@@ -8,7 +8,6 @@ const sdCount = articles.filter((a: any) => a.id.startsWith('system-design/')).l
 const cipCount = articles.filter((a: any) => a.id.startsWith('coding-interview/')).length;
 const glossaryCount = articles.filter((a: any) => a.id.startsWith('glossary/')).length;
 
-// Total word count for "35 hours of audio" stat
 const totalWords = articles.reduce((sum: number, a: any) => {
   const text = a.body || '';
   return sum + text.split(/\s+/).filter(Boolean).length;
@@ -51,163 +50,199 @@ const hoursOfAudio = Math.round(hoursOfReading * 1.4);
     </div>
   </div>
 
+  <!-- Continue Listening card (Phase 2.3) — populated by client-side script -->
+  <section class="continue-section" id="continue-section" style="display:none">
+    <div class="continue-section-inner">
+      <a id="continue-link" class="continue-card">
+        <div class="continue-card-icon">▶</div>
+        <div class="continue-card-body">
+          <div class="continue-card-label">Continue listening</div>
+          <div class="continue-card-title" id="continue-title"></div>
+          <div class="continue-card-bar">
+            <div class="continue-card-bar-fill" id="continue-bar-fill"></div>
+          </div>
+        </div>
+      </a>
+    </div>
+  </section>
+
   <section class="features">
     <div class="features-inner">
       <div class="feature">
         <div class="feature-icon">📖</div>
         <h3 class="feature-title">Read</h3>
         <p class="feature-text">
-          Clean typography, syntax-highlighted code, searchable glossary. Built for long-form learning without eye strain.
+          Clean typography, syntax-highlighted code, interactive diagrams. Built for long-form learning without eye strain.
         </p>
       </div>
       <div class="feature">
         <div class="feature-icon">🔊</div>
         <h3 class="feature-title">Listen</h3>
         <p class="feature-text">
-          Every article has a "Read Aloud" button. Browser TTS narrates the content — free, offline-capable, no API key needed.
+          Every article has a "Read Aloud" player. Browser TTS narrates the content. Build a queue, auto-advance, listen to entire learning paths.
         </p>
       </div>
       <div class="feature">
         <div class="feature-icon">🔍</div>
         <h3 class="feature-title">Search</h3>
         <p class="feature-text">
-          Full-text search across all articles. Jump to a topic mid-sentence. Find the answer, don't lose your place.
+          Full-text search across all 74 articles. Jump to a topic mid-sentence. Find the answer, don't lose your place.
         </p>
       </div>
     </div>
   </section>
-</BaseLayout>
 
-<style>
-  .hero {
-    padding: 6rem 1.5rem 4rem;
-    background: linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg-card) 100%);
-    border-bottom: 1px solid var(--color-border);
-  }
-  .hero-inner {
-    max-width: 900px;
-    margin: 0 auto;
-    text-align: center;
-  }
-  .hero-eyebrow {
-    color: var(--color-accent);
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    margin: 0 0 1rem;
-  }
-  .hero-title {
-    font-size: 3.5rem;
-    font-weight: 700;
-    line-height: 1.1;
-    margin: 0 0 1.5rem;
-    color: var(--color-text);
-  }
-  .hero-subtitle {
-    font-size: 1.25rem;
-    color: var(--color-text-secondary);
-    line-height: 1.6;
-    margin: 0 0 2.5rem;
-    max-width: 650px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-  .hero-cta {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    flex-wrap: wrap;
-    margin-bottom: 4rem;
-  }
-  .btn {
-    display: inline-block;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 0.95rem;
-    transition: all 200ms;
-  }
-  .btn-primary {
-    background: var(--color-accent);
-    color: white;
-  }
-  .btn-primary:hover {
-    background: var(--color-accent-hover);
-    text-decoration: none;
-    transform: translateY(-1px);
-  }
-  .btn-secondary {
-    background: var(--color-bg-card);
-    color: var(--color-text);
-    border: 1px solid var(--color-border);
-  }
-  .btn-secondary:hover {
-    border-color: var(--color-accent);
-    color: var(--color-accent);
-    text-decoration: none;
-  }
-  .hero-stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
-    max-width: 700px;
-    margin: 0 auto;
-  }
-  .stat {
-    text-align: center;
-  }
-  .stat-num {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--color-accent);
-    font-family: var(--font-code);
-  }
-  .stat-label {
-    font-size: 0.8rem;
-    color: var(--color-text-secondary);
-    margin-top: 0.25rem;
-  }
-  .features {
-    padding: 4rem 1.5rem;
-  }
-  .features-inner {
-    max-width: 1100px;
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 2rem;
-  }
-  .feature {
-    text-align: center;
-    padding: 1.5rem;
-  }
-  .feature-icon {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-  }
-  .feature-title {
-    font-size: 1.3rem;
-    font-weight: 600;
-    margin: 0 0 0.5rem;
-  }
-  .feature-text {
-    color: var(--color-text-secondary);
-    line-height: 1.6;
-    font-size: 0.95rem;
-  }
-  @media (max-width: 768px) {
+  <script is:inline>
+    // Show "Continue Listening" card if user has progress
+    (function() {
+      function whenReady(cb) {
+        if (window.NotesProgress) { cb(); return; }
+        let attempts = 0;
+        const t = setInterval(function() {
+          if (window.NotesProgress) { clearInterval(t); cb(); }
+          else if (++attempts > 50) { clearInterval(t); }
+        }, 100);
+      }
+
+      whenReady(function() {
+        const cont = window.NotesProgress.getContinueListening();
+        if (!cont || !cont.entry) return;
+
+        const section = document.getElementById('continue-section');
+        if (!section) return;
+
+        const link = document.getElementById('continue-link');
+        const title = document.getElementById('continue-title');
+        const fill = document.getElementById('continue-bar-fill');
+        if (link && title && fill) {
+          link.href = cont.url.startsWith('http') ? cont.url : (location.origin + cont.url);
+          const slug = cont.entry.slug;
+          const pretty = slug.split('/').pop().replace(/[-_]/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+          title.textContent = pretty;
+          fill.style.width = Math.round(cont.entry.listenProgress) + '%';
+          section.style.display = 'block';
+        }
+      });
+    })();
+  </script>
+
+  <style>
+    .hero {
+      padding: 6rem 1.5rem 4rem;
+      background: linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg-card) 100%);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .hero-inner { max-width: 900px; margin: 0 auto; text-align: center; }
+    .hero-eyebrow {
+      color: var(--color-accent);
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      margin: 0 0 1rem;
+    }
     .hero-title {
-      font-size: 2.2rem;
+      font-size: 3.5rem;
+      font-weight: 700;
+      line-height: 1.1;
+      margin: 0 0 1.5rem;
+      color: var(--color-text);
     }
     .hero-subtitle {
-      font-size: 1.05rem;
+      font-size: 1.25rem;
+      color: var(--color-text-secondary);
+      line-height: 1.6;
+      margin: 0 0 2.5rem;
+      max-width: 650px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .hero-cta {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 4rem;
+    }
+    .btn {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: all 200ms;
+    }
+    .btn-primary {
+      background: var(--color-accent);
+      color: white;
+    }
+    .btn-primary:hover {
+      background: var(--color-accent-hover);
+      text-decoration: none;
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: var(--color-bg-card);
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+    }
+    .btn-secondary:hover {
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+      text-decoration: none;
     }
     .hero-stats {
-      grid-template-columns: repeat(2, 1fr);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      max-width: 700px;
+      margin: 0 auto;
     }
+    .stat { text-align: center; }
+    .stat-num {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--color-accent);
+      font-family: var(--font-code);
+    }
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--color-text-secondary);
+      margin-top: 0.25rem;
+    }
+
+    .continue-section {
+      padding: 2rem 1.5rem 0;
+    }
+    .continue-section-inner {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .features { padding: 4rem 1.5rem; }
     .features-inner {
-      grid-template-columns: 1fr;
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
     }
-  }
-</style>
+    .feature {
+      text-align: center;
+      padding: 1.5rem;
+    }
+    .feature-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+    .feature-title { font-size: 1.3rem; font-weight: 600; margin: 0 0 0.5rem; }
+    .feature-text {
+      color: var(--color-text-secondary);
+      line-height: 1.6;
+      font-size: 0.95rem;
+    }
+    @media (max-width: 768px) {
+      .hero-title { font-size: 2.2rem; }
+      .hero-subtitle { font-size: 1.05rem; }
+      .hero-stats { grid-template-columns: repeat(2, 1fr); }
+      .features-inner { grid-template-columns: 1fr; }
+    }
+  </style>
+</BaseLayout>

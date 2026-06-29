@@ -8,12 +8,14 @@ export interface Props {
   readTime?: number;
   listenTime?: number;
   tags?: string[];
+  slug?: string;
 }
-const { href, title, description, category, difficulty, readTime, listenTime, tags } = Astro.props;
+
+const { href, title, description, category, difficulty, readTime, listenTime, tags, slug } = Astro.props;
 const excerpt = description ? description.slice(0, 140) + (description.length > 140 ? '…' : '') : '';
 ---
 
-<a href={href} class="card">
+<a href={href} class="card" data-article-slug={slug || ''} data-article-title={title}>
   {category && <div class="card-category">{category}</div>}
   <h3 class="card-title">{title}</h3>
   {excerpt && <p class="card-excerpt">{excerpt}</p>}
@@ -33,6 +35,18 @@ const excerpt = description ? description.slice(0, 140) + (description.length > 
       ))}
     </div>
   )}
+  <button class="card-play" data-queue-add data-article-slug={slug || ''} data-article-title={title} data-article-url={href} type="button" aria-label="Add to queue" title="Add to queue">
+    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+      <path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z"/>
+    </svg>
+  </button>
+  <div class="card-progress-ring" data-progress-ring>
+    <svg viewBox="0 0 36 36" width="28" height="28" style="display:none">
+      <circle class="bg" cx="18" cy="18" r="14" />
+      <circle class="fg" cx="18" cy="18" r="14" stroke-dasharray="88" stroke-dashoffset="88" />
+    </svg>
+    <span class="read-mark" style="display:none">✓</span>
+  </div>
 </a>
 
 <style>
@@ -46,6 +60,7 @@ const excerpt = description ? description.slice(0, 140) + (description.length > 
     text-decoration: none;
     color: var(--color-text);
     transition: all 200ms;
+    position: relative;
   }
   .card:hover {
     border-color: var(--color-accent);
@@ -67,6 +82,7 @@ const excerpt = description ? description.slice(0, 140) + (description.length > 
     line-height: 1.3;
     margin: 0 0 0.5rem;
     color: var(--color-text);
+    padding-right: 2rem;
   }
   .card-excerpt {
     font-size: 0.9rem;
@@ -110,4 +126,125 @@ const excerpt = description ? description.slice(0, 140) + (description.length > 
     font-size: 0.7em;
     font-family: var(--font-code);
   }
+  .card-play {
+    position: absolute;
+    bottom: 0.75rem;
+    right: 0.75rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 200ms, background 150ms, transform 150ms;
+    z-index: 2;
+  }
+  .card:hover .card-play { opacity: 1; }
+  .card-play:hover {
+    background: var(--color-accent-hover);
+    transform: scale(1.1);
+  }
+  .card-play.is-queued {
+    opacity: 1;
+    background: var(--color-text);
+  }
+  .card-progress-ring {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+  .card-progress-ring svg {
+    transform: rotate(-90deg);
+  }
+  .card-progress-ring circle {
+    fill: none;
+    stroke-width: 3;
+  }
+  .card-progress-ring .bg { stroke: var(--color-border); }
+  .card-progress-ring .fg {
+    stroke: var(--color-accent);
+    stroke-linecap: round;
+    transition: stroke-dashoffset 300ms;
+  }
+  .read-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    color: white;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
 </style>
+
+<script is:inline>
+  // Wire up card-level queue + progress on render
+  (function() {
+    // Wait for state modules (loaded by BaseLayout) to be ready
+    function whenReady(cb, attempts) {
+      attempts = attempts || 0;
+      if (window.NotesProgress && window.NotesPlaylist) { cb(); return; }
+      if (attempts > 50) return; // give up after ~5s
+      setTimeout(function() { whenReady(cb, attempts + 1); }, 100);
+    }
+
+    whenReady(function() {
+      const all = window.NotesProgress.getAllProgress();
+
+      document.querySelectorAll('[data-progress-ring]').forEach(function(ring) {
+        const card = ring.closest('.card');
+        if (!card) return;
+        const slug = card.getAttribute('data-article-slug') || '';
+        const p = all[slug];
+        const svg = ring.querySelector('svg');
+        const mark = ring.querySelector('.read-mark');
+        if (!p) return;
+
+        if (p.read) {
+          if (svg) svg.style.display = 'none';
+          if (mark) mark.style.display = 'inline-flex';
+        } else if (p.listenProgress > 0) {
+          if (svg) {
+            svg.style.display = 'block';
+            const fg = svg.querySelector('.fg');
+            if (fg) {
+              const dash = 88 - (88 * (p.listenProgress / 100));
+              fg.setAttribute('stroke-dashoffset', dash);
+            }
+          }
+        }
+      });
+
+      document.querySelectorAll('[data-queue-add]').forEach(function(btn) {
+        const slug = btn.getAttribute('data-article-slug') || '';
+        if (window.NotesPlaylist.isInPlaylist(slug)) {
+          btn.classList.add('is-queued');
+        }
+        btn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          const title = btn.getAttribute('data-article-title') || '';
+          const url = btn.getAttribute('data-article-url') || '';
+          window.NotesPlaylist.addToPlaylist(slug, title, url);
+          btn.classList.add('is-queued');
+        });
+      });
+
+      document.addEventListener('notes:playlist:changed', function() {
+        document.querySelectorAll('[data-queue-add]').forEach(function(btn) {
+          const slug = btn.getAttribute('data-article-slug') || '';
+          if (window.NotesPlaylist.isInPlaylist(slug)) btn.classList.add('is-queued');
+          else btn.classList.remove('is-queued');
+        });
+      });
+    });
+  })();
+</script>

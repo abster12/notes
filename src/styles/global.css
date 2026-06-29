@@ -7,7 +7,7 @@
    =========================================================== */
 
 @theme {
-  /* Colors — warm, paper-like light theme */
+  /* Colors — warm, paper-like light theme (defaults) */
   --color-bg: #faf9f6;
   --color-bg-card: #ffffff;
   --color-bg-code: #f5f3ef;
@@ -29,8 +29,37 @@
   --width-nav: 240px;
 }
 
+/* Manual dark mode (Phase 2.2) — set data-theme="dark" on <html> */
+:root[data-theme="dark"] {
+  --color-bg: #12121a;
+  --color-bg-card: #1a1a26;
+  --color-bg-code: #0d0d14;
+  --color-text: #e8e8f0;
+  --color-text-secondary: #9999aa;
+  --color-accent: #f77f00;
+  --color-accent-hover: #ffa040;
+  --color-border: #2a2a3a;
+  --color-link: #ffa040;
+  --color-muted: #6a6a7a;
+}
+
+/* Manual light mode — overrides system dark preference */
+:root[data-theme="light"] {
+  --color-bg: #faf9f6;
+  --color-bg-card: #ffffff;
+  --color-bg-code: #f5f3ef;
+  --color-text: #1a1a2e;
+  --color-text-secondary: #555570;
+  --color-accent: #e85d04;
+  --color-accent-hover: #c44900;
+  --color-border: #e8e6e0;
+  --color-link: #c44900;
+  --color-muted: #8a8a9a;
+}
+
+/* Auto dark — only when no explicit theme set */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --color-bg: #12121a;
     --color-bg-card: #1a1a26;
     --color-bg-code: #0d0d14;
@@ -52,6 +81,7 @@ html {
   font-size: var(--font-size-base);
   line-height: var(--leading-content);
   -webkit-font-smoothing: antialiased;
+  transition: background-color 200ms, color 200ms;
 }
 
 body {
@@ -210,4 +240,620 @@ pre code {
   background: #ef444420;
   color: #ef4444;
   border: 1px solid #ef444440;
+}
+
+/* Phase 2 additions ============================================ */
+
+/* Theme toggle (Phase 2.2) */
+.theme-toggle {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 200ms;
+  flex-shrink: 0;
+}
+.theme-toggle:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* Article progress bar at top (Phase 2.6) */
+.article-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: transparent;
+  z-index: 60;
+  pointer-events: none;
+}
+.article-progress-bar-fill {
+  height: 100%;
+  background: var(--color-accent);
+  width: 0%;
+  transition: width 100ms linear;
+}
+
+/* Sticky TOC with scroll spy (Phase 2.6) */
+.toc-link {
+  display: block;
+  padding: 0.3rem 0.75rem;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  border-left: 2px solid transparent;
+  transition: all 150ms;
+  line-height: 1.4;
+}
+.toc-link:hover {
+  color: var(--color-text);
+  text-decoration: none;
+  border-left-color: var(--color-border);
+}
+.toc-link.active {
+  color: var(--color-accent);
+  border-left-color: var(--color-accent);
+  font-weight: 500;
+}
+.toc-link.depth-3 {
+  padding-left: 1.5rem;
+  font-size: 0.8rem;
+}
+
+/* Read article mark (Phase 2.3) */
+.read-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--color-accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Article card with progress (Phase 2.3) */
+.card-progress-ring {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 28px;
+  height: 28px;
+}
+.card-progress-ring svg {
+  transform: rotate(-90deg);
+}
+.card-progress-ring circle {
+  fill: none;
+  stroke-width: 3;
+}
+.card-progress-ring .bg {
+  stroke: var(--color-border);
+}
+.card-progress-ring .fg {
+  stroke: var(--color-accent);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 300ms;
+}
+.card {
+  position: relative;
+}
+.card-play {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 200ms;
+  z-index: 2;
+}
+.card:hover .card-play {
+  opacity: 1;
+}
+.card-play:hover {
+  background: var(--color-accent-hover);
+  transform: scale(1.1);
+}
+.card-play.is-queued {
+  opacity: 1;
+  background: var(--color-text);
+}
+
+/* Continue listening card (Phase 2.3) */
+.continue-card {
+  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
+  color: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgba(232, 93, 4, 0.2);
+  transition: transform 200ms;
+}
+.continue-card:hover {
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+.continue-card-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+.continue-card-body {
+  flex: 1;
+  min-width: 0;
+}
+.continue-card-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+  margin-bottom: 0.25rem;
+}
+.continue-card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.continue-card-bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.continue-card-bar-fill {
+  height: 100%;
+  background: white;
+}
+
+/* Playlist bar (Phase 2.4) */
+.playlist-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  background: var(--color-bg-card);
+  border-top: 1px solid var(--color-border);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.1);
+  transform: translateY(100%);
+  transition: transform 300ms;
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+}
+.playlist-bar.is-open {
+  transform: translateY(0);
+}
+.playlist-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.playlist-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.playlist-count {
+  background: var(--color-accent);
+  color: white;
+  font-size: 0.7rem;
+  padding: 0.1em 0.5em;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.playlist-toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text);
+  cursor: pointer;
+  padding: 0.3rem;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.playlist-toggle-btn:hover {
+  background: var(--color-bg-code);
+}
+.playlist-items {
+  overflow-y: auto;
+  flex: 1;
+  padding: 0.5rem 0;
+}
+.playlist-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1.5rem;
+  cursor: pointer;
+  transition: background 150ms;
+}
+.playlist-item:hover {
+  background: var(--color-bg-code);
+}
+.playlist-item.is-current {
+  background: var(--color-bg-code);
+  border-left: 3px solid var(--color-accent);
+}
+.playlist-item-num {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  font-family: var(--font-code);
+  min-width: 1.5rem;
+  text-align: center;
+}
+.playlist-item-title {
+  flex: 1;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.playlist-item-remove {
+  background: transparent;
+  border: none;
+  color: var(--color-muted);
+  cursor: pointer;
+  padding: 0.2rem;
+  border-radius: 4px;
+  display: inline-flex;
+}
+.playlist-item-remove:hover {
+  color: #ef4444;
+  background: var(--color-bg-card);
+}
+.playlist-empty {
+  padding: 2rem 1.5rem;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Mini floating playlist button (collapsed state) */
+.playlist-mini-btn {
+  position: fixed;
+  bottom: 6rem;
+  right: 1.5rem;
+  z-index: 95;
+  background: var(--color-text);
+  color: var(--color-bg);
+  border: none;
+  border-radius: 50px;
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  gap: 0.4rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  font-family: var(--font-body);
+  transition: all 200ms;
+}
+.playlist-mini-btn:hover {
+  background: var(--color-accent);
+  color: white;
+}
+.playlist-mini-btn.is-visible {
+  display: inline-flex;
+}
+
+/* Article share/feedback section (Phase 2.6) */
+.article-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 3rem 0 1rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--color-border);
+}
+.action-btn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-body);
+  transition: all 150ms;
+}
+.action-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.action-btn.is-active {
+  background: var(--color-accent);
+  color: white;
+  border-color: var(--color-accent);
+}
+
+/* Related articles section (Phase 2.6) */
+.related-articles {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--color-border);
+}
+.related-articles h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0 0 1rem;
+  color: var(--color-text);
+}
+.related-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+.related-card {
+  padding: 1rem;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--color-text);
+  transition: all 200ms;
+}
+.related-card:hover {
+  border-color: var(--color-accent);
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+.related-card-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 0.4rem;
+}
+.related-card-meta {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+/* Mermaid diagrams (Phase 2.1) */
+.diagram-block {
+  margin: 1.5rem 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-bg-card);
+}
+.diagram-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-bg-code);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+.diagram-toggle {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: all 150ms;
+}
+.diagram-toggle:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.diagram-content {
+  padding: 1rem;
+  overflow-x: auto;
+}
+.diagram-content.mermaid {
+  text-align: center;
+}
+.diagram-content pre {
+  margin: 0;
+  border: none;
+  background: transparent;
+}
+.diagram-ascii {
+  display: none;
+}
+.diagram-block.show-ascii .diagram-content.mermaid {
+  display: none;
+}
+.diagram-block.show-ascii .diagram-ascii {
+  display: block;
+}
+
+/* Mermaid theme overrides — match our orange accent */
+.mermaid {
+  font-family: var(--font-body) !important;
+  font-size: 14px !important;
+}
+.mermaid .nodeLabel, .mermaid .edgeLabel, .mermaid .label {
+  font-family: var(--font-body) !important;
+}
+
+/* Animated SVG diagram block (Phase 2.1) */
+.animated-diagram {
+  margin: 1.5rem 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-card);
+  padding: 1.5rem;
+  overflow: hidden;
+}
+.animated-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Keyboard shortcuts help overlay (Phase 2.6) */
+.kbd-help {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+.kbd-help.is-open {
+  display: flex;
+}
+.kbd-help-panel {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 480px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.kbd-help h3 {
+  margin: 0 0 1.25rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.kbd-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.9rem;
+}
+.kbd-row:last-child {
+  border-bottom: none;
+}
+.kbd-row kbd {
+  background: var(--color-bg-code);
+  border: 1px solid var(--color-border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.2em 0.5em;
+  font-family: var(--font-code);
+  font-size: 0.8rem;
+  min-width: 2rem;
+  display: inline-block;
+  text-align: center;
+}
+
+/* Mobile bottom tab bar (Phase 2.5) */
+.mobile-tab-bar {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 80;
+  background: color-mix(in srgb, var(--color-bg-card) 95%, transparent);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--color-border);
+  padding: 0.4rem 0 calc(0.4rem + env(safe-area-inset-bottom));
+  justify-content: space-around;
+}
+.mobile-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  text-decoration: none;
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  flex: 1;
+  text-align: center;
+}
+.mobile-tab.active, .mobile-tab:hover {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+.mobile-tab-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+@media (max-width: 768px) {
+  .mobile-tab-bar {
+    display: flex;
+  }
+  /* Pad body for tab bar */
+  body {
+    padding-bottom: 60px;
+  }
+  /* Player adjustments */
+  .audio-player {
+    bottom: 70px !important;
+  }
+  .playlist-bar {
+    bottom: 60px;
+  }
+  .playlist-mini-btn {
+    bottom: 8rem;
+  }
+}
+
+/* Hamburger drawer (mobile) */
+.nav-drawer-toggle {
+  display: none;
+  background: transparent;
+  border: none;
+  color: var(--color-text);
+  cursor: pointer;
+  padding: 0.4rem;
+}
+@media (max-width: 768px) {
+  .nav-drawer-toggle {
+    display: inline-flex;
+  }
+  .nav-links {
+    display: none;
+  }
+  .nav-links.is-open {
+    display: flex;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-bg-card);
+    border-bottom: 1px solid var(--color-border);
+    flex-direction: column;
+    padding: 1rem 1.5rem;
+    gap: 0.75rem;
+    z-index: 70;
+  }
 }

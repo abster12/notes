@@ -1,0 +1,108 @@
+---
+// Mermaid diagram with ASCII toggle
+export interface Props {
+  id: string;
+  title: string;
+  code: string;
+  asciiFallback?: string;
+}
+
+const { id, title, code, asciiFallback = '' } = Astro.props;
+---
+
+<div class="diagram-block" data-diagram-id={id}>
+  <div class="diagram-header">
+    <span>{title}</span>
+    {asciiFallback && (
+      <button class="diagram-toggle" data-toggle-ascii aria-label="Toggle ASCII view">
+        View as ASCII
+      </button>
+    )}
+  </div>
+  <div class="diagram-content mermaid" data-mermaid-target={id}></div>
+  {asciiFallback && (
+    <div class="diagram-ascii">
+      <pre>{asciiFallback}</pre>
+    </div>
+  )}
+</div>
+
+<!-- Mermaid source, will be rendered client-side -->
+<script type="application/json" data-mermaid-source={id} set:html={JSON.stringify({ id, code })}></script>
+
+<script>
+  // Lazy Mermaid — only loads when a diagram is present
+  let mermaidPromise: Promise<any> | null = null;
+
+  async function getMermaid() {
+    if (!mermaidPromise) {
+      mermaidPromise = import('mermaid').then(m => m.default);
+    }
+    return mermaidPromise;
+  }
+
+  function isDark() {
+    return document.documentElement.dataset.theme === 'dark' ||
+      (!document.documentElement.dataset.theme &&
+       window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+
+  async function renderAllDiagrams() {
+    const sources = document.querySelectorAll('[data-mermaid-source]');
+    if (sources.length === 0) return;
+
+    const mermaid = await getMermaid();
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: isDark() ? 'dark' : 'neutral',
+      themeVariables: {
+        primaryColor: '#fff5ec',
+        primaryTextColor: isDark() ? '#e8e8f0' : '#1a1a2e',
+        primaryBorderColor: '#e85d04',
+        lineColor: '#e85d04',
+        secondaryColor: isDark() ? '#1a1a26' : '#f5f3ef',
+        tertiaryColor: isDark() ? '#12121a' : '#faf9f6',
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '14px',
+      },
+      flowchart: { curve: 'basis', padding: 12 },
+    });
+
+    for (const source of sources) {
+      const id = source.getAttribute('data-mermaid-source') || '';
+      const target = document.querySelector(`[data-mermaid-target="${id}"]`);
+      if (!target || target.dataset.rendered) continue;
+
+      try {
+        const payload = JSON.parse(source.textContent || '{}');
+        const renderId = `mermaid-${id}-${Math.random().toString(36).slice(2, 8)}`;
+        const { svg } = await mermaid.render(renderId, payload.code);
+        target.innerHTML = svg;
+        target.dataset.rendered = 'true';
+      } catch (err) {
+        target.innerHTML = `<pre style="color: #ef4444; font-size: 0.85rem;">Mermaid render error: ${(err as Error).message}</pre>`;
+      }
+    }
+  }
+
+  function attachToggles() {
+    document.querySelectorAll('[data-toggle-ascii]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const block = btn.closest('.diagram-block');
+        if (!block) return;
+        const showing = block.classList.toggle('show-ascii');
+        btn.textContent = showing ? 'View as diagram' : 'View as ASCII';
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      renderAllDiagrams();
+      attachToggles();
+    });
+  } else {
+    renderAllDiagrams();
+    attachToggles();
+  }
+</script>

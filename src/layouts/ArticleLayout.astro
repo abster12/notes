@@ -3,6 +3,8 @@ import BaseLayout from './BaseLayout.astro';
 import AudioPlayer from '../components/AudioPlayer.astro';
 import TableOfContents from '../components/TableOfContents.astro';
 import LearningPathNav from '../components/LearningPathNav.astro';
+import RelatedArticles from '../components/RelatedArticles.astro';
+import { getCollection } from 'astro:content';
 
 export interface Props {
   title: string;
@@ -22,9 +24,33 @@ const {
   title, description, difficulty, readTime, listenTime,
   tags, category, categorySlug, activeNav, slug, headings,
 } = Astro.props;
+
+// Get candidates for "Related" section (same category)
+const allArticles = await getCollection('articles');
+const categoryPrefix = slug.startsWith('system-design/') ? 'system-design/' :
+                       slug.startsWith('coding-interview/') ? 'coding-interview/' : 'glossary/';
+const candidates = allArticles
+  .filter((a: any) => a.id.startsWith(categoryPrefix) && a.id !== slug)
+  .map((a: any) => ({
+    id: a.id,
+    title: a.data?.title || a.id,
+    readTime: a.data?.estimated_reading_time || Math.max(5, Math.round((a.body || '').split(/\s+/).filter(Boolean).length / 250)),
+    category: a.id.startsWith('system-design/') ? 'system-design' as const : 'coding-interview' as const,
+  }))
+  .sort((a: any, b: any) => (a.title || '').localeCompare(b.title || ''));
+
+// URL for share buttons
+const base = import.meta.env.BASE_URL;
+const articleUrl = `${base}${slug.replace(/\.md$/, '')}/`;
+// Edit-on-GitHub URL (vault is synced from abster12/abster12.github.io)
+const editUrl = `https://github.com/abster12/abster12.github.io/edit/main/${slug}`;
 ---
 
 <BaseLayout title={title} description={description} activeNav={activeNav}>
+  <div class="article-progress-bar" id="article-progress-bar">
+    <div class="article-progress-bar-fill" id="article-progress-bar-fill"></div>
+  </div>
+
   <div class="article-layout">
     <aside class="toc-sidebar">
       <TableOfContents headings={headings.filter(h => h.depth === 2 || h.depth === 3)} />
@@ -33,7 +59,7 @@ const {
     <article class="article-main">
       <header class="article-header">
         {category && categorySlug && (
-          <a href={`/${categorySlug}/`} class="article-category">{category}</a>
+          <a href={`${base}${categorySlug}/`} class="article-category">{category}</a>
         )}
         <h1 class="article-title">{title}</h1>
         <div class="article-meta">
@@ -66,11 +92,130 @@ const {
         <slot />
       </div>
 
+      <div class="article-actions">
+        <button class="action-btn" id="share-copy" data-url={articleUrl}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+          </svg>
+          <span id="share-copy-text">Copy link</span>
+        </button>
+        <a class="action-btn" href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent('https://abster12.github.io' + articleUrl)}`} target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+          Share
+        </a>
+        <a class="action-btn" href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://abster12.github.io' + articleUrl)}`} target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+          </svg>
+          LinkedIn
+        </a>
+        <button class="action-btn" id="helpful-btn" data-helpful="1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+          </svg>
+          Helpful
+        </button>
+        <a class="action-btn" href={editUrl} target="_blank" rel="noopener" title="Edit on GitHub">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Edit
+        </a>
+      </div>
+
+      <RelatedArticles
+        currentSlug={slug}
+        currentCategory={categoryPrefix.replace(/\/$/, '')}
+        currentTags={tags || []}
+        candidates={candidates}
+        limit={3}
+      />
+
       <LearningPathNav slug={slug} category={category} />
     </article>
   </div>
 
-  <AudioPlayer title={title} articleSelector=".article-prose" />
+  <AudioPlayer title={title} articleSelector=".article-prose" slug={slug} />
+
+  <script is:inline>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script>
 
   <style>
     .article-layout {
@@ -93,9 +238,7 @@ const {
       min-width: 0;
       max-width: 820px;
     }
-    .article-header {
-      margin-bottom: 2rem;
-    }
+    .article-header { margin-bottom: 2rem; }
     .article-category {
       display: inline-block;
       color: var(--color-accent);
@@ -133,9 +276,7 @@ const {
       align-items: center;
       gap: 0.3rem;
     }
-    .meta-icon {
-      opacity: 0.7;
-    }
+    .meta-icon { opacity: 0.7; }
     .article-tags {
       display: flex;
       flex-wrap: wrap;
@@ -151,17 +292,12 @@ const {
       font-family: var(--font-code);
     }
     @media (max-width: 1024px) {
-      .article-layout {
-        grid-template-columns: 1fr;
-      }
-      .toc-sidebar {
-        display: none;
-      }
+      .article-layout { grid-template-columns: 1fr; }
+      .toc-sidebar { display: none; }
     }
     @media (max-width: 768px) {
-      .article-title {
-        font-size: 1.8rem;
-      }
+      .article-title { font-size: 1.8rem; }
+      .article-actions { gap: 0.5rem; }
     }
   </style>
 </BaseLayout>

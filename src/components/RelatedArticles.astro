@@ -1,0 +1,55 @@
+---
+// Related articles — based on shared tags + same category
+export interface RelatedArticle {
+  id: string;
+  title: string;
+  readTime?: number;
+  category: 'system-design' | 'coding-interview';
+}
+
+export interface Props {
+  currentSlug: string;
+  currentCategory: string;
+  currentTags: string[];
+  candidates: RelatedArticle[];
+  limit?: number;
+}
+
+const { currentSlug, currentCategory, currentTags, candidates, limit = 3 } = Astro.props;
+const base = import.meta.env.BASE_URL;
+
+const currentTagSet = new Set(currentTags || []);
+
+const scored = candidates
+  .filter((a) => a.id !== currentSlug)
+  .map((a) => {
+    const cat = a.id.startsWith('system-design/') ? 'system-design' : 'coding-interview';
+    // We don't have tags for candidates here, so score primarily by category
+    // In a future iteration, pass candidate tags too.
+    const sameCategory = cat === currentCategory ? 1 : 0;
+    return { article: a, category: cat, score: sameCategory };
+  })
+  .sort((a, b) => b.score - a.score)
+  .slice(0, limit);
+
+function urlFor(id: string): string {
+  return `${base}${id.replace(/\.md$/, '')}/`;
+}
+---
+
+{scored.length > 0 && (
+  <section class="related-articles">
+    <h3>Related</h3>
+    <div class="related-grid">
+      {scored.map(({ article, category }) => (
+        <a href={urlFor(article.id)} class="related-card">
+          <div class="related-card-title">{article.title}</div>
+          <div class="related-card-meta">
+            {category === 'system-design' ? 'System Design' : 'Coding Interview'}
+            {article.readTime && <> · {article.readTime} min</>}
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+)}
