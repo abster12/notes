@@ -1,0 +1,106 @@
+---
+export interface Props {
+  slug: string;
+  category: string | undefined;
+}
+const { slug, category } = Astro.props;
+
+// Get all articles in the same category and find prev/next
+import { getCollection } from 'astro:content';
+
+const articles = await getCollection('articles', (entry: any) => {
+  const id = entry.id;
+  if (category === 'System Design') {
+    return id.startsWith('system-design/');
+  } else if (category === 'Coding Interview') {
+    return id.startsWith('coding-interview/');
+  } else if (category === 'Glossary') {
+    return id.startsWith('glossary/');
+  }
+  return false;
+});
+
+// Sort by title for stable order (or by day if available)
+articles.sort((a: any, b: any) => {
+  const dayA = a.data?.day ?? 0;
+  const dayB = b.data?.day ?? 0;
+  if (dayA !== dayB) return dayA - dayB;
+  const titleA = a.data?.title || a.id;
+  const titleB = b.data?.title || b.id;
+  return titleA.localeCompare(titleB);
+});
+
+const currentIndex = articles.findIndex((a: any) => a.id === slug);
+const prev = currentIndex > 0 ? articles[currentIndex - 1] : null;
+const next = currentIndex < articles.length - 1 ? articles[currentIndex + 1] : null;
+
+const href = (a: any) => {
+  const id = a.id.replace(/\.md$/, '').replace(/^system-design\//, '/system-design/').replace(/^coding-interview\//, '/coding-interview/').replace(/^glossary\//, '/glossary/');
+  return id;
+};
+---
+
+{(prev || next) && (
+  <nav class="path-nav">
+    {prev ? (
+      <a href={href(prev)} class="path-link path-prev">
+        <span class="path-direction">← Previous</span>
+        <span class="path-title">{prev.data?.title || prev.id}</span>
+      </a>
+    ) : <div class="path-spacer"></div>}
+    {next ? (
+      <a href={href(next)} class="path-link path-next">
+        <span class="path-direction">Next →</span>
+        <span class="path-title">{next.data?.title || next.id}</span>
+      </a>
+    ) : <div class="path-spacer"></div>}
+  </nav>
+)}
+
+<style>
+  .path-nav {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--color-border);
+  }
+  .path-link {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 1.25rem;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 200ms;
+  }
+  .path-link:hover {
+    border-color: var(--color-accent);
+    transform: translateY(-2px);
+    text-decoration: none;
+  }
+  .path-prev {
+    text-align: left;
+  }
+  .path-next {
+    text-align: right;
+  }
+  .path-direction {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-accent);
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+  }
+  .path-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+  .path-spacer {
+    display: block;
+  }
+</style>

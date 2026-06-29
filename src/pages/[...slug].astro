@@ -1,0 +1,64 @@
+---
+import { getCollection, render } from 'astro:content';
+import ArticleLayout from '../layouts/ArticleLayout.astro';
+
+export async function getStaticPaths() {
+  const articles = await getCollection('articles');
+  return articles.map((entry: any) => {
+    const id = entry.id;
+    let slug = id.replace(/^system-design\//, 'system-design/').replace(/^coding-interview\//, 'coding-interview/').replace(/^glossary\//, 'glossary/');
+    slug = slug.replace(/\.md$/, '');
+    return {
+      params: { slug },
+      props: { entry, originalId: id },
+    };
+  });
+}
+
+const { entry, originalId } = Astro.props;
+const { Content, headings } = await render(entry);
+
+// Derive category and activeNav from the id
+let category: string | undefined;
+let categorySlug: string | undefined;
+let activeNav: string | undefined;
+
+if (originalId.startsWith('system-design/')) {
+  category = 'System Design';
+  categorySlug = 'system-design';
+  activeNav = 'system-design';
+} else if (originalId.startsWith('coding-interview/')) {
+  category = 'Coding Interview';
+  categorySlug = 'coding-interview';
+  activeNav = 'coding-interview';
+} else if (originalId.startsWith('glossary/')) {
+  category = 'Glossary';
+  categorySlug = 'glossary';
+  activeNav = 'glossary';
+}
+
+const data: any = entry.data || {};
+const title = data.title || originalId.replace(/^.*\//, '').replace(/[-_]/g, ' ').replace(/\.md$/, '');
+
+// Calculate read time
+const body = entry.body || '';
+const words = body.split(/\s+/).filter(Boolean).length;
+const readTime = data.estimated_reading_time || Math.max(5, Math.round(words / 250));
+const listenTime = Math.round(readTime * 1.4);
+---
+
+<ArticleLayout
+  title={title}
+  description={data.description}
+  difficulty={data.difficulty}
+  readTime={readTime}
+  listenTime={listenTime}
+  tags={data.tags}
+  category={category}
+  categorySlug={categorySlug}
+  activeNav={activeNav}
+  slug={originalId}
+  headings={headings}
+>
+  <Content />
+</ArticleLayout>

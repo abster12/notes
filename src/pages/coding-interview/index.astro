@@ -1,0 +1,99 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ArticleCard from '../../components/ArticleCard.astro';
+import { getCollection } from 'astro:content';
+
+const allArticles = await getCollection('articles', (entry: any) => entry.id.startsWith('coding-interview/'));
+
+function extractDescription(body: string): string {
+  if (!body) return '';
+  const match = body.match(/## Summary & Interview Framing\s*\n\n([\s\S]*?)(?=\n---|\n##)/);
+  if (match) {
+    const text = match[1].trim();
+    const descLine = text.split(/\n\n/)[0].replace(/\*\*How it's asked:\*\*\s*/i, '').trim();
+    return descLine || text.split(/\n/)[0];
+  }
+  return '';
+}
+
+function calcReadTime(body: string): number {
+  if (!body) return 5;
+  const words = body.split(/\s+/).filter(Boolean).length;
+  return Math.max(5, Math.round(words / 250));
+}
+
+const articles = allArticles.map((a: any) => ({
+  id: a.id,
+  href: a.id.replace(/^coding-interview\//, '/coding-interview/').replace(/\.md$/, ''),
+  title: a.data?.title || a.id,
+  description: extractDescription(a.body),
+  difficulty: a.data?.difficulty,
+  readTime: calcReadTime(a.body),
+  listenTime: Math.round(calcReadTime(a.body) * 1.4),
+  tags: a.data?.tags?.slice(0, 6) || [],
+}));
+
+articles.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+---
+
+<BaseLayout title="Coding Interview Prep" description="25 in-depth Coding Interview Prep articles covering all major algorithm patterns, ML coding, Python internals, and interview strategy." activeNav="coding-interview">
+  <div class="category-page">
+    <header class="category-header">
+      <p class="category-eyebrow">CATEGORY</p>
+      <h1 class="category-title">Coding Interview Prep</h1>
+      <p class="category-subtitle">
+        {articles.length} in-depth articles covering all major algorithm patterns, ML coding, Python internals, and interview strategy.
+      </p>
+    </header>
+
+    <div class="article-grid">
+      {articles.map(article => (
+        <ArticleCard
+          href={article.href}
+          title={article.title}
+          description={article.description}
+          category="Coding Interview"
+          difficulty={article.difficulty}
+          readTime={article.readTime}
+          listenTime={article.listenTime}
+          tags={article.tags}
+        />
+      ))}
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .category-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+  }
+  .category-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+  .category-eyebrow {
+    color: var(--color-accent);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    margin: 0 0 0.5rem;
+  }
+  .category-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0 0 1rem;
+  }
+  .category-subtitle {
+    font-size: 1.1rem;
+    color: var(--color-text-secondary);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .article-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+</style>

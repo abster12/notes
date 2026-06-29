@@ -1,0 +1,98 @@
+---
+export interface Props {
+  headings: { depth: number; slug: string; text: string }[];
+}
+const { headings } = Astro.props;
+const filtered = headings.filter(h => h.depth === 2 || h.depth === 3);
+---
+
+{filtered.length > 0 && (
+  <nav class="toc">
+    <h4 class="toc-title">On this page</h4>
+    <ul class="toc-list">
+      {filtered.map(heading => (
+        <li class:list={['toc-item', `depth-${heading.depth}`]}>
+          <a href={`#${heading.slug}`} class="toc-link" data-toc-link={heading.slug}>
+            {heading.text}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+)}
+
+<style>
+  .toc {
+    font-size: 0.85rem;
+    border-left: 2px solid var(--color-border);
+    padding-left: 1rem;
+  }
+  .toc-title {
+    color: var(--color-text-secondary);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    margin: 0 0 0.75rem;
+  }
+  .toc-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .toc-item {
+    margin: 0.3rem 0;
+  }
+  .toc-item.depth-3 {
+    padding-left: 0.75rem;
+    font-size: 0.8em;
+  }
+  .toc-link {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    display: block;
+    padding: 0.15rem 0;
+    border-left: 2px solid transparent;
+    margin-left: -1rem;
+    padding-left: calc(1rem - 2px);
+    transition: all 150ms;
+  }
+  .toc-link:hover {
+    color: var(--color-accent);
+  }
+  .toc-link.active {
+    color: var(--color-accent);
+    border-left-color: var(--color-accent);
+  }
+</style>
+
+<script>
+  // TOC scroll spy: highlight current section
+  document.addEventListener('DOMContentLoaded', () => {
+    const tocLinks = document.querySelectorAll('[data-toc-link]');
+    if (tocLinks.length === 0) return;
+
+    const headings = Array.from(tocLinks).map(link => {
+      const slug = (link as HTMLElement).dataset.tocLink;
+      return document.getElementById(slug || '');
+    }).filter(Boolean) as HTMLElement[];
+
+    if (headings.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const id = entry.target.id;
+          const link = document.querySelector(`[data-toc-link="${id}"]`);
+          if (entry.isIntersecting) {
+            tocLinks.forEach(l => l.classList.remove('active'));
+            link?.classList.add('active');
+          }
+        }
+      },
+      { rootMargin: '-20% 0px -75% 0px', threshold: 0 }
+    );
+
+    headings.forEach(h => observer.observe(h));
+  });
+</script>
