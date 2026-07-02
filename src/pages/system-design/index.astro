@@ -1,7 +1,8 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import ArticleCard from '../../components/ArticleCard.astro';
+import CategorySection from '../../components/CategorySection.astro';
 import { getCollection } from 'astro:content';
+import { systemDesignCategories } from '../../data/articleCategories';
 
 const allArticles = await getCollection('articles', (entry: any) => entry.id.startsWith('system-design/'));
 
@@ -10,9 +11,7 @@ function extractDescription(body: string): string {
   if (!body) return '';
   const match = body.match(/## Summary & Interview Framing\s*\n\n([\s\S]*?)(?=\n---|\n##)/);
   if (match) {
-    // Get the "How it's asked" line and the paragraph above it
     const text = match[1].trim();
-    // Skip the "How it's asked:" line and grab the descriptive paragraph
     const descLine = text.split(/\n\n/)[0].replace(/\*\*How it's asked:\*\*\s*/i, '').trim();
     return descLine || text.split(/\n/)[0];
   }
@@ -27,41 +26,69 @@ function calcReadTime(body: string): number {
 }
 
 const base = import.meta.env.BASE_URL;
-const articles = allArticles.map((a: any) => ({
-  id: a.id,
-  href: `${base}${a.id.replace(/^system-design\//, 'system-design/').replace(/\.md$/, '')}`,
-  title: a.data?.title || a.id,
-  description: extractDescription(a.body),
-  difficulty: a.data?.difficulty,
-  readTime: calcReadTime(a.body),
-  listenTime: Math.round(calcReadTime(a.body) * 1.4),
-  tags: a.data?.tags?.slice(0, 6) || [],
-}));
 
-articles.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+// Build article list with category info
+const articles = allArticles.map((a: any) => {
+  const slug = a.id.replace(/^system-design\//, '').replace(/\.md$/, '');
+  return {
+    id: a.id,
+    slug,
+    href: `${base}${a.id.replace(/^system-design\//, 'system-design/').replace(/\.md$/, '')}`,
+    title: a.data?.title || a.id,
+    description: extractDescription(a.body),
+    difficulty: a.data?.difficulty,
+    readTime: calcReadTime(a.body),
+    listenTime: Math.round(calcReadTime(a.body) * 1.4),
+    tags: a.data?.tags?.slice(0, 6) || [],
+    category: systemDesignCategories[slug] || 'Other',
+  };
+});
+
+// Group by category in display order
+const categoryOrder = [
+  'Foundations',
+  'Databases & Storage',
+  'Caching & Performance',
+  'Messaging & Event-Driven',
+  'Observability & DevOps',
+  'Real-World System Designs',
+  'AI/ML Infrastructure',
+  'Other',
+];
+
+const grouped: Record<string, typeof articles> = {};
+for (const cat of categoryOrder) {
+  const inCat = articles.filter(a => a.category === cat).sort((a, b) => a.title.localeCompare(b.title));
+  if (inCat.length > 0) grouped[cat] = inCat;
+}
 ---
 
-<BaseLayout title="System Design" description="49 in-depth System Design articles covering distributed systems, databases, caching, messaging, ML infrastructure, and real-world architecture." activeNav="system-design">
+<BaseLayout title="System Design" description="{articles.length} in-depth System Design articles covering distributed systems, databases, caching, messaging, ML infrastructure, and real-world architecture." activeNav="system-design">
   <div class="category-page">
-    <header class="category-header">
+    <header class="page-header">
       <p class="category-eyebrow">CATEGORY</p>
       <h1 class="category-title">System Design</h1>
       <p class="category-subtitle">
-        {articles.length} in-depth articles covering distributed systems, databases, caching, messaging, ML infrastructure, and real-world architecture.
+        {articles.length} in-depth articles across {Object.keys(grouped).length} topics — distributed systems, databases, caching, messaging, ML infrastructure, and real-world architecture.
       </p>
     </header>
 
-    <div class="article-grid">
-      {articles.map(article => (
-        <ArticleCard
-          href={article.href}
-          title={article.title}
-          description={article.description}
-          category="System Design"
-          difficulty={article.difficulty}
-          readTime={article.readTime}
-          listenTime={article.listenTime}
-          tags={article.tags}
+    <div class="category-list">
+      {Object.entries(grouped).map(([catName, catArticles]) => (
+        <CategorySection
+          title={catName}
+          count={catArticles.length}
+          articles={catArticles.map(a => ({
+            href: a.href,
+            title: a.title,
+            description: a.description,
+            category: catName,
+            difficulty: a.difficulty,
+            readTime: a.readTime,
+            listenTime: a.listenTime,
+            tags: a.tags,
+          }))}
+          defaultOpen={catArticles.length <= 5}
         />
       ))}
     </div>
@@ -74,7 +101,7 @@ articles.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
     margin: 0 auto;
     padding: 3rem 1.5rem;
   }
-  .category-header {
+  .page-header {
     text-align: center;
     margin-bottom: 3rem;
   }
@@ -84,6 +111,7 @@ articles.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
     font-weight: 600;
     letter-spacing: 0.1em;
     margin: 0 0 0.5rem;
+    text-transform: uppercase;
   }
   .category-title {
     font-size: 2.5rem;
@@ -95,10 +123,16 @@ articles.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
     color: var(--color-text-secondary);
     max-width: 600px;
     margin: 0 auto;
+    line-height: 1.6;
   }
-  .article-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1.5rem;
+  .category-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  @media (max-width: 768px) {
+    .category-title {
+      font-size: 2rem;
+    }
   }
 </style>

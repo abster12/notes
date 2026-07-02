@@ -1,0 +1,166 @@
+---
+import ArticleCard from './ArticleCard.astro';
+
+export interface Props {
+  title: string;
+  count: number;
+  articles: Array<{
+    href: string;
+    title: string;
+    description?: string;
+    category?: string;
+    difficulty?: string;
+    readTime?: number;
+    listenTime?: number;
+    tags?: string[];
+  }>;
+  defaultOpen?: boolean;
+}
+
+const { title, count, articles, defaultOpen = false } = Astro.props;
+const sectionId = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+---
+
+<div class="category-section">
+  <button
+    class="category-header"
+    type="button"
+    aria-expanded={defaultOpen ? "true" : "false"}
+    aria-controls={`${sectionId}-content`}
+    id={`${sectionId}-toggle`}
+    data-collapse-toggle
+  >
+    <span class="category-header-text">
+      <span class="category-header-title">{title}</span>
+      <span class="category-header-count">{count} article{count !== 1 ? 's' : ''}</span>
+    </span>
+    <svg class="category-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="6 9 12 15 18 9"></polyline>
+    </svg>
+  </button>
+  <div
+    class="category-content"
+    id={`${sectionId}-content`}
+    role="region"
+    aria-labelledby={`${sectionId}-toggle`}
+    style={defaultOpen ? '' : 'display: none;'}
+  >
+    <div class="article-grid">
+      {articles.map(article => (
+        <ArticleCard
+          href={article.href}
+          title={article.title}
+          description={article.description}
+          category={article.category}
+          difficulty={article.difficulty}
+          readTime={article.readTime}
+          listenTime={article.listenTime}
+          tags={article.tags}
+        />
+      ))}
+    </div>
+  </div>
+</div>
+
+<style>
+  .category-section {
+    margin-bottom: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--color-bg-card);
+  }
+  .category-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 1rem 1.25rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    color: var(--color-text);
+    transition: background 150ms;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .category-header:hover {
+    background: var(--color-bg-code);
+  }
+  .category-header:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+  }
+  .category-header-text {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+  .category-header-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+  .category-header-count {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    font-family: var(--font-code);
+  }
+  .category-chevron {
+    flex-shrink: 0;
+    transition: transform 250ms ease;
+    color: var(--color-text-secondary);
+  }
+  .category-header[aria-expanded="true"] .category-chevron {
+    transform: rotate(180deg);
+  }
+  .category-content {
+    border-top: 1px solid var(--color-border);
+    padding: 1.25rem;
+    animation: categoryExpand 200ms ease-out;
+  }
+  @keyframes categoryExpand {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .article-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+  }
+  @media (max-width: 768px) {
+    .article-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script is:inline>
+  // Collapsible toggle behavior — runs immediately, no framework needed
+  (function() {
+    document.querySelectorAll('[data-collapse-toggle]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        const expanded = btn.getAttribute('aria-expanded') === 'true';
+        const contentId = btn.getAttribute('aria-controls');
+        const content = document.getElementById(contentId);
+        if (!content) return;
+
+        if (expanded) {
+          btn.setAttribute('aria-expanded', 'false');
+          content.style.display = 'none';
+        } else {
+          btn.setAttribute('aria-expanded', 'true');
+          content.style.display = 'block';
+        }
+      });
+    });
+  })();
+</script>
