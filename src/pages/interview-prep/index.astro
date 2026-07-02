@@ -1,0 +1,99 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ArticleCard from '../../components/ArticleCard.astro';
+import { getCollection } from 'astro:content';
+
+const allArticles = await getCollection('articles', (entry: any) => entry.id.startsWith('interview-prep/'));
+
+function extractDescription(body: string): string {
+  if (!body) return '';
+  // Try frontmatter description first
+  const fmMatch = body.match(/^---[\s\S]*?description:\s*["']?([^"'\n]+)["']?/m);
+  if (fmMatch) return fmMatch[1].trim();
+  // Fallback: first non-heading paragraph
+  const para = body.split('\n').find(l => l.trim() && !l.startsWith('#') && !l.startsWith('>') && !l.startsWith('-') && !l.startsWith('|'));
+  return (para || '').trim().slice(0, 220);
+}
+
+function calcReadTime(body: string): number {
+  if (!body) return 5;
+  const words = body.split(/\s+/).filter(Boolean).length;
+  return Math.max(5, Math.round(words / 250));
+}
+
+const base = import.meta.env.BASE_URL;
+const articles = allArticles.map((a: any) => ({
+  id: a.id,
+  href: `${base}${a.id.replace(/^interview-prep\//, 'interview-prep/').replace(/\.md$/, '')}`,
+  title: a.data?.title || a.id,
+  description: extractDescription(a.body),
+  difficulty: a.data?.difficulty,
+  readTime: a.data?.estimated_reading_time || calcReadTime(a.body),
+  listenTime: Math.round((a.data?.estimated_reading_time || calcReadTime(a.body)) * 1.4),
+  tags: a.data?.tags?.slice(0, 6) || [],
+}));
+
+articles.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+---
+
+<BaseLayout title="Interview Prep" description="System design interview prep for senior backend roles at AI/agentic fintechs. Flagship questions, ideal answers, failure modes, and the principles that separate Senior from Staff." activeNav="interview-prep">
+  <div class="category-page">
+    <header class="category-header">
+      <p class="category-eyebrow">CATEGORY</p>
+      <h1 class="category-title">Interview Prep</h1>
+      <p class="category-subtitle">
+        System design interview prep for senior backend roles at AI/agentic fintechs. Flagship questions, ideal answers, failure modes, and the principles that separate Senior from Staff.
+      </p>
+    </header>
+
+    <div class="article-grid">
+      {articles.map(article => (
+        <ArticleCard
+          href={article.href}
+          title={article.title}
+          description={article.description}
+          category="Interview Prep"
+          difficulty={article.difficulty}
+          readTime={article.readTime}
+          listenTime={article.listenTime}
+          tags={article.tags}
+        />
+      ))}
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .category-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+  }
+  .category-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+  .category-eyebrow {
+    color: var(--color-accent);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    margin: 0 0 0.5rem;
+  }
+  .category-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0 0 1rem;
+  }
+  .category-subtitle {
+    font-size: 1.1rem;
+    color: var(--color-text-secondary);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .article-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+</style>

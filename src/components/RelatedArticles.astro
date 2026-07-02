@@ -4,7 +4,7 @@ export interface RelatedArticle {
   id: string;
   title: string;
   readTime?: number;
-  category: 'system-design' | 'coding-interview';
+  category: 'system-design' | 'coding-interview' | 'interview-prep' | 'glossary';
 }
 
 export interface Props {
@@ -23,9 +23,11 @@ const currentTagSet = new Set(currentTags || []);
 const scored = candidates
   .filter((a) => a.id !== currentSlug)
   .map((a) => {
-    const cat = a.id.startsWith('system-design/') ? 'system-design' : 'coding-interview';
+    let cat: 'system-design' | 'coding-interview' | 'interview-prep' | 'glossary' = 'glossary';
+    if (a.id.startsWith('system-design/')) cat = 'system-design';
+    else if (a.id.startsWith('coding-interview/')) cat = 'coding-interview';
+    else if (a.id.startsWith('interview-prep/')) cat = 'interview-prep';
     // We don't have tags for candidates here, so score primarily by category
-    // In a future iteration, pass candidate tags too.
     const sameCategory = cat === currentCategory ? 1 : 0;
     return { article: a, category: cat, score: sameCategory };
   })
@@ -35,6 +37,13 @@ const scored = candidates
 function urlFor(id: string): string {
   return `${base}${id.replace(/\.md$/, '')}/`;
 }
+
+const categoryLabel: Record<string, string> = {
+  'system-design': 'System Design',
+  'coding-interview': 'Coding Interview',
+  'interview-prep': 'Interview Prep',
+  'glossary': 'Glossary',
+};
 ---
 
 {scored.length > 0 && (
@@ -45,7 +54,7 @@ function urlFor(id: string): string {
         <a href={urlFor(article.id)} class="related-card">
           <div class="related-card-title">{article.title}</div>
           <div class="related-card-meta">
-            {category === 'system-design' ? 'System Design' : 'Coding Interview'}
+            {categoryLabel[category] || category}
             {article.readTime && <> · {article.readTime} min</>}
           </div>
         </a>
