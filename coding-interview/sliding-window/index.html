@@ -1,0 +1,1268 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Sliding Window — Coding Interview Prep · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link active" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-core-idea" class="toc-link" data-toc-link="1-core-idea" data-astro-cid-p33bl5ka>1. Core Idea</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#when-to-suspect-sliding-window" class="toc-link" data-toc-link="when-to-suspect-sliding-window" data-astro-cid-p33bl5ka>When to suspect sliding window</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-two-flavors-fixed-size-vs-variable-size" class="toc-link" data-toc-link="2-two-flavors-fixed-size-vs-variable-size" data-astro-cid-p33bl5ka>2. Two Flavors: Fixed-Size vs Variable-Size</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#fixed-size-window" class="toc-link" data-toc-link="fixed-size-window" data-astro-cid-p33bl5ka>Fixed-Size Window</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#variable-size-window" class="toc-link" data-toc-link="variable-size-window" data-astro-cid-p33bl5ka>Variable-Size Window</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-ascii-diagram-fixed-window-slide" class="toc-link" data-toc-link="3-ascii-diagram-fixed-window-slide" data-astro-cid-p33bl5ka>3. ASCII Diagram: Fixed Window Slide</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#4-ascii-diagram-variable-window-expandcontract" class="toc-link" data-toc-link="4-ascii-diagram-variable-window-expandcontract" data-astro-cid-p33bl5ka>4. ASCII Diagram: Variable Window Expand/Contract</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#5-template-comparison-table" class="toc-link" data-toc-link="5-template-comparison-table" data-astro-cid-p33bl5ka>5. Template Comparison Table</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#6-fixed-size-window-problems" class="toc-link" data-toc-link="6-fixed-size-window-problems" data-astro-cid-p33bl5ka>6. Fixed-Size Window Problems</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#61-maximum-sum-subarray-of-size-k" class="toc-link" data-toc-link="61-maximum-sum-subarray-of-size-k" data-astro-cid-p33bl5ka>6.1 Maximum Sum Subarray of Size K</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#62-average-of-each-window-of-size-k-conceptual" class="toc-link" data-toc-link="62-average-of-each-window-of-size-k-conceptual" data-astro-cid-p33bl5ka>6.2 Average of Each Window of Size K (conceptual)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#63-find-all-anagrams-in-a-string-conceptual" class="toc-link" data-toc-link="63-find-all-anagrams-in-a-string-conceptual" data-astro-cid-p33bl5ka>6.3 Find All Anagrams in a String (conceptual)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#64-permutation-in-string-leetcode-567--full-solution-below-in-section-9" class="toc-link" data-toc-link="64-permutation-in-string-leetcode-567--full-solution-below-in-section-9" data-astro-cid-p33bl5ka>6.4 Permutation in String (LeetCode 567) — full solution below in section 9.</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#7-variable-size-window-problems" class="toc-link" data-toc-link="7-variable-size-window-problems" data-astro-cid-p33bl5ka>7. Variable-Size Window Problems</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#71-longest-substring-without-repeating-characters-leetcode-3" class="toc-link" data-toc-link="71-longest-substring-without-repeating-characters-leetcode-3" data-astro-cid-p33bl5ka>7.1 Longest Substring Without Repeating Characters (LeetCode 3)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#72-minimum-window-substring-leetcode-76" class="toc-link" data-toc-link="72-minimum-window-substring-leetcode-76" data-astro-cid-p33bl5ka>7.2 Minimum Window Substring (LeetCode 76)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#73-longest-repeating-character-replacement-leetcode-424" class="toc-link" data-toc-link="73-longest-repeating-character-replacement-leetcode-424" data-astro-cid-p33bl5ka>7.3 Longest Repeating Character Replacement (LeetCode 424)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#74-max-consecutive-ones-iii-leetcode-1004" class="toc-link" data-toc-link="74-max-consecutive-ones-iii-leetcode-1004" data-astro-cid-p33bl5ka>7.4 Max Consecutive Ones III (LeetCode 1004)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#75-fruits-into-baskets-leetcode-904" class="toc-link" data-toc-link="75-fruits-into-baskets-leetcode-904" data-astro-cid-p33bl5ka>7.5 Fruits into Baskets (LeetCode 904)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#8-sliding-window-maximum-leetcode-239--deque" class="toc-link" data-toc-link="8-sliding-window-maximum-leetcode-239--deque" data-astro-cid-p33bl5ka>8. Sliding Window Maximum (LeetCode 239) — Deque</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ascii-diagram-deque-for-sliding-window-max" class="toc-link" data-toc-link="ascii-diagram-deque-for-sliding-window-max" data-astro-cid-p33bl5ka>ASCII Diagram: Deque for Sliding Window Max</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#9-permutation-in-string-leetcode-567" class="toc-link" data-toc-link="9-permutation-in-string-leetcode-567" data-astro-cid-p33bl5ka>9. Permutation in String (LeetCode 567)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#10-sliding-window-median-two-heaps--conceptual" class="toc-link" data-toc-link="10-sliding-window-median-two-heaps--conceptual" data-astro-cid-p33bl5ka>10. Sliding Window Median (Two Heaps) — Conceptual</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#11-frequency-count-in-window--technique" class="toc-link" data-toc-link="11-frequency-count-in-window--technique" data-astro-cid-p33bl5ka>11. Frequency Count in Window — Technique</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#12-window-with-constraint-at-most-k-pattern" class="toc-link" data-toc-link="12-window-with-constraint-at-most-k-pattern" data-astro-cid-p33bl5ka>12. Window With Constraint: “At Most K” Pattern</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#longest-window-at-most-k-template-longest-valid" class="toc-link" data-toc-link="longest-window-at-most-k-template-longest-valid" data-astro-cid-p33bl5ka>Longest-window-at-most-K template (longest valid)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#counting-exactly-k-via-at-most-k-identity" class="toc-link" data-toc-link="counting-exactly-k-via-at-most-k-identity" data-astro-cid-p33bl5ka>Counting exactly K via at-most-K identity</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#13-at-most-k-changes-variant-longest-repeating-family" class="toc-link" data-toc-link="13-at-most-k-changes-variant-longest-repeating-family" data-astro-cid-p33bl5ka>13. At-Most-K Changes Variant (Longest Repeating Family)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#14-common-mistakes-and-pitfalls" class="toc-link" data-toc-link="14-common-mistakes-and-pitfalls" data-astro-cid-p33bl5ka>14. Common Mistakes and Pitfalls</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#15-complexity-cheat-sheet" class="toc-link" data-toc-link="15-complexity-cheat-sheet" data-astro-cid-p33bl5ka>15. Complexity Cheat Sheet</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#16-pattern-recognition-table" class="toc-link" data-toc-link="16-pattern-recognition-table" data-astro-cid-p33bl5ka>16. Pattern Recognition Table</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#quick-decision-flow" class="toc-link" data-toc-link="quick-decision-flow" data-astro-cid-p33bl5ka>Quick decision flow</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#17-practice-progression" class="toc-link" data-toc-link="17-practice-progression" data-astro-cid-p33bl5ka>17. Practice Progression</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#19-final-tips-for-interviews" class="toc-link" data-toc-link="19-final-tips-for-interviews" data-astro-cid-p33bl5ka>19. Final Tips for Interviews</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/coding-interview/" class="article-category" data-astro-cid-sgg5joot>Coding Interview</a><h1 class="article-title" data-astro-cid-sgg5joot>Sliding Window — Coding Interview Prep</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-medium" data-astro-cid-sgg5joot>Medium</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 45 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 63 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>coding-interview</span><span class="tag" data-astro-cid-sgg5joot>sliding-window</span><span class="tag" data-astro-cid-sgg5joot>java</span><span class="tag" data-astro-cid-sgg5joot>algorithms</span><span class="tag" data-astro-cid-sgg5joot>two-pointers</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="sliding-window--master-guide">Sliding Window — Master Guide</h1>
+<p>The sliding window is one of the most frequently tested patterns in coding interviews. It converts nested O(n^2) or O(n^3) loops over contiguous subarrays/substrings into a single O(n) pass by reusing computation from the previous window instead of recomputing from scratch. Master this pattern and a large family of “subarray / substring with constraint” problems becomes mechanical.</p>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A pattern that converts nested O(n²) loops over contiguous subarrays/substrings into O(n) by maintaining running window state.</p>
+<p><strong>How it’s asked:</strong> “Longest substring without repeating characters, minimum window substring, max consecutive ones III, subarrays with K different integers — ‘contiguous subarray/substring with constraint.’”</p>
+<hr>
+<h2 id="1-core-idea">1. Core Idea</h2>
+<p>A window is a contiguous range [left, right] over an array or string. As the window slides to the right, you:</p>
+<ol>
+<li>Add the new element entering on the right.</li>
+<li>Remove the element leaving on the left (if the window is fixed-size, or when shrinking a variable window).</li>
+<li>Update the answer using the running state (sum, count, frequency map, deque, etc.).</li>
+</ol>
+<p>The key insight: <strong>never recompute the window’s state from scratch</strong>. Carry it forward incrementally.</p>
+<h3 id="when-to-suspect-sliding-window">When to suspect sliding window</h3>
+<ul>
+<li>“Find the longest / shortest / maximum / minimum contiguous subarray or substring such that …”</li>
+<li>“Number of subarrays with sum exactly / at most K”</li>
+<li>“Substring containing all characters of another string”</li>
+<li>“Maximum in every window of size K”</li>
+<li>A brute force solution involves two nested loops where the inner loop scans a contiguous chunk</li>
+</ul>
+<p>If the problem asks about subsequences (not contiguous) or needs a global sort, sliding window is usually NOT the right tool.</p>
+<hr>
+<h2 id="2-two-flavors-fixed-size-vs-variable-size">2. Two Flavors: Fixed-Size vs Variable-Size</h2>
+<h3 id="fixed-size-window">Fixed-Size Window</h3>
+<p>The window width K is given. Slide it left to right one index at a time. Every step removes <code>arr[left]</code> and adds <code>arr[right]</code>. Answer is the best state seen across all windows.</p>
+<p>Typical problems:</p>
+<ul>
+<li>Maximum sum subarray of size K</li>
+<li>Average of each window of size K</li>
+<li>Permutation in String (window of size len(pattern))</li>
+<li>Find All Anagrams in a String (window of size len(p))</li>
+<li>Sliding Window Maximum / Median</li>
+</ul>
+<h3 id="variable-size-window">Variable-Size Window</h3>
+<p>K is unknown; you are optimizing the window’s length or counting windows that satisfy a constraint. The window expands by moving <code>right</code> and contracts by moving <code>left</code> until the constraint is satisfied again. Two sub-patterns:</p>
+<ul>
+<li><strong>Longest valid window</strong> — expand aggressively, shrink only when invalid, track max length.</li>
+<li><strong>Shortest valid window</strong> — expand until valid, then shrink as much as possible while staying valid, track min length.</li>
+<li><strong>Count windows with at-most-K constraint</strong> — use the identity <code>exactly(K) = atMost(K) - atMost(K-1)</code>.</li>
+</ul>
+<p>Typical problems:</p>
+<ul>
+<li>Longest Substring Without Repeating Characters</li>
+<li>Minimum Window Substring</li>
+<li>Longest Repeating Character Replacement</li>
+<li>Max Consecutive Ones III</li>
+<li>Fruits into Baskets</li>
+<li>Subarrays with K Different Integers</li>
+<li>Longest Substring with At Most K Distinct Characters</li>
+</ul>
+<hr>
+<h2 id="3-ascii-diagram-fixed-window-slide">3. ASCII Diagram: Fixed Window Slide</h2>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Array:  [ 2, 1, 5, 1, 3, 2 ]     K = 3</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 0 (form first window, sum = 2+1+5 = 8):</span></span>
+<span class="line"><span> index:   0  1  2  3  4  5</span></span>
+<span class="line"><span>        [ 2  1  5  1  3  2 ]</span></span>
+<span class="line"><span>         ^^^^^^^</span></span>
+<span class="line"><span>         left=0 right=2      maxSum = 8</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 1 (slide right by 1):</span></span>
+<span class="line"><span>        [ 2  1  5  1  3  2 ]</span></span>
+<span class="line"><span>               .  ^^^^^^^</span></span>
+<span class="line"><span>            remove 1 (idx0), add 1 (idx3)</span></span>
+<span class="line"><span>            left=1 right=3      sum = 8 - 2 + 1 = 7   maxSum = 8</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 2 (slide right by 1):</span></span>
+<span class="line"><span>        [ 2  1  5  1  3  2 ]</span></span>
+<span class="line"><span>                     ^^^^^^^</span></span>
+<span class="line"><span>            remove 1 (idx1), add 3 (idx4)</span></span>
+<span class="line"><span>            left=2 right=4      sum = 7 - 1 + 3 = 9   maxSum = 9</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 3 (slide right by 1):</span></span>
+<span class="line"><span>        [ 2  1  5  1  3  2 ]</span></span>
+<span class="line"><span>                        ^^^^^^^</span></span>
+<span class="line"><span>            remove 5 (idx2), add 2 (idx5)</span></span>
+<span class="line"><span>            left=3 right=5      sum = 9 - 5 + 2 = 6   maxSum = 9</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Result: maxSum = 9  (window [5,1,3])</span></span></code></pre>
+<p>The work per slide is O(1): one subtraction and one addition. Total O(n) instead of O(n*K).</p>
+<hr>
+<h2 id="4-ascii-diagram-variable-window-expandcontract">4. ASCII Diagram: Variable Window Expand/Contract</h2>
+<p>Using “Longest Substring Without Repeating Characters” on <code>s = "abcabcbb"</code>:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>s = a b c a b c b b</span></span>
+<span class="line"><span>i:  0 1 2 3 4 5 6 7</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Legend:  R = right (expand),  L = left (shrink),  [L..R] = current window</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>R=0:  [a]                L=0 R=0  valid, len=1</span></span>
+<span class="line"><span>R=1:  [a b]              L=0 R=1  valid, len=2</span></span>
+<span class="line"><span>R=2:  [a b c]            L=0 R=2  valid, len=3   best=3</span></span>
+<span class="line"><span>R=3:  [a b c a]  DUPLICATE 'a'</span></span>
+<span class="line"><span>        shrink: L 0->1   [b c a]   valid, len=3</span></span>
+<span class="line"><span>R=4:  [b c a b]  DUPLICATE 'b'</span></span>
+<span class="line"><span>        shrink: L 1->2   [c a b]   valid, len=3</span></span>
+<span class="line"><span>R=5:  [c a b c]  DUPLICATE 'c'</span></span>
+<span class="line"><span>        shrink: L 2->3   [a b c]   valid, len=3</span></span>
+<span class="line"><span>R=6:  [a b c b]  DUPLICATE 'b'</span></span>
+<span class="line"><span>        shrink: L 3->4   [c b]     valid, len=2</span></span>
+<span class="line"><span>        shrink: L 4->5   [b]       (if needed)     -> actually [c b] fine</span></span>
+<span class="line"><span>R=7:  [c b b]  DUPLICATE 'b'</span></span>
+<span class="line"><span>        shrink: L 5->6   [b]       valid, len=1</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Best overall = 3  ("abc" or "bca" or "cab")</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Visual of expand/contract motion:</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>      expand ----></span></span>
+<span class="line"><span>  L_________________________</span></span>
+<span class="line"><span>  |  [===window===]</span></span>
+<span class="line"><span>  |       shrink &#x3C;---- (when invalid)</span></span>
+<span class="line"><span>  v</span></span></code></pre>
+<p>The general motion: <code>right</code> always marches forward (never decreases). <code>left</code> only moves forward when the window becomes invalid, contracting until valid again. Both pointers travel at most n steps → O(n).</p>
+<hr>
+<h2 id="5-template-comparison-table">5. Template Comparison Table</h2>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Fixed-Size Window</th>
+<th>Variable-Size Window (longest)</th>
+<th>Variable-Size Window (shortest)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Window size</td>
+<td>Known K</td>
+<td>Unknown, maximize</td>
+<td>Unknown, minimize</td>
+</tr>
+<tr>
+<td>Outer loop</td>
+<td>right from K-1 to n-1 (after first window)</td>
+<td>right from 0 to n-1</td>
+<td>right from 0 to n-1</td>
+</tr>
+<tr>
+<td>Inner action</td>
+<td>subtract arr[right-K], add arr[right]</td>
+<td>while invalid: remove arr[left], left++</td>
+<td>while valid: remove arr[left], left++</td>
+</tr>
+<tr>
+<td>Answer update</td>
+<td>every window</td>
+<td>when valid, max = max(max, right-left+1)</td>
+<td>when valid, min = min(min, right-left+1)</td>
+</tr>
+<tr>
+<td>Termination</td>
+<td>right reaches end</td>
+<td>right reaches end</td>
+<td>right reaches end</td>
+</tr>
+<tr>
+<td>Complexity</td>
+<td>O(n) time, O(1) extra (or O(K))</td>
+<td>O(n) time, O(alphabet) extra</td>
+<td>O(n) time, O(alphabet) extra</td>
+</tr>
+<tr>
+<td>Key invariant</td>
+<td>window size == K</td>
+<td>window always valid after inner loop</td>
+<td>window as small as possible while valid</td>
+</tr>
+<tr>
+<td>Typical state</td>
+<td>running sum / count</td>
+<td>frequency map / set / counter</td>
+<td>frequency map / counter</td>
+</tr>
+<tr>
+<td>Examples</td>
+<td>Max sum size K, Average K, Anagrams</td>
+<td>Longest no-repeat, Longest Repeating Replacement, Fruits in Baskets</td>
+<td>Min Window Substring, Min Size Subarray Sum</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="6-fixed-size-window-problems">6. Fixed-Size Window Problems</h2>
+<h3 id="61-maximum-sum-subarray-of-size-k">6.1 Maximum Sum Subarray of Size K</h3>
+<p>Given an array of integers and an integer K, find the maximum sum of any contiguous subarray of size K.</p>
+<p>Brute force: check every starting index, sum K elements → O(n*K). Sliding window: O(n).</p>
+<h4 id="java-solution">Java Solution</h4>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">public</span><span style="color:#F97583"> class</span><span style="color:#B392F0"> MaxSumSubarraySizeK</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> static</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> maxSum</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">arr</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> k</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (arr </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> null</span><span style="color:#F97583"> ||</span><span style="color:#E1E4E8"> arr.length </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> k </span><span style="color:#F97583">||</span><span style="color:#E1E4E8"> k </span><span style="color:#F97583">&#x3C;=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // 1. Build first window of size k</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> windowSum </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> k; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) windowSum </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> arr[i];</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> maxSum </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> windowSum;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // 2. Slide the window one step at a time</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> right </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> k; right </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> arr.length; right</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            windowSum </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> arr[right] </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> arr[right </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> k]; </span><span style="color:#6A737D">// add new, drop old</span></span>
+<span class="line"><span style="color:#E1E4E8">            maxSum </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(maxSum, windowSum);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> maxSum;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> static</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> main</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">args</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        System.out.</span><span style="color:#B392F0">println</span><span style="color:#E1E4E8">(</span><span style="color:#B392F0">maxSum</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">}, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)); </span><span style="color:#6A737D">// 9</span></span>
+<span class="line"><span style="color:#E1E4E8">        System.out.</span><span style="color:#B392F0">println</span><span style="color:#E1E4E8">(</span><span style="color:#B392F0">maxSum</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">}, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">));    </span><span style="color:#6A737D">// 7</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity:</strong> O(n) time, O(1) space.</p>
+<h3 id="62-average-of-each-window-of-size-k-conceptual">6.2 Average of Each Window of Size K (conceptual)</h3>
+<p>Same skeleton, but instead of tracking <code>max</code>, push <code>windowSum / (double) k</code> into a result list at every position. Return the list of averages. Useful when the interviewer asks “given stream / array, return rolling average.”</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">public</span><span style="color:#F97583"> static</span><span style="color:#F97583"> double</span><span style="color:#E1E4E8">[] </span><span style="color:#B392F0">averages</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] arr, </span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> k) {</span></span>
+<span class="line"><span style="color:#F97583">    double</span><span style="color:#E1E4E8">[] res </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> double</span><span style="color:#E1E4E8">[arr.length </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> k </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#F97583">    int</span><span style="color:#E1E4E8"> sum </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">    for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> k; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) sum </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> arr[i];</span></span>
+<span class="line"><span style="color:#E1E4E8">    res[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> sum </span><span style="color:#F97583">/</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">double</span><span style="color:#E1E4E8">) k;</span></span>
+<span class="line"><span style="color:#F97583">    for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> k; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> arr.length; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        sum </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> arr[i] </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> arr[i </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> k];</span></span>
+<span class="line"><span style="color:#E1E4E8">        res[i </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> k </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> sum </span><span style="color:#F97583">/</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">double</span><span style="color:#E1E4E8">) k;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> res;</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="63-find-all-anagrams-in-a-string-conceptual">6.3 Find All Anagrams in a String (conceptual)</h3>
+<p>LeetCode 438. Fixed window of size <code>p.length()</code> sliding over <code>s</code>. Maintain frequency counts of the window and compare against <code>p</code>’s frequency counts. Optimization: track a <code>matches</code> counter of how many characters have equal counts, so each slide is O(1) update with O(alphabet) check avoided. Return starting indices where the window is an anagram.</p>
+<h3 id="64-permutation-in-string-leetcode-567--full-solution-below-in-section-9">6.4 Permutation in String (LeetCode 567) — full solution below in section 9.</h3>
+<hr>
+<h2 id="7-variable-size-window-problems">7. Variable-Size Window Problems</h2>
+<h3 id="71-longest-substring-without-repeating-characters-leetcode-3">7.1 Longest Substring Without Repeating Characters (LeetCode 3)</h3>
+<p>Find the length of the longest substring with all distinct characters.</p>
+<p>Approach: expand <code>right</code>, track last-seen index of each character. When <code>s[right]</code> was seen at index &gt;= <code>left</code>, jump <code>left</code> to <code>seen + 1</code> (no need to shrink one-by-one). Track max length.</p>
+<h4 id="java-solution-1">Java Solution</h4>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">public</span><span style="color:#F97583"> class</span><span style="color:#B392F0"> LongestSubstringNoRepeat</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> lengthOfLongestSubstring</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (s </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> null</span><span style="color:#F97583"> ||</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[] lastSeen </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[</span><span style="color:#79B8FF">128</span><span style="color:#E1E4E8">]; </span><span style="color:#6A737D">// ASCII; -1 means unseen</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#79B8FF"> 128</span><span style="color:#E1E4E8">; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) lastSeen[i] </span><span style="color:#F97583">=</span><span style="color:#F97583"> -</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> left </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, maxLen </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> right </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; right </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">(); right</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(right);</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (lastSeen[c] </span><span style="color:#F97583">>=</span><span style="color:#E1E4E8"> left) {</span></span>
+<span class="line"><span style="color:#6A737D">                // duplicate inside current window -> jump left</span></span>
+<span class="line"><span style="color:#E1E4E8">                left </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> lastSeen[c] </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">            lastSeen[c] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> right;</span></span>
+<span class="line"><span style="color:#E1E4E8">            maxLen </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(maxLen, right </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> left </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> maxLen;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> static</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> main</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">args</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        LongestSubstringNoRepeat sol </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> LongestSubstringNoRepeat</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">        System.out.</span><span style="color:#B392F0">println</span><span style="color:#E1E4E8">(sol.</span><span style="color:#B392F0">lengthOfLongestSubstring</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"abcabcbb"</span><span style="color:#E1E4E8">)); </span><span style="color:#6A737D">// 3</span></span>
+<span class="line"><span style="color:#E1E4E8">        System.out.</span><span style="color:#B392F0">println</span><span style="color:#E1E4E8">(sol.</span><span style="color:#B392F0">lengthOfLongestSubstring</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"bbbbb"</span><span style="color:#E1E4E8">));    </span><span style="color:#6A737D">// 1</span></span>
+<span class="line"><span style="color:#E1E4E8">        System.out.</span><span style="color:#B392F0">println</span><span style="color:#E1E4E8">(sol.</span><span style="color:#B392F0">lengthOfLongestSubstring</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"pwwkew"</span><span style="color:#E1E4E8">));   </span><span style="color:#6A737D">// 4</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Why <code>lastSeen[c] &gt;= left</code>?</strong> A character may have appeared earlier in the string but outside the current window (index &lt; left). That stale sighting is irrelevant; only repeats inside [left, right] force a contraction.</p>
+<p><strong>Complexity:</strong> O(n) time, O(1) space (alphabet of 128).</p>
+<h3 id="72-minimum-window-substring-leetcode-76">7.2 Minimum Window Substring (LeetCode 76)</h3>
+<p>Given strings <code>s</code> and <code>t</code>, return the minimum-length substring of <code>s</code> that contains every character of <code>t</code> (including duplicates). Empty string if none.</p>
+<p>Approach: variable window, “shortest valid” flavor. Build a required frequency map for <code>t</code>. Expand <code>right</code> to include characters; when all required characters are matched, try to shrink <code>left</code> as much as possible while still valid, updating the best substring. Use a <code>formed</code> counter tracking how many unique characters have met their required count.</p>
+<h4 id="java-solution-2">Java Solution</h4>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> java.util.HashMap;</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> java.util.Map;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">public</span><span style="color:#F97583"> class</span><span style="color:#B392F0"> MinimumWindowSubstring</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> String </span><span style="color:#B392F0">minWindow</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">, String </span><span style="color:#FFAB70">t</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (s </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> null</span><span style="color:#F97583"> ||</span><span style="color:#E1E4E8"> t </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> null</span><span style="color:#F97583"> ||</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> t.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">()) </span><span style="color:#F97583">return</span><span style="color:#9ECBFF"> ""</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // frequency required for each char in t</span></span>
+<span class="line"><span style="color:#E1E4E8">        Map&#x3C;</span><span style="color:#F97583">Character</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> need </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> t.</span><span style="color:#B392F0">toCharArray</span><span style="color:#E1E4E8">()) need.</span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(c, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, Integer</span><span style="color:#F97583">::</span><span style="color:#E1E4E8">sum);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">        Map&#x3C;</span><span style="color:#F97583">Character</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> have </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> left </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, formed </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, required </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> need.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> minLen </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Integer.MAX_VALUE, minStart </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> right </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; right </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">(); right</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(right);</span></span>
+<span class="line"><span style="color:#E1E4E8">            have.</span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(c, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, Integer</span><span style="color:#F97583">::</span><span style="color:#E1E4E8">sum);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">            // if this char's count now meets the requirement, increment formed</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (need.</span><span style="color:#B392F0">containsKey</span><span style="color:#E1E4E8">(c) </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> have.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(c).</span><span style="color:#B392F0">intValue</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> need.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(c).</span><span style="color:#B392F0">intValue</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                formed</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">            // try to shrink the window while it remains valid</span></span>
+<span class="line"><span style="color:#F97583">            while</span><span style="color:#E1E4E8"> (formed </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> required </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> left </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> right) {</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (right </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> left </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#F97583"> &#x3C;</span><span style="color:#E1E4E8"> minLen) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                    minLen </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> right </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> left </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">                    minStart </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> left;</span></span>
+<span class="line"><span style="color:#E1E4E8">                }</span></span>
+<span class="line"><span style="color:#F97583">                char</span><span style="color:#E1E4E8"> out </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(left);</span></span>
+<span class="line"><span style="color:#E1E4E8">                have.</span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(out, </span><span style="color:#F97583">-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, Integer</span><span style="color:#F97583">::</span><span style="color:#E1E4E8">sum);</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (need.</span><span style="color:#B392F0">containsKey</span><span style="color:#E1E4E8">(out) </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> have.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(out) </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> need.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(out)) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                    formed</span><span style="color:#F97583">--</span><span style="color:#E1E4E8">;  </span><span style="color:#6A737D">// window no longer satisfies this char</span></span>
+<span class="line"><span style="color:#E1E4E8">                }</span></span>
+<span class="line"><span style="color:#E1E4E8">                left</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> minLen </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> Integer.MAX_VALUE </span><span style="color:#F97583">?</span><span style="color:#9ECBFF"> ""</span><span style="color:#F97583"> :</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">substring</span><span style="color:#E1E4E8">(minStart, minStart </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> minLen);</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> static</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> main</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">args</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        MinimumWindowSubstring sol </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> MinimumWindowSubstring</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">        System.out.</span><span style="color:#B392F0">println</span><span style="color:#E1E4E8">(sol.</span><span style="color:#B392F0">minWindow</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"ADOBECODEBANC"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"ABC"</span><span style="color:#E1E4E8">)); </span><span style="color:#6A737D">// "BANC"</span></span>
+<span class="line"><span style="color:#E1E4E8">        System.out.</span><span style="color:#B392F0">println</span><span style="color:#E1E4E8">(sol.</span><span style="color:#B392F0">minWindow</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"a"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"a"</span><span style="color:#E1E4E8">));               </span><span style="color:#6A737D">// "a"</span></span>
+<span class="line"><span style="color:#E1E4E8">        System.out.</span><span style="color:#B392F0">println</span><span style="color:#E1E4E8">(sol.</span><span style="color:#B392F0">minWindow</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"a"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"aa"</span><span style="color:#E1E4E8">));              </span><span style="color:#6A737D">// ""</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity:</strong> O(n + m) time, O(alphabet) space.</p>
+<h3 id="73-longest-repeating-character-replacement-leetcode-424">7.3 Longest Repeating Character Replacement (LeetCode 424)</h3>
+<p>Given a string <code>s</code> and integer <code>k</code>, find the length of the longest substring containing the same letter after performing at most <code>k</code> character replacements.</p>
+<p>Key insight: a window [left, right] can become all-one-letter with at most <code>k</code> changes if and only if</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>windowLength - maxCharCountInWindow &#x3C;= k</span></span></code></pre>
+<p>You do not need to know WHICH letter is the majority — just the max frequency inside the window. And because <code>maxFreq</code> only ever increases (we never recompute it on shrink — see note below), the condition simplifies to “expand when valid, shrink when invalid.”</p>
+<h4 id="java-solution-3">Java Solution</h4>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">public</span><span style="color:#F97583"> class</span><span style="color:#B392F0"> LongestRepeatingCharacterReplacement</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> characterReplacement</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> k</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[] count </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[</span><span style="color:#79B8FF">26</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> left </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, maxFreq </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, maxLen </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> right </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; right </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">(); right</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(right);</span></span>
+<span class="line"><span style="color:#E1E4E8">            count[c </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'A'</span><span style="color:#E1E4E8">]</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            maxFreq </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(maxFreq, count[c </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'A'</span><span style="color:#E1E4E8">]);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">            // window is invalid if changes needed > k</span></span>
+<span class="line"><span style="color:#F97583">            while</span><span style="color:#E1E4E8"> ((right </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> left </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> maxFreq </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> k) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                count[s.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(left) </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'A'</span><span style="color:#E1E4E8">]</span><span style="color:#F97583">--</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">                left</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#6A737D">                // Note: we do NOT recompute maxFreq here. See explanation.</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">            maxLen </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(maxLen, right </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> left </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> maxLen;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> static</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> main</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">args</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        LongestRepeatingCharacterReplacement sol </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> LongestRepeatingCharacterReplacement</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">        System.out.</span><span style="color:#B392F0">println</span><span style="color:#E1E4E8">(sol.</span><span style="color:#B392F0">characterReplacement</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"ABAB"</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">));      </span><span style="color:#6A737D">// 4</span></span>
+<span class="line"><span style="color:#E1E4E8">        System.out.</span><span style="color:#B392F0">println</span><span style="color:#E1E4E8">(sol.</span><span style="color:#B392F0">characterReplacement</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"AABABBA"</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">));  </span><span style="color:#6A737D">// 4</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Why not recompute <code>maxFreq</code> on shrink?</strong> <code>maxFreq</code> represents the best majority count seen so far in any window. A larger window than the current best can only exist if its <code>maxFreq</code> is at least as large as the current best’s <code>maxFreq</code>. So overestimating <code>maxFreq</code> is safe — it just makes the validity test stricter, never lax. This keeps the loop O(n). A correct but slower version would recompute <code>maxFreq</code> by scanning <code>count</code> each shrink, giving O(26n) = still O(n) but with a constant. The trick above is the standard accepted optimization.</p>
+<p><strong>Complexity:</strong> O(n) time, O(1) space (26 letters).</p>
+<h3 id="74-max-consecutive-ones-iii-leetcode-1004">7.4 Max Consecutive Ones III (LeetCode 1004)</h3>
+<p>Given a binary array, return the maximum number of consecutive 1s if you may flip at most <code>k</code> zeros to 1.</p>
+<p>This is structurally identical to 424: “longest window where (count of zeros) &lt;= k.” Track zero count; when it exceeds <code>k</code>, shrink <code>left</code> until zeros &lt;= k again.</p>
+<h4 id="java-solution-4">Java Solution</h4>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">public</span><span style="color:#F97583"> class</span><span style="color:#B392F0"> MaxConsecutiveOnesIII</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> longestOnes</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> k</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> left </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, zeros </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, maxLen </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> right </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; right </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> nums.length; right</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (nums[right] </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) zeros</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">            while</span><span style="color:#E1E4E8"> (zeros </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> k) {</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (nums[left] </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) zeros</span><span style="color:#F97583">--</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">                left</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">            maxLen </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(maxLen, right </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> left </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> maxLen;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> static</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> main</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">args</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        MaxConsecutiveOnesIII sol </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> MaxConsecutiveOnesIII</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">        System.out.</span><span style="color:#B392F0">println</span><span style="color:#E1E4E8">(sol.</span><span style="color:#B392F0">longestOnes</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">}, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">)); </span><span style="color:#6A737D">// 6</span></span>
+<span class="line"><span style="color:#E1E4E8">        System.out.</span><span style="color:#B392F0">println</span><span style="color:#E1E4E8">(sol.</span><span style="color:#B392F0">longestOnes</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">}, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)); </span><span style="color:#6A737D">// 10</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity:</strong> O(n) time, O(1) space.</p>
+<h3 id="75-fruits-into-baskets-leetcode-904">7.5 Fruits into Baskets (LeetCode 904)</h3>
+<p>You have two baskets, each can hold only one type of fruit. Given an array where <code>fruits[i]</code> is the type of the i-th tree, find the maximum number of fruits you can pick from a contiguous sequence of trees (i.e., longest subarray with at most 2 distinct values).</p>
+<p>This is “longest substring with at most K distinct characters” with K = 2.</p>
+<h4 id="java-solution-5">Java Solution</h4>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> java.util.HashMap;</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> java.util.Map;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">public</span><span style="color:#F97583"> class</span><span style="color:#B392F0"> FruitsIntoBaskets</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> totalFruit</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">fruits</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Map&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> count </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> left </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, maxLen </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> right </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; right </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> fruits.length; right</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            count.</span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(fruits[right], </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, Integer</span><span style="color:#F97583">::</span><span style="color:#E1E4E8">sum);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">            while</span><span style="color:#E1E4E8"> (count.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">></span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                count.</span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(fruits[left], </span><span style="color:#F97583">-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, Integer</span><span style="color:#F97583">::</span><span style="color:#E1E4E8">sum);</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (count.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(fruits[left]) </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) count.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">(fruits[left]);</span></span>
+<span class="line"><span style="color:#E1E4E8">                left</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">            maxLen </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(maxLen, right </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> left </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> maxLen;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> static</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> main</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">args</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        FruitsIntoBaskets sol </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> FruitsIntoBaskets</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">        System.out.</span><span style="color:#B392F0">println</span><span style="color:#E1E4E8">(sol.</span><span style="color:#B392F0">totalFruit</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">}));         </span><span style="color:#6A737D">// 3</span></span>
+<span class="line"><span style="color:#E1E4E8">        System.out.</span><span style="color:#B392F0">println</span><span style="color:#E1E4E8">(sol.</span><span style="color:#B392F0">totalFruit</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">}));       </span><span style="color:#6A737D">// 3</span></span>
+<span class="line"><span style="color:#E1E4E8">        System.out.</span><span style="color:#B392F0">println</span><span style="color:#E1E4E8">(sol.</span><span style="color:#B392F0">totalFruit</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">}));     </span><span style="color:#6A737D">// 4</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity:</strong> O(n) time, O(1) space (map holds at most 3 keys).</p>
+<hr>
+<h2 id="8-sliding-window-maximum-leetcode-239--deque">8. Sliding Window Maximum (LeetCode 239) — Deque</h2>
+<p>Return an array of the maximum of every contiguous subarray of size <code>k</code>.</p>
+<p>A naive approach recomputes the max in each window → O(n*k). The optimal approach uses a <strong>monotonic decreasing deque</strong> storing indices, giving O(n).</p>
+<h3 id="ascii-diagram-deque-for-sliding-window-max">ASCII Diagram: Deque for Sliding Window Max</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Array:  [ 1, 3, -1, -3, 5, 3, 6, 7 ]   k = 3</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Deque holds INDICES, values decreasing from front to back.</span></span>
+<span class="line"><span>Front of deque = index of max in current window.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step: right=0  add 0(1)        deque: [0]            window: [1]            (forming)</span></span>
+<span class="line"><span>Step: right=1  add 1(3)</span></span>
+<span class="line"><span>        pop back while smaller: pop 0 (1&#x3C;3)</span></span>
+<span class="line"><span>        deque: [1]              window: [1,3]        (forming)</span></span>
+<span class="line"><span>Step: right=2  add 2(-1)</span></span>
+<span class="line"><span>        -1 &#x3C; 3, keep it</span></span>
+<span class="line"><span>        deque: [1,2]            window: [1,3,-1]     -> max = arr[1] = 3   OUTPUT 3</span></span>
+<span class="line"><span>Step: right=3  add 3(-3)</span></span>
+<span class="line"><span>        deque: [1,2,3]          window: [3,-1,-3]    -> max = arr[1] = 3   OUTPUT 3</span></span>
+<span class="line"><span>        (no front expired: 1 >= 3-3+1=1)</span></span>
+<span class="line"><span>Step: right=4  add 4(5)</span></span>
+<span class="line"><span>        pop 3(-3), pop 2(-1), pop 1(3): all smaller than 5</span></span>
+<span class="line"><span>        deque: [4]              window: [-1,-3,5]    -> max = arr[4] = 5   OUTPUT 5</span></span>
+<span class="line"><span>Step: right=5  add 5(3)         deque: [4,5]         window: [-3,5,3]      -> 5     OUTPUT 5</span></span>
+<span class="line"><span>Step: right=6  add 6(6)</span></span>
+<span class="line"><span>        pop 5(3), pop 4(5)</span></span>
+<span class="line"><span>        deque: [6]              window: [5,3,6]      -> 6                  OUTPUT 6</span></span>
+<span class="line"><span>Step: right=7  add 7(7)</span></span>
+<span class="line"><span>        pop 6(6)</span></span>
+<span class="line"><span>        deque: [7]              window: [3,6,7]      -> 7                  OUTPUT 7</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Result: [3, 3, 5, 5, 6, 7]</span></span></code></pre>
+<p>Two rules keep the deque correct:</p>
+<ol>
+<li><strong>Maintain decreasing order:</strong> before pushing index <code>i</code>, pop from the back all indices whose values are &lt;= <code>arr[i]</code> (they can never be the max in any future window that includes <code>i</code>).</li>
+<li><strong>Evict expired front:</strong> if <code>deque.peekFirst() &lt;= right - k</code>, the front index is outside the current window — pop it from the front.</li>
+</ol>
+<h4 id="java-solution-6">Java Solution</h4>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> java.util.ArrayDeque;</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> java.util.Deque;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">public</span><span style="color:#F97583"> class</span><span style="color:#B392F0"> SlidingWindowMaximum</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[] </span><span style="color:#B392F0">maxSlidingWindow</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> k</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (nums </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> null</span><span style="color:#F97583"> ||</span><span style="color:#E1E4E8"> k </span><span style="color:#F97583">&#x3C;=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nums.length;</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[] result </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[n </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> k </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#E1E4E8">        Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> dq </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>(); </span><span style="color:#6A737D">// stores indices, values decreasing</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> right </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; right </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> n; right</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6A737D">            // 1. Remove indices that are out of the current window (from front)</span></span>
+<span class="line"><span style="color:#F97583">            while</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">dq.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> dq.</span><span style="color:#B392F0">peekFirst</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> right </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> k) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                dq.</span><span style="color:#B392F0">pollFirst</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#6A737D">            // 2. Maintain decreasing order: remove from back all smaller values</span></span>
+<span class="line"><span style="color:#F97583">            while</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">dq.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> nums[dq.</span><span style="color:#B392F0">peekLast</span><span style="color:#E1E4E8">()] </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> nums[right]) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                dq.</span><span style="color:#B392F0">pollLast</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#6A737D">            // 3. Add current index</span></span>
+<span class="line"><span style="color:#E1E4E8">            dq.</span><span style="color:#B392F0">offerLast</span><span style="color:#E1E4E8">(right);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">            // 4. Once the first window is formed, record max (front of deque)</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (right </span><span style="color:#F97583">>=</span><span style="color:#E1E4E8"> k </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                result[right </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> k </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nums[dq.</span><span style="color:#B392F0">peekFirst</span><span style="color:#E1E4E8">()];</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> static</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> main</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">args</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        SlidingWindowMaximum sol </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> SlidingWindowMaximum</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[] r </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> sol.</span><span style="color:#B392F0">maxSlidingWindow</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">,</span><span style="color:#F97583">-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#F97583">-</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">6</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">7</span><span style="color:#E1E4E8">}, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> r) System.out.</span><span style="color:#B392F0">print</span><span style="color:#E1E4E8">(x </span><span style="color:#F97583">+</span><span style="color:#9ECBFF"> " "</span><span style="color:#E1E4E8">); </span><span style="color:#6A737D">// 3 3 5 5 6 7</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity:</strong> O(n) time — each index is pushed and popped at most once. O(k) space for the deque.</p>
+<hr>
+<h2 id="9-permutation-in-string-leetcode-567">9. Permutation in String (LeetCode 567)</h2>
+<p>Given strings <code>s1</code> and <code>s2</code>, return true if <code>s2</code> contains a permutation of <code>s1</code> as a substring.</p>
+<p>Fixed window of size <code>s1.length()</code> over <code>s2</code>. Maintain frequency counts and a <code>matches</code> counter of how many characters currently have equal counts in the window and in <code>s1</code>. When <code>matches == 26</code>-ish (or equal to the number of distinct chars in s1), return true.</p>
+<h4 id="java-solution-7">Java Solution</h4>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">public</span><span style="color:#F97583"> class</span><span style="color:#B392F0"> PermutationInString</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> checkInclusion</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s1</span><span style="color:#E1E4E8">, String </span><span style="color:#FFAB70">s2</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (s1.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> s2.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">()) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[] need </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[</span><span style="color:#79B8FF">26</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[] have </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[</span><span style="color:#79B8FF">26</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> s1.</span><span style="color:#B392F0">toCharArray</span><span style="color:#E1E4E8">()) need[c </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'a'</span><span style="color:#E1E4E8">]</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> k </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> s1.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#6A737D">        // initialize first window</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> k; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) have[s2.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(i) </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'a'</span><span style="color:#E1E4E8">]</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (</span><span style="color:#B392F0">matches</span><span style="color:#E1E4E8">(need, have)) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // slide</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> right </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> k; right </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> s2.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">(); right</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            have[s2.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(right) </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'a'</span><span style="color:#E1E4E8">]</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;            </span><span style="color:#6A737D">// add new char</span></span>
+<span class="line"><span style="color:#E1E4E8">            have[s2.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(right </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> k) </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'a'</span><span style="color:#E1E4E8">]</span><span style="color:#F97583">--</span><span style="color:#E1E4E8">;        </span><span style="color:#6A737D">// drop old char</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (</span><span style="color:#B392F0">matches</span><span style="color:#E1E4E8">(need, have)) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> matches</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">a</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">b</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#79B8FF"> 26</span><span style="color:#E1E4E8">; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">if</span><span style="color:#E1E4E8"> (a[i] </span><span style="color:#F97583">!=</span><span style="color:#E1E4E8"> b[i]) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">    // Optimized version using a running 'matches' counter -> O(n) with no 26-scan</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> checkInclusionOpt</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s1</span><span style="color:#E1E4E8">, String </span><span style="color:#FFAB70">s2</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (s1.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> s2.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">()) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[] count </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[</span><span style="color:#79B8FF">26</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> s1.</span><span style="color:#B392F0">toCharArray</span><span style="color:#E1E4E8">()) count[c </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'a'</span><span style="color:#E1E4E8">]</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> k </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> s1.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">(), matched </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#6A737D">        // how many chars have nonzero requirement</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> required </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> count) </span><span style="color:#F97583">if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">></span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) required</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> s2.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">(); i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> idx </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> s2.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(i) </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'a'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            count[idx]</span><span style="color:#F97583">--</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (count[idx] </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) matched</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (count[idx] </span><span style="color:#F97583">==</span><span style="color:#F97583"> -</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">) matched</span><span style="color:#F97583">--</span><span style="color:#E1E4E8">; </span><span style="color:#6A737D">// was zero, now negative</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">>=</span><span style="color:#E1E4E8"> k) {</span></span>
+<span class="line"><span style="color:#F97583">                int</span><span style="color:#E1E4E8"> out </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> s2.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(i </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> k) </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'a'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">                count[out]</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (count[out] </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) matched</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">                else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (count[out] </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">) matched</span><span style="color:#F97583">--</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (matched </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> required) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> static</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> main</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">args</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        PermutationInString sol </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> PermutationInString</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">        System.out.</span><span style="color:#B392F0">println</span><span style="color:#E1E4E8">(sol.</span><span style="color:#B392F0">checkInclusion</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"ab"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"eidbaooo"</span><span style="color:#E1E4E8">)); </span><span style="color:#6A737D">// true</span></span>
+<span class="line"><span style="color:#E1E4E8">        System.out.</span><span style="color:#B392F0">println</span><span style="color:#E1E4E8">(sol.</span><span style="color:#B392F0">checkInclusion</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"ab"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"eidboaoo"</span><span style="color:#E1E4E8">)); </span><span style="color:#6A737D">// false</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>The first version is O(26*n); the optimized version is O(n) using a running matches counter. Both are accepted; learn the optimized one for follow-ups about large alphabets.</p>
+<p><strong>Complexity:</strong> O(n) time, O(1) space (alphabet of 26).</p>
+<hr>
+<h2 id="10-sliding-window-median-two-heaps--conceptual">10. Sliding Window Median (Two Heaps) — Conceptual</h2>
+<p>LeetCode 480. Return the median of every window of size <code>k</code> in an array.</p>
+<p>Use two heaps like the running-median data structure:</p>
+<ul>
+<li><code>lo</code> — a max-heap holding the smaller half of the window.</li>
+<li><code>hi</code> — a min-heap holding the larger half.</li>
+<li>Balance so <code>lo.size()</code> is equal to or one more than <code>hi.size()</code>.</li>
+<li>Median: if k is odd, top of <code>lo</code>; if k is even, average of both tops.</li>
+</ul>
+<p>The hard part is <strong>removal</strong>: when the window slides, the outgoing element must be removed from whichever heap holds it. Java’s <code>PriorityQueue</code> does not support O(1) removal; use <code>HashMap&lt;value, count&gt;</code> of “lazy deletions” and rebalance when the tops are stale. Alternatively use <code>TreeMap</code>-based multisets for cleaner removal at O(log n).</p>
+<p>Pseudocode shape:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>for right in 0..n-1:</span></span>
+<span class="line"><span>    add nums[right] to lo or hi, rebalance</span></span>
+<span class="line"><span>    if right >= k-1:</span></span>
+<span class="line"><span>        record median</span></span>
+<span class="line"><span>        remove nums[right-k+1] (lazy), rebalance</span></span></code></pre>
+<p><strong>Complexity:</strong> O(n log k) time, O(k) space.</p>
+<p>This is an advanced variant; interviewers usually accept a correct description of the lazy-deletion strategy over a fully bug-free implementation.</p>
+<hr>
+<h2 id="11-frequency-count-in-window--technique">11. Frequency Count in Window — Technique</h2>
+<p>Many sliding window problems reduce to maintaining a frequency map of the current window and a derived counter:</p>
+<ul>
+<li><code>count[c]</code> — occurrences of <code>c</code> in the current window.</li>
+<li><code>matches</code> — number of characters whose window count equals their required count (Permutation in String, Find All Anagrams, Minimum Window Substring).</li>
+<li><code>distinct</code> — number of keys with positive count (Fruits into Baskets, At Most K Distinct).</li>
+<li><code>maxFreq</code> — largest single-character count in the window (Longest Repeating Character Replacement).</li>
+</ul>
+<p>The pattern for updating these counters:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>When ADDING char c on the right:</span></span>
+<span class="line"><span>    oldCount = count[c]</span></span>
+<span class="line"><span>    count[c] = oldCount + 1</span></span>
+<span class="line"><span>    update derived counters (matches / distinct / maxFreq) based on oldCount -> newCount</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>When REMOVING char c on the left:</span></span>
+<span class="line"><span>    oldCount = count[c]</span></span>
+<span class="line"><span>    count[c] = oldCount - 1</span></span>
+<span class="line"><span>    update derived counters based on oldCount -> newCount</span></span>
+<span class="line"><span>    if count[c] == 0: remove key (for distinct tracking)</span></span></code></pre>
+<p>Keeping the derived counter incremental (instead of rescanning the map) is what makes these solutions O(n) rather than O(n * alphabet).</p>
+<hr>
+<h2 id="12-window-with-constraint-at-most-k-pattern">12. Window With Constraint: “At Most K” Pattern</h2>
+<p>A huge family of problems is phrased as “at most K”:</p>
+<ul>
+<li>Longest substring with at most K distinct characters</li>
+<li>Longest substring with at most K replacements</li>
+<li>Subarrays with at most K different integers</li>
+<li>Number of substrings with at most K distinct vowels</li>
+</ul>
+<h3 id="longest-window-at-most-k-template-longest-valid">Longest-window-at-most-K template (longest valid)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>left = 0, best = 0</span></span>
+<span class="line"><span>state = (count map, derived counter)</span></span>
+<span class="line"><span>for right in 0..n-1:</span></span>
+<span class="line"><span>    add arr[right] to state</span></span>
+<span class="line"><span>    while state violates the "at most K" constraint:</span></span>
+<span class="line"><span>        remove arr[left] from state</span></span>
+<span class="line"><span>        left++</span></span>
+<span class="line"><span>    best = max(best, right - left + 1)</span></span>
+<span class="line"><span>return best</span></span></code></pre>
+<h3 id="counting-exactly-k-via-at-most-k-identity">Counting exactly K via at-most-K identity</h3>
+<p>When asked to count subarrays with <strong>exactly</strong> K distinct (LeetCode 992 “Subarrays with K Different Integers”, LeetCode 1248 “Count Number of Nice Subarrays”), use:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>exactly(K) = atMost(K) - atMost(K - 1)</span></span></code></pre>
+<p>where <code>atMost(K)</code> returns the number of subarrays with at most K distinct elements.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>int atMost(int[] nums, int k) {</span></span>
+<span class="line"><span>    if (k &#x3C; 0) return 0;</span></span>
+<span class="line"><span>    Map&#x3C;Integer,Integer> count = new HashMap&#x3C;>();</span></span>
+<span class="line"><span>    int left = 0, total = 0;</span></span>
+<span class="line"><span>    for (int right = 0; right &#x3C; nums.length; right++) {</span></span>
+<span class="line"><span>        count.merge(nums[right], 1, Integer::sum);</span></span>
+<span class="line"><span>        while (count.size() > k) {</span></span>
+<span class="line"><span>            count.merge(nums[left], -1, Integer::sum);</span></span>
+<span class="line"><span>            if (count.get(nums[left]) == 0) count.remove(nums[left]);</span></span>
+<span class="line"><span>            left++;</span></span>
+<span class="line"><span>        }</span></span>
+<span class="line"><span>        // every subarray ending at 'right' with start in [left..right] is valid</span></span>
+<span class="line"><span>        total += right - left + 1;</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>    return total;</span></span>
+<span class="line"><span>}</span></span>
+<span class="line"><span>// answer = atMost(K) - atMost(K-1)</span></span></code></pre>
+<p>Why <code>right - left + 1</code>? For each <code>right</code>, there are exactly <code>right - left + 1</code> valid subarrays ending at <code>right</code> (starting at any index from <code>left</code> to <code>right</code>). Summing these over all <code>right</code> gives the total count of valid subarrays. This is a powerful counting trick worth memorizing.</p>
+<hr>
+<h2 id="13-at-most-k-changes-variant-longest-repeating-family">13. At-Most-K Changes Variant (Longest Repeating Family)</h2>
+<p>Problems 424 (Longest Repeating Character Replacement) and 1004 (Max Consecutive Ones III) are the same template expressed differently:</p>
+<ul>
+<li>424: at most K changes where a “change” converts any letter to the majority letter. Constraint: <code>windowLen - maxFreq &lt;= K</code>.</li>
+<li>1004: at most K changes where a “change” flips a 0 to 1. Constraint: <code>zerosInWindow &lt;= K</code>.</li>
+<li>Generalized “longest subarray where (some bad-count) &lt;= K”: track the bad-count, shrink when it exceeds K.</li>
+</ul>
+<p>Both use the “longest valid window” template — expand always, shrink only when invalid, track max.</p>
+<hr>
+<h2 id="14-common-mistakes-and-pitfalls">14. Common Mistakes and Pitfalls</h2>
+<ul>
+<li><strong>Recomputing window state from scratch each step.</strong> This destroys the O(n) win. Always update incrementally (one add, one remove).</li>
+<li><strong>Forgetting to evict expired front of the deque</strong> in Sliding Window Maximum, producing stale maxima from outside the window.</li>
+<li><strong>Using <code>&lt;=</code> vs <code>&lt;</code> when popping the deque back.</strong> For maximum, pop back values <code>&lt;= new</code> to keep strictly decreasing; using <code>&lt;</code> leaves duplicates and may keep a tied max that expires — usually still correct but waste space. Be deliberate.</li>
+<li><strong>Shrinking in the wrong direction for “shortest valid” vs “longest valid.”</strong> For shortest, you shrink WHILE valid (to minimize); for longest, you shrink WHILE invalid (to restore validity).</li>
+<li><strong>Off-by-one on window formation.</strong> In fixed windows, only record answers once <code>right &gt;= k - 1</code>. In variable windows, <code>right - left + 1</code> is the window length.</li>
+<li><strong>Using <code>==</code> on boxed <code>Integer</code> counts.</strong> With <code>HashMap.merge</code>, values become <code>Integer</code>; comparing with <code>==</code> works only for cached small values. Use <code>.intValue()</code> or <code>.equals</code> (see the Minimum Window Substring code).</li>
+<li><strong>Not handling <code>k &gt; n</code> or empty input.</strong> Always guard early.</li>
+<li><strong>Confusing subarray (contiguous) with subsequence.</strong> Sliding window needs contiguity.</li>
+<li><strong>Forgetting the <code>exactly(K) = atMost(K) - atMost(K-1)</code> identity</strong> when a problem asks for “exactly K” — direct counting of exactly-K is much harder than the difference trick.</li>
+</ul>
+<hr>
+<h2 id="15-complexity-cheat-sheet">15. Complexity Cheat Sheet</h2>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Time</th>
+<th>Space</th>
+<th>Window Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Max Sum Subarray Size K</td>
+<td>O(n)</td>
+<td>O(1)</td>
+<td>Fixed</td>
+</tr>
+<tr>
+<td>Average of K</td>
+<td>O(n)</td>
+<td>O(n-k+1) output</td>
+<td>Fixed</td>
+</tr>
+<tr>
+<td>Permutation in String (567)</td>
+<td>O(n)</td>
+<td>O(1) (26)</td>
+<td>Fixed</td>
+</tr>
+<tr>
+<td>Find All Anagrams (438)</td>
+<td>O(n)</td>
+<td>O(1) (26)</td>
+<td>Fixed</td>
+</tr>
+<tr>
+<td>Sliding Window Maximum (239)</td>
+<td>O(n)</td>
+<td>O(k) deque</td>
+<td>Fixed + deque</td>
+</tr>
+<tr>
+<td>Sliding Window Median (480)</td>
+<td>O(n log k)</td>
+<td>O(k) heaps</td>
+<td>Fixed + heaps</td>
+</tr>
+<tr>
+<td>Longest Substring No Repeat (3)</td>
+<td>O(n)</td>
+<td>O(1) (128)</td>
+<td>Variable (longest)</td>
+</tr>
+<tr>
+<td>Min Window Substring (76)</td>
+<td>O(n+m)</td>
+<td>O(alphabet)</td>
+<td>Variable (shortest)</td>
+</tr>
+<tr>
+<td>Longest Repeating Replacement (424)</td>
+<td>O(n)</td>
+<td>O(1) (26)</td>
+<td>Variable (longest)</td>
+</tr>
+<tr>
+<td>Max Consecutive Ones III (1004)</td>
+<td>O(n)</td>
+<td>O(1)</td>
+<td>Variable (longest)</td>
+</tr>
+<tr>
+<td>Fruits into Baskets (904)</td>
+<td>O(n)</td>
+<td>O(1)</td>
+<td>Variable (longest)</td>
+</tr>
+<tr>
+<td>Longest Substring At Most K Distinct (340)</td>
+<td>O(n)</td>
+<td>O(k)</td>
+<td>Variable (longest)</td>
+</tr>
+<tr>
+<td>Subarrays with K Different Integers (992)</td>
+<td>O(n)</td>
+<td>O(k)</td>
+<td>Variable (count via atMost)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="16-pattern-recognition-table">16. Pattern Recognition Table</h2>
+<p>Use this table to identify the sliding-window variant from problem phrasing.</p>
+<table>
+<thead>
+<tr>
+<th>Clue in the problem statement</th>
+<th>Likely pattern</th>
+<th>Template</th>
+<th>Example problems</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>“subarray of size K” / “window of size K”</td>
+<td>Fixed-size window</td>
+<td>sum/track state over fixed K, slide by 1</td>
+<td>Max Sum Size K, Average K, Sliding Window Max, Sliding Window Median</td>
+</tr>
+<tr>
+<td>“permutation / anagram of a string as substring”</td>
+<td>Fixed window + frequency match</td>
+<td>window size = pattern length, compare freq maps or matches counter</td>
+<td>Permutation in String (567), Find All Anagrams (438)</td>
+</tr>
+<tr>
+<td>“maximum/minimum in every window of size K”</td>
+<td>Fixed window + monotonic deque</td>
+<td>deque of indices, decreasing for max / increasing for min</td>
+<td>Sliding Window Maximum (239), Sliding Window Minimum</td>
+</tr>
+<tr>
+<td>“median of every window of size K”</td>
+<td>Fixed window + two heaps</td>
+<td>lo max-heap + hi min-heap, lazy deletion</td>
+<td>Sliding Window Median (480)</td>
+</tr>
+<tr>
+<td>“longest substring with all unique / no repeating”</td>
+<td>Variable, longest valid</td>
+<td>expand right, jump left to lastSeen+1 on duplicate</td>
+<td>Longest Substring Without Repeating (3)</td>
+</tr>
+<tr>
+<td>“shortest substring containing all of T”</td>
+<td>Variable, shortest valid</td>
+<td>expand until valid, shrink while valid</td>
+<td>Minimum Window Substring (76)</td>
+</tr>
+<tr>
+<td>“longest substring after at most K changes/replacements”</td>
+<td>Variable, longest, constraint = windowLen - maxFreq &lt;= K</td>
+<td>expand always, shrink when constraint breaks, track maxFreq</td>
+<td>Longest Repeating Character Replacement (424), Max Consecutive Ones III (1004)</td>
+</tr>
+<tr>
+<td>“longest subarray with at most K distinct”</td>
+<td>Variable, longest, constraint = distinct &lt;= K</td>
+<td>freq map, shrink while distinct &gt; K</td>
+<td>Fruits into Baskets (904), Longest Substring At Most K Distinct (340)</td>
+</tr>
+<tr>
+<td>“number of subarrays with exactly K distinct/sum”</td>
+<td>Variable + atMost identity</td>
+<td>exactly(K) = atMost(K) - atMost(K-1), count += right-left+1</td>
+<td>Subarrays with K Different Integers (992), Count Nice Subarrays (1248), Subarray Sum Equals K (prefix sum variant)</td>
+</tr>
+<tr>
+<td>“longest subarray with sum &lt;= K”</td>
+<td>Variable, longest, constraint = sum &lt;= K</td>
+<td>running sum, shrink while sum &gt; K</td>
+<td>Max Size Subarray Sum &lt;= k (325 inverse), Shortest Subarray Sum &gt;= K (862, needs deque)</td>
+</tr>
+<tr>
+<td>“shortest subarray with sum &gt;= K”</td>
+<td>Variable + deque (handles negatives)</td>
+<td>prefix sums + monotonic deque</td>
+<td>Shortest Subarray with Sum at Least K (862)</td>
+</tr>
+<tr>
+<td>“max consecutive ones after flipping K zeros”</td>
+<td>Variable, longest, constraint = zeros &lt;= K</td>
+<td>track zero count, shrink while zeros &gt; K</td>
+<td>Max Consecutive Ones III (1004)</td>
+</tr>
+<tr>
+<td>“longest repeating character(s) after K ops”</td>
+<td>Variable, longest, constraint = windowLen - maxFreq &lt;= K</td>
+<td>track maxFreq via count array</td>
+<td>Longest Repeating Character Replacement (424)</td>
+</tr>
+<tr>
+<td>“maximize/minimize X over all valid subarrays”</td>
+<td>Variable, decide longest vs shortest by goal</td>
+<td>longest: shrink while invalid; shortest: shrink while valid</td>
+<td>generic</td>
+</tr>
+<tr>
+<td>“substrings satisfying a monotone property”</td>
+<td>Variable window or two-pointer</td>
+<td>if property is monotone in window expansion, sliding window applies</td>
+<td>varies</td>
+</tr>
+</tbody>
+</table>
+<h3 id="quick-decision-flow">Quick decision flow</h3>
+<ol>
+<li>Is the input a contiguous subarray/substring problem? If no, sliding window probably does not apply.</li>
+<li>Is the window size fixed (K given) or variable (optimize length / count)?</li>
+<li>If fixed — do you need the max/min (deque), median (heaps), or a sum/count (running state)?</li>
+<li>If variable — are you maximizing length (shrink while invalid) or minimizing length (shrink while valid) or counting (use atMost identity)?</li>
+<li>What state must you maintain incrementally? (sum, frequency map, deque, maxFreq, distinct count, matches counter)</li>
+<li>What is the validity condition, and can you check it in O(1) from the state?</li>
+</ol>
+<p>If you can answer all six, the code writes itself.</p>
+<hr>
+<h2 id="17-practice-progression">17. Practice Progression</h2>
+<p>Recommended order to build mastery:</p>
+<ol>
+<li>Max Sum Subarray Size K (fixed, warm-up)</li>
+<li>Average of K (fixed, list output)</li>
+<li>Longest Substring Without Repeating Characters (3) — first variable window</li>
+<li>Max Consecutive Ones III (1004) — at-most-K changes</li>
+<li>Fruits into Baskets (904) — at-most-K distinct</li>
+<li>Longest Repeating Character Replacement (424) — maxFreq trick</li>
+<li>Permutation in String (567) — fixed window + frequency match</li>
+<li>Find All Anagrams in a String (438) — fixed window + matches counter</li>
+<li>Minimum Window Substring (76) — shortest valid, hardest variable window</li>
+<li>Sliding Window Maximum (239) — monotonic deque</li>
+<li>Sliding Window Median (480) — two heaps with lazy deletion</li>
+<li>Subarrays with K Different Integers (992) — atMost identity for exact counting</li>
+<li>Shortest Subarray with Sum at Least K (862) — deque + prefix sums (negatives)</li>
+</ol>
+<p>After this progression you will have seen every major sliding-window technique interviewed today.</p>
+<hr>
+<h2 id="19-final-tips-for-interviews">19. Final Tips for Interviews</h2>
+<ul>
+<li><strong>State the brute force first</strong> (nested loops), then say “we can do better by reusing the previous window’s computation,” then derive the sliding window. Interviewers love seeing the optimization emerge.</li>
+<li><strong>Name the window flavor explicitly:</strong> “This is a fixed-size window” or “This is a variable window maximizing length under a constraint.” It signals pattern mastery.</li>
+<li><strong>Walk through one slide by hand</strong> with a tiny example before coding — catches off-by-one errors in window formation and deque eviction.</li>
+<li><strong>Discuss the validity check’s cost.</strong> If it requires scanning a map, mention the matches-counter optimization.</li>
+<li><strong>For deque problems, draw the deque</strong> at two or three steps (as in the ASCII diagram above). The interviewer can follow your reasoning.</li>
+<li><strong>Mention complexity explicitly</strong> at the end: time, space, and why each index is processed O(1) times amortized.</li>
+<li><strong>Edge cases to volunteer:</strong> empty input, k &gt; n, k = 1, k = n, all identical elements, no valid answer (return empty / 0 / -1 per problem).</li>
+</ul>
+<p>Sliding window rewards pattern recognition. Once the templates above are muscle memory, the only job in an interview is to (a) classify the problem into one of the templates, (b) identify the state and validity condition, and (c) implement the template cleanly. Practice the progression in section 18 and you will handle any sliding-window question confidently.</p>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Fixed-size window: add right, remove left, update answer — O(1) per slide.</li>
+<li>Variable-size window: expand right, shrink left while invalid — two sub-patterns (longest/shortest).</li>
+<li>Count subarrays with exact K = atMost(K) - atMost(K-1).</li>
+<li>Never recompute window state from scratch — carry it incrementally (sum, count, frequency map, deque).</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you know if a problem is sliding window?” — Keywords: “contiguous subarray/substring,” “longest/shortest with constraint,” “at most K.” If the problem asks about subsequences (not contiguous), it’s NOT sliding window.</li>
+<li>“Fixed or variable window?” — If K is given, fixed. If you’re optimizing window size, variable.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Confusing subarrays (contiguous → sliding window) with subsequences (non-contiguous → DP or greedy). Read the problem statement carefully — “subarray” = contiguous, “subsequence” = not necessarily contiguous.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/coding-interview/sliding-window/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Sliding%20Window%20%E2%80%94%20Coding%20Interview%20Prep&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fcoding-interview%2Fsliding-window%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fcoding-interview%2Fsliding-window%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/coding-interview/sliding-window" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/coding-interview/arrays-and-strings/" class="related-card"><div class="related-card-title">Arrays &amp; Strings — Interview Prep Guide</div><div class="related-card-meta">Coding Interview · 47 min</div></a><a href="/notes/coding-interview/backtracking/" class="related-card"><div class="related-card-title">Backtracking — Complete Interview Prep Guide</div><div class="related-card-meta">Coding Interview · 21 min</div></a><a href="/notes/coding-interview/big-o-and-pattern-recognition/" class="related-card"><div class="related-card-title">Big O Complexity &amp; Pattern Recognition</div><div class="related-card-meta">Coding Interview · 30 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/coding-interview/python-internals" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Python Internals &amp; Interview Prep</span></a><a href="/notes/coding-interview/sorting" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Sorting — Coding Interview Prep</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Sliding Window — Coding Interview Prep" data-selector=".article-prose" data-article-slug="coding-interview/sliding-window" data-article-title="Sliding Window — Coding Interview Prep" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

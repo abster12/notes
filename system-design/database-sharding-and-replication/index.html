@@ -1,0 +1,627 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Database Sharding &amp; Replication · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#horizontal-vs-vertical-partitioning" class="toc-link" data-toc-link="horizontal-vs-vertical-partitioning" data-astro-cid-p33bl5ka>Horizontal vs Vertical Partitioning</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#choosing-a-shard-key" class="toc-link" data-toc-link="choosing-a-shard-key" data-astro-cid-p33bl5ka>Choosing a Shard Key</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#sharding-strategies" class="toc-link" data-toc-link="sharding-strategies" data-astro-cid-p33bl5ka>Sharding Strategies</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#range-based-sharding" class="toc-link" data-toc-link="range-based-sharding" data-astro-cid-p33bl5ka>Range-Based Sharding</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#hash-based-sharding" class="toc-link" data-toc-link="hash-based-sharding" data-astro-cid-p33bl5ka>Hash-Based Sharding</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#directory-based-sharding" class="toc-link" data-toc-link="directory-based-sharding" data-astro-cid-p33bl5ka>Directory-Based Sharding</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#consistent-hashing-for-sharding" class="toc-link" data-toc-link="consistent-hashing-for-sharding" data-astro-cid-p33bl5ka>Consistent Hashing for Sharding</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#cross-shard-queries-and-distributed-joins" class="toc-link" data-toc-link="cross-shard-queries-and-distributed-joins" data-astro-cid-p33bl5ka>Cross-Shard Queries and Distributed Joins</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#sharded-counters-and-aggregations" class="toc-link" data-toc-link="sharded-counters-and-aggregations" data-astro-cid-p33bl5ka>Sharded Counters and Aggregations</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#replication-modes" class="toc-link" data-toc-link="replication-modes" data-astro-cid-p33bl5ka>Replication Modes</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#read-replicas-and-write-scaling" class="toc-link" data-toc-link="read-replicas-and-write-scaling" data-astro-cid-p33bl5ka>Read Replicas and Write Scaling</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#hot-shard-mitigation" class="toc-link" data-toc-link="hot-shard-mitigation" data-astro-cid-p33bl5ka>Hot Shard Mitigation</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#resharding-without-downtime" class="toc-link" data-toc-link="resharding-without-downtime" data-astro-cid-p33bl5ka>Resharding Without Downtime</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#vitess-and-citus" class="toc-link" data-toc-link="vitess-and-citus" data-astro-cid-p33bl5ka>Vitess and Citus</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-planning" class="toc-link" data-toc-link="capacity-planning" data-astro-cid-p33bl5ka>Capacity Planning</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-question" class="toc-link" data-toc-link="interview-question" data-astro-cid-p33bl5ka>Interview Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#key-terms" class="toc-link" data-toc-link="key-terms" data-astro-cid-p33bl5ka>Key Terms</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Database Sharding &amp; Replication</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-advanced" data-astro-cid-sgg5joot>advanced</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 29 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 41 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>databases</span><span class="tag" data-astro-cid-sgg5joot>sharding</span><span class="tag" data-astro-cid-sgg5joot>replication</span><span class="tag" data-astro-cid-sgg5joot>distributed-systems</span><span class="tag" data-astro-cid-sgg5joot>scaling</span><span class="tag" data-astro-cid-sgg5joot>interview</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="database-sharding--replication">Database Sharding &amp; Replication</h1>
+<p>Sharding and replication are the two foundational techniques for scaling a database beyond the capacity of a single machine, and although they are often discussed together they solve fundamentally different problems. Sharding is about <em>spreading data out</em> so that no one node holds more than a fraction of the total dataset, which primarily addresses write throughput and storage capacity. Replication is about <em>copying data</em> so that the same information lives on multiple nodes, which primarily addresses read throughput, availability, and durability. The two are orthogonal: you can shard without replicating (each row exists on exactly one shard, cheap but fragile), replicate without sharding (every node holds the entire dataset, simple but bounded by the largest node’s capacity), or — as almost every production system at scale eventually does — combine them so that each shard is itself backed by a primary and several replicas. Understanding when each technique applies, and the exact failure modes that emerge when they are combined, is one of the most consistently tested areas in senior and staff-level system design interviews.</p>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>Splitting a large database into smaller partitions (shards) across multiple machines for horizontal scaling, plus copying data to replicas for read scaling and fault tolerance. Sharding addresses write throughput and storage capacity by spreading rows across nodes; replication addresses read throughput, availability, and durability by copying data — and most production systems combine both with each shard backed by a primary and replicas.</p>
+<p><strong>How it’s asked:</strong> “Design a sharding strategy for a 10TB database with 500K QPS. Choose shard key, handle cross-shard queries, resharding, and replication lag.”</p>
+<h2 id="horizontal-vs-vertical-partitioning">Horizontal vs Vertical Partitioning</h2>
+<p>Before diving into sharding it is worth separating the related but distinct idea of partitioning. Vertical partitioning splits a table by <em>columns</em>: you might move a large rarely-accessed JSON blob column or a full-text payload into its own table or even its own storage engine, keeping the hot, narrow columns on the fast primary row store. Vertical partitioning is something a single database instance can do internally and it does not require any distributed machinery; it reduces row width, improves cache hit rates, and lets you tune storage per column family, but it does not increase write throughput or total storage beyond what one machine can hold because every row still has to live on the same node. Horizontal partitioning instead splits a table by <em>rows</em>, distributing different rows to different nodes. When that horizontal split crosses machine boundaries it is what we call sharding. The practical rule of thumb is to exhaust vertical partitioning, read replicas, and query optimization first — these buy you maybe an order of magnitude — and only reach for horizontal sharding once you are genuinely bound by the CPU, memory, or disk of a single primary, because sharding introduces a permanent layer of operational complexity that you can never fully remove.</p>
+<p>A subtle but important point is that horizontal partitioning <em>within</em> a single node (partitioned tables in PostgreSQL, InnoDB partitioning in MySQL) is sometimes confused with sharding. Both split rows by a key, but intra-node partitioning only helps with manageability — faster maintenance operations, partition pruning on queries, easier archiving of old partitions — and does nothing for write throughput because all partitions still contend for one node’s I/O and CPU. Sharding is specifically the <em>cross-node</em> form, and everything hard about it (cross-shard transactions, distributed joins, rebalancing) follows from that one design decision to put partitions on physically separate machines.</p>
+<h2 id="choosing-a-shard-key">Choosing a Shard Key</h2>
+<p>The shard key is the single most consequential decision in any sharding design because it determines data placement forever after, and changing it later is roughly as expensive as a full migration. A good shard key has three properties: high cardinality, so that the key space can be split into many distinct buckets and no single value dominates; even write distribution, so that traffic does not concentrate on one shard; and locality for the dominant access pattern, so that the common query — almost always “fetch one entity by its key” — touches exactly one shard and never fans out. <code>user_id</code> is the canonical good key for a social or SaaS product because it has enormous cardinality, writes are naturally spread across the user base, and almost every request is scoped to a single user. A composite key like <code>(tenant_id, user_id)</code> is common in multi-tenant systems where you want all of a tenant’s data colocated for per-tenant queries but still spread across shards at the tenant level. Bad keys are easy to spot in hindsight: <code>country</code> has low cardinality and concentrates load wherever the largest user base lives; a monotonically increasing timestamp creates a single hot shard at the “head” of the insert stream where all new writes land; and any key whose hash is taken modulo a small N will eventually produce skew. The key insight interviewers look for is that the shard key must be chosen around the <em>write</em> path and the primary read path, not around analytic range queries, because analytic queries can always be served by a secondary system (a data warehouse, ClickHouse, an Elasticsearch index) whereas the transactional read and write path has to be fast on the shard store itself.</p>
+<h2 id="sharding-strategies">Sharding Strategies</h2>
+<h3 id="range-based-sharding">Range-Based Sharding</h3>
+<p>Range-based sharding assigns contiguous ranges of the shard key to each shard: shard 0 holds user IDs 0 to one million, shard 1 holds one million to two million, and so on. The great advantage of range sharding is that range scans become single-shard or few-shard operations, because adjacent keys are colocated, which makes queries like “all users created between these two IDs” efficient. The equally great disadvantage is that range sharding is extremely prone to hot spots: any monotonically increasing key (an auto-increment ID, a timestamp) funnels all new inserts onto whichever shard currently owns the top of the range, turning that one node into a bottleneck while the rest of the cluster sits idle. Range sharding also tends to produce uneven shard sizes over time unless ranges are actively split and rebalanced, because real data is rarely uniform — a shard covering a dense geographic region or a viral tenant will dwarf its siblings. In practice pure range sharding is used when range queries are a first-class requirement and the key is not monotonic, or as the underlying mechanism in systems like HBase and Bigtable that combine a range-partitioned key space with automatic region splitting.</p>
+<h3 id="hash-based-sharding">Hash-Based Sharding</h3>
+<p>Hash-based sharding computes <code>shard = hash(key) % N</code> and places the row on the resulting shard, which distributes writes evenly as long as the hash function is good and the key has high cardinality. This eliminates the hot-spot problem of range sharding for inserts because consecutive keys hash to random shards, so a monotonically increasing ID spreads its writes across the whole cluster. The price you pay is that range queries become scatter-gather operations hitting every shard, since adjacent keys are now scattered, and that resharding is acutely painful: if N changes from 10 to 11, the modulus changes and roughly 90% of all keys need to move to a new shard, because <code>hash(key) % 11</code> differs from <code>hash(key) % 10</code> for almost every key. This modulus-resizing problem is the motivation for consistent hashing, discussed below. Hash sharding is the right default when the workload is point lookups and writes with no meaningful range component, which covers a large fraction of OLTP workloads.</p>
+<h3 id="directory-based-sharding">Directory-Based Sharding</h3>
+<p>Directory-based sharding introduces a separate lookup service — typically a highly available key-value store like ZooKeeper, etcd, or a Redis cluster — that maps each shard key (or key range) to the physical shard that owns it. The application or a routing layer consults the directory for every request, then routes to the indicated shard. The strength of this approach is flexibility: the mapping is arbitrary data, not arithmetic, so you can assign specific heavy tenants to dedicated shards, move a single key by editing one mapping entry, and support complex multi-tenant placement policies without rehashing anything. The weakness is that the directory itself is now a critical piece of infrastructure: it is a dependency on the hot path of every query, it must itself be replicated and highly available, and if it goes down the entire system loses the ability to route. Real systems mitigate this with aggressive client-side caching of the directory (so the common case is a cache hit and the directory is only consulted on a miss or a suspected move) and by making the directory small enough to fit entirely in memory on every router. Vitess uses a variant of this pattern with its topology service storing shard-key mappings, and Citus essentially uses a directory-style metadata table in the coordinator node to track which shard holds which hash ranges.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                         SHARDING STRATEGIES</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   RANGE-BASED              HASH-BASED              DIRECTORY-BASED</span></span>
+<span class="line"><span>   ────────────             ──────────              ───────────────</span></span>
+<span class="line"><span>   key ──┐                  key ──┐                 key ──┐</span></span>
+<span class="line"><span>         ▼                       ▼                       ▼</span></span>
+<span class="line"><span>   ┌─────────────┐        shard = hash(key) % N   ┌─────────────┐</span></span>
+<span class="line"><span>   │ Shard 0     │              │                 │  Directory  │</span></span>
+<span class="line"><span>   │   0 – 1M    │              ▼                 │   Service   │</span></span>
+<span class="line"><span>   │ Shard 1     │        ┌───────────┐           │  (etcd/ZK)  │</span></span>
+<span class="line"><span>   │   1M – 2M   │        │  hash to  │           └──────┬──────┘</span></span>
+<span class="line"><span>   │ Shard 2     │        │  shard N  │                  │ lookup</span></span>
+<span class="line"><span>   │   2M – 3M   │        └─────┬─────┘                  ▼</span></span>
+<span class="line"><span>   │   ...       │              │                   routed shard</span></span>
+<span class="line"><span>   │ Shard 9     │              ▼</span></span>
+<span class="line"><span>   │   9M – 10M  │        shards 0..N-1</span></span>
+<span class="line"><span>   └─────────────┘</span></span>
+<span class="line"><span>   contiguous              even spread            arbitrary mapping</span></span>
+<span class="line"><span>   ✓ range scans cheap     ✓ even writes          ✓ flexible placement</span></span>
+<span class="line"><span>   ✗ hot spot at head      ✗ range query fan-out  ✗ directory = hot path</span></span>
+<span class="line"><span>   ✗ uneven sizes          ✗ reshard moves ~all   ✗ extra hop per query</span></span></code></pre>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Key → shard mapping</th>
+<th>Range queries</th>
+<th>Write distribution</th>
+<th>Resharding cost</th>
+<th>Best for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Range</td>
+<td>contiguous key ranges</td>
+<td>cheap — single/few shards</td>
+<td>poor — hot range at the head</td>
+<td>split/merge ranges (manageable)</td>
+<td>range-scan workloads; HBase, Bigtable</td>
+</tr>
+<tr>
+<td>Hash</td>
+<td><code>hash(key) % N</code></td>
+<td>expensive — scatter-gather all shards</td>
+<td>even (high-cardinality key)</td>
+<td>painful — ~all keys relocate when N changes</td>
+<td>point lookups + writes; most OLTP</td>
+</tr>
+<tr>
+<td>Directory</td>
+<td>lookup service maps key → shard</td>
+<td>depends on the mapping</td>
+<td>flexible — manual control</td>
+<td>cheap — edit one mapping entry</td>
+<td>multi-tenant; pinning heavy tenants</td>
+</tr>
+</tbody>
+</table>
+<h2 id="consistent-hashing-for-sharding">Consistent Hashing for Sharding</h2>
+<p>Consistent hashing solves the resharding problem of naive hash modulo. Instead of mapping keys directly to shards with <code>hash(key) % N</code>, both the keys and the shard nodes are placed onto the same hash ring — a fixed-size circular space, typically the full 32-bit or 128-bit hash range — and each key is assigned to the first node encountered moving clockwise from the key’s position on the ring. The defining property is that when a node is added or removed, only the keys in the arc between the changed node and its predecessor need to move; every other key stays put. Contrast this with modulo hashing where changing N relocates nearly the entire keyspace. This means going from 10 to 11 shards migrates roughly 1/11 of the data instead of 10/11, which is the difference between a feasible online migration and a full rebuild.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>              CONSISTENT HASHING RING</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>                     0</span></span>
+<span class="line"><span>                .  ·  ·  .</span></span>
+<span class="line"><span>            ·              ·</span></span>
+<span class="line"><span>         ·                    ·   ◀ key k routes clockwise to the</span></span>
+<span class="line"><span>       ·         N1            ·     first node it meets on the ring</span></span>
+<span class="line"><span>      ·            ◀            ·</span></span>
+<span class="line"><span>     ·      key k  ·   N2        ·</span></span>
+<span class="line"><span>     ·                ◀          ·</span></span>
+<span class="line"><span>      ·                          ·</span></span>
+<span class="line"><span>        ·          N3          ·</span></span>
+<span class="line"><span>            ·              ·</span></span>
+<span class="line"><span>                ·  ·  ·</span></span>
+<span class="line"><span>                    2^32 / 2^128</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Add node N4 → only the arc between N4 and its predecessor</span></span>
+<span class="line"><span>   moves keys; every other key stays put.</span></span>
+<span class="line"><span>   (10 → 11 shards ≈ 1/11 of data moves,</span></span>
+<span class="line"><span>    vs. ~10/11 under naive modulo hashing.)</span></span></code></pre>
+<p>The naive ring has two problems that production systems must address. First, a random placement of a small number of nodes produces uneven arc lengths, so some nodes own far more of the ring than others and become disproportionately loaded. The standard fix is <em>virtual nodes</em> (also called vnodes): each physical node is placed on the ring multiple times at pseudo-random positions (typically 100 to 200 vnodes per node), which statistically smooths out the owned arc length so that every physical node ends up with close to an equal share. Second, on a plain ring a node addition still takes ownership of its arc immediately, which can cause a brief window of stale reads and write loss during the migration. Production consistent-hashing systems (Dynamo, Cassandra, ScyllaDB) layer a token-aware replication strategy on top: data is replicated to the next R nodes clockwise, and when a node joins it gradually streams its assigned ranges from the existing replicas before advertising itself as ready, so that ownership transfer is gradual rather than instantaneous. For a sharded relational database, consistent hashing is most useful not as the storage engine’s internal mechanism but as the <em>routing</em> layer’s mechanism: a proxy like Vitess can use a consistent-hash shard map so that adding a shard only remaps the keys in the affected arc, making resharding a bounded, online operation rather than a full table rewrite.</p>
+<h2 id="cross-shard-queries-and-distributed-joins">Cross-Shard Queries and Distributed Joins</h2>
+<p>The moment you shard, you have given up the ability to do a single-node join or a single-node transaction across arbitrary rows, and every query that is not routed by the shard key becomes a distributed operation. A point query on the shard key — <code>SELECT * FROM orders WHERE user_id = 42</code> — is the happy path: the router hashes <code>user_id</code>, picks one shard, and the query is as fast as on an unsharded database. Everything else is harder. A query that filters on a non-sharded column, like <code>SELECT * FROM orders WHERE status = 'shipped'</code>, has no single shard to target, so the router must fan it out to every shard, run the query locally on each, then merge the results at the router layer — the classic scatter-gather pattern. Scatter-gather multiplies your query latency by the slowest shard, saturates the router’s merge buffers with partial results, and breaks any query that needs global ordering or a global limit unless the router implements merge-sort and top-K logic on the streamed partial results. The standard mitigations are to design the schema so that the dominant queries are shard-key-routed, to maintain denormalized copies of frequently-joined data colocated with the shard key (embedding the user’s profile fields into the order row, for example), and to push analytics that genuinely need a global view into a separate OLAP system fed by change data capture.</p>
+<p>Distributed joins are the most expensive operation in a sharded system because they come in two painful flavors. A <em>colocated join</em> — joining two tables on the shard key, where both tables are sharded by the same key so matching rows live on the same shard — is cheap because the join runs locally on each shard and no data moves. This is why multi-tenant systems almost always shard every tenant-scoped table by <code>tenant_id</code>: all joins within a tenant are colocated and free. A <em>broadcast join</em> handles the case where one side of the join is small enough to replicate to every shard; the small table is sent to all shards and each shard joins its local partition against the broadcast copy. The truly expensive case is a <em>shuffle join</em> between two large tables sharded on different keys, which requires redistributing one or both sides across the network so that matching rows meet on the same node — essentially a distributed hash join with a network shuffle. Citus, which extends PostgreSQL for distributed querying, can do all three: it colocates joins on the distribution column for free, broadcasts small reference tables automatically, and can plan shuffle joins for the rare cross-distribution case. The interview-level takeaway is that you should engineer your schema so that 99% of joins are colocated, accept broadcast joins for small dimension tables, and treat shuffle joins as a red flag that your shard key or your data model is wrong.</p>
+<h2 id="sharded-counters-and-aggregations">Sharded Counters and Aggregations</h2>
+<p>Global counters are a surprisingly hard problem in a sharded system because the whole point of sharding is that no single node sees all the writes, so a naive <code>UPDATE counters SET count = count + 1</code> would have to be a cross-shard transaction on every increment. The standard solution is a <em>sharded counter</em>: instead of one row holding the count, you maintain N counter rows (one per shard, or more) and each increment writes to one of them chosen at random or by shard affinity. The total count is obtained by scatter-gathering a <code>SUM</code> across all counter rows, which is eventually consistent and cheap to read even though each individual increment is a single-shard local write. Google’s original MapReduce paper and the App Engine docs made this pattern famous for view counters and like counts. The trade-offs are clear: writes scale linearly with the number of counter shards (no contention on a single row), reads require a fan-out and are only as fresh as the last scatter-gather, and you must size the number of counter shards to the write rate — too few and a single counter row becomes a hot row again, too many and reads pay a larger fan-out cost. The same principle generalizes to any global aggregation: maintain per-shard partial aggregates and combine them at read time, accepting that you have moved from strong to eventual consistency for the aggregate.</p>
+<p>For approximate global counts where exactness is not required, probabilistic structures let you avoid the fan-out entirely. HyperLogLog maintains a constant-size cardinality sketch that can be merged across shards by taking the max of the registers, giving you a distinct-count with roughly 1% error in a few kilobytes regardless of how many billions of events you have seen. Count-Min Sketch does the same for frequency estimates. These are the data structures behind “unique viewers in the last 24 hours” counters at Twitter and Reddit scale, where a scatter-gather sum over sharded counters would itself be a bottleneck.</p>
+<h2 id="replication-modes">Replication Modes</h2>
+<p>Replication creates copies of data, and the critical design axis is <em>how the primary acknowledges writes relative to how many replicas have applied them</em>, which is fundamentally a latency-versus-durability trade-off. In <em>synchronous replication</em>, the primary waits for at least one replica to durably write the transaction to its own log before acknowledging the commit to the client. This guarantees that the committed data survives a primary failure (no committed transaction is lost) and that the replica is an exact, up-to-date copy, but it makes every write pay the round-trip latency to the replica, so throughput is bounded by the slowest replica and a slow or stalled replica can block the primary entirely. Synchronous replication is used when data loss is unacceptable — financial ledgers, configuration stores — and is the default in systems like PostgreSQL’s synchronous commit mode and Spanner’s Paxos groups.</p>
+<p>In <em>asynchronous replication</em>, the primary writes to its own log and acknowledges the commit immediately, then ships the log (often via a WAL stream or binlog) to replicas in the background. This gives the primary full write throughput independent of replica health and adds zero replica latency to the write path, which is why it is the default in MySQL and the common case in PostgreSQL. The cost is <em>replication lag</em>: the replica is always some milliseconds to seconds behind the primary, so reads from a replica can return stale data, and if the primary crashes with unreplicated transactions in its log those transactions are permanently lost on failover. The window is usually small (sub-second on a healthy LAN) but it is non-zero and it widens under load, which is the root of the “read-your-writes” consistency problem.</p>
+<p><em>Semi-synchronous replication</em> is the pragmatic middle ground used by most production MySQL deployments and by PostgreSQL’s reputation-based quorum modes. The primary acknowledges the commit as soon as <em>at least one</em> replica (or a configurable number) has received the transaction, but it does not wait for all replicas and does not necessarily wait for the replica to durably flush. This bounds the potential data loss on failover to at most the transactions that were acknowledged by the primary but not yet acknowledged by any replica, which in steady state is near zero, while keeping write latency close to the asynchronous case because you wait on only one replica rather than the full fleet. The subtlety is that “at least one replica received it” is weaker than “at least one replica durably committed it” — if you need the stronger guarantee you configure the replica to ack only after a sync flush, which costs latency but eliminates loss. Interviewers often probe exactly this distinction: semi-sync trades a small, bounded durability risk for most of the latency benefit of async, and the knob is how durable the ack must be.</p>
+<p>Beyond the ack timing, replication also differs in topology. <em>Single-leader</em> (primary-replica) is the most common: one primary takes writes, N replicas serve reads, failover promotes a replica. <em>Multi-leader</em> (multi-active) lets several nodes accept writes and replicate to each other, which is great for geographic locality and write availability but introduces write conflicts that must be resolved by last-writer-wins timestamps, CRDTs (Conflict-free Replicated Data Types — data structures like counters or sets that can be merged automatically without conflict), or application logic — conflict resolution is genuinely hard and is why multi-leader is rare outside geographically distributed deployments. <em>Leaderless</em> (Dynamo-style, used by Cassandra and Riak) has no designated leader: the client writes to N nodes and reads from R nodes, and if <code>W + R &gt; N</code> the read is guaranteed to see the latest write (a quorum). Leaderless systems have excellent write availability and no failover concept, but they require read-repair to reconcile divergent replicas and application-level conflict tolerance for the eventual-consistency window.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>              REPLICATION TOPOLOGIES</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   PRIMARY-REPLICA                 MULTI-LEADER</span></span>
+<span class="line"><span>   ──────────────                  ────────────</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>       ┌─────────┐                ┌─────────┐ ⇄ ┌─────────┐</span></span>
+<span class="line"><span>       │ Primary │                │ Leader A│──▶│ Leader B│</span></span>
+<span class="line"><span>       │(writes) │                │(writes) │   │(writes) │</span></span>
+<span class="line"><span>       └────┬────┘                └────┬────┘   └────┬────┘</span></span>
+<span class="line"><span>            │ WAL/binlog               │ replicate    │ replicate</span></span>
+<span class="line"><span>      ┌─────┴─────┐                   ▼              ▼</span></span>
+<span class="line"><span>      ▼           ▼               ┌──────┐      ┌──────┐</span></span>
+<span class="line"><span>   ┌──────┐   ┌──────┐            │Repl A│      │Repl B│</span></span>
+<span class="line"><span>   │Repl 1│   │Repl 2│            │reads │      │reads │</span></span>
+<span class="line"><span>   │reads │   │reads │            └──────┘      └──────┘</span></span>
+<span class="line"><span>   └──────┘   └──────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   1 writer, N readers             N writers; conflict resolution</span></span>
+<span class="line"><span>   ✓ simple, strong consistency    ✓ geo locality + write availability</span></span>
+<span class="line"><span>   ✗ write capacity = 1 node       ✗ write conflicts, hard to merge</span></span></code></pre>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Primary acks after…</th>
+<th>Write latency</th>
+<th>Data loss on failover</th>
+<th>Typical use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Synchronous</td>
+<td>≥1 replica durably commits the txn</td>
+<td>high (RTT to a replica)</td>
+<td>none — committed txns survive</td>
+<td>financial ledgers, config stores; Postgres sync commit, Spanner</td>
+</tr>
+<tr>
+<td>Asynchronous</td>
+<td>its own log write only</td>
+<td>low (no replica wait)</td>
+<td>any unreplicated txn is lost</td>
+<td>MySQL default; common Postgres</td>
+</tr>
+<tr>
+<td>Semi-synchronous</td>
+<td>≥1 replica has received it (configurable flush)</td>
+<td>near-async</td>
+<td>bounded — acked-but-unreplicated txns only</td>
+<td>most production MySQL; Postgres quorum</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Topology</th>
+<th>Writers</th>
+<th>Conflict resolution</th>
+<th>Failover</th>
+<th>Best for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Single-leader (primary-replica)</td>
+<td>1 primary</td>
+<td>none needed</td>
+<td>promote a replica</td>
+<td>most common workloads; simple consistency</td>
+</tr>
+<tr>
+<td>Multi-leader (multi-active)</td>
+<td>N leaders</td>
+<td>last-writer-wins / CRDTs / app logic</td>
+<td>N/A — multi-active</td>
+<td>geo-distributed deployments</td>
+</tr>
+<tr>
+<td>Leaderless (Dynamo-style)</td>
+<td>any of N (W quorum)</td>
+<td>read-repair + app tolerance</td>
+<td>none — no leader concept</td>
+<td>high write availability; Cassandra, Riak</td>
+</tr>
+</tbody>
+</table>
+<h2 id="read-replicas-and-write-scaling">Read Replicas and Write Scaling</h2>
+<p>Read replicas are the first scaling lever most teams reach for, and they are effective as long as your workload is read-heavy, which the majority of web workloads are. The pattern is straightforward: the primary handles all writes and strong-consistency reads, and a pool of replicas serves the read-heavy traffic that can tolerate eventual consistency. A social feed, a product catalog, a search index all fit this shape. The operational challenges are replica lag management and read routing. Replica lag is measured continuously and exposed as a metric; the router must decide, for each read, whether it can go to a replica (accepting staleness) or must go to the primary (requiring freshness). The common policy is <em>read-your-writes consistency</em>: any read that might be observing the user’s own just-written data goes to the primary or to a replica confirmed to have replayed past the user’s last write timestamp, while reads from other users or anonymous traffic go to any replica. Without this, users see maddening “I just saved it but it’s gone” glitches. Some systems (PostgreSQL’s <code>synchronous_commit=remote_apply</code>, Vitess’s <code>@primary</code> / <code>@replica</code> targeted reads) let you pin specific reads to the primary or to a replica with applied lag under a threshold.</p>
+<p>Read replicas scale reads horizontally but they do <em>not</em> scale writes, because every replica must apply every write — adding replicas increases the write fan-out and the primary’s replication load without increasing aggregate write capacity. This is the essential asymmetry to internalize: replication scales reads, sharding scales writes. When writes outgrow a single primary you must shard, and the transition from “one primary plus replicas” to “many primaries each with their own replicas” is the architectural inflection point that most teams underestimate. Until that point, you can extract more write headroom from a single primary by vertical scaling (bigger box, faster disks), by moving workloads off the primary (running analytics on a replica, moving search to Elasticsearch), and by batching and reducing write amplification, but these are all delays, not solutions.</p>
+<h2 id="hot-shard-mitigation">Hot Shard Mitigation</h2>
+<p>A hot shard is a shard receiving disproportionate traffic, and it is the failure mode that turns a theoretically even hash distribution into a real-world bottleneck. Hot shards arise from three causes, each with a different remedy. A <em>hot key</em> is a single shard-key value that receives a large fraction of all traffic — a celebrity’s user record on a social network, a viral post’s like counter, a globally shared configuration row. The fix is to break the key apart: sharded counters for the like count, caching the celebrity profile in a CDN or memcached so the database is bypassed, or replicating that one row to every shard as a broadcast read. A <em>hot range</em> arises in range-based sharding where all new inserts land on the shard owning the top of the key space; the fix is to pre-split ranges aggressively or to use a hash of a high-cardinality key instead of a monotonic one. A <em>hot shard from skew</em> happens when the hash distribution is even but the <em>workload</em> per key is not — a few tenants generate 80% of the traffic — and the fix is directory-based placement that assigns heavy tenants to dedicated or over-provisioned shards, essentially manual rebalancing guided by traffic metrics rather than by key distribution alone.</p>
+<p>The general principle is that you cannot rely on the shard key alone to guarantee even load, because real workloads are power-law distributed. You need continuous monitoring of per-shard CPU, I/O, query latency, and connection count, and you need a playbook for moving a hot tenant or splitting a hot range without downtime. Systems like Vitess expose live shard metrics and support online shard splits; Cassandra’s vnodes and dynamic snitching down-rank slow nodes for reads; and at the application layer a read-through cache in front of the hottest keys is almost always cheaper than resharding.</p>
+<h2 id="resharding-without-downtime">Resharding Without Downtime</h2>
+<p>Resharding — changing the number of shards or the placement of keys — is the hardest operational task in a sharded system, and doing it without downtime is a recurring interview topic because it forces you to combine replication, dual-write, and cutover techniques. The naive approach of taking the cluster offline, rehashing all data, and bringing it back up is unacceptable for any real production system, so the industry-standard pattern is a multi-phase online migration. The first phase is <em>dual-write</em>: the application is configured to write every change to both the old shard layout and the new shard layout, so that new data is present in both places from the moment the migration starts. The second phase is <em>backfill</em>: a background job reads historical data from the old shards and copies it into the new shards, typically using a cursor over the shard key and a change-data-capture stream to apply any concurrent writes that occurred during the backfill. Because dual-write is already capturing new changes, the backfill only needs to catch up to the moving frontier, and once it converges the new shards are a complete, current copy. The third phase is <em>verification</em>: a checksum or sampled comparison between old and new confirms they agree, catching any dual-write bug or backfill gap. The fourth phase is <em>cutover</em>: the router switches reads (and then writes) from the old shards to the new shards, ideally behind a feature flag so it can be instantly rolled back. The final phase is <em>cleanup</em>: dual-write is disabled and the old shards are decommissioned after a watch period.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>        RESHARDING MIGRATION FLOW (5 phases, online)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   ┌────────────┐     ┌────────────┐     ┌────────────┐</span></span>
+<span class="line"><span>   │ 1. DUAL    │────▶│ 2. BACKFILL │────▶│ 3. VERIFY  │</span></span>
+<span class="line"><span>   │    WRITE   │     │             │     │            │</span></span>
+<span class="line"><span>   └────────────┘     └────────────┘     └────────────┘</span></span>
+<span class="line"><span>   app writes to      bg job copies      checksum /</span></span>
+<span class="line"><span>   old + new layout   old → new shards   sampled compare</span></span>
+<span class="line"><span>                      (CDC catches</span></span>
+<span class="line"><span>                       concurrent writes)        │</span></span>
+<span class="line"><span>                                                 ▼</span></span>
+<span class="line"><span>   ┌────────────┐     ┌────────────┐</span></span>
+<span class="line"><span>   │ 5. CLEANUP │◀────│ 4. CUTOVER │</span></span>
+<span class="line"><span>   │            │     │            │</span></span>
+<span class="line"><span>   └────────────┘     └────────────┘</span></span>
+<span class="line"><span>   disable dual-      router flips reads</span></span>
+<span class="line"><span>   write, retire      then writes to new</span></span>
+<span class="line"><span>   old shards         (behind a flag,</span></span>
+<span class="line"><span>                      instant rollback)</span></span></code></pre>
+<p>Vitess implements exactly this flow with its vreplication (migration replication) feature: it streams changes from source shards to target shards continuously, supports a <code>MoveTables</code> workflow that handles dual-write, backfill, verify, and cutover as managed phases, and lets you cut over with a single command and roll back just as easily. The keys to making this safe are that the cutover is a routing change (instant, reversible) rather than a data move, that dual-write guarantees no data is lost during the migration window, and that verification catches divergence before the cutover rather than after. The mistake that ruins resharding is trying to migrate by copying data and then flipping, without dual-write — any write between the copy and the flip is lost, and any write to the old shard after the flip is orphaned. Dual-write is non-negotiable for a correct online reshard.</p>
+<h2 id="vitess-and-citus">Vitess and Citus</h2>
+<p>Vitess and Citus are the two most prominent open-source systems for sharding a relational database, and they illustrate two different philosophies worth understanding for interviews. Vitess, born at YouTube and now a CNCF project, is a sharding layer <em>in front of</em> MySQL: it provides a proxy (vtgate) that accepts SQL, parses it, routes each query to the correct shard (vttablet) based on a vindex (the shard key mapping, which can be hash-based, range-based, or a lookup vindex for directory-style sharding), and merges results for scatter queries. Because it sits in front of unmodified MySQL, you inherit MySQL’s storage engine and replication, and Vitess adds the sharding logic, the topology service, the online resharding workflows, and a transaction model that supports cross-shard transactions with best-effort or two-phase-commit semantics. Vitess is the system that powers YouTube, Slack, Square Cash, and GitHub’s early sharding, and it is the canonical answer to “how do you shard MySQL at scale.”</p>
+<p>Citus, by contrast, is a PostgreSQL <em>extension</em> rather than a proxy: it extends the Postgres planner and executor so that a single Postgres coordinator can distribute tables across worker nodes, push query fragments down to the workers, and merge results back, all within the Postgres query engine rather than alongside it. You mark a table as distributed with <code>SELECT create_distributed_table('orders', 'user_id')</code> and Citus automatically shards it by hashing the distribution column into 32 (by default) shard placements spread across the workers. Joins on the distribution column are colocated and run locally on each worker; small reference tables can be marked as reference tables that are broadcast to every worker for cheap broadcast joins; and the coordinator handles the rare shuffle join by repartitioning data on the fly. Citus is now part of the Postgres ecosystem (acquired by Microsoft, available as a managed Hyperscale option in Azure), and it is the canonical answer to “how do you scale Postgres horizontally.” The architectural contrast is instructive: Vitess is a sharding proxy over an unchanged storage engine, while Citus is a sharding-aware extension that modifies the engine itself — the former is more portable and storage-engine-agnostic, the latter is more integrated and can push more optimization into the planner.</p>
+<h2 id="capacity-planning">Capacity Planning</h2>
+<p>Capacity planning for a sharded system is the practice of deciding how many shards you need and how big each should be, and it is driven by three independent constraints that all must be satisfied simultaneously. The <em>storage</em> constraint is the simplest: total dataset size divided by number of shards must fit comfortably on one node’s disk, with headroom for growth and for the post-compaction size of indexes. The <em>write throughput</em> constraint says that the per-shard write rate (total writes divided by shards, adjusted for skew) must stay under the per-node write ceiling, which for a typical MySQL or Postgres primary on fast NVMe is on the order of tens of thousands of writes per second before you hit log or replication bottlenecks. The <em>memory</em> constraint says the working set of hot data per shard should fit in the node’s RAM for good cache hit rates; if the hot working set is larger than RAM you will be disk-bound regardless of how many shards you have, and adding shards helps only insofar as it shrinks the per-shard hot set. The binding constraint is whichever of these runs out first, and a common planning error is to size only for storage while ignoring write throughput, resulting in a few enormous shards that are disk-rich but CPU-poor.</p>
+<p>Concrete numbers and targets to plan against:</p>
+<ul>
+<li><strong>Per-node write ceiling</strong> (MySQL/Postgres primary, fast NVMe): on the order of tens of thousands of writes/second before hitting log or replication bottlenecks.</li>
+<li><strong>Per-shard target:</strong> aim for ~half of the node’s observed write ceiling, leaving headroom for skew and growth.</li>
+<li><strong>Skew multiplier:</strong> design for the hottest shard to carry <strong>2–3×</strong> the average load; the per-shard ceiling must absorb that multiplier.</li>
+<li><strong>Planning horizon:</strong> project write rate and dataset size roughly <strong>18 months</strong> out.</li>
+<li><strong>Shard count formula:</strong> <code>max(storage-driven count, write-driven count)</code>, then validated against the memory working-set constraint.</li>
+<li><strong>Shard count alignment:</strong> keep it a <strong>power of two</strong> or a <strong>multiple of the replication factor</strong> so future resharding stays cheap.</li>
+</ul>
+<p>A concrete planning approach is to start from the projected write rate and dataset size at the horizon date (say, 18 months out), pick a per-shard target that is half of the node’s observed ceiling to leave headroom for skew and growth, and compute the shard count as the maximum of the storage-driven and write-driven counts. Then validate against the memory working-set constraint. Always plan for skew: real traffic is rarely perfectly uniform, so design for the hottest shard to carry 2-3x the average load, which means your per-shard ceiling must absorb that multiplier. Plan the resharding path before you need it — knowing whether you will split shards (add shards within an existing key range, requiring data migration of half of each shard) or add new hash buckets (requiring a full consistent-hash rebalance) — because the architecture decisions that make future resharding cheap, such as using consistent hashing and keeping the shard count a power of two or a multiple of your replication factor, must be made at the initial design. The rule interviewers reward is that capacity planning is not a one-time calculation but a continuous discipline: measure the actual per-shard load distribution, track the gap between current and ceiling, and trigger a reshard when you cross the threshold that leaves you enough lead time to migrate before you hit the wall.</p>
+<hr>
+<h2 id="interview-question">Interview Question</h2>
+<p><strong>Q: Walk me through how you would shard a rapidly growing multi-tenant SaaS database that is hitting the write ceiling of a single Postgres primary. How do you choose the shard key, handle cross-tenant analytics, and plan to double the shard count next year without downtime?</strong></p>
+<p><strong>Model answer:</strong> “I would shard by <code>tenant_id</code> using hash-based distribution — specifically, I’d use Citus or an equivalent consistent-hashing router so that adding shards later only remaps the keys in the affected arc rather than the whole keyspace. <code>tenant_id</code> is the right key because every transactional query in a multi-tenant product is already scoped to a tenant, so sharding on it makes nearly all reads and writes single-shard and makes every join between tenant-scoped tables colocated and free. The dominant access pattern — ‘load this tenant’s data’ — hits exactly one shard. For the rare very large tenant that would alone overload a shard, I’d use directory-based placement to pin that tenant to a dedicated shard or a pair of shards, since the hash distribution would otherwise let one tenant dominate a shard.</p>
+<p>For cross-tenant analytics — ‘total revenue across all tenants last month’ — I would not run that against the transactional shard store, because it’s a scatter-gather over every shard that competes with the OLTP workload. Instead I’d stream changes from the shards via logical replication or a CDC tool like Debezium into a separate analytics warehouse — ClickHouse, BigQuery, or a columnar Postgres — where full-table scans and global aggregations are cheap and isolated from the production write path. Global counters that the application needs in real time, like a platform-wide active-user count, I’d implement as sharded counters with per-shard partial sums merged at read time, or as a HyperLogLog sketch for cardinality, accepting eventual consistency.</p>
+<p>For doubling the shard count next year, I’d plan the reshard as a four-phase online migration: enable dual-write to both the current and the new shard layout so every new change lands in both; backfill the historical data from old to new shards using CDC to catch concurrent writes; verify with checksums that old and new agree; then cut over the router from old to new behind a feature flag, with instant rollback. Because the routing uses consistent hashing, the new shards only take ownership of the arc ranges assigned to them, so the backfill is bounded to roughly half the data rather than the entire keyspace. The cutover itself is a routing change, not a data move, so it’s instant and reversible. The thing I would never do is rehash by modulo and flip without dual-write — that loses writes in the gap between copy and cutover.“</p>
+<p><strong>Common pitfall to mention:</strong> “The classic mistake is sharding on <code>tenant_id</code> but then needing a query that is <em>not</em> tenant-scoped — like a global admin dashboard or a cross-tenant search — and trying to serve it with a scatter-gather against the shards. That query will be slow, it will compete with the OLTP workload, and as the cluster grows the fan-out latency will grow with it. The fix is to recognize up front which queries are not tenant-scoped and route them to a separate system — a search index, an analytics warehouse, a denormalized aggregate table — rather than forcing the sharded OLTP store to serve workloads it was never designed for. A related mistake is ignoring the heavy-tenant problem: if one tenant is 30% of your traffic, hash sharding puts 30% of your load on one shard, and you need directory-based placement for that tenant before it takes down its shard.”</p>
+<hr>
+<h2 id="key-terms">Key Terms</h2>
+<p><strong>Shard key</strong> — the column (or columns) whose value determines which shard a row lives on; the most consequential and hardest-to-change decision in a sharded design. <strong>Hot shard</strong> — a shard receiving disproportionate traffic, caused by a hot key, a hot range, or workload skew; mitigated by sharded counters, caching, pre-splitting, or directory-based placement. <strong>Cross-shard transaction</strong> — a transaction spanning multiple shards, which requires two-phase commit or best-effort coordination and is expensive enough that well-designed systems avoid it. <strong>Scatter-gather</strong> — the query pattern of fanning a non-shard-key query to every shard, running it locally, and merging at the router; bounded by the slowest shard. <strong>Colocated join</strong> — a join between two tables sharded on the same key, where matching rows are guaranteed on the same shard and the join is local and free. <strong>Read replica</strong> — a read-only copy of the primary, fed by WAL or binlog replication, used to scale reads; subject to replica lag. <strong>Replica lag</strong> — the delay between a write on the primary and its application on a replica; the source of stale reads and the reason for read-your-writes routing. <strong>Semi-synchronous replication</strong> — the primary acks a write once at least one replica has received it, bounding data loss on failover while keeping latency near the async case. <strong>WAL (Write-Ahead Log)</strong> — the durable log of changes that the primary writes before ack and that replicas replay to stay in sync. <strong>GTID (Global Transaction ID)</strong> — a globally unique, monotonic identifier for each transaction in MySQL replication, enabling consistent failover and replica positioning. <strong>Quorum</strong> — in leaderless systems, the condition <code>W + R &gt; N</code> that guarantees a read sees the latest write by overlapping the write and read replica sets. <strong>Vindex (Vitess)</strong> — the shard-key mapping function in Vitess (hash, numeric range, or lookup-based) that determines row placement and can be changed via online resharding. <strong>Vnode</strong> — a virtual node placement on a consistent-hashing ring; multiple vnodes per physical node smooth out the owned arc length to balance load. <strong>CDC (Change Data Capture)</strong> — streaming the WAL or binlog as an event stream, used for backfilling replicas, feeding analytics, and driving online reshard migrations.</p>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Replication scales reads; [[Glossary#Sharding|sharding]] scales writes. Adding read replicas does not increase write capacity — every replica must apply every write.</li>
+<li>The [[Glossary#Shard Key|shard key]] is the most consequential and hardest-to-change decision; choose it around the write path and primary read path, not analytic queries. <code>user_id</code> or <code>(tenant_id, user_id)</code> are canonical good keys.</li>
+<li>Consistent hashing makes resharding bounded: adding a shard migrates ~1/N of data instead of ~all of it. Use it as the routing layer’s mechanism.</li>
+<li>Online resharding requires dual-write (write to both old and new layout) + backfill + verify + cutover behind a feature flag. Never migrate by copying then flipping without dual-write — you lose writes in the gap.</li>
+<li>Design for the hottest shard to carry 2–3x the average load; size per-shard capacity to absorb that multiplier.</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li><em>How do you handle a query that isn’t scoped to the shard key?</em> — It becomes a scatter-gather (fan-out to all shards, merge at the router). For frequently-needed non-shard-key queries, maintain a denormalized copy colocated with the shard key, or push the workload to a separate analytics system via CDC.</li>
+<li><em>How do you handle a single tenant that’s 30% of your traffic?</em> — Hash sharding puts 30% of load on one shard. Use directory-based placement to pin that tenant to a dedicated or over-provisioned shard.</li>
+<li><em>Synchronous vs asynchronous replication — which do you choose?</em> — Synchronous guarantees zero data loss on failover but adds replica round-trip latency to every write. Asynchronous has no latency cost but risks losing unreplicated writes on failover. Semi-synchronous (wait for ≥1 replica to receive, not flush) is the pragmatic middle ground for most production deployments.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>The classic mistake is sharding on <code>tenant_id</code> and then trying to serve a global/cross-tenant query (admin dashboard, global search) with a scatter-gather against the shards. That query will be slow, will compete with the OLTP workload, and will get worse as the cluster grows. The fix is to recognize non-tenant-scoped queries up front and route them to a separate system — not to force the sharded store to serve a workload it was never designed for.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/database-sharding-and-replication/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Database%20Sharding%20%26%20Replication&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fdatabase-sharding-and-replication%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fdatabase-sharding-and-replication%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/database-sharding-and-replication" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/search-engine-elasticsearch" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Search Engine (Elasticsearch)</span></a><a href="/notes/system-design/payment-system" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Payment System / Ledger Design</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Database Sharding &amp; Replication" data-selector=".article-prose" data-article-slug="system-design/database-sharding-and-replication" data-article-title="Database Sharding &amp; Replication" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

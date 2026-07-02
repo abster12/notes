@@ -1,0 +1,1214 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Bloom Filters &amp; Probabilistic Data Structures · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-what-problem-do-probabilistic-data-structures-solve" class="toc-link" data-toc-link="1-what-problem-do-probabilistic-data-structures-solve" data-astro-cid-p33bl5ka>1. What Problem Do Probabilistic Data Structures Solve?</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#when-to-use-and-when-not-to-use" class="toc-link" data-toc-link="when-to-use-and-when-not-to-use" data-astro-cid-p33bl5ka>When to Use (and When NOT to Use)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-bloom-filter--the-core-data-structure" class="toc-link" data-toc-link="2-bloom-filter--the-core-data-structure" data-astro-cid-p33bl5ka>2. Bloom Filter — The Core Data Structure</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#how-it-works" class="toc-link" data-toc-link="how-it-works" data-astro-cid-p33bl5ka>How It Works</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-math-interview-essential" class="toc-link" data-toc-link="the-math-interview-essential" data-astro-cid-p33bl5ka>The Math (Interview Essential)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#capacity-planning--the-critical-operational-concern" class="toc-link" data-toc-link="capacity-planning--the-critical-operational-concern" data-astro-cid-p33bl5ka>Capacity Planning — The Critical Operational Concern</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#hash-functions--the-implementation-details" class="toc-link" data-toc-link="hash-functions--the-implementation-details" data-astro-cid-p33bl5ka>Hash Functions — The Implementation Details</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#bloom-filter-implementation-sketch" class="toc-link" data-toc-link="bloom-filter-implementation-sketch" data-astro-cid-p33bl5ka>Bloom Filter Implementation Sketch</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-beyond-standard-bloom-filters--the-family" class="toc-link" data-toc-link="3-beyond-standard-bloom-filters--the-family" data-astro-cid-p33bl5ka>3. Beyond Standard Bloom Filters — The Family</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#31-counting-bloom-filter--adding-deletion" class="toc-link" data-toc-link="31-counting-bloom-filter--adding-deletion" data-astro-cid-p33bl5ka>3.1 Counting Bloom Filter — Adding Deletion</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#32-cuckoo-filter--deletion-without-bloat" class="toc-link" data-toc-link="32-cuckoo-filter--deletion-without-bloat" data-astro-cid-p33bl5ka>3.2 Cuckoo Filter — Deletion Without Bloat</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#33-scalable-bloom-filter--dynamic-growth" class="toc-link" data-toc-link="33-scalable-bloom-filter--dynamic-growth" data-astro-cid-p33bl5ka>3.3 Scalable Bloom Filter — Dynamic Growth</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#34-bloom-filter-variants-summary" class="toc-link" data-toc-link="34-bloom-filter-variants-summary" data-astro-cid-p33bl5ka>3.4 Bloom Filter Variants Summary</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#4-hyperloglog--cardinality-estimation" class="toc-link" data-toc-link="4-hyperloglog--cardinality-estimation" data-astro-cid-p33bl5ka>4. HyperLogLog — Cardinality Estimation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#how-it-works-intuition" class="toc-link" data-toc-link="how-it-works-intuition" data-astro-cid-p33bl5ka>How It Works (Intuition)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#size-vs-accuracy-trade-off" class="toc-link" data-toc-link="size-vs-accuracy-trade-off" data-astro-cid-p33bl5ka>Size vs Accuracy Trade-off</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#when-hyperloglog-fails" class="toc-link" data-toc-link="when-hyperloglog-fails" data-astro-cid-p33bl5ka>When HyperLogLog Fails</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#5-count-min-sketch--frequency-estimation" class="toc-link" data-toc-link="5-count-min-sketch--frequency-estimation" data-astro-cid-p33bl5ka>5. Count-Min Sketch — Frequency Estimation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#how-it-works-1" class="toc-link" data-toc-link="how-it-works-1" data-astro-cid-p33bl5ka>How It Works</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#6-real-world-system-design-applications" class="toc-link" data-toc-link="6-real-world-system-design-applications" data-astro-cid-p33bl5ka>6. Real-World System Design Applications</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#61-google-bigtable--apache-hbase--cassandra--read-path-optimization" class="toc-link" data-toc-link="61-google-bigtable--apache-hbase--cassandra--read-path-optimization" data-astro-cid-p33bl5ka>6.1 Google Bigtable / Apache HBase / Cassandra — Read Path Optimization</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#62-cdn--web-cache--is-this-object-cached" class="toc-link" data-toc-link="62-cdn--web-cache--is-this-object-cached" data-astro-cid-p33bl5ka>6.2 CDN / Web Cache — “Is This Object Cached?”</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#63-web-crawler--url-deduplication" class="toc-link" data-toc-link="63-web-crawler--url-deduplication" data-astro-cid-p33bl5ka>6.3 Web Crawler — URL Deduplication</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#64-database-query-optimization--bloom-filter-join" class="toc-link" data-toc-link="64-database-query-optimization--bloom-filter-join" data-astro-cid-p33bl5ka>6.4 Database Query Optimization — Bloom Filter Join</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#65-malware--phishing-url-blocklist--chromes-safe-browsing" class="toc-link" data-toc-link="65-malware--phishing-url-blocklist--chromes-safe-browsing" data-astro-cid-p33bl5ka>6.5 Malware / Phishing URL Blocklist — Chrome’s Safe Browsing</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#66-rate-limiting--sliding-window-with-approximate-counts" class="toc-link" data-toc-link="66-rate-limiting--sliding-window-with-approximate-counts" data-astro-cid-p33bl5ka>6.6 Rate Limiting — Sliding Window with Approximate Counts</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#7-architectural-decision-choosing-the-right-structure" class="toc-link" data-toc-link="7-architectural-decision-choosing-the-right-structure" data-astro-cid-p33bl5ka>7. Architectural Decision: Choosing the Right Structure</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#decision-table-space-vs-accuracy" class="toc-link" data-toc-link="decision-table-space-vs-accuracy" data-astro-cid-p33bl5ka>Decision Table: Space vs. Accuracy</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#8-operational-pitfalls-the-things-that-break-in-production" class="toc-link" data-toc-link="8-operational-pitfalls-the-things-that-break-in-production" data-astro-cid-p33bl5ka>8. Operational Pitfalls (The Things That Break in Production)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#pitfall-1-capacity-overrun-the-silent-degradation" class="toc-link" data-toc-link="pitfall-1-capacity-overrun-the-silent-degradation" data-astro-cid-p33bl5ka>Pitfall 1: Capacity Overrun (The Silent Degradation)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#pitfall-2-serializationdeserialization-drift" class="toc-link" data-toc-link="pitfall-2-serializationdeserialization-drift" data-astro-cid-p33bl5ka>Pitfall 2: Serialization/Deserialization Drift</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#pitfall-3-false-negatives-from-misimplementation" class="toc-link" data-toc-link="pitfall-3-false-negatives-from-misimplementation" data-astro-cid-p33bl5ka>Pitfall 3: False Negatives from Misimplementation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#pitfall-4-using-bloom-filter-where-exact-lookup-is-required" class="toc-link" data-toc-link="pitfall-4-using-bloom-filter-where-exact-lookup-is-required" data-astro-cid-p33bl5ka>Pitfall 4: Using Bloom Filter Where Exact Lookup Is Required</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#pitfall-5-hyperloglog-merge-with-different-precisions" class="toc-link" data-toc-link="pitfall-5-hyperloglog-merge-with-different-precisions" data-astro-cid-p33bl5ka>Pitfall 5: HyperLogLog Merge with Different Precisions</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#9-interview-question-the-url-blocklist-at-scale" class="toc-link" data-toc-link="9-interview-question-the-url-blocklist-at-scale" data-astro-cid-p33bl5ka>9. Interview Question: The URL Blocklist at Scale</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-scenario" class="toc-link" data-toc-link="the-scenario" data-astro-cid-p33bl5ka>The Scenario</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#model-answer" class="toc-link" data-toc-link="model-answer" data-astro-cid-p33bl5ka>Model Answer</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#common-pitfall" class="toc-link" data-toc-link="common-pitfall" data-astro-cid-p33bl5ka>Common Pitfall</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#10-curveball-questions" class="toc-link" data-toc-link="10-curveball-questions" data-astro-cid-p33bl5ka>10. Curveball Questions</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#11-key-metrics-summary" class="toc-link" data-toc-link="11-key-metrics-summary" data-astro-cid-p33bl5ka>11. Key Metrics Summary</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#12-weaknesses--trade-offs" class="toc-link" data-toc-link="12-weaknesses--trade-offs" data-astro-cid-p33bl5ka>12. Weaknesses &amp; Trade-offs</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#related" class="toc-link" data-toc-link="related" data-astro-cid-p33bl5ka>Related</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Bloom Filters &amp; Probabilistic Data Structures</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-advanced" data-astro-cid-sgg5joot>advanced</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 25 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 35 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>platform</span><span class="tag" data-astro-cid-sgg5joot>bloom-filters</span><span class="tag" data-astro-cid-sgg5joot>probabilistic-data-structures</span><span class="tag" data-astro-cid-sgg5joot>hyperloglog</span><span class="tag" data-astro-cid-sgg5joot>count-min-sketch</span><span class="tag" data-astro-cid-sgg5joot>cuckoo-filter</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="bloom-filters--probabilistic-data-structures">Bloom Filters &amp; Probabilistic Data Structures</h1>
+<blockquote>
+<p><strong>Staff-Engineer Focus:</strong> “Use a Bloom filter” is the mid-level answer. Knowing that a Bloom filter trades a small false-positive rate for massive space savings is the senior answer. <strong>Knowing when a Bloom filter is the wrong data structure and reaching for a Cuckoo filter (deletable), a Counting Bloom filter (frequency), or a HyperLogLog (cardinality) instead — that’s the staff engineer.</strong> The interview question isn’t “explain a Bloom filter.” It’s: “You’re building a URL blocklist for 10 billion URLs. Disk is limited to 4 GB. You need sub-millisecond lookups with zero false negatives. False positives are acceptable at 0.1%. What do you build, and what are the operational failure modes when the blocklist surpasses 12 billion entries?”</p>
+</blockquote>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>Space-efficient data structures that trade certainty for memory — a Bloom filter can tell you if an element is definitely NOT in a set, but can only say it’s probably in it. Variants include Counting Bloom filters (support deletions), Cuckoo filters (deletable, more space-efficient), HyperLogLog (cardinality estimation), and Count-Min Sketch (frequency estimation).</p>
+<p><strong>How it’s asked:</strong> “Design a Bloom filter for a web crawler to check if a URL has been visited, using less than 1GB of memory for 100M URLs with &lt;1% false positive rate.”</p>
+<h2 id="1-what-problem-do-probabilistic-data-structures-solve">1. What Problem Do Probabilistic Data Structures Solve?</h2>
+<p>The fundamental tension in distributed systems: <strong>you need to answer membership, frequency, or cardinality questions across massive datasets, but you can’t afford to store the full dataset in memory (or sometimes even on disk).</strong></p>
+<table>
+<thead>
+<tr>
+<th>Data Structure</th>
+<th>Question It Answers</th>
+<th>Space per Element</th>
+<th>Error Type</th>
+<th>Deletable?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Bloom Filter</strong></td>
+<td>“Is X in the set?” (membership)</td>
+<td>~1-2 bytes</td>
+<td>False positive only (no false negatives)</td>
+<td>No (standard)</td>
+</tr>
+<tr>
+<td><strong>Counting Bloom Filter</strong></td>
+<td>“Is X in the set? How many times?”</td>
+<td>~4 bytes per counter</td>
+<td>False positive (overcount possible)</td>
+<td>Yes (decrement)</td>
+</tr>
+<tr>
+<td><strong>Cuckoo Filter</strong></td>
+<td>“Is X in the set?” (membership)</td>
+<td>~1-2 bytes</td>
+<td>False positive only</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><strong>HyperLogLog</strong></td>
+<td>“How many unique elements?” (cardinality)</td>
+<td>~1.5 KB for 2% error (any set size)</td>
+<td>Count estimate ±2%</td>
+<td>N/A (counting)</td>
+</tr>
+<tr>
+<td><strong>Count-Min Sketch</strong></td>
+<td>“What’s the frequency of X?”</td>
+<td>~2-5 KB for reasonable error</td>
+<td>Overcount only (never undercount)</td>
+<td>N/A (counting)</td>
+</tr>
+<tr>
+<td><strong>MinHash / SimHash</strong></td>
+<td>“How similar are two sets?” (Jaccard)</td>
+<td>~1-4 KB per sketch</td>
+<td>Similarity estimate ±ε</td>
+<td>N/A (similarity)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The unifying insight:</strong> All of these trade perfect accuracy for massive reductions in space (and often time). In systems where 99.9% accuracy is sufficient and 100% accuracy would require 100× the resources, probabilistic data structures aren’t a compromise — they’re the correct engineering choice.</p>
+<h3 id="when-to-use-and-when-not-to-use">When to Use (and When NOT to Use)</h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Probabilistic?</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>URL blocklist for 10B URLs</td>
+<td>✅ Bloom/Cuckoo filter</td>
+<td>4 GB Bloom filter vs. 500 GB hash table. 0.1% FP acceptable for blocklist.</td>
+</tr>
+<tr>
+<td>Payment transaction lookup</td>
+<td>❌</td>
+<td>Can’t tolerate false positives. $1M transaction must be found exactly.</td>
+</tr>
+<tr>
+<td>CDN cache key eviction</td>
+<td>✅ Bloom filter</td>
+<td>“Is this object likely in cache?” FP = unnecessary eviction miss (acceptable).</td>
+</tr>
+<tr>
+<td>Password “already used” check</td>
+<td>✅ Bloom filter</td>
+<td>“Have you used this password before?” FP = rejects a safe password (annoying but safe).</td>
+</tr>
+<tr>
+<td>Unique visitor count (1B events/day)</td>
+<td>✅ HyperLogLog</td>
+<td>1.5 KB memory for cardinality. Exact count would need GBs.</td>
+</tr>
+<tr>
+<td>Database primary key lookup</td>
+<td>❌</td>
+<td>B-tree or hash index. Cannot tolerate FPs.</td>
+</tr>
+<tr>
+<td>Crawler “already visited” URL set</td>
+<td>✅ Bloom filter</td>
+<td>FP = skip a URL we haven’t visited (acceptable). No FN = never re-crawl (guaranteed).</td>
+</tr>
+<tr>
+<td>Spam filter word frequency</td>
+<td>✅ Count-Min Sketch</td>
+<td>“Is this word too frequent in spam?” Overcount is conservative (safe).</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="2-bloom-filter--the-core-data-structure">2. Bloom Filter — The Core Data Structure</h2>
+<h3 id="how-it-works">How It Works</h3>
+<p>A [[Glossary#Bloom Filter|Bloom filter]] is a space-efficient probabilistic set. It uses <strong>k hash functions</strong> and a <strong>bit array of m bits</strong> (all initialized to 0).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>INSERT "foo":</span></span>
+<span class="line"><span>  h1("foo") = 3  →  set bit[3] = 1</span></span>
+<span class="line"><span>  h2("foo") = 7  →  set bit[7] = 1</span></span>
+<span class="line"><span>  h3("foo") = 12 →  set bit[12] = 1</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Bit array: [0,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0]</span></span>
+<span class="line"><span>              0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>INSERT "bar":</span></span>
+<span class="line"><span>  h1("bar") = 3  →  bit[3] already 1 (collision!)</span></span>
+<span class="line"><span>  h2("bar") = 10 →  set bit[10] = 1</span></span>
+<span class="line"><span>  h3("bar") = 14 →  set bit[14] = 1</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>QUERY "baz":</span></span>
+<span class="line"><span>  h1("baz") = 7  →  bit[7] = 1 ✓</span></span>
+<span class="line"><span>  h2("baz") = 10 →  bit[10] = 1 ✓</span></span>
+<span class="line"><span>  h3("baz") = 14 →  bit[14] = 1 ✓</span></span>
+<span class="line"><span>  → "baz" ∈ set? YES (but it was never inserted — FALSE POSITIVE!)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>QUERY "qux":</span></span>
+<span class="line"><span>  h1("qux") = 5  →  bit[5] = 0 ✗</span></span>
+<span class="line"><span>  → "qux" ∈ set? NO (guaranteed — never false negative)</span></span></code></pre>
+<p><strong>Key guarantee:</strong> If any hash position is 0, the element is DEFINITELY not in the set. If all positions are 1, the element MIGHT be in the set (with a calculable false-positive probability).</p>
+<h3 id="the-math-interview-essential">The Math (Interview Essential)</h3>
+<p>Given:</p>
+<ul>
+<li><strong>n</strong> = number of elements inserted</li>
+<li><strong>m</strong> = bit array size</li>
+<li><strong>k</strong> = number of hash functions</li>
+</ul>
+<p><strong>False-positive probability (after n insertions):</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>p ≈ (1 - e^(-kn/m))^k</span></span></code></pre>
+<p><strong>Optimal k (minimizing false-positive rate for given m, n):</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>k_opt = (m/n) * ln(2) ≈ 0.693 * (m/n)</span></span></code></pre>
+<p><strong>At k_opt, the false-positive rate simplifies to:</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>p ≈ (0.6185)^(m/n)</span></span></code></pre>
+<p><strong>Bits per element (m/n) needed for target false-positive rate p:</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>m/n = -1.44 * log2(p)</span></span></code></pre>
+<table>
+<thead>
+<tr>
+<th>Target FP Rate (p)</th>
+<th>m/n (bits per element)</th>
+<th>Example: space for 1B elements</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1% (0.01)</td>
+<td>9.6 bits</td>
+<td>1.2 GB</td>
+</tr>
+<tr>
+<td>0.1% (0.001)</td>
+<td>14.4 bits</td>
+<td>1.8 GB</td>
+</tr>
+<tr>
+<td>0.01% (0.0001)</td>
+<td>19.2 bits</td>
+<td>2.4 GB</td>
+</tr>
+<tr>
+<td>0.001% (0.00001)</td>
+<td>24.0 bits</td>
+<td>3.0 GB</td>
+</tr>
+<tr>
+<td>1e-6</td>
+<td>28.8 bits</td>
+<td>3.6 GB</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The interview takeaway:</strong> A Bloom filter needs only ~10 bits per element for 1% FP rate and ~14 bits per element for 0.1% FP rate. That’s roughly 1–2 bytes per element — 100-1000× smaller than storing the elements themselves.</p>
+<h3 id="capacity-planning--the-critical-operational-concern">Capacity Planning — The Critical Operational Concern</h3>
+<p>A Bloom filter’s false-positive rate is calculated for a given capacity <code>n</code>. <strong>As you insert beyond the designed capacity, the false-positive rate degrades exponentially:</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Elements inserted | Actual FP rate (designed for 1% at n)</span></span>
+<span class="line"><span>------------------|------------------------------------</span></span>
+<span class="line"><span>0.5 × n           | &#x3C;&#x3C; 1% (under-utilized)</span></span>
+<span class="line"><span>1.0 × n           | 1% (at design point)</span></span>
+<span class="line"><span>1.5 × n           | ~3% (degrading)</span></span>
+<span class="line"><span>2.0 × n           | ~8% (significantly degraded)</span></span>
+<span class="line"><span>3.0 × n           | ~25% (useless)</span></span>
+<span class="line"><span>5.0 × n           | ~60% (basically returns "yes" for everything)</span></span></code></pre>
+<p><strong>⚠️ This is the #1 operational pitfall.</strong> Teams deploy a Bloom filter designed for n = 1 billion, watch it fill up, and don’t re-provision. At n = 1.5 billion, the 1% filter becomes a 3% filter. At n = 3 billion, it becomes a 25% filter — meaning 1 in 4 non-members are returned as members. This silently corrupts the system’s behavior.</p>
+<h3 id="hash-functions--the-implementation-details">Hash Functions — The Implementation Details</h3>
+<p>You don’t need k independent hash functions. Use <strong>double hashing</strong> (Kirsch-Mitzenmacher technique):</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># Generate k hash values from just TWO hash functions</span></span>
+<span class="line"><span style="color:#E1E4E8">h1 </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> murmur3_128(key)  </span><span style="color:#6A737D"># First 64 bits</span></span>
+<span class="line"><span style="color:#E1E4E8">h2 </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> murmur3_128(key)  </span><span style="color:#6A737D"># Second 64 bits (or a different seed)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(k):</span></span>
+<span class="line"><span style="color:#E1E4E8">    position </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (h1 </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> h2) </span><span style="color:#F97583">%</span><span style="color:#E1E4E8"> m</span></span>
+<span class="line"><span style="color:#6A737D">    # Set/check bit[position]</span></span></code></pre>
+<p>This is both faster (only two hash computations) and mathematically equivalent for Bloom filter purposes. Mention this in interviews to demonstrate implementation depth.</p>
+<h3 id="bloom-filter-implementation-sketch">Bloom Filter Implementation Sketch</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> mmh3  </span><span style="color:#6A737D"># MurmurHash3</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> bitarray</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> BloomFilter</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __init__</span><span style="color:#E1E4E8">(self, n: </span><span style="color:#79B8FF">int</span><span style="color:#E1E4E8">, p: </span><span style="color:#79B8FF">float</span><span style="color:#F97583"> =</span><span style="color:#79B8FF"> 0.01</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.n </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> n                          </span><span style="color:#6A737D"># Expected elements</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.p </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> p                          </span><span style="color:#6A737D"># Target FP rate</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.m </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> int</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">n </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> math.log(p) </span><span style="color:#F97583">/</span><span style="color:#E1E4E8"> (math.log(</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">)</span><span style="color:#F97583">**</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">))  </span><span style="color:#6A737D"># Bit array size</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.k </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> int</span><span style="color:#E1E4E8">((</span><span style="color:#79B8FF">self</span><span style="color:#E1E4E8">.m </span><span style="color:#F97583">/</span><span style="color:#E1E4E8"> n) </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> math.log(</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">))           </span><span style="color:#6A737D"># Optimal hash count</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.bits </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> bitarray.bitarray(</span><span style="color:#79B8FF">self</span><span style="color:#E1E4E8">.m)</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.bits.setall(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.count </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#6A737D">                      # Track actual insertions</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> add</span><span style="color:#E1E4E8">(self, key: </span><span style="color:#79B8FF">str</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#E1E4E8">        h1, h2 </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mmh3.hash64(key)  </span><span style="color:#6A737D"># Two 64-bit hashes</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">self</span><span style="color:#E1E4E8">.k):</span></span>
+<span class="line"><span style="color:#E1E4E8">            pos </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (h1 </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> h2) </span><span style="color:#F97583">%</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.m</span></span>
+<span class="line"><span style="color:#79B8FF">            self</span><span style="color:#E1E4E8">.bits[pos] </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.count </span><span style="color:#F97583">+=</span><span style="color:#79B8FF"> 1</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> contains</span><span style="color:#E1E4E8">(self, key: </span><span style="color:#79B8FF">str</span><span style="color:#E1E4E8">) -> </span><span style="color:#79B8FF">bool</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#E1E4E8">        h1, h2 </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mmh3.hash64(key)</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">self</span><span style="color:#E1E4E8">.k):</span></span>
+<span class="line"><span style="color:#E1E4E8">            pos </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (h1 </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> h2) </span><span style="color:#F97583">%</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.m</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#F97583"> not</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.bits[pos]:</span></span>
+<span class="line"><span style="color:#F97583">                return</span><span style="color:#79B8FF"> False</span><span style="color:#6A737D">  # DEFINITELY not present</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> True</span><span style="color:#6A737D">  # MIGHT be present (with FP probability)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> current_fp_rate</span><span style="color:#E1E4E8">(self) -> </span><span style="color:#79B8FF">float</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#9ECBFF">        """Estimate actual FP rate given current insertions."""</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> (</span><span style="color:#79B8FF">1</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8"> math.exp(</span><span style="color:#F97583">-</span><span style="color:#79B8FF">self</span><span style="color:#E1E4E8">.k </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.count </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.m)) </span><span style="color:#F97583">**</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.k</span></span></code></pre>
+<hr>
+<h2 id="3-beyond-standard-bloom-filters--the-family">3. Beyond Standard Bloom Filters — The Family</h2>
+<h3 id="31-counting-bloom-filter--adding-deletion">3.1 Counting Bloom Filter — Adding Deletion</h3>
+<p>The standard Bloom filter can’t delete (clearing a bit to 0 might also clear another element’s bit). A <strong>Counting Bloom Filter</strong> replaces each bit with an n-bit counter (typically 4 bits = count up to 15):</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Standard:  [0][1][0][1][1]          # Can't decrement — which element owns bit[1]?</span></span>
+<span class="line"><span>Counting:  [0][2][0][1][1]          # Insert: increment counters. Delete: decrement.</span></span></code></pre>
+<p><strong>Trade-offs:</strong></p>
+<ul>
+<li>4× space increase (4-bit counter per position instead of 1 bit)</li>
+<li>Counter overflow risk at 16+ collisions (mitigated with 8-bit counters or “stick at max” policy)</li>
+<li>Now supports deletion — but a counting Bloom filter is 3–4× larger than a standard Bloom filter for the same FP rate</li>
+</ul>
+<h3 id="32-cuckoo-filter--deletion-without-bloat">3.2 Cuckoo Filter — Deletion Without Bloat</h3>
+<p>Cuckoo filters use <strong>cuckoo hashing</strong> — each element has two candidate buckets. If both are full, evict an existing element to its alternate bucket (like a cuckoo bird pushing eggs out of a nest).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Insert X:</span></span>
+<span class="line"><span>  Bucket A = fingerprint(X) ⊕ hash(X)</span></span>
+<span class="line"><span>  Bucket B = fingerprint(X) ⊕ hash(fingerprint(X))</span></span>
+<span class="line"><span>  → If either bucket has space, store fingerprint there.</span></span>
+<span class="line"><span>  → If both full, evict an existing fingerprint to ITS alternate bucket.</span></span>
+<span class="line"><span>  → Repeat until all elements placed or max evictions reached (table full → resize).</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Lookup X:</span></span>
+<span class="line"><span>  Check Bucket A and Bucket B for fingerprint(X). If found → yes.</span></span></code></pre>
+<p><strong>Cuckoo Filter vs Bloom Filter:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Bloom Filter</th>
+<th>Cuckoo Filter</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Deletion</td>
+<td>❌ (standard), ✅ (counting, 4× space)</td>
+<td>✅ (native)</td>
+</tr>
+<tr>
+<td>Space efficiency (at 0.1% FP)</td>
+<td>~14 bits/element</td>
+<td>~12 bits/element</td>
+</tr>
+<tr>
+<td>Space efficiency (at 1% FP)</td>
+<td>~10 bits/element</td>
+<td>~8 bits/element</td>
+</tr>
+<tr>
+<td>Lookup speed</td>
+<td>k memory accesses (e.g., 7)</td>
+<td>At most 2 memory accesses</td>
+</tr>
+<tr>
+<td>Insert speed</td>
+<td>k memory accesses</td>
+<td>1-2 accesses (amortized), up to ~500 for full tables</td>
+</tr>
+<tr>
+<td>Maximum load factor</td>
+<td>N/A (FP degrades, not fails)</td>
+<td>~95% (then insertions fail → resize)</td>
+</tr>
+<tr>
+<td>Implementation complexity</td>
+<td>Low</td>
+<td>Medium</td>
+</tr>
+</tbody>
+</table>
+<p><strong>When to prefer Cuckoo over Bloom:</strong> You need deletion support AND space is tight AND lookups must be fast (2 cache lines vs. 7). <strong>When to prefer Bloom:</strong> Simplicity, predictable behavior, no insertion failure mode.</p>
+<h3 id="33-scalable-bloom-filter--dynamic-growth">3.3 Scalable Bloom Filter — Dynamic Growth</h3>
+<p>A standard Bloom filter’s FP rate degrades beyond capacity. A <strong>Scalable Bloom Filter</strong> addresses this by creating a chain of Bloom filters, each with progressively tighter FP rates:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Filter 0: n=1M, p=0.01   →  after 1M insertions, create Filter 1</span></span>
+<span class="line"><span>Filter 1: n=2M, p=0.005  →  after 2M insertions, create Filter 2</span></span>
+<span class="line"><span>Filter 2: n=4M, p=0.0025 →  after 4M insertions, create Filter 3</span></span>
+<span class="line"><span>...</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Total FP rate = 1 - ∏(1 - p_i) ≈ p_0 + p_1 + p_2 + ... (since p_i ≪ 1)</span></span></code></pre>
+<p>Each new filter is larger (capacity doubles) but tighter (FP rate halves). The geometric series converges: even with infinite filters, total FP ≈ 2 × p_0. <strong>This lets the Bloom filter “scale out” instead of degrading</strong> — the trade-off is that lookups must check ALL filters in the chain.</p>
+<h3 id="34-bloom-filter-variants-summary">3.4 Bloom Filter Variants Summary</h3>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>Solves</th>
+<th>Space Overhead</th>
+<th>Key Trade-off</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Standard Bloom</strong></td>
+<td>Membership</td>
+<td>10-15 bits/elem</td>
+<td>No deletion, FP degrades with overfill</td>
+</tr>
+<tr>
+<td><strong>Counting Bloom</strong></td>
+<td>Membership + Deletion</td>
+<td>40-60 bits/elem</td>
+<td>4× space, counter overflow risk</td>
+</tr>
+<tr>
+<td><strong>Cuckoo Filter</strong></td>
+<td>Membership + Deletion (efficient)</td>
+<td>8-12 bits/elem</td>
+<td>Insertion failures at ~95% load</td>
+</tr>
+<tr>
+<td><strong>Scalable Bloom</strong></td>
+<td>Membership + Dynamic growth</td>
+<td>~2× factor</td>
+<td>Multi-filter lookup latency</td>
+</tr>
+<tr>
+<td><strong>Compressed Bloom</strong></td>
+<td>Network transmission</td>
+<td>10-15 bits/elem (compressed)</td>
+<td>CPU cost of (de)compression</td>
+</tr>
+<tr>
+<td><strong>Blocked Bloom</strong></td>
+<td>Cache-friendly lookups</td>
+<td>Same</td>
+<td>One cache line per lookup, but more complex</td>
+</tr>
+<tr>
+<td><strong>Bloomier Filter</strong></td>
+<td>Associate values with keys</td>
+<td>Larger</td>
+<td>Returns a value OR “not present”</td>
+</tr>
+<tr>
+<td><strong>Invertible Bloom Lookup Table (IBLT)</strong></td>
+<td>Set reconciliation</td>
+<td>Larger</td>
+<td>Can LIST all elements present (not just test membership)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="4-hyperloglog--cardinality-estimation">4. HyperLogLog — Cardinality Estimation</h2>
+<p>“How many unique users visited today?” With 500M events/day, exact counting needs O(n) memory. HyperLogLog uses <strong>1.5 KB</strong> for ~2% error, regardless of how many billions of elements you count.</p>
+<h3 id="how-it-works-intuition">How It Works (Intuition)</h3>
+<ol>
+<li><strong>Hash each element</strong> to a uniformly distributed random bit string.</li>
+<li><strong>Count leading zeros.</strong> If you hash a million elements, you’ll probably see “0000…” (many leading zeros) at some point. The more elements you process, the longer the maximum run of leading zeros you’ll observe.</li>
+<li><strong>The estimate.</strong> If the longest run of leading zeros is L, the approximate cardinality is 2^L (divided into registers for accuracy via harmonic mean).</li>
+</ol>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Hash("user_123") → 00101...  (2 leading zeros)</span></span>
+<span class="line"><span>Hash("user_456") → 00010...  (3 leading zeros) ← new max!</span></span>
+<span class="line"><span>Hash("user_789") → 10011...  (0 leading zeros)</span></span>
+<span class="line"><span>...</span></span>
+<span class="line"><span>After N elements: max_leading_zeros = 14  →  cardinality ≈ 2^14 = 16,384</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>With 16,384 registers (HLL standard): counting 2^64 elements with ~2% error in 12 KB.</span></span></code></pre>
+<h3 id="size-vs-accuracy-trade-off">Size vs Accuracy Trade-off</h3>
+<table>
+<thead>
+<tr>
+<th>Registers (m)</th>
+<th>Memory</th>
+<th>Standard Error</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>256</td>
+<td>256 bytes</td>
+<td>~6.5%</td>
+<td>IoT sensor unique IDs</td>
+</tr>
+<tr>
+<td>1024</td>
+<td>1 KB</td>
+<td>~3.2%</td>
+<td>Basic analytics</td>
+</tr>
+<tr>
+<td>4096</td>
+<td>4 KB</td>
+<td>~1.6%</td>
+<td>Production analytics (Redis default)</td>
+</tr>
+<tr>
+<td>16384 (HLL)</td>
+<td>12 KB</td>
+<td>~0.81%</td>
+<td>Standard production HLL</td>
+</tr>
+<tr>
+<td>65536</td>
+<td>48 KB</td>
+<td>~0.41%</td>
+<td>High-precision analytics</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The key HLL operations:</strong></p>
+<ul>
+<li><strong>PFADD</strong> — add an element (idempotent)</li>
+<li><strong>PFCOUNT</strong> — estimate cardinality</li>
+<li><strong>PFMERGE</strong> — merge two HLLs (cardinality of the union)</li>
+</ul>
+<p>The merge property is incredibly powerful: you can have 1,000 web servers each maintaining a local HLL, then merge them at query time to get the global unique count. No central coordination needed.</p>
+<h3 id="when-hyperloglog-fails">When HyperLogLog Fails</h3>
+<ul>
+<li><strong>Small cardinalities (&lt; 1000):</strong> HLL uses Linear Counting correction, but precision is worse than exact counting with a HashSet.</li>
+<li><strong>When exact counts matter:</strong> “How many users?” → HLL. “Did user 42 visit?” → Bloom filter. “How much revenue?” → exact counter.</li>
+<li><strong>When you need per-element metadata:</strong> HLL only gives you the count. If you need the list of users, you need a different structure.</li>
+</ul>
+<hr>
+<h2 id="5-count-min-sketch--frequency-estimation">5. Count-Min Sketch — Frequency Estimation</h2>
+<p>“How many times was this IP address seen?” A Count-Min Sketch gives an <strong>overcount estimate</strong> (never undercounts) with bounded error.</p>
+<h3 id="how-it-works-1">How It Works</h3>
+<p>A Count-Min Sketch is a 2D array of counters: <strong>d rows (depth) × w columns (width)</strong>.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>INSERT "192.168.1.1":</span></span>
+<span class="line"><span>  For each row i (0 to d-1):</span></span>
+<span class="line"><span>    col = hash_i("192.168.1.1") % w</span></span>
+<span class="line"><span>    sketch[i][col] += 1</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>ESTIMATE frequency of "192.168.1.1":</span></span>
+<span class="line"><span>  freq = infinity</span></span>
+<span class="line"><span>  For each row i (0 to d-1):</span></span>
+<span class="line"><span>    col = hash_i("192.168.1.1") % w</span></span>
+<span class="line"><span>    freq = min(freq, sketch[i][col])  # Take the minimum across all rows</span></span>
+<span class="line"><span>  return freq   # This is an OVERCOUNT (never an undercount)</span></span></code></pre>
+<p><strong>Why take the minimum?</strong> Each row independently hashes the element. Collisions cause overcounts. By taking the minimum across d independent rows, we minimize the collision-induced overcount.</p>
+<p><strong>Error bounds:</strong> With depth d = ⌈ln(1/δ)⌉ and width w = ⌈e/ε⌉ (where e ≈ 2.718):</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>P(estimate > true_count + ε × N) ≤ δ</span></span></code></pre>
+<p>Where N = total sum of all counts in the sketch. This means: with probability 1-δ, the estimate is within ε×N of the true value.</p>
+<p><strong>Example:</strong> For ε = 0.001 (0.1% error) and δ = 0.01 (99% confidence):</p>
+<ul>
+<li>w = e/0.001 ≈ 2719 columns</li>
+<li>d = ln(1/0.01) ≈ 5 rows</li>
+<li>Total counters: 2719 × 5 = 13,595</li>
+<li>Memory: 13,595 × 4 bytes (32-bit counters) ≈ 54 KB</li>
+</ul>
+<p><strong>54 KB to estimate frequencies of billions of events with 99% confidence within 0.1%!</strong></p>
+<hr>
+<h2 id="6-real-world-system-design-applications">6. Real-World System Design Applications</h2>
+<h3 id="61-google-bigtable--apache-hbase--cassandra--read-path-optimization">6.1 Google Bigtable / Apache HBase / Cassandra — Read Path Optimization</h3>
+<p>In LSM-tree (Log-Structured Merge-tree — a write-optimized storage engine that batches writes into sorted, immutable files on disk) databases (Bigtable, HBase, Cassandra, RocksDB), a read may need to check multiple SSTables (sorted string tables) on disk. A Bloom filter per SSTable avoids unnecessary disk seeks:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Without Bloom filter:</span></span>
+<span class="line"><span>  SELECT * FROM users WHERE id = 42;</span></span>
+<span class="line"><span>  → Check SSTable-1 (disk seek) → not found</span></span>
+<span class="line"><span>  → Check SSTable-2 (disk seek) → not found</span></span>
+<span class="line"><span>  → Check SSTable-3 (disk seek) → FOUND</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>With Bloom filter per SSTable:</span></span>
+<span class="line"><span>  SELECT * FROM users WHERE id = 42;</span></span>
+<span class="line"><span>  → Check Bloom-1 → "definitely not" → skip SSTable-1</span></span>
+<span class="line"><span>  → Check Bloom-2 → "definitely not" → skip SSTable-2</span></span>
+<span class="line"><span>  → Check Bloom-3 → "might be" → read SSTable-3 → FOUND</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Result: 1 disk seek instead of 3 (67% reduction in this example, often 90%+ in production).</span></span></code></pre>
+<p><strong>Configuration in practice:</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span># Cassandra table creation</span></span>
+<span class="line"><span>CREATE TABLE users (...) WITH bloom_filter_fp_chance = 0.01;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span># RocksDB configuration</span></span>
+<span class="line"><span>rocksdb::BlockBasedTableOptions::filter_policy.reset(</span></span>
+<span class="line"><span>    rocksdb::NewBloomFilterPolicy(10, false));</span></span>
+<span class="line"><span>                                  #  ↑ 10 bits per key, false = block-based (not full filter)</span></span></code></pre>
+<h3 id="62-cdn--web-cache--is-this-object-cached">6.2 CDN / Web Cache — “Is This Object Cached?”</h3>
+<p>Akamai, Cloudflare, and other CDNs handle billions of objects. A per-edge-server Bloom filter can answer “is this object likely cached locally?” in O(k) without a distributed cache lookup:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Request: GET /images/cat.jpg</span></span>
+<span class="line"><span>  → Edge Bloom filter: "Is /images/cat.jpg in local cache?"</span></span>
+<span class="line"><span>    → NO (definite)  → Fetch from origin, cache locally</span></span>
+<span class="line"><span>    → YES (maybe)    → Check local cache (may be a false positive — minor waste)</span></span></code></pre>
+<p>The false-positive cost is bounded: one unnecessary local cache lookup per false positive. The savings: avoid origin fetches for cache-hit objects.</p>
+<h3 id="63-web-crawler--url-deduplication">6.3 Web Crawler — URL Deduplication</h3>
+<p>Google’s crawler has visited trillions of URLs. Storing visited URLs exactly would take petabytes. A Bloom filter with p = 0.001 (0.1% FP, ~14 bits/URL) needs only ~1.7 TB for 1 trillion URLs, vs ~100 TB for a hash set of 100-byte average URLs.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Crawl frontier:</span></span>
+<span class="line"><span>  Dequeue URL → Bloom filter: "Already visited?"</span></span>
+<span class="line"><span>    → NO  → Visit page, extract outlinks, add to Bloom</span></span>
+<span class="line"><span>    → YES → Skip (0.1% chance it's a false positive → miss a page)</span></span></code></pre>
+<p>The 0.1% missed-page rate is acceptable for web crawling since pages are re-crawled periodically.</p>
+<h3 id="64-database-query-optimization--bloom-filter-join">6.4 Database Query Optimization — Bloom Filter Join</h3>
+<p>In distributed SQL engines (Presto, Spark, BigQuery), Bloom-filter-based joins can dramatically reduce shuffle volume:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A737D">-- Without Bloom filter join: shuffle ALL rows from both tables</span></span>
+<span class="line"><span style="color:#F97583">SELECT</span><span style="color:#F97583"> *</span><span style="color:#F97583"> FROM</span><span style="color:#E1E4E8"> orders o </span><span style="color:#F97583">JOIN</span><span style="color:#E1E4E8"> customers c </span><span style="color:#F97583">ON</span><span style="color:#79B8FF"> o</span><span style="color:#E1E4E8">.</span><span style="color:#79B8FF">customer_id</span><span style="color:#F97583"> =</span><span style="color:#79B8FF"> c</span><span style="color:#E1E4E8">.</span><span style="color:#79B8FF">id</span></span>
+<span class="line"><span style="color:#F97583">WHERE</span><span style="color:#79B8FF"> c</span><span style="color:#E1E4E8">.</span><span style="color:#79B8FF">region</span><span style="color:#F97583"> =</span><span style="color:#9ECBFF"> 'EU'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">-- With Bloom filter join:</span></span>
+<span class="line"><span style="color:#6A737D">-- 1. Scan customers, build Bloom filter of customer IDs in EU region</span></span>
+<span class="line"><span style="color:#6A737D">-- 2. Broadcast Bloom filter to all order-scanner nodes</span></span>
+<span class="line"><span style="color:#6A737D">-- 3. Each order node filters: "Is customer_id in EU Bloom filter?"</span></span>
+<span class="line"><span style="color:#6A737D">--    → NO → drop row (no shuffle needed)</span></span>
+<span class="line"><span style="color:#6A737D">--    → YES → shuffle row to join (may be FP → filtered at join)</span></span>
+<span class="line"><span style="color:#6A737D">-- 4. Only ~10-20% of orders shuffled (dramatic reduction)</span></span></code></pre>
+<p>This technique is called a <strong>Bloom filter pushdown</strong> or <strong>dynamic filter</strong> and is often a 5-50× improvement in join performance.</p>
+<h3 id="65-malware--phishing-url-blocklist--chromes-safe-browsing">6.5 Malware / Phishing URL Blocklist — Chrome’s Safe Browsing</h3>
+<p>Google Safe Browsing maintains a blocklist of millions of malicious URLs. Shipping the full list to every Chrome browser would be GB-sized and update slowly. Instead:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>1. Server sends a compressed Bloom filter (few MB) to each browser.</span></span>
+<span class="line"><span>2. Browser checks each URL against local Bloom filter:</span></span>
+<span class="line"><span>   → NO  → Safe (no server query needed — preserves privacy!)</span></span>
+<span class="line"><span>   → YES → Hash prefix sent to Google for server-side verification</span></span>
+<span class="line"><span>3. Server-side verification resolves false positives with full database.</span></span></code></pre>
+<p>This preserves user privacy (only a hash prefix leaves the browser for “yes” answers) while keeping the client-side database tiny.</p>
+<h3 id="66-rate-limiting--sliding-window-with-approximate-counts">6.6 Rate Limiting — Sliding Window with Approximate Counts</h3>
+<p>A hyper-scale rate limiter (1M requests/sec) can use Count-Min Sketch for approximate per-user counts:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Rate limit: 1000 requests per hour per user</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>For each request from user U:</span></span>
+<span class="line"><span>  count = CountMinSketch.estimate(U, last_hour_window)</span></span>
+<span class="line"><span>  if count > 1000:</span></span>
+<span class="line"><span>      reject request (with probability 1 - FP rate)</span></span>
+<span class="line"><span>  else:</span></span>
+<span class="line"><span>      CountMinSketch.add(U, last_hour_window)</span></span>
+<span class="line"><span>      accept request</span></span></code></pre>
+<p>The Count-Min Sketch overcount guarantees: a user may be rate-limited even if they’re slightly below the limit, but will NEVER be allowed over the limit unrecognized. This is conservative and safe.</p>
+<hr>
+<h2 id="7-architectural-decision-choosing-the-right-structure">7. Architectural Decision: Choosing the Right Structure</h2>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                WHICH PROBABILISTIC DATA STRUCTURE?                   │</span></span>
+<span class="line"><span>│                                                                      │</span></span>
+<span class="line"><span>│  Question you're answering:                                          │</span></span>
+<span class="line"><span>│                                                                      │</span></span>
+<span class="line"><span>│  "Is X in the set?"                                                  │</span></span>
+<span class="line"><span>│    ├── Need deletion? ──YES── Need space efficiency?                 │</span></span>
+<span class="line"><span>│    │                          ├── YES → Cuckoo Filter                │</span></span>
+<span class="line"><span>│    │                          └── NO (flexible) → Counting Bloom     │</span></span>
+<span class="line"><span>│    └── No deletion ────→ Standard Bloom Filter                       │</span></span>
+<span class="line"><span>│                                                                      │</span></span>
+<span class="line"><span>│  "How many of X?"                                                    │</span></span>
+<span class="line"><span>│    ├── Frequency of individual items ──→ Count-Min Sketch            │</span></span>
+<span class="line"><span>│    └── Unique count (cardinality)    ──→ HyperLogLog                 │</span></span>
+<span class="line"><span>│                                                                      │</span></span>
+<span class="line"><span>│  "How similar are A and B?"                                          │</span></span>
+<span class="line"><span>│    ├── Set similarity (Jaccard) ──→ MinHash                         │</span></span>
+<span class="line"><span>│    └── Document similarity (cosine) ──→ SimHash / Random Projection  │</span></span>
+<span class="line"><span>│                                                                      │</span></span>
+<span class="line"><span>│  "What are the top K?"                                               │</span></span>
+<span class="line"><span>│    ├── Heavy hitters (frequent items) ──→ Count-Min Sketch + Heap    │</span></span>
+<span class="line"><span>│    └── Top K with bounded error     ──→ SpaceSaving (deterministic)  │</span></span>
+<span class="line"><span>│                                                                      │</span></span>
+<span class="line"><span>│  "Which items differ between two sets?"                              │</span></span>
+<span class="line"><span>│    └── Set reconciliation ──→ Invertible Bloom Lookup Table (IBLT)   │</span></span>
+<span class="line"><span>│                                                                      │</span></span>
+<span class="line"><span>└────────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<h3 id="decision-table-space-vs-accuracy">Decision Table: Space vs. Accuracy</h3>
+<table>
+<thead>
+<tr>
+<th>Structure</th>
+<th>Space for 1B elements</th>
+<th>Error Type</th>
+<th>Error Rate</th>
+<th>Operations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HashSet (baseline)</td>
+<td>~100 GB (100B avg)</td>
+<td>None (exact)</td>
+<td>0</td>
+<td>Insert, Lookup, Delete</td>
+</tr>
+<tr>
+<td>Bloom Filter (p=0.1%)</td>
+<td>~1.8 GB</td>
+<td>FP only</td>
+<td>0.1%</td>
+<td>Insert, Lookup</td>
+</tr>
+<tr>
+<td>Cuckoo Filter (p=0.1%)</td>
+<td>~1.5 GB</td>
+<td>FP only</td>
+<td>0.1%</td>
+<td>Insert, Lookup, Delete</td>
+</tr>
+<tr>
+<td>Counting Bloom (p=0.1%)</td>
+<td>~7 GB</td>
+<td>FP + overcount</td>
+<td>0.1% FP</td>
+<td>Insert, Lookup, Delete, Count</td>
+</tr>
+<tr>
+<td>Count-Min Sketch (ε=0.001)</td>
+<td>~100 KB (fixed)</td>
+<td>Overcount</td>
+<td>ε × N</td>
+<td>Add, Estimate</td>
+</tr>
+<tr>
+<td>HyperLogLog (2% error)</td>
+<td>~1.5 KB (fixed)</td>
+<td>Estimate ±2%</td>
+<td>2% relative</td>
+<td>Add, Count, Merge</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The story in one line:</strong> A Bloom filter is ~55× smaller than a hash set at 0.1% error. HyperLogLog is 70,000,000× smaller than exact counting for 1B elements.</p>
+<hr>
+<h2 id="8-operational-pitfalls-the-things-that-break-in-production">8. Operational Pitfalls (The Things That Break in Production)</h2>
+<h3 id="pitfall-1-capacity-overrun-the-silent-degradation">Pitfall 1: Capacity Overrun (The Silent Degradation)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Week 1:  Bloom filter deployed, n=1B, p=0.1%. 0.1% of non-members return "yes."</span></span>
+<span class="line"><span>Week 52: 1.5B elements inserted. Actual FP rate ≈ 3%.</span></span>
+<span class="line"><span>         System is silently returning 30× more false positives.</span></span>
+<span class="line"><span>         No alert. No metric. Just degraded behavior.</span></span></code></pre>
+<p><strong>Fix:</strong> (a) Monitor <code>actual_insertions / designed_capacity</code>. Alert at 80%. (b) Use a Scalable Bloom Filter that auto-expands. (c) Expose <code>current_fp_rate()</code> metric to monitoring.</p>
+<h3 id="pitfall-2-serializationdeserialization-drift">Pitfall 2: Serialization/Deserialization Drift</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Server A: Bloom filter with murmur3 hash, m=10M bits, k=7</span></span>
+<span class="line"><span>Server B: Bloom filter with sha256 hash, m=10M bits, k=7</span></span>
+<span class="line"><span>→ Same element produces different hash positions.</span></span>
+<span class="line"><span>→ Filters are incompatible.</span></span>
+<span class="line"><span>→ Combined (union) gives garbage results.</span></span></code></pre>
+<p><strong>Fix:</strong> Serialize the Bloom filter parameters (hash algorithm, seed, m, k) along with the bit array. Never assume two filters are compatible without checking parameters.</p>
+<h3 id="pitfall-3-false-negatives-from-misimplementation">Pitfall 3: False Negatives from Misimplementation</h3>
+<p>A true Bloom filter has ZERO false negatives by design. But bugs introduce them:</p>
+<ul>
+<li>Concurrency: two threads setting bits simultaneously, one clobbers the other (use atomic bit sets or <code>compare_and_swap</code>).</li>
+<li>Hash collision between different hash functions (use double hashing with independent seeds).</li>
+<li>Bit array resizing without rehashing (loses all existing members).</li>
+</ul>
+<h3 id="pitfall-4-using-bloom-filter-where-exact-lookup-is-required">Pitfall 4: Using Bloom Filter Where Exact Lookup Is Required</h3>
+<p>“Let’s use a Bloom filter for our user authentication lookup — it’s so memory-efficient!”
+→ False positive = a non-existent user passes authentication.
+→ This is a CRITICAL security flaw, not a minor annoyance.</p>
+<p><strong>Rule:</strong> Bloom filters are for optimization, not for correctness-critical paths. If a wrong answer has a security, financial, or legal consequence, use an exact data structure.</p>
+<h3 id="pitfall-5-hyperloglog-merge-with-different-precisions">Pitfall 5: HyperLogLog Merge with Different Precisions</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>HLL(precision=12) from server A (4 KB)</span></span>
+<span class="line"><span>HLL(precision=14) from server B (16 KB)</span></span>
+<span class="line"><span>→ Merging them: which precision? The lower one loses information.</span></span>
+<span class="line"><span>→ Merged result has error rate of the lowest-precision HLL.</span></span></code></pre>
+<p><strong>Fix:</strong> Standardize precision across all services. Include precision in serialization.</p>
+<hr>
+<h2 id="9-interview-question-the-url-blocklist-at-scale">9. Interview Question: The URL Blocklist at Scale</h2>
+<h3 id="the-scenario">The Scenario</h3>
+<blockquote>
+<p>“You’re building a URL blocklist for a security product that processes 50 billion URLs per day. The blocklist contains 10 billion known malicious URLs. You have a budget of 4 GB RAM per server for the blocklist data structure. Lookups must return in under 1 microsecond. False negatives (classifying a malicious URL as safe) are catastrophic. False positives (classifying a safe URL as malicious) are acceptable up to 0.1%. The blocklist grows by 100 million URLs per day. How do you design this system?”</p>
+</blockquote>
+<h3 id="model-answer">Model Answer</h3>
+<p><strong>1. Pick the data structure: Bloom filter (not a hash set).</strong>
+A hash set of 10 billion URLs at ~100 bytes per URL (string + hash table overhead) would need ~1 TB of RAM — well beyond our 4 GB budget. A Bloom filter at 0.1% FP needs ~14 bits per element: 10B × 14 bits = 17.5 GB if we sized for the full 10B. But we can compress: serialized Bloom filters compress extremely well (they’re mostly random bits, but the sparsity creates compressibility in early stages). Even without compression, with 4 GB = 32 Gbits / 10B elements = 3.2 bits per element → FP rate ≈ 25% — unacceptable. We need a better approach.</p>
+<p><strong>2. The multi-layer architecture:</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Layer 1 (L1 - Hot Cache): LRU cache of recently seen URLs</span></span>
+<span class="line"><span>  → 500 MB. Hash set of ~5M exact URLs. 0.02μs lookup.</span></span>
+<span class="line"><span>  → 80% of requests hit here (power-law distribution: most traffic is to popular URLs).</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Layer 2 (L2 - Bloom Filter): Compressed Bloom filter for the full 10B blocklist</span></span>
+<span class="line"><span>  → 3 GB compressed (~2.4 bits/elem at rest, decompressed on startup).</span></span>
+<span class="line"><span>  → Online, the Bloom filter needs ~14 bits/elem uncompressed = 17.5 GB. But we can:</span></span>
+<span class="line"><span>    a) Partition the Bloom filter across 5 servers (3.5 GB each), or</span></span>
+<span class="line"><span>    b) Use a Scalable Bloom Filter where only "hot" filters are in memory.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Layer 3 (L3 - Exact verification): Remote query to blocklist database</span></span>
+<span class="line"><span>  → For L2 "yes" answers, verify against RocksDB on SSD (50TB blocklist on disk).</span></span>
+<span class="line"><span>  → Only ~0.1% of total traffic (the FPs from L2) hit this layer.</span></span>
+<span class="line"><span>  → RTT to L3: ~100-500μs. Total pipeline: still &#x3C; 1ms for FP case.</span></span></code></pre>
+<p><strong>3. Handling growth of 100M URLs/day:</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>- Rebuild the Bloom filter daily from the ground truth database during off-peak.</span></span>
+<span class="line"><span>- Use a delta Bloom filter for new URLs added between rebuilds.</span></span>
+<span class="line"><span>- Total pipeline: query L1 → L2 (main) → L2 (delta) → L3 (exact).</span></span>
+<span class="line"><span>- Daily rebuild takes ~10 minutes with parallelized hashing.</span></span></code></pre>
+<p><strong>4. The complete read path:</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Request: "Is https://evil.com/phish safe?"</span></span>
+<span class="line"><span>  → L1 (Hot Cache): Check exact URL hash set. If HIT → "MALICIOUS" (0.02μs)</span></span>
+<span class="line"><span>  → L2 (Bloom Filter): Query Bloom. </span></span>
+<span class="line"><span>    → If NO → "SAFE" (guaranteed). (0.3μs)</span></span>
+<span class="line"><span>    → If YES → continue. (might be FP)</span></span>
+<span class="line"><span>  → L3 (RocksDB): Exact lookup in blocklist database on SSD.</span></span>
+<span class="line"><span>    → If FOUND → "MALICIOUS" (confirmed).</span></span>
+<span class="line"><span>    → If NOT FOUND → "SAFE" (it was a false positive — update monitoring).</span></span>
+<span class="line"><span>  → Promote to L1 cache on "MALICIOUS" hits.</span></span></code></pre>
+<p><strong>5. Deployment architecture:</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                   Load Balancer                       │</span></span>
+<span class="line"><span>└───┬──────────────┬──────────────┬─────────────────┬──┘</span></span>
+<span class="line"><span>    │              │              │                 │</span></span>
+<span class="line"><span>┌───▼───┐     ┌───▼───┐     ┌───▼───┐        ┌────▼────┐</span></span>
+<span class="line"><span>│Server 1│     │Server 2│     │Server 3│   ...  │Server N │</span></span>
+<span class="line"><span>│L1: LRU │     │L1: LRU │     │L1: LRU │        │L1: LRU  │</span></span>
+<span class="line"><span>│L2: BF  │     │L2: BF  │     │L2: BF  │        │L2: BF   │</span></span>
+<span class="line"><span>│ (full) │     │ (full) │     │ (full) │        │ (full)  │</span></span>
+<span class="line"><span>└───┬───┘     └───┬───┘     └───┬───┘        └────┬────┘</span></span>
+<span class="line"><span>    │              │              │                 │</span></span>
+<span class="line"><span>    └──────────────┴──────────────┴─────────────────┘</span></span>
+<span class="line"><span>                        │</span></span>
+<span class="line"><span>                   ┌────▼────┐</span></span>
+<span class="line"><span>                   │  RocksDB │  (SSD cluster — ground truth)</span></span>
+<span class="line"><span>                   │  Cluster  │</span></span>
+<span class="line"><span>                   └─────────┘</span></span></code></pre>
+<p>Each server has the full Bloom filter (4 GB, occasionally swapped to disk for cold sections). The L1 cache is per-server (500 MB) — no coordination needed. The L3 RocksDB cluster is the single source of truth, updated atomically.</p>
+<h3 id="common-pitfall">Common Pitfall</h3>
+<p><strong>❌ “Just use a 4 GB Bloom filter for 10 billion URLs.”</strong> At 4 GB = 32 Gbits = 3.2 bits per element, the FP rate is ~(0.6185)^3.2 ≈ 25%. One in four safe URLs would be flagged as malicious. Your security product would block Google.com, GitHub.com, and every other popular site 25% of the time. It would be completely unusable.</p>
+<p><strong>✅ The fix:</strong> Don’t try to fit the full blocklist in RAM with a single Bloom filter at 0.1% FP — it needs ~17.5 GB. Instead, use the multi-layer architecture: an LRU hot cache (80% hit rate), a Bloom filter at higher FP rate (2-5%) as a “probable block” filter, and an exact verification layer for Bloom positives. The layered approach reduces average lookup to the cost of L1/L2, with L3 only handling the FP tail. Also consider: do you really need 0.1% FP for ALL URLs, or can you use a higher FP rate for cold URLs and exact storage for hot URLs? A <strong>weighted Bloom filter</strong> approach (larger filter for frequently-accessed URL prefixes) can provide better effective accuracy.</p>
+<hr>
+<h2 id="10-curveball-questions">10. Curveball Questions</h2>
+<p><strong>“Your Bloom filter has been running for 6 months. The CISO asks: ‘Can you prove that a specific URL was definitely in the blocklist on March 15th?’ How do you answer?”</strong></p>
+<p>A Bloom filter can’t answer this. It’s a probabilistic structure with no audit trail — you can’t reconstruct past membership from the current bit array (because bits are set by multiple elements and never cleared).</p>
+<p><strong>The staff-engineer answer:</strong> “No — a standard Bloom filter can’t answer historical membership queries. Here’s how I’d solve it: (a) Keep a WAL (write-ahead log) of all Bloom filter insertions in append-only storage. To answer ‘was X present on March 15th?’, replay the WAL up to that date. (b) Or, use versioned Bloom filters — daily snapshots stored in S3. To answer a historical query, load the March 15th snapshot. (c) Better: recognize that this is a fundamentally different requirement (auditability) and the Bloom filter is the wrong tool for it. Use an exact structure (Merkle tree, append-only log, or database with temporal tables) for audit queries, and keep the Bloom filter for the real-time path.”</p>
+<p><strong>“You’re building a distributed rate limiter. Your Count-Min Sketch is kept locally on each server. The rate limit is 100 requests per minute per user. How do you handle the fact that the same user’s requests may hit different servers?”</strong></p>
+<p>Single-server Count-Min Sketch doesn’t work for distributed rate limiting — each server only sees its fraction of the user’s traffic, so the total is undercounted (and the overcount guarantee is violated across servers).</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><strong>Sticky sessions</strong> — route User X always to Server Y ([[Glossary#Consistent Hashing|consistent hashing]] on user_id). Simple but breaks if Server Y goes down and user is re-routed.</li>
+<li><strong>Distributed Count-Min Sketch</strong> — each server writes to a shared Redis cluster. The sketch is in Redis; all servers read/write the same counters. Trade-off: Redis becomes a bottleneck at 1M RPS.</li>
+<li><strong>Local sketch + periodic merge</strong> — each server maintains its own Count-Min Sketch. Every 10 seconds, servers exchange sketches and merge (pointwise addition). Rate limit check: estimate from merged sketch. Trade-off: 10-second staleness means a user can burst 2× the limit briefly.</li>
+<li><strong>Two-layer: local (fast, stale) + global (slow, accurate)</strong> — local Count-Min Sketch with relaxed limit (80 requests). When local approaches limit, query global Redis for exact count. This is the practical answer.</li>
+</ol>
+<hr>
+<h2 id="11-key-metrics-summary">11. Key Metrics Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Target</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>False-positive rate</td>
+<td>≤ 0.1% (for blocklist/security)</td>
+<td>User trust. Higher FPs → product unusable.</td>
+</tr>
+<tr>
+<td>False-negative rate</td>
+<td>0 (guaranteed by design)</td>
+<td>Non-negotiable for security filters.</td>
+</tr>
+<tr>
+<td>Insertion throughput</td>
+<td>1M+ per second per server</td>
+<td>Must keep up with URL ingestion (100M/day).</td>
+</tr>
+<tr>
+<td>Lookup latency (P99)</td>
+<td>&lt; 1μs (L1), &lt; 5μs (L2)</td>
+<td>Must not add perceptible latency to page loads.</td>
+</tr>
+<tr>
+<td>Memory per server</td>
+<td>&lt; 4 GB for 10B-element filter</td>
+<td>Hardware constraints.</td>
+</tr>
+<tr>
+<td>Capacity headroom monitor</td>
+<td>Alert at 80% of designed n</td>
+<td>Prevents silent FP degradation.</td>
+</tr>
+<tr>
+<td>Bloom filter rebuild time</td>
+<td>&lt; 30 minutes</td>
+<td>Must complete during off-peak window.</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="12-weaknesses--trade-offs">12. Weaknesses &amp; Trade-offs</h2>
+<ol>
+<li>
+<p><strong>Bloom filters degrade silently.</strong> The FP rate increases with insertions, but there’s no obvious signal unless you explicitly monitor <code>current_fp_rate()</code>. Most teams don’t. By the time someone notices, the system has been returning garbage for weeks.</p>
+</li>
+<li>
+<p><strong>No deletion without cost.</strong> Standard Bloom filters can’t delete. Counting Bloom filters cost 4× space. Cuckoo filters can delete but fail to insert at high load. Choose carefully.</p>
+</li>
+<li>
+<p><strong>No enumeration.</strong> You can test “is X in the set?” but you can’t ask “give me all elements in the set.” If you need enumeration (e.g., “list all blocked URLs”), you need a separate exact data store.</p>
+</li>
+<li>
+<p><strong>Parameter lock-in.</strong> Once you choose m (size) and k (hash functions), you can’t change them without rebuilding the entire filter from the original dataset. If you lose the original dataset, you’re stuck.</p>
+</li>
+<li>
+<p><strong>False sense of precision.</strong> HyperLogLog’s “2% error” sounds precise, but for small cardinalities (&lt; 1000), the error can be much higher. Always check the HLL error profile for your expected cardinality range.</p>
+</li>
+<li>
+<p><strong>Hash function distribution matters.</strong> A poor hash function (non-uniform distribution) breaks all the probability guarantees. Use well-tested hash functions: MurmurHash3, xxHash, SipHash. Never use a cryptographic hash (SHA-256) for Bloom filters — it’s 100× slower and adds unnecessary collision resistance that you don’t need.</p>
+</li>
+</ol>
+<hr>
+<h2 id="related">Related</h2>
+<ul>
+<li>[[topic-queue]]</li>
+<li>[[Distributed Cache (Redis-Memcached)]]</li>
+<li>[[Consistent Hashing]] (for partitioning Bloom filters across servers)</li>
+<li>[[Database Indexing &amp; Query Optimization]] (for Bloom filter join pushdown)</li>
+<li>[[Rate Limiter]] (for Count-Min Sketch in rate limiting)</li>
+<li>[[Bloom Filters &amp; Probabilistic Data Structures — Weakness Vault]]</li>
+</ul>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>A Bloom filter answers “is X possibly in the set?” with zero false negatives and a tunable false-positive rate. It needs only ~10–14 bits per element (1%–0.1% FP), making it 100–1000x smaller than a hash set.</li>
+<li>The false-positive rate degrades exponentially as you insert beyond the designed capacity — at 3x the design point, a 1% filter becomes ~25%. Monitor <code>actual_insertions / designed_capacity</code> and alert at 80%, or use a Scalable Bloom Filter.</li>
+<li>Bloom filters cannot delete (standard) or enumerate elements. Need deletion? Use a Cuckoo filter (native delete, ~2 memory accesses) or Counting Bloom filter (4x space). Need unique counts? Use HyperLogLog (~1.5 KB for billions of elements at ~2% error).</li>
+<li>Never use a Bloom filter where a false positive has security, financial, or legal consequences — it is an optimization layer, not a correctness layer. Always pair it with an exact verification step for “yes” answers in critical paths.</li>
+<li>Use double hashing (Kirsch-Mitzenmacher) to derive k hash positions from just two hash computations — mathematically equivalent and far faster than k independent hashes.</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li><strong>“How do you handle a Bloom filter that needs to grow beyond its original capacity?”</strong> — Use a Scalable Bloom Filter: a chain of filters with progressively tighter FP rates that auto-expand, keeping total FP bounded at ~2x the initial rate. The cost is that lookups must check every filter in the chain.</li>
+<li><strong>“You need to count unique visitors across 1,000 servers — how?”</strong> — Use HyperLogLog on each server (1.5 KB each), then merge with PFMERGE at query time. The merge is associative and needs no central coordination, giving a global unique count with ~2% error in kilobytes total.</li>
+<li><strong>“When is a Bloom filter the wrong choice?”</strong> — When you need deletion, element enumeration, exact counts, historical auditability, or zero false positives. Each of these maps to a different structure (Cuckoo filter, IBLT, exact counter, WAL/versioned snapshots, or a hash set).</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>The silent degradation trap: a Bloom filter designed for n=1B at 1% FP will still “work” at n=3B — no errors, no crashes — but its actual FP rate has climbed to ~25%, quietly corrupting system behavior with no alert. Most teams never expose <code>current_fp_rate()</code> to monitoring, so the degradation goes unnoticed for weeks.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Bloom%20Filters%20%26%20Probabilistic%20Data%20Structures&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fbloom-filters-and-probabilistic-data-structures%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fbloom-filters-and-probabilistic-data-structures%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/bloom-filters-and-probabilistic-data-structures" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a><a href="/notes/system-design/chaos-engineering-failure-injection-game-days/" class="related-card"><div class="related-card-title">Chaos Engineering (Failure Injection, Game Days)</div><div class="related-card-meta">System Design · 16 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/authentication-system-oauth-jwt-sso" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Authentication System (OAuth, JWT, SSO)</span></a><a href="/notes/system-design/chaos-engineering-failure-injection-game-days" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Chaos Engineering (Failure Injection, Game Days)</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Bloom Filters &amp; Probabilistic Data Structures" data-selector=".article-prose" data-article-slug="system-design/bloom-filters-and-probabilistic-data-structures" data-article-title="Bloom Filters &amp; Probabilistic Data Structures" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

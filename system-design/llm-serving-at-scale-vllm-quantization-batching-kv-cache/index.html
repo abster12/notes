@@ -1,0 +1,840 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>LLM Serving at Scale (vLLM, Quantization, Batching, KV Cache) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-the-llm-inference-problem" class="toc-link" data-toc-link="1-the-llm-inference-problem" data-astro-cid-p33bl5ka>1. The LLM Inference Problem</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#11-autoregressive-generation-is-fundamentally-different" class="toc-link" data-toc-link="11-autoregressive-generation-is-fundamentally-different" data-astro-cid-p33bl5ka>1.1 Autoregressive Generation Is Fundamentally Different</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#12-the-memory-wall" class="toc-link" data-toc-link="12-the-memory-wall" data-astro-cid-p33bl5ka>1.2 The Memory Wall</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-kv-cache-the-core-mechanism" class="toc-link" data-toc-link="2-kv-cache-the-core-mechanism" data-astro-cid-p33bl5ka>2. KV Cache: The Core Mechanism</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#21-what-gets-cached-and-why" class="toc-link" data-toc-link="21-what-gets-cached-and-why" data-astro-cid-p33bl5ka>2.1 What Gets Cached and Why</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#22-the-prefill-vs-decode-distinction" class="toc-link" data-toc-link="22-the-prefill-vs-decode-distinction" data-astro-cid-p33bl5ka>2.2 The Prefill vs. Decode Distinction</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#23-pagedattention-the-vllm-innovation" class="toc-link" data-toc-link="23-pagedattention-the-vllm-innovation" data-astro-cid-p33bl5ka>2.3 PagedAttention: The vLLM Innovation</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-batching-strategies" class="toc-link" data-toc-link="3-batching-strategies" data-astro-cid-p33bl5ka>3. Batching Strategies</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#31-static-batching-the-old-way" class="toc-link" data-toc-link="31-static-batching-the-old-way" data-astro-cid-p33bl5ka>3.1 Static Batching (The Old Way)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#32-continuous-in-flight-batching" class="toc-link" data-toc-link="32-continuous-in-flight-batching" data-astro-cid-p33bl5ka>3.2 Continuous (In-Flight) Batching</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#33-iteration-level-scheduling" class="toc-link" data-toc-link="33-iteration-level-scheduling" data-astro-cid-p33bl5ka>3.3 Iteration-Level Scheduling</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#4-quantization-trading-precision-for-throughput" class="toc-link" data-toc-link="4-quantization-trading-precision-for-throughput" data-astro-cid-p33bl5ka>4. Quantization: Trading Precision for Throughput</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#41-the-precision-spectrum" class="toc-link" data-toc-link="41-the-precision-spectrum" data-astro-cid-p33bl5ka>4.1 The Precision Spectrum</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#42-gptq-vs-awq-the-calibration-difference" class="toc-link" data-toc-link="42-gptq-vs-awq-the-calibration-difference" data-astro-cid-p33bl5ka>4.2 GPTQ vs. AWQ: The Calibration Difference</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#43-quantizations-hidden-cost-attention-degradation" class="toc-link" data-toc-link="43-quantizations-hidden-cost-attention-degradation" data-astro-cid-p33bl5ka>4.3 Quantization’s Hidden Cost: Attention Degradation</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#5-prefix-caching-the-8020-win" class="toc-link" data-toc-link="5-prefix-caching-the-8020-win" data-astro-cid-p33bl5ka>5. Prefix Caching: The 80/20 Win</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#51-the-observation" class="toc-link" data-toc-link="51-the-observation" data-astro-cid-p33bl5ka>5.1 The Observation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#52-automatic-prefix-caching-apc-in-vllm" class="toc-link" data-toc-link="52-automatic-prefix-caching-apc-in-vllm" data-astro-cid-p33bl5ka>5.2 Automatic Prefix Caching (APC) in vLLM</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#53-the-fragmentation-problem-revisited" class="toc-link" data-toc-link="53-the-fragmentation-problem-revisited" data-astro-cid-p33bl5ka>5.3 The Fragmentation Problem Revisited</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#6-model-parallelism-when-one-gpu-isnt-enough" class="toc-link" data-toc-link="6-model-parallelism-when-one-gpu-isnt-enough" data-astro-cid-p33bl5ka>6. Model Parallelism: When One GPU Isn’t Enough</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#61-tensor-parallelism-tp" class="toc-link" data-toc-link="61-tensor-parallelism-tp" data-astro-cid-p33bl5ka>6.1 Tensor Parallelism (TP)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#62-pipeline-parallelism-pp" class="toc-link" data-toc-link="62-pipeline-parallelism-pp" data-astro-cid-p33bl5ka>6.2 Pipeline Parallelism (PP)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#63-the-tp-vs-pp-decision-at-staff-level" class="toc-link" data-toc-link="63-the-tp-vs-pp-decision-at-staff-level" data-astro-cid-p33bl5ka>6.3 The TP vs. PP Decision at Staff Level</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#7-the-interview-question" class="toc-link" data-toc-link="7-the-interview-question" data-astro-cid-p33bl5ka>7. The Interview Question</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#-sharp-question" class="toc-link" data-toc-link="-sharp-question" data-astro-cid-p33bl5ka>⚡ Sharp Question</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#-model-answer" class="toc-link" data-toc-link="-model-answer" data-astro-cid-p33bl5ka>✅ Model Answer</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#-common-pitfall" class="toc-link" data-toc-link="-common-pitfall" data-astro-cid-p33bl5ka>❗ Common Pitfall</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#8-self-check-questions-cron-job-format" class="toc-link" data-toc-link="8-self-check-questions-cron-job-format" data-astro-cid-p33bl5ka>8. Self-Check Questions (Cron-Job Format)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#related" class="toc-link" data-toc-link="related" data-astro-cid-p33bl5ka>Related</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>LLM Serving at Scale (vLLM, Quantization, Batching, KV Cache)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 16 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 22 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>ai-ml</span><span class="tag" data-astro-cid-sgg5joot>llm-serving</span><span class="tag" data-astro-cid-sgg5joot>vllm</span><span class="tag" data-astro-cid-sgg5joot>quantization</span><span class="tag" data-astro-cid-sgg5joot>batching</span><span class="tag" data-astro-cid-sgg5joot>kv-cache</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="llm-serving-at-scale-vllm-quantization-batching-kv-cache">LLM Serving at Scale (vLLM, Quantization, Batching, KV Cache)</h1>
+<blockquote>
+<p><strong>Staff-Engineer Focus:</strong> “We deploy the model behind an API and it generates text” is the junior answer. “We use vLLM with continuous batching and FP16” is the mid-level answer. <strong>The staff engineer doesn’t ask which serving framework to use. They ask: “What is our token generation throughput per GPU-dollar at P99 latency? How does KV cache memory fragmentation degrade our max batch size under bursty traffic with varying sequence lengths? When we quantize to INT4, what’s the perplexity delta on our specific prompt distribution — not the benchmark average? If we shard the model across 8 GPUs with tensor parallelism, what is the all-reduce bubble time per transformer layer, and is pipeline parallelism actually cheaper at our batch sizes? When a request with 32K context arrives mid-batch, does our prefix caching hit rate collapse because we evicted the system prompt’s KV blocks from the previous batch? And critically — during a rolling model upgrade, how do we avoid dropping in-flight requests whose KV caches are incompatible with the new weights?”</strong> The interview question isn’t “What is KV cache?” It’s: “You’re serving Llama-3-70B to 10,000 concurrent users. P50 latency is 200ms but P99 is 4.5 seconds. Memory is 85% utilized but 30% of that is fragmentation — KV blocks from finished requests that aren’t reusable because they’re interleaved with active request blocks. Global batch size is 128 but effective batch size drops to 40 during P99 spikes because the scheduler can’t pack sequences efficiently. Walk me through: (a) exactly what fragmentation means in the context of PagedAttention and why it causes effective batch size collapse, (b) how prefix-aware scheduling would change the picture if 80% of your traffic shares a 4K-token system prompt, (c) whether switching from FP16 to INT4 quantization helps or hurts the fragmentation problem — and the secondary effect on attention computation that nobody talks about, and (d) what a proper canary deployment looks like when you can’t just kill pods because in-flight requests hold unrecoverable KV cache state.”**</p>
+</blockquote>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>The infrastructure for serving LLM inference at scale — managing KV cache memory, batching concurrent requests, and quantizing weights to reduce cost.</p>
+<p><strong>How it’s asked:</strong> “Design an LLM serving system for 10K concurrent users on Llama-3-70B with P99 &lt;300ms. Cover KV cache management, continuous batching, quantization trade-offs, and rolling deployments.”</p>
+<hr>
+<h2 id="1-the-llm-inference-problem">1. The LLM Inference Problem</h2>
+<h3 id="11-autoregressive-generation-is-fundamentally-different">1.1 Autoregressive Generation Is Fundamentally Different</h3>
+<p>Unlike traditional ML serving (classification, embedding extraction) which is a single forward pass, LLM inference is <strong>autoregressive</strong> — generate one token, feed it back as input, generate the next. For a 500-token response from a 70B model:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>1 forward pass per token × 500 tokens = 500 sequential forward passes</span></span>
+<span class="line"><span>Each forward pass computes attention over ALL previous tokens</span></span>
+<span class="line"><span>Total computation: O(n² · d) per sequence where n = sequence length, d = model dimension</span></span></code></pre>
+<p>This creates three compounding bottlenecks that don’t exist in traditional model serving:</p>
+<table>
+<thead>
+<tr>
+<th>Bottleneck</th>
+<th>Traditional ML</th>
+<th>LLM Inference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Compute</strong></td>
+<td>One pass, fixed cost</td>
+<td>N passes, O(n²) attention</td>
+</tr>
+<tr>
+<td><strong>Memory</strong></td>
+<td>Fixed model weights only</td>
+<td>Weights + growing KV cache per sequence</td>
+</tr>
+<tr>
+<td><strong>Batching</strong></td>
+<td>Static, homogeneous inputs</td>
+<td>Dynamic, variable-length, stateful</td>
+</tr>
+</tbody>
+</table>
+<h3 id="12-the-memory-wall">1.2 The Memory Wall</h3>
+<p>A 70B parameter model in FP16:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Model weights: 70B × 2 bytes = 140 GB</span></span>
+<span class="line"><span>That alone requires 2× A100-80GB or 4× A100-40GB just to load the model</span></span></code></pre>
+<p>But weights are only half the story. The <strong>KV cache</strong> — storing key and value tensors for every token in every active sequence — is the real memory killer:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>KV cache per token (Llama-3-70B):</span></span>
+<span class="line"><span>  - 80 layers × 2 (K,V) × 8 KV heads × 128 dim × 2 bytes = ~328 KB per token</span></span>
+<span class="line"><span>  - For 128 concurrent sequences of 4096 tokens each:</span></span>
+<span class="line"><span>    128 × 4096 × 328 KB = ~172 GB of KV cache alone</span></span>
+<span class="line"><span>  - Total GPU memory: 140 GB (weights) + 172 GB (KV cache) = 312 GB</span></span>
+<span class="line"><span>  - That's 4× A100-80GB — and we haven't even run a forward pass yet</span></span></code></pre>
+<p><strong>This is why KV cache management is the single most important optimization in LLM serving.</strong> Everything else — batching, scheduling, quantization — exists in the shadow of this memory constraint.</p>
+<hr>
+<h2 id="2-kv-cache-the-core-mechanism">2. KV Cache: The Core Mechanism</h2>
+<h3 id="21-what-gets-cached-and-why">2.1 What Gets Cached and Why</h3>
+<p>During autoregressive generation, the causal attention mask means token <code>t</code> only attends to tokens <code>0..t</code>. When generating token <code>t+1</code>, we recompute attention for ALL previous tokens if we don’t cache:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Without cache: O(t²) per new token</span></span>
+<span class="line"><span>With cache: O(t) per new token — we only compute attention for the new token</span></span></code></pre>
+<p>The KV cache stores the <strong>Key</strong> and <strong>Value</strong> projections for every token that has been generated so far. When a new token arrives, we compute its Q, K, V, append K and V to the cache, then compute attention of Q against ALL cached K,V pairs.</p>
+<p><strong>Critical detail:</strong> The KV cache is per-layer and per-attention-head. For Llama-3-70B with GQA (Grouped Query Attention) — 64 query heads but only 8 KV heads — the KV cache is 8× smaller than it would be with full MHA. This architectural choice is explicitly about reducing KV cache memory.</p>
+<h3 id="22-the-prefill-vs-decode-distinction">2.2 The Prefill vs. Decode Distinction</h3>
+<p>This is where most mid-level engineers get fuzzy. LLM serving has TWO distinct phases:</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>What Happens</th>
+<th>Compute</th>
+<th>Memory</th>
+<th>Bottleneck</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Prefill</strong></td>
+<td>Process the entire input prompt in one forward pass</td>
+<td>Compute-bound (O(n²) attention over prompt)</td>
+<td>KV cache allocated for all prompt tokens</td>
+<td>FLOPs, not memory</td>
+</tr>
+<tr>
+<td><strong>Decode</strong></td>
+<td>Generate one token at a time autoregressively</td>
+<td>Memory-bound (O(n) per step, but memory bandwidth limited)</td>
+<td>KV cache grows by 1 token per step</td>
+<td>Memory bandwidth</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The prefill phase is compute-bound</strong> — the GPU is doing massive parallel matrix multiplications over the full prompt. <strong>The decode phase is memory-bound</strong> — for each new token, we’re limited by how fast we can read the KV cache from HBM into SRAM, not by compute.</p>
+<p>This distinction is why continuous batching works: you can interleave prefill of new requests with decode of existing ones to maximize GPU utilization.</p>
+<h3 id="23-pagedattention-the-vllm-innovation">2.3 PagedAttention: The vLLM Innovation</h3>
+<p>Before PagedAttention (vLLM, June 2023), frameworks allocated KV cache as one contiguous block per sequence. If a sequence might generate up to 2048 tokens, you pre-allocated 2048 slots — even if it finished at 50 tokens. This is the same problem virtual memory solved for OS in the 1960s.</p>
+<p><strong>PagedAttention</strong> treats the KV cache like virtual memory pages:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Traditional: [============2048 slots pre-allocated============] — 90% wasted for short generations</span></span>
+<span class="line"><span>PagedAttention: [Block0][Block1][Block2]...[BlockN] — allocated on demand in fixed-size blocks (e.g., 16 tokens)</span></span></code></pre>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Traditional (Contiguous)</th>
+<th>PagedAttention</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Allocation</strong></td>
+<td>Pre-allocate max length</td>
+<td>Allocate blocks on demand</td>
+</tr>
+<tr>
+<td><strong>Fragmentation</strong></td>
+<td>External: unused pre-allocated space</td>
+<td>Internal: partially-filled last block (max 15 tokens wasted)</td>
+</tr>
+<tr>
+<td><strong>Memory waste</strong></td>
+<td>Up to 90% for variable-length outputs</td>
+<td>&lt; 4% (only last block waste)</td>
+</tr>
+<tr>
+<td><strong>Sharing</strong></td>
+<td>Impossible: each sequence owns its cache</td>
+<td><strong>Block-level sharing</strong> for prefix caching, beam search</td>
+</tr>
+<tr>
+<td><strong>Throughput gain</strong></td>
+<td>Baseline</td>
+<td>2-4× higher throughput via higher batch sizes</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The key insight:</strong> By decoupling logical sequences from physical KV cache blocks, vLLM can pack more concurrent sequences into the same GPU memory, increasing batch size and therefore throughput. A block table (analogous to a page table) maps logical token positions to physical blocks.</p>
+<hr>
+<h2 id="3-batching-strategies">3. Batching Strategies</h2>
+<h3 id="31-static-batching-the-old-way">3.1 Static Batching (The Old Way)</h3>
+<p>Static batching pads all sequences to the same length and runs them together. If one sequence is 10 tokens and another is 500, both get padded to 500 — the short one wastes 98% of its compute and memory.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Static batch of 4 sequences, max length 500:</span></span>
+<span class="line"><span>Seq1: [10 tokens + 490 PAD tokens] — 98% waste</span></span>
+<span class="line"><span>Seq2: [500 tokens] — OK</span></span>
+<span class="line"><span>Seq3: [50 tokens + 450 PAD tokens] — 90% waste</span></span>
+<span class="line"><span>Seq4: [200 tokens + 300 PAD tokens] — 60% waste</span></span>
+<span class="line"><span>Effective utilization: 38%</span></span></code></pre>
+<h3 id="32-continuous-in-flight-batching">3.2 Continuous (In-Flight) Batching</h3>
+<p>Continuous batching, popularized by TGI and vLLM, treats the batch as a dynamic set. Requests enter and leave the batch independently:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Time ──────────────────────────────────────────────►</span></span>
+<span class="line"><span>Batch: [R1▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮]</span></span>
+<span class="line"><span>          [R2▮▮▮▮▮▮▮▮▮▮▮▮] → finished, evicted</span></span>
+<span class="line"><span>             [R3 enters → ▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮]</span></span>
+<span class="line"><span>                [R4▮▮▮▮▮▮▮▮] → finished, evicted</span></span>
+<span class="line"><span>                   [R5 enters → ▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮]</span></span></code></pre>
+<p>At each step, the scheduler picks which sequences participate in the next forward pass. This is NOT trivial — you can’t just throw all active sequences into every batch because of the memory-bandwidth bottleneck in decode.</p>
+<p><strong>The scheduling decision at each step:</strong> How many sequences to batch? Too few → GPU underutilized. Too many → each sequence gets less memory bandwidth, per-token latency increases for everyone. This is the <strong>batch size vs. latency trade-off</strong> that makes LLM serving fundamentally different from stateless API serving.</p>
+<h3 id="33-iteration-level-scheduling">3.3 Iteration-Level Scheduling</h3>
+<p>vLLM schedules at the granularity of individual forward passes (iterations), not requests. At each iteration:</p>
+<ol>
+<li><strong>Select a batch:</strong> Pick N sequences whose combined KV cache fits in available blocks</li>
+<li><strong>Run one forward pass</strong> for all N sequences</li>
+<li><strong>Append new KV block</strong> for each sequence that generated a token</li>
+<li><strong>Check for completions</strong> — evict finished sequences, free their blocks</li>
+<li><strong>Admit new requests</strong> if space available (run prefill for them)</li>
+</ol>
+<p>This is why vLLM achieves 2-4× higher throughput than static batching — the batch is always full of work, and no GPU cycles are wasted on padding.</p>
+<hr>
+<h2 id="4-quantization-trading-precision-for-throughput">4. Quantization: Trading Precision for Throughput</h2>
+<h3 id="41-the-precision-spectrum">4.1 The Precision Spectrum</h3>
+<table>
+<thead>
+<tr>
+<th>Precision</th>
+<th>Bits/Weight</th>
+<th>70B Model Size</th>
+<th>Perplexity Impact</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FP32</td>
+<td>32</td>
+<td>280 GB</td>
+<td>0 (reference)</td>
+<td>Training</td>
+</tr>
+<tr>
+<td>FP16/BF16</td>
+<td>16</td>
+<td>140 GB</td>
+<td>~0</td>
+<td>Standard serving</td>
+</tr>
+<tr>
+<td>INT8</td>
+<td>8</td>
+<td>70 GB</td>
+<td>+0.1–0.5</td>
+<td>High-quality serving</td>
+</tr>
+<tr>
+<td>INT4 (GPTQ)</td>
+<td>4</td>
+<td>35 GB</td>
+<td>+0.5–2.0</td>
+<td>Throughput-optimized</td>
+</tr>
+<tr>
+<td>INT4 (AWQ)</td>
+<td>4</td>
+<td>35 GB</td>
+<td>+0.3–1.5</td>
+<td>Better than GPTQ for most models</td>
+</tr>
+<tr>
+<td>FP4 (NF4)</td>
+<td>4</td>
+<td>35 GB</td>
+<td>+0.5–2.0</td>
+<td>QLoRA training</td>
+</tr>
+<tr>
+<td>INT3</td>
+<td>3</td>
+<td>26 GB</td>
+<td>+3.0–8.0</td>
+<td>Extreme compression</td>
+</tr>
+<tr>
+<td>INT2</td>
+<td>2</td>
+<td>17.5 GB</td>
+<td>+15–50</td>
+<td>Usually unusable</td>
+</tr>
+</tbody>
+</table>
+<h3 id="42-gptq-vs-awq-the-calibration-difference">4.2 GPTQ vs. AWQ: The Calibration Difference</h3>
+<p>Both are post-training quantization (PTQ) methods that compress to INT4, but they differ fundamentally in what they optimize:</p>
+<p><strong>GPTQ (Frantar et al., 2023):</strong></p>
+<ul>
+<li>Quantizes weights layer by layer, minimizing the L2 error between quantized and original layer outputs</li>
+<li>Uses a Hessian-based approach: weights that matter more get higher precision implicitly through the optimization</li>
+<li>Requires a calibration dataset (~128 samples)</li>
+<li><strong>Problem:</strong> Treats all activations as equally important — the “salience” of each weight is determined by average activation magnitude, not per-channel importance</li>
+</ul>
+<p><strong>AWQ (Lin et al., 2024):</strong></p>
+<ul>
+<li>Identifies that ~1% of “salient” weight channels carry most of the information</li>
+<li>Instead of keeping those channels at higher precision, it scales them UP before quantization and scales activations DOWN accordingly</li>
+<li>This is mathematically equivalent but avoids mixed-precision hardware complexity</li>
+<li><strong>Result:</strong> Better perplexity than GPTQ at the same bit width, especially for smaller models</li>
+</ul>
+<p><strong>The interview trap:</strong> Saying “AWQ is better than GPTQ” without explaining WHY. The interviewer wants to hear: “AWQ identifies that only ~1% of channels are salient and scales them to preserve information, rather than trying to minimize per-layer L2 error which treats all channels equally. This exploits the observation that LLM weight distributions have heavy-tailed channel importance, and protecting the tail is what matters for generation quality.”</p>
+<h3 id="43-quantizations-hidden-cost-attention-degradation">4.3 Quantization’s Hidden Cost: Attention Degradation</h3>
+<p><strong>This is the thing nobody talks about in interviews but every staff engineer should know:</strong></p>
+<p>When you quantize weights to INT4, you save 4× on the weight memory. But the KV cache — which is computed FROM those weights during the forward pass — is typically kept in FP16. Why? Because KV cache values are dynamic (they change per sequence, per token) and quantizing them on-the-fly would add latency.</p>
+<p>However, there’s a subtle secondary effect: quantized weights produce slightly degraded K and V projections, which means the attention scores are computed over slightly degraded representations. This compounds with sequence length:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>FP16 attention: O(n² · d) with full precision K,V → high fidelity attention</span></span>
+<span class="line"><span>INT4 attention: O(n² · d) with degraded K,V → attention drift at long context</span></span></code></pre>
+<p>For short sequences (&lt; 2K tokens), this is negligible. For long context (32K+), the accumulated attention error from degraded KV representations can cause the model to “lose track” of early information — the same vectors that should attend to paragraph 1 now attend more weakly, redistributing attention mass incorrectly.</p>
+<p><strong>The staff answer:</strong> “We use INT4 for weights but keep KV cache in FP16. For long-context workloads (&gt;16K), we should measure attention drift — how much does the attention distribution change vs. FP16 baseline at each position — not just perplexity. If drift exceeds 5% at the farthest positions, we either keep the first N layers in FP16 (where attention patterns are most sensitive), or we use INT8 for KV cache instead.”</p>
+<hr>
+<h2 id="5-prefix-caching-the-8020-win">5. Prefix Caching: The 80/20 Win</h2>
+<h3 id="51-the-observation">5.1 The Observation</h3>
+<p>In production LLM applications (chatbots, coding assistants, RAG), a large fraction of requests share a common prefix:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>System prompt (4K tokens): "You are a helpful assistant. Here are the rules..." ← SHARED</span></span>
+<span class="line"><span>User message (variable): "What is the capital of France?" ← UNIQUE</span></span></code></pre>
+<p>If 100 concurrent requests share a 4K-token system prompt, computing and storing 100 separate KV caches for that prefix wastes 100× the memory and compute.</p>
+<h3 id="52-automatic-prefix-caching-apc-in-vllm">5.2 Automatic Prefix Caching (APC) in vLLM</h3>
+<p>vLLM’s PagedAttention block structure enables this naturally: the KV blocks for the shared prefix are computed once and referenced by all sequences via their block tables.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Request 1: [Block A][Block B][Block C][Block D] — Blocks A,B = system prompt KV</span></span>
+<span class="line"><span>Request 2: [Block A][Block B][Block E][Block F] — Shares A,B via reference counting</span></span>
+<span class="line"><span>Request 3: [Block A][Block B][Block G]        — Shares A,B</span></span></code></pre>
+<p><strong>Memory savings:</strong> If the system prompt is 4096 tokens (256 blocks of 16 tokens), and you have 128 concurrent requests, prefix caching saves: <code>256 blocks × 127 copies × (block_size × KV_size_per_token)</code> = potentially tens of GB.</p>
+<p><strong>The hash-based matching:</strong> vLLM computes a hash of each block’s input tokens. When a new request arrives, it checks if its initial tokens match any existing block hashes. If yes, it reuses those blocks. This is O(1) lookup per block.</p>
+<h3 id="53-the-fragmentation-problem-revisited">5.3 The Fragmentation Problem Revisited</h3>
+<p>Here’s where prefix caching interacts poorly with fragmentation. When shared prefix blocks are reference-counted (used by multiple sequences), they cannot be freed until ALL sequences using them finish. If one slow request (generating 2000 tokens) references the shared prefix block while 127 other requests have finished, that block stays in memory — and may prevent new prefix blocks from being allocated contiguously.</p>
+<p><strong>The staff-level insight:</strong> The block allocator needs a <strong>defragmentation</strong> or <strong>compaction</strong> mechanism — copy live blocks to consolidate free space, analogous to garbage collection compaction. vLLM v0.6+ implements this as “block swapping” where blocks can be swapped to CPU RAM and back. This adds latency but prevents OOM under fragmentation.</p>
+<hr>
+<h2 id="6-model-parallelism-when-one-gpu-isnt-enough">6. Model Parallelism: When One GPU Isn’t Enough</h2>
+<h3 id="61-tensor-parallelism-tp">6.1 Tensor Parallelism (TP)</h3>
+<p>Split individual weight matrices across GPUs. Each GPU holds a slice of every layer:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Layer N attention weight matrix W_Q: [8192 × 8192]</span></span>
+<span class="line"><span>GPU 0: W_Q[0:4096, :]  — first half of columns</span></span>
+<span class="line"><span>GPU 1: W_Q[4096:8192, :] — second half of columns</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Forward pass: each GPU computes its slice, then All-Reduce to combine</span></span></code></pre>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Tensor Parallelism</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Communication</strong></td>
+<td>All-reduce after EVERY layer (80 layers = 80 all-reduces)</td>
+</tr>
+<tr>
+<td><strong>Bandwidth requirement</strong></td>
+<td>NVLink/NVSwitch (900 GB/s) — cannot work over PCIe</td>
+</tr>
+<tr>
+<td><strong>Scaling limit</strong></td>
+<td>~8 GPUs max (all-reduce latency dominates beyond this)</td>
+</tr>
+<tr>
+<td><strong>Latency impact</strong></td>
+<td>Per-layer overhead: ~50-100μs for all-reduce on NVLink</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62-pipeline-parallelism-pp">6.2 Pipeline Parallelism (PP)</h3>
+<p>Split layers across GPUs. GPU 0 handles layers 0-19, GPU 1 handles layers 20-39, etc.:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>GPU 0: Embedding → Layer 0 → ... → Layer 19 → send to GPU 1</span></span>
+<span class="line"><span>GPU 1: receive → Layer 20 → ... → Layer 39 → send to GPU 2</span></span>
+<span class="line"><span>...</span></span></code></pre>
+<p><strong>The pipeline bubble:</strong> Between micro-batches, GPUs sit idle waiting for data. This is the fundamental efficiency loss of PP.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Time ─────────────────────────────────────────►</span></span>
+<span class="line"><span>GPU 0: [MB0▮▮▮▮▮▮][MB1▮▮▮▮▮▮][MB2▮▮▮▮▮▮][idle]</span></span>
+<span class="line"><span>GPU 1: [idle      ][MB0▮▮▮▮▮▮][MB1▮▮▮▮▮▮][MB2▮▮▮▮▮▮]</span></span>
+<span class="line"><span>                              ↑ bubble = idle time</span></span></code></pre>
+<p>Bubble fraction ≈ <code>(P-1) / M</code> where P = pipeline stages, M = micro-batches. More micro-batches → smaller bubble, but higher latency.</p>
+<h3 id="63-the-tp-vs-pp-decision-at-staff-level">6.3 The TP vs. PP Decision at Staff Level</h3>
+<table>
+<thead>
+<tr>
+<th>Criterion</th>
+<th>Tensor Parallelism</th>
+<th>Pipeline Parallelism</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Intra-node (8 GPUs)</strong></td>
+<td>✅ Use TP (NVLink is fast enough)</td>
+<td>❌ Bubble dominates at small scale</td>
+</tr>
+<tr>
+<td><strong>Inter-node (16+ GPUs)</strong></td>
+<td>❌ All-reduce over network kills latency</td>
+<td>✅ Use PP between nodes, TP within nodes</td>
+</tr>
+<tr>
+<td><strong>Batch size</strong></td>
+<td>Works with any batch size</td>
+<td>Needs large micro-batch count to amortize bubble</td>
+</tr>
+<tr>
+<td><strong>Latency sensitivity</strong></td>
+<td>Higher latency (all-reduce per layer)</td>
+<td>Higher latency (bubble + inter-stage comm)</td>
+</tr>
+<tr>
+<td><strong>Throughput focus</strong></td>
+<td>✅ Use TP</td>
+<td>✅ Use PP (bubble amortized over large batches)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The hybrid approach (used in practice):</strong> TP within a node (8 GPUs via NVLink), PP across nodes. This is what “TP=8, PP=4” means — 32 GPUs total, organized as 4 pipeline stages of 8 GPUs each with tensor parallelism.</p>
+<hr>
+<h2 id="7-the-interview-question">7. The Interview Question</h2>
+<h3 id="-sharp-question">⚡ Sharp Question</h3>
+<blockquote>
+<p><strong>“You’re running Llama-3-70B on 4× A100-80GB GPUs using vLLM with PagedAttention, serving a chatbot with a 4K-token system prompt and highly variable user message lengths (10 to 3000 tokens). Your P50 latency is 150ms and throughput is 800 tokens/sec across all users. Then you push a model update that adds 8K tokens of RAG context to EVERY request (total prefix now 12K). Immediately, P50 latency jumps to 2.8 seconds and throughput drops to 90 tokens/sec. Your GPU memory shows 92% utilization but <code>nvidia-smi</code> shows GPU utilization at only 15%. What happened, and how do you fix it?”</strong></p>
+</blockquote>
+<h3 id="-model-answer">✅ Model Answer</h3>
+<p><strong>What happened (diagnosis):</strong></p>
+<p>The 12K prefix pushed the system into a memory-bandwidth-bound decode regime. Here’s the chain:</p>
+<ol>
+<li>
+<p><strong>KV cache explosion:</strong> Adding 8K tokens to every request’s prefix means every sequence now has at least 12K tokens of KV cache. At ~328 KB per token, that’s ~3.9 GB of KV cache per sequence. With 4× A100-80GB (320 GB total), subtracting 35 GB for INT4 quantized weights (or 140 GB for FP16), the remaining memory can hold fewer concurrent sequences.</p>
+</li>
+<li>
+<p><strong>Batch size collapse:</strong> Where you previously fit 80 concurrent sequences, you now fit maybe 12-15. Continuous batching can’t pack enough work to keep the GPU busy — that’s why GPU utilization is 15%.</p>
+</li>
+<li>
+<p><strong>The decode bottleneck:</strong> Even for those 15 sequences, each forward pass in decode mode is bottlenecked on reading the 12K-token KV cache from HBM. The GPU’s tensor cores are mostly idle waiting for memory. 15% utilization with 92% memory usage is the classic signature of a memory-bandwidth-bound workload.</p>
+</li>
+<li>
+<p><strong>P50 latency spike:</strong> With only 15 sequences in the batch and each decode step taking ~190ms (memory-bound), the P50 per-token latency is now 190ms instead of the previous ~2ms. A 15-token response now takes 2.8 seconds end-to-end.</p>
+</li>
+</ol>
+<p><strong>How to fix it (layered approach):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Fix</th>
+<th>Mechanism</th>
+<th>Expected Gain</th>
+<th>Trade-off</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Prefix caching</strong></td>
+<td>Share 12K prefix KV blocks across all requests</td>
+<td>Frees ~3.6 GB per additional concurrent sequence</td>
+<td>None — this is purely upside for shared-prefix workloads</td>
+</tr>
+<tr>
+<td><strong>INT4 KV cache quantization</strong></td>
+<td>Quantize KV cache to INT4 (not just weights)</td>
+<td>4× KV cache reduction, ~4× more sequences in batch</td>
+<td>Perplexity +0.3–1.0; test on your prompt distribution</td>
+</tr>
+<tr>
+<td><strong>Add GPUs (scale out)</strong></td>
+<td>8× A100 instead of 4</td>
+<td>Double the KV cache capacity</td>
+<td>Cost; requires TP=8 configuration</td>
+</tr>
+<tr>
+<td><strong>Chunked prefill</strong></td>
+<td>Split the 12K prefill into chunks interleaved with decode</td>
+<td>Smooths latency; prevents prefill from starving decode</td>
+<td>Slightly higher per-token latency for prefill</td>
+</tr>
+<tr>
+<td><strong>Reduce RAG context</strong></td>
+<td>Retrieve top-2K instead of top-8K chunks</td>
+<td>Proportional KV cache reduction</td>
+<td>May reduce answer quality; test retrieval recall</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The most impactful single fix:</strong> Enable automatic prefix caching (APC) in vLLM. If ALL requests share the same 12K system+RAG prefix, the KV cache for that prefix is stored ONCE and shared across all sequences. This immediately recovers the batch size you lost.</p>
+<h3 id="-common-pitfall">❗ Common Pitfall</h3>
+<p><strong>“Let’s just add more GPUs”</strong> — without understanding WHY the existing GPUs are underutilized. Throwing hardware at a memory-bandwidth problem without fixing the memory efficiency first is how you burn cloud budget without improving user experience. The real answer is: diagnose the bottleneck (memory bandwidth → investigate KV cache utilization and fragmentation → enable prefix caching → only then consider scaling horizontally). Staff engineers fix the bottleneck, not the symptom.</p>
+<hr>
+<h2 id="8-self-check-questions-cron-job-format">8. Self-Check Questions (Cron-Job Format)</h2>
+<p>Since this session is self-paced, test yourself:</p>
+<ol>
+<li>
+<p><strong>Can you explain why KV cache is the memory bottleneck rather than model weights?</strong> (Hint: weights are fixed; KV cache grows linearly with both sequence length AND batch size.)</p>
+</li>
+<li>
+<p><strong>What’s the difference between internal and external fragmentation in PagedAttention, and which one dominates?</strong> (Internal = partially-filled last block, max 15 tokens per sequence — negligible. External would be free blocks scattered among allocated blocks — this is what block swapping addresses.)</p>
+</li>
+<li>
+<p><strong>Why does continuous batching improve throughput by 2-4× over static batching?</strong> (Static batches waste compute on padding; continuous batching keeps the batch full of real work and interleaves prefill and decode.)</p>
+</li>
+<li>
+<p><strong>When would you choose pipeline parallelism over tensor parallelism?</strong> (Inter-node setups where network bandwidth can’t support all-reduce per layer; or when batch sizes are large enough to amortize the pipeline bubble.)</p>
+</li>
+<li>
+<p><strong>What does prefix caching save that naive KV cache sharing doesn’t?</strong> (It saves the COMPUTE of the prefill phase for shared prefixes, not just the memory. Without prefix caching, each request independently computes the KV projections for the shared prefix.)</p>
+</li>
+<li>
+<p><strong>If P99 latency is 10× P50, what are three possible causes specific to LLM serving?</strong> (a) Prefill of a long request stalling all decode in the batch, b) KV cache fragmentation causing scheduler to reduce batch size, c) Garbage collection / block compaction triggering mid-request.)</p>
+</li>
+</ol>
+<hr>
+<h2 id="related">Related</h2>
+<ul>
+<li>[[topic-queue]]</li>
+<li>[[Vector Database Internals (HNSW, IVF, Sharding)]] — Previous Day 46</li>
+<li>[[RAG Pipeline (Chunking, Embeddings, Retrieval, Reranking)]] — Day 45, closely related</li>
+<li>[[Fine-Tuning Infrastructure (LoRA, QLoRA, Distributed Training)]] — Next up, Day 48</li>
+<li>[[Weakness Vault/Day-47-LLM-Serving-at-Scale]]</li>
+</ul>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>KV cache is the dominant memory consumer — not model weights. A 7B model at FP16 needs 14GB for weights but 30GB+ for KV cache at 32K context</li>
+<li>vLLM’s PagedAttention manages KV cache like virtual memory — reduces fragmentation and increases effective batch size</li>
+<li>Continuous batching: dynamically add/remove requests from a batch, unlike static batching which waits for the whole batch</li>
+<li>Quantization (INT8/INT4) reduces memory and speeds inference with ~1-3% quality loss</li>
+<li>Throughput vs latency trade-off: larger batches = higher throughput but higher per-request latency</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you serve multiple LoRA adapters efficiently?” — Keep base model fixed, load adapters dynamically. vLLM supports multi-LoRA serving with adapter swapping.</li>
+<li>“What’s the cost of tensor parallelism?” — All-reduce communication after each transformer layer adds latency. Use NVLink/InfiniBand to minimize; otherwise pipeline parallelism may be better.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Prefix caching (sharing KV cache for common system prompts) can dramatically improve throughput, but if the system prompt changes mid-batch, the cache is invalidated and throughput drops. Design for prompt stability.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/llm-serving-at-scale-vllm-quantization-batching-kv-cache/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=LLM%20Serving%20at%20Scale%20(vLLM%2C%20Quantization%2C%20Batching%2C%20KV%20Cache)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fllm-serving-at-scale-vllm-quantization-batching-kv-cache%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fllm-serving-at-scale-vllm-quantization-batching-kv-cache%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/llm-serving-at-scale-vllm-quantization-batching-kv-cache" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/lead-election-and-gossip-protocol" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Lead Election &amp; Gossip Protocol</span></a><a href="/notes/system-design/message-queue-kafka-rabbitmq" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Message Queue (Kafka / RabbitMQ)</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="LLM Serving at Scale (vLLM, Quantization, Batching, KV Cache)" data-selector=".article-prose" data-article-slug="system-design/llm-serving-at-scale-vllm-quantization-batching-kv-cache" data-article-title="LLM Serving at Scale (vLLM, Quantization, Batching, KV Cache)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

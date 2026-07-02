@@ -1,0 +1,1183 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Multi-Agent Orchestration (Planning, Tool Use, Memory, Routing) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-the-multi-agent-landscape" class="toc-link" data-toc-link="1-the-multi-agent-landscape" data-astro-cid-p33bl5ka>1. The Multi-Agent Landscape</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#11-why-multiple-agents" class="toc-link" data-toc-link="11-why-multiple-agents" data-astro-cid-p33bl5ka>1.1 Why Multiple Agents?</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#12-agent-taxonomy" class="toc-link" data-toc-link="12-agent-taxonomy" data-astro-cid-p33bl5ka>1.2 Agent Taxonomy</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#13-the-orchestration-spectrum" class="toc-link" data-toc-link="13-the-orchestration-spectrum" data-astro-cid-p33bl5ka>1.3 The Orchestration Spectrum</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-planning-the-orchestrators-core-function" class="toc-link" data-toc-link="2-planning-the-orchestrators-core-function" data-astro-cid-p33bl5ka>2. Planning: The Orchestrator’s Core Function</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#21-the-planning-problem" class="toc-link" data-toc-link="21-the-planning-problem" data-astro-cid-p33bl5ka>2.1 The Planning Problem</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#22-planning-strategies" class="toc-link" data-toc-link="22-planning-strategies" data-astro-cid-p33bl5ka>2.2 Planning Strategies</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#23-the-planning-bottleneck" class="toc-link" data-toc-link="23-the-planning-bottleneck" data-astro-cid-p33bl5ka>2.3 The Planning Bottleneck</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-tool-use-the-agents-interface-to-the-world" class="toc-link" data-toc-link="3-tool-use-the-agents-interface-to-the-world" data-astro-cid-p33bl5ka>3. Tool Use: The Agent’s Interface to the World</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#31-the-tool-integration-stack" class="toc-link" data-toc-link="31-the-tool-integration-stack" data-astro-cid-p33bl5ka>3.1 The Tool Integration Stack</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#32-tool-design-principles" class="toc-link" data-toc-link="32-tool-design-principles" data-astro-cid-p33bl5ka>3.2 Tool Design Principles</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#33-tool-execution-models" class="toc-link" data-toc-link="33-tool-execution-models" data-astro-cid-p33bl5ka>3.3 Tool Execution Models</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#4-memory-architecture-what-stays-what-goes" class="toc-link" data-toc-link="4-memory-architecture-what-stays-what-goes" data-astro-cid-p33bl5ka>4. Memory Architecture: What Stays, What Goes</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#41-the-memory-hierarchy" class="toc-link" data-toc-link="41-the-memory-hierarchy" data-astro-cid-p33bl5ka>4.1 The Memory Hierarchy</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#42-the-retention-problem" class="toc-link" data-toc-link="42-the-retention-problem" data-astro-cid-p33bl5ka>4.2 The Retention Problem</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#43-vector-db-vs-relational-db" class="toc-link" data-toc-link="43-vector-db-vs-relational-db" data-astro-cid-p33bl5ka>4.3 Vector DB vs. Relational DB</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#5-routing-getting-work-to-the-right-agent" class="toc-link" data-toc-link="5-routing-getting-work-to-the-right-agent" data-astro-cid-p33bl5ka>5. Routing: Getting Work to the Right Agent</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#51-the-routing-problem" class="toc-link" data-toc-link="51-the-routing-problem" data-astro-cid-p33bl5ka>5.1 The Routing Problem</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#52-routing-strategies" class="toc-link" data-toc-link="52-routing-strategies" data-astro-cid-p33bl5ka>5.2 Routing Strategies</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#53-agent-pooling-and-load-balancing" class="toc-link" data-toc-link="53-agent-pooling-and-load-balancing" data-astro-cid-p33bl5ka>5.3 Agent Pooling and Load Balancing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#6-the-orchestrator-as-a-state-machine" class="toc-link" data-toc-link="6-the-orchestrator-as-a-state-machine" data-astro-cid-p33bl5ka>6. The Orchestrator as a State Machine</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#61-workflow-state-management" class="toc-link" data-toc-link="61-workflow-state-management" data-astro-cid-p33bl5ka>6.1 Workflow State Management</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#62-timeout-and-cascading-failure" class="toc-link" data-toc-link="62-timeout-and-cascading-failure" data-astro-cid-p33bl5ka>6.2 Timeout and Cascading Failure</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#63-deadlock-detection" class="toc-link" data-toc-link="63-deadlock-detection" data-astro-cid-p33bl5ka>6.3 Deadlock Detection</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#7-observability-and-debugging" class="toc-link" data-toc-link="7-observability-and-debugging" data-astro-cid-p33bl5ka>7. Observability and Debugging</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#71-the-trace-problem" class="toc-link" data-toc-link="71-the-trace-problem" data-astro-cid-p33bl5ka>7.1 The Trace Problem</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#72-key-metrics" class="toc-link" data-toc-link="72-key-metrics" data-astro-cid-p33bl5ka>7.2 Key Metrics</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#8-sharp-question" class="toc-link" data-toc-link="8-sharp-question" data-astro-cid-p33bl5ka>8. Sharp Question</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#model-answer" class="toc-link" data-toc-link="model-answer" data-astro-cid-p33bl5ka>Model Answer</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#common-pitfall" class="toc-link" data-toc-link="common-pitfall" data-astro-cid-p33bl5ka>Common Pitfall</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#9-common-pitfalls-summary" class="toc-link" data-toc-link="9-common-pitfalls-summary" data-astro-cid-p33bl5ka>9. Common Pitfalls Summary</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#10-self-check-questions" class="toc-link" data-toc-link="10-self-check-questions" data-astro-cid-p33bl5ka>10. Self-Check Questions</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#11-key-takeaways" class="toc-link" data-toc-link="11-key-takeaways" data-astro-cid-p33bl5ka>11. Key Takeaways</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Multi-Agent Orchestration (Planning, Tool Use, Memory, Routing)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 23 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 32 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>ai-ml</span><span class="tag" data-astro-cid-sgg5joot>multi-agent</span><span class="tag" data-astro-cid-sgg5joot>orchestration</span><span class="tag" data-astro-cid-sgg5joot>planning</span><span class="tag" data-astro-cid-sgg5joot>tool-use</span><span class="tag" data-astro-cid-sgg5joot>memory</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="multi-agent-orchestration-planning-tool-use-memory-routing">Multi-Agent Orchestration (Planning, Tool Use, Memory, Routing)</h1>
+<blockquote>
+<p><strong>Staff-Engineer Focus:</strong> “We use LangChain to chain a few LLM calls” is the junior answer. “We have an orchestrator agent that delegates to specialist agents” is the mid-level answer. <strong>The staff engineer doesn’t ask whether to use agents. They ask: “We’re running a fleet of 200 agents across 12 workflows — customer support triage spawns 3 sub-agents per ticket, each making 8-15 tool calls. At 5,000 concurrent tickets, that’s 150,000 agent invocations and 1.2 million tool calls in flight. The orchestrator’s LLM context window is consuming 50K tokens per planning cycle because it’s reasoning about all agent states — at scale, the planner IS the bottleneck. Walk me through: (a) how you’d design a two-tier orchestration architecture where a ‘macro-planner’ produces a high-level DAG once and ‘micro-executors’ handle per-step adaptation without re-invoking the planner, (b) the exact failure mode when Agent-7’s tool call to the payment API hangs at 29 seconds with a 30-second timeout — does the orchestrator wait, retry, or fail-fast, and what happens to the 14 other agents that are waiting on Agent-7’s output as their input, (c) the memory architecture: if each agent accumulates conversation history, tool outputs, and intermediate reasoning (say 8K tokens per agent per task), at 5,000 concurrent tasks with 200,000 completed tasks per day, you’re generating 1.6 billion tokens of context per day — what stays in the vector DB, what goes into the relational DB, what gets summarized, and what do you throw away? And when a customer asks ‘what did the agent do about my refund yesterday?’ 36 hours later, how do you reconstruct the full agent trace including the tool call that failed silently on retry 3?”</strong> The interview question isn’t “Explain how agents work.” It’s: “Design a multi-agent customer support system for a bank handling 100,000 queries/day. Agents can access 40 internal APIs (account balance, transaction history, dispute filing, fraud flagging). The compliance team requires full audit trails. P99 latency for simple queries must be under 2 seconds, and no single agent failure may cascade. Sketch the architecture. What breaks first at 10× load?”**</p>
+</blockquote>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A system that decomposes complex tasks across multiple AI agents, each with specialized roles, tools, and memory, coordinated by a planner.</p>
+<p><strong>How it’s asked:</strong> “Design a multi-agent customer support system for a bank handling 100K queries/day with 40 internal APIs, full audit trails, and P99 &lt;2s for simple queries.”</p>
+<hr>
+<h2 id="1-the-multi-agent-landscape">1. The Multi-Agent Landscape</h2>
+<h3 id="11-why-multiple-agents">1.1 Why Multiple Agents?</h3>
+<p>A single LLM with tool access can handle many tasks, but real-world enterprise workflows demand decomposition for three reasons:</p>
+<p><strong>Context window limits.</strong> A banking dispute resolution requires: customer profile (2K tokens), last 90 days of transactions (15K tokens), merchant details (1K tokens), bank policy doc (8K tokens), and conversation history (3K tokens). That’s 29K tokens before any reasoning. Split across specialist agents — one for customer context, one for transaction analysis, one for policy — each stays within a manageable window and can reason deeply about its domain.</p>
+<p><strong>Specialization beats generalization.</strong> An agent fine-tuned on transaction fraud patterns will catch edge cases a generalist misses. Specialist agents can have different system prompts, different tool sets, and even different base models — a Claude agent for nuanced policy interpretation alongside a GPT agent for structured data extraction.</p>
+<p><strong>Fault isolation.</strong> If a single monolithic agent hallucinates a refund amount, the entire workflow produces wrong output. In a multi-agent system, the verification agent catches the hallucination before the customer sees it. Agent failures are contained.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                    MULTI-AGENT ARCHITECTURE                       │</span></span>
+<span class="line"><span>│                                                                   │</span></span>
+<span class="line"><span>│  ┌─────────┐     ┌──────────────┐     ┌───────────────────────┐  │</span></span>
+<span class="line"><span>│  │  User   │────▶│ Orchestrator │────▶│   Specialist Agents   │  │</span></span>
+<span class="line"><span>│  │ Request │     │   (Planner)  │     │                       │  │</span></span>
+<span class="line"><span>│  └─────────┘     └──────┬───────┘     │  ┌─────────────────┐  │  │</span></span>
+<span class="line"><span>│                         │             │  │ Context Agent   │  │  │</span></span>
+<span class="line"><span>│                   Plans &#x26; assigns     │  │ (customer data) │  │  │</span></span>
+<span class="line"><span>│                         │             │  └────────┬────────┘  │  │</span></span>
+<span class="line"><span>│                    ┌────┼────┐        │           │           │  │</span></span>
+<span class="line"><span>│                    │    │    │        │  ┌────────▼────────┐  │  │</span></span>
+<span class="line"><span>│                    ▼    ▼    ▼        │  │ Transaction     │  │  │</span></span>
+<span class="line"><span>│                 ┌───┐┌───┐┌───┐      │  │ Agent (fraud)   │  │  │</span></span>
+<span class="line"><span>│                 │ A ││ B ││ C │      │  └────────┬────────┘  │  │</span></span>
+<span class="line"><span>│                 └───┘└───┘└───┘      │           │           │  │</span></span>
+<span class="line"><span>│                   Specialist Agents   │  ┌────────▼────────┐  │  │</span></span>
+<span class="line"><span>│                         │             │  │ Policy Agent    │  │  │</span></span>
+<span class="line"><span>│                    ┌────┼────┐        │  │ (compliance)    │  │  │</span></span>
+<span class="line"><span>│                    │    │    │        │  └────────┬────────┘  │  │</span></span>
+<span class="line"><span>│                    ▼    ▼    ▼        │           │           │  │</span></span>
+<span class="line"><span>│                 ┌─────────────────┐   │  ┌────────▼────────┐  │  │</span></span>
+<span class="line"><span>│                 │  Synthesizer    │   │  │ Verification    │  │  │</span></span>
+<span class="line"><span>│                 │  (aggregator)   │   │  │ Agent (safety)  │  │  │</span></span>
+<span class="line"><span>│                 └────────┬────────┘   │  └─────────────────┘  │  │</span></span>
+<span class="line"><span>│                          │            └───────────────────────┘  │</span></span>
+<span class="line"><span>│                          ▼                                       │</span></span>
+<span class="line"><span>│                    ┌──────────┐                                  │</span></span>
+<span class="line"><span>│                    │ Response │                                  │</span></span>
+<span class="line"><span>│                    └──────────┘                                  │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<h3 id="12-agent-taxonomy">1.2 Agent Taxonomy</h3>
+<p>Not all agent architectures are created equal. Understanding the taxonomy is essential for system design:</p>
+<table>
+<thead>
+<tr>
+<th>Architecture</th>
+<th>Description</th>
+<th>Latency</th>
+<th>Reliability</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Single Agent + Tools</strong></td>
+<td>One LLM with function calling</td>
+<td>Lowest</td>
+<td>Single point of failure</td>
+<td>Simple Q&amp;A, data lookup</td>
+</tr>
+<tr>
+<td><strong>Chain/Sequence</strong></td>
+<td>Agents execute in fixed order</td>
+<td>Low</td>
+<td>Blocked by any failure</td>
+<td>Document processing pipeline</td>
+</tr>
+<tr>
+<td><strong>Router</strong></td>
+<td>One agent classifies, routes to specialist</td>
+<td>Low-Medium</td>
+<td>Router SPOF, specialists independent</td>
+<td>Customer support triage</td>
+</tr>
+<tr>
+<td><strong>Orchestrator-Worker</strong></td>
+<td>Central planner assigns to workers</td>
+<td>Medium</td>
+<td>Orchestrator SPOF</td>
+<td>Complex multi-step workflows</td>
+</tr>
+<tr>
+<td><strong>Peer-to-Peer / Swarm</strong></td>
+<td>Agents communicate directly, no central control</td>
+<td>High</td>
+<td>No SPOF, hard to debug</td>
+<td>Research, creative tasks</td>
+</tr>
+<tr>
+<td><strong>Hierarchical</strong></td>
+<td>Multi-level orchestration tree</td>
+<td>Medium-High</td>
+<td>Partial failure tolerance</td>
+<td>Enterprise workflows at scale</td>
+</tr>
+</tbody>
+</table>
+<h3 id="13-the-orchestration-spectrum">1.3 The Orchestration Spectrum</h3>
+<p>The fundamental architectural choice: <strong>how much does the orchestrator know?</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>CENTRALIZED ◄────────────────────────────────────────────► DECENTRALIZED</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Orchestrator               Orchestrator                 No Orchestrator</span></span>
+<span class="line"><span>  controls everything        sets goal + reviews           agents self-organize</span></span>
+<span class="line"><span>  ████████████████           ████████░░░░░░░░             ░░░░░░░░░░░░░░░░</span></span>
+<span class="line"><span>  LangChain LCEL             LangGraph / CrewAI            AutoGen / Swarm</span></span>
+<span class="line"><span>  Predefined DAGs            Dynamic DAG + adaptation      Emergent behavior</span></span></code></pre>
+<p><strong>Centralized (LangChain, LCEL):</strong> The orchestrator defines a static graph of operations before execution begins. Every edge, every conditional branch, every tool is known at graph-construction time. This is fast and predictable — the DAG can be optimized, cached, and validated. But it cannot adapt to unexpected intermediate results. If the transaction agent discovers a fraud pattern that requires an additional investigation step, a static DAG has no edge for it.</p>
+<p><strong>Semi-centralized (LangGraph, CrewAI):</strong> The orchestrator produces an initial plan as a DAG, but agents can dynamically modify the graph during execution. LangGraph’s <code>Command</code> primitive lets an agent update state and redirect execution to a different node. This is the sweet spot for most production systems — enough structure to be predictable, enough flexibility to handle surprises.</p>
+<p><strong>Decentralized (AutoGen, Swarm):</strong> Agents communicate peer-to-peer with no central planner. They negotiate tasks, share results, and collectively decide when work is complete. This is powerful for creative and research tasks where the solution path is genuinely unknown, but it’s unpredictable — the same input can produce wildly different execution traces, which is a nightmare for compliance and auditing.</p>
+<hr>
+<h2 id="2-planning-the-orchestrators-core-function">2. Planning: The Orchestrator’s Core Function</h2>
+<h3 id="21-the-planning-problem">2.1 The Planning Problem</h3>
+<p>The orchestrator receives a user request and must produce a plan: a directed acyclic graph (DAG) of agent invocations with dependencies. This is fundamentally a <strong>reasoning → decomposition → assignment</strong> problem.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>User: "I was charged twice for my subscription, and I want a refund."</span></span>
+<span class="line"><span>       │</span></span>
+<span class="line"><span>       ▼</span></span>
+<span class="line"><span>┌──────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                    ORCHESTRATOR (Planner)                     │</span></span>
+<span class="line"><span>│                                                               │</span></span>
+<span class="line"><span>│  Step 1: DECOMPOSE the request                                │</span></span>
+<span class="line"><span>│    - Sub-task A: Verify customer identity and account         │</span></span>
+<span class="line"><span>│    - Sub-task B: Find duplicate charge in transaction history │</span></span>
+<span class="line"><span>│    - Sub-task C: Check refund policy and eligibility          │</span></span>
+<span class="line"><span>│    - Sub-task D: Process refund if eligible                   │</span></span>
+<span class="line"><span>│    - Sub-task E: Compose customer-facing response             │</span></span>
+<span class="line"><span>│                                                               │</span></span>
+<span class="line"><span>│  Step 2: DETECT DEPENDENCIES                                  │</span></span>
+<span class="line"><span>│    A ──┬──▶ B (need customer_id to query transactions)       │</span></span>
+<span class="line"><span>│        └──▶ C (need account_tier to check policy)             │</span></span>
+<span class="line"><span>│    B ──▶ D (need transaction_id to process refund)            │</span></span>
+<span class="line"><span>│    C ──▶ D (need policy_result to gate refund)                │</span></span>
+<span class="line"><span>│    D ──▶ E (need refund_id for response)                     │</span></span>
+<span class="line"><span>│                                                               │</span></span>
+<span class="line"><span>│  Step 3: PARALLELIZE                                          │</span></span>
+<span class="line"><span>│    Level 0: [A]                     (1 agent)                 │</span></span>
+<span class="line"><span>│    Level 1: [B, C]                  (2 agents, parallel)      │</span></span>
+<span class="line"><span>│    Level 2: [D]                     (1 agent, waits for B,C)  │</span></span>
+<span class="line"><span>│    Level 3: [E]                     (1 agent)                 │</span></span>
+<span class="line"><span>│                                                               │</span></span>
+<span class="line"><span>│  Step 4: ASSIGN to specialist agents                          │</span></span>
+<span class="line"><span>│    A → AuthAgent    B → TransactionAgent                      │</span></span>
+<span class="line"><span>│    C → PolicyAgent  D → RefundAgent    E → ResponseAgent      │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<h3 id="22-planning-strategies">2.2 Planning Strategies</h3>
+<p><strong>ReAct (Reasoning + Acting):</strong> The most common pattern. The agent alternates between thinking (what should I do next?) and acting (calling a tool). For multi-agent systems, ReAct is typically used at the orchestrator level — the planner thinks, assigns, observes results, then thinks again.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>ReAct loop in orchestrator:</span></span>
+<span class="line"><span>  Thought: "I need the customer's ID first."</span></span>
+<span class="line"><span>  Action:  invoke(AuthAgent, {query: "verify identity"})</span></span>
+<span class="line"><span>  Observation: {customer_id: "C789", tier: "premium", authenticated: true}</span></span>
+<span class="line"><span>  Thought: "Customer verified. Now I can parallelize transaction</span></span>
+<span class="line"><span>            lookup and policy check."</span></span>
+<span class="line"><span>  Action:  parallel_invoke([</span></span>
+<span class="line"><span>             {agent: TransactionAgent, input: {customer_id: "C789"}},</span></span>
+<span class="line"><span>             {agent: PolicyAgent, input: {customer_id: "C789", tier: "premium"}}</span></span>
+<span class="line"><span>           ])</span></span>
+<span class="line"><span>  Observation: [{duplicate_txn: "T456", amount: 29.99},</span></span>
+<span class="line"><span>                {refund_eligible: true, max_refund: 30.00}]</span></span>
+<span class="line"><span>  Thought: "Duplicate found and refund is eligible. Proceed."</span></span>
+<span class="line"><span>  ...</span></span></code></pre>
+<p><strong>Plan-and-Execute:</strong> The orchestrator generates the entire plan upfront (as a DAG), then dispatches all independent agents in parallel. No re-planning unless an agent fails. This is much faster than ReAct for well-understood workflows because it eliminates the sequential think-act loop at the orchestrator level.</p>
+<p><strong>Plan-and-Adapt:</strong> The orchestrator generates an initial DAG but agents can signal that the plan needs modification. For example, the TransactionAgent might discover that the duplicate charge was actually a legitimate renewal and signal a plan revision. This is the most robust approach but requires careful state management.</p>
+<h3 id="23-the-planning-bottleneck">2.3 The Planning Bottleneck</h3>
+<p>At scale, the orchestrator’s LLM call IS the bottleneck. Consider:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>100K queries/day → ~1.16 queries/second average</span></span>
+<span class="line"><span>But traffic is bursty: 500 queries/second at peak</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Orchestrator planning latency: 1-3 seconds per query (LLM inference)</span></span>
+<span class="line"><span>  → Cannot handle 500 qps with a single orchestrator</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Solutions:</span></span>
+<span class="line"><span>  1. Plan caching: hash (intent, customer_segment) → cached plan DAG</span></span>
+<span class="line"><span>     - 80% of queries fall into ~20 templates</span></span>
+<span class="line"><span>     - Cache hit: 5ms vs. 2s for LLM planning</span></span>
+<span class="line"><span>  </span></span>
+<span class="line"><span>  2. Tiered orchestration:</span></span>
+<span class="line"><span>     - Tier-1: lightweight classifier (fast model, 50ms)</span></span>
+<span class="line"><span>       routes to template-based plans for common intents</span></span>
+<span class="line"><span>     - Tier-2: full orchestrator (slow LLM, 2s)</span></span>
+<span class="line"><span>       handles novel or complex intents</span></span>
+<span class="line"><span>  </span></span>
+<span class="line"><span>  3. Macro-planner + micro-executor:</span></span>
+<span class="line"><span>     - Macro-planner produces a high-level DAG once</span></span>
+<span class="line"><span>     - Micro-executors handle per-step adaptation without re-invoking planner</span></span>
+<span class="line"><span>     - Reduces orchestrator LLM calls from N per step to 1 per workflow</span></span></code></pre>
+<hr>
+<h2 id="3-tool-use-the-agents-interface-to-the-world">3. Tool Use: The Agent’s Interface to the World</h2>
+<h3 id="31-the-tool-integration-stack">3.1 The Tool Integration Stack</h3>
+<p>Tools are the mechanism by which agents affect the real world. A well-designed tool integration layer is the difference between a demo and a production system.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                     TOOL INTEGRATION STACK                     │</span></span>
+<span class="line"><span>│                                                               │</span></span>
+<span class="line"><span>│  ┌─────────────────────────────────────────────────────────┐ │</span></span>
+<span class="line"><span>│  │  Agent Layer: function_call / tool_use in system prompt  │ │</span></span>
+<span class="line"><span>│  │  "You have access to: get_balance, list_transactions..." │ │</span></span>
+<span class="line"><span>│  └────────────────────────┬────────────────────────────────┘ │</span></span>
+<span class="line"><span>│                           │                                   │</span></span>
+<span class="line"><span>│  ┌────────────────────────▼────────────────────────────────┐ │</span></span>
+<span class="line"><span>│  │  Tool Registry: service discovery + schema validation    │ │</span></span>
+<span class="line"><span>│  │  get_balance → POST /api/v2/accounts/{id}/balance        │ │</span></span>
+<span class="line"><span>│  │  Schema: {customer_id: string} → {balance: float, ...}   │ │</span></span>
+<span class="line"><span>│  └────────────────────────┬────────────────────────────────┘ │</span></span>
+<span class="line"><span>│                           │                                   │</span></span>
+<span class="line"><span>│  ┌────────────────────────▼────────────────────────────────┐ │</span></span>
+<span class="line"><span>│  │  Execution Layer: auth, rate limiting, retry, timeout    │ │</span></span>
+<span class="line"><span>│  │  - Inject auth headers from agent context                │ │</span></span>
+<span class="line"><span>│  │  - Per-tool rate limit: 100 req/s for get_balance        │ │</span></span>
+<span class="line"><span>│  │  - Retry: 3× with exponential backoff (1s, 2s, 4s)      │ │</span></span>
+<span class="line"><span>│  │  - Timeout: 30s default, configurable per tool           │ │</span></span>
+<span class="line"><span>│  └────────────────────────┬────────────────────────────────┘ │</span></span>
+<span class="line"><span>│                           │                                   │</span></span>
+<span class="line"><span>│  ┌────────────────────────▼────────────────────────────────┐ │</span></span>
+<span class="line"><span>│  │  Audit Layer: log every tool call (input, output, time)  │ │</span></span>
+<span class="line"><span>│  │  - Who (agent_id, workflow_id)                           │ │</span></span>
+<span class="line"><span>│  │  - What (tool_name, parameters, result)                  │ │</span></span>
+<span class="line"><span>│  │  - When (start_time, end_time, latency)                  │ │</span></span>
+<span class="line"><span>│  │  - Result (success, error_code, retry_count)             │ │</span></span>
+<span class="line"><span>│  └─────────────────────────────────────────────────────────┘ │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<h3 id="32-tool-design-principles">3.2 Tool Design Principles</h3>
+<p><strong>Idempotency is non-negotiable.</strong> Every tool that mutates state MUST be idempotent or the system cannot safely retry. A <code>process_refund(transaction_id, amount)</code> call that succeeds but times out on the network will be retried — if it’s not idempotent, the customer gets double-refunded.</p>
+<p><strong>Schema is contract.</strong> Tool schemas (JSON Schema, OpenAPI) serve as the interface contract between the LLM and the execution layer. The LLM generates parameters; the execution layer validates before calling the real API. Never let raw LLM output hit a production API without validation.</p>
+<p><strong>Side-effect awareness.</strong> Tools should declare their side-effect profile: <code>read_only</code>, <code>idempotent_write</code>, <code>non_idempotent_write</code>. The orchestrator can use this to make smarter retry decisions — read_only tools can be retried aggressively, non_idempotent_write tools need human-in-the-loop confirmation before retry.</p>
+<table>
+<thead>
+<tr>
+<th>Side-Effect Profile</th>
+<th>Retry Strategy</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>read_only</strong></td>
+<td>Aggressive retry (5×, 100ms backoff)</td>
+<td>get_balance, search_transactions</td>
+</tr>
+<tr>
+<td><strong>idempotent_write</strong></td>
+<td>Safe retry (3×, 1s backoff)</td>
+<td>set_flag, upsert_record</td>
+</tr>
+<tr>
+<td><strong>non_idempotent_write</strong></td>
+<td>No auto-retry without idempotency key</td>
+<td>process_refund, send_email</td>
+</tr>
+<tr>
+<td><strong>destructive</strong></td>
+<td>Human approval required</td>
+<td>close_account, delete_data</td>
+</tr>
+</tbody>
+</table>
+<h3 id="33-tool-execution-models">3.3 Tool Execution Models</h3>
+<p><strong>Sequential tool calling.</strong> The agent calls one tool, waits for the result, then decides the next action. This is the simplest model but adds latency — each tool call is a round trip. A 5-tool workflow incurs 5 sequential LLM + API latencies.</p>
+<p><strong>Parallel tool calling.</strong> Modern LLMs (GPT-4, Claude 3.5+) support emitting multiple tool calls in a single response. The agent identifies independent tool calls and dispatches them simultaneously. This cuts latency from O(N) to O(max_latency).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Sequential:                      Parallel:</span></span>
+<span class="line"><span>  call A (200ms)                   call A ─┐</span></span>
+<span class="line"><span>  call B (150ms)                   call B ─┼─ 200ms (max of A,B,C)</span></span>
+<span class="line"><span>  call C (180ms)                   call C ─┘</span></span>
+<span class="line"><span>  call D (100ms)                   call D ─┐</span></span>
+<span class="line"><span>  call E (50ms)                    call E ─┼─ 100ms (max of D,E)</span></span>
+<span class="line"><span>  Total: 680ms                     Total: 300ms (2 LLM rounds + max latency)</span></span></code></pre>
+<p><strong>Speculative tool calling.</strong> For latency-critical paths, pre-compute likely tool calls and dispatch them before the agent decides. If the agent’s decision matches the speculation, the result is already available. If not, discard and execute the correct call. This is analogous to branch prediction in CPUs.</p>
+<hr>
+<h2 id="4-memory-architecture-what-stays-what-goes">4. Memory Architecture: What Stays, What Goes</h2>
+<h3 id="41-the-memory-hierarchy">4.1 The Memory Hierarchy</h3>
+<p>Agent memory is not one thing — it’s a hierarchy with different storage backends, retention policies, and access patterns.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                      MEMORY HIERARCHY                           │</span></span>
+<span class="line"><span>│                                                                 │</span></span>
+<span class="line"><span>│  ┌───────────────────────────────────────────────────────────┐ │</span></span>
+<span class="line"><span>│  │ WORKING MEMORY (in-context, ephemeral)                     │ │</span></span>
+<span class="line"><span>│  │ - Current task state, intermediate results                 │ │</span></span>
+<span class="line"><span>│  │ - Lifetime: single task execution                          │ │</span></span>
+<span class="line"><span>│  │ - Storage: orchestrator's context window                   │ │</span></span>
+<span class="line"><span>│  │ - Size: 2K-50K tokens per task                             │ │</span></span>
+<span class="line"><span>│  │ - Problem: context window is expensive (O(n²) attention)   │ │</span></span>
+<span class="line"><span>│  └───────────────────────────┬───────────────────────────────┘ │</span></span>
+<span class="line"><span>│                              │                                  │</span></span>
+<span class="line"><span>│  ┌───────────────────────────▼───────────────────────────────┐ │</span></span>
+<span class="line"><span>│  │ SHORT-TERM MEMORY (session-level)                          │ │</span></span>
+<span class="line"><span>│  │ - Multi-turn conversation within a session                 │ │</span></span>
+<span class="line"><span>│  │ - Lifetime: user session (minutes to hours)                │ │</span></span>
+<span class="line"><span>│  │ - Storage: Redis/in-memory, keyed by session_id            │ │</span></span>
+<span class="line"><span>│  │ - Size: 10K-100K tokens per session                        │ │</span></span>
+<span class="line"><span>│  │ - Eviction: TTL (configurable), LRU when memory pressure   │ │</span></span>
+<span class="line"><span>│  └───────────────────────────┬───────────────────────────────┘ │</span></span>
+<span class="line"><span>│                              │                                  │</span></span>
+<span class="line"><span>│  ┌───────────────────────────▼───────────────────────────────┐ │</span></span>
+<span class="line"><span>│  │ LONG-TERM MEMORY (cross-session)                           │ │</span></span>
+<span class="line"><span>│  │ - User preferences, past interactions, learned facts       │ │</span></span>
+<span class="line"><span>│  │ - Lifetime: permanent (until explicit deletion)            │ │</span></span>
+<span class="line"><span>│  │ - Storage: Vector DB (semantic) + Relational DB (exact)    │ │</span></span>
+<span class="line"><span>│  │ - Retrieval: hybrid (dense embeddings + keyword/BM25)      │ │</span></span>
+<span class="line"><span>│  │ - Size: billions of tokens across all users                │ │</span></span>
+<span class="line"><span>│  │ - Challenge: what to remember vs. what to forget           │ │</span></span>
+<span class="line"><span>│  └───────────────────────────┬───────────────────────────────┘ │</span></span>
+<span class="line"><span>│                              │                                  │</span></span>
+<span class="line"><span>│  ┌───────────────────────────▼───────────────────────────────┐ │</span></span>
+<span class="line"><span>│  │ PROCEDURAL MEMORY (skills, workflows)                      │ │</span></span>
+<span class="line"><span>│  │ - How to do things: SOPs, tool usage patterns, rules       │ │</span></span>
+<span class="line"><span>│  │ - Lifetime: permanent, versioned                           │ │</span></span>
+<span class="line"><span>│  │ - Storage: Document store + Vector DB                      │ │</span></span>
+<span class="line"><span>│  │ - "When customer says 'fraud', always escalate to Tier-2"  │ │</span></span>
+<span class="line"><span>│  └───────────────────────────────────────────────────────────┘ │</span></span>
+<span class="line"><span>└────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<h3 id="42-the-retention-problem">4.2 The Retention Problem</h3>
+<p>At 5,000 concurrent tasks per day, each generating 8K tokens of agent trace data:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Daily trace volume: 5,000 tasks × 8K tokens × 4 bytes/token (avg)</span></span>
+<span class="line"><span>                  = 160 MB/day of raw trace data</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Annual trace volume: 160 MB × 365 = 58.4 GB/year</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>But that's just structured traces. Add:</span></span>
+<span class="line"><span>  - Conversation logs: 3× trace volume (verbatim LLM I/O)</span></span>
+<span class="line"><span>  - Tool outputs: 5× trace volume (API responses are verbose)</span></span>
+<span class="line"><span>  - Vector embeddings: 2× trace volume (768-dim embeddings)</span></span>
+<span class="line"><span>  - Audit indexes: 1× trace volume (compliance metadata)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Total: ~700 GB/year for 5,000 tasks/day. At 100K/day, that's 14 TB/year.</span></span></code></pre>
+<p><strong>The tiered retention strategy</strong> is what separates a working system from an unsupportable one:</p>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>What</th>
+<th>Retention</th>
+<th>Storage</th>
+<th>Retrieval Latency</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Hot</strong></td>
+<td>Current session context</td>
+<td>Duration of session</td>
+<td>GPU/CPU memory</td>
+<td>&lt;1ms</td>
+</tr>
+<tr>
+<td><strong>Warm</strong></td>
+<td>Recent traces (30 days)</td>
+<td>30 days</td>
+<td>PostgreSQL + pgvector</td>
+<td>&lt;100ms</td>
+</tr>
+<tr>
+<td><strong>Cold</strong></td>
+<td>Aggregated summaries + embeddings</td>
+<td>1 year</td>
+<td>Vector DB + S3</td>
+<td>&lt;1s</td>
+</tr>
+<tr>
+<td><strong>Frozen</strong></td>
+<td>Raw logs (compliance)</td>
+<td>7 years</td>
+<td>S3 Glacier</td>
+<td>Minutes to hours</td>
+</tr>
+<tr>
+<td><strong>Discard</strong></td>
+<td>Intermediate reasoning steps</td>
+<td>Never stored</td>
+<td>N/A</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
+<p><strong>What to discard:</strong> Intermediate ReAct loop steps that didn’t lead to the final answer, tool call retries that succeeded on later attempts, planning iterations that were superseded. Keep the final plan DAG, the tool calls that contributed to the result, and the final response. Discard the rest.</p>
+<h3 id="43-vector-db-vs-relational-db">4.3 Vector DB vs. Relational DB</h3>
+<p>Both are necessary, for different query patterns:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>QUERY: "What did the agent do about my refund yesterday?"</span></span>
+<span class="line"><span>       │</span></span>
+<span class="line"><span>       ▼</span></span>
+<span class="line"><span>┌──────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│  STEP 1: Relational DB (exact lookup)                         │</span></span>
+<span class="line"><span>│  SELECT * FROM agent_traces                                   │</span></span>
+<span class="line"><span>│  WHERE customer_id = 'C789'                                   │</span></span>
+<span class="line"><span>│    AND workflow_type = 'refund'                               │</span></span>
+<span class="line"><span>│    AND created_at > NOW() - INTERVAL '48 hours'               │</span></span>
+<span class="line"><span>│  → Returns: structured trace with tool_call_ids               │</span></span>
+<span class="line"><span>└──────────────────────────┬───────────────────────────────────┘</span></span>
+<span class="line"><span>                           │</span></span>
+<span class="line"><span>┌──────────────────────────▼───────────────────────────────────┐</span></span>
+<span class="line"><span>│  STEP 2: Relational DB (join tool outputs)                    │</span></span>
+<span class="line"><span>│  SELECT tool_name, input_params, output, status, retry_count   │</span></span>
+<span class="line"><span>│  FROM tool_executions                                         │</span></span>
+<span class="line"><span>│  WHERE trace_id = 'T-12345'                                   │</span></span>
+<span class="line"><span>│  ORDER BY sequence_num                                        │</span></span>
+<span class="line"><span>│  → Returns: ordered list of every tool call in the trace      │</span></span>
+<span class="line"><span>└──────────────────────────┬───────────────────────────────────┘</span></span>
+<span class="line"><span>                           │</span></span>
+<span class="line"><span>┌──────────────────────────▼───────────────────────────────────┐</span></span>
+<span class="line"><span>│  STEP 3: Vector DB (semantic search — only if needed)         │</span></span>
+<span class="line"><span>│  query_embedding = embed("customer complaint about duplicate  │</span></span>
+<span class="line"><span>│                           charge resolution process")         │</span></span>
+<span class="line"><span>│  results = vector_db.search(query_embedding, top_k=5)         │</span></span>
+<span class="line"><span>│  → Returns: semantically similar past traces for pattern      │</span></span>
+<span class="line"><span>│             matching (fraud patterns, resolution patterns)    │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<p><strong>Relational DB</strong> is the system of record for exact retrieval: “show me everything agent X did at timestamp Y for customer Z.” <strong>Vector DB</strong> is for fuzzy retrieval: “find past cases similar to this one” or “what’s the standard resolution for this type of dispute.”</p>
+<hr>
+<h2 id="5-routing-getting-work-to-the-right-agent">5. Routing: Getting Work to the Right Agent</h2>
+<h3 id="51-the-routing-problem">5.1 The Routing Problem</h3>
+<p>Given a user request and a pool of specialist agents, which agent(s) should handle it? This is a classification problem with real consequences — route to the wrong agent and the user gets a bad answer, or worse, a security violation (routing a transaction query to an agent that also has refund permissions).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                     ┌─────────────────────┐</span></span>
+<span class="line"><span>                     │    User Request      │</span></span>
+<span class="line"><span>                     └──────────┬──────────┘</span></span>
+<span class="line"><span>                                │</span></span>
+<span class="line"><span>                     ┌──────────▼──────────┐</span></span>
+<span class="line"><span>                     │  Intent Classifier   │</span></span>
+<span class="line"><span>                     │  (fast model, 50ms)  │</span></span>
+<span class="line"><span>                     └──────────┬──────────┘</span></span>
+<span class="line"><span>                                │</span></span>
+<span class="line"><span>          ┌─────────────────────┼─────────────────────┐</span></span>
+<span class="line"><span>          │                     │                     │</span></span>
+<span class="line"><span>    ┌─────▼─────┐         ┌─────▼─────┐         ┌─────▼─────┐</span></span>
+<span class="line"><span>    │  Intent:  │         │  Intent:  │         │  Intent:  │</span></span>
+<span class="line"><span>    │  balance  │         │  dispute  │         │  fraud    │</span></span>
+<span class="line"><span>    │  inquiry  │         │           │         │  report   │</span></span>
+<span class="line"><span>    └─────┬─────┘         └─────┬─────┘         └─────┬─────┘</span></span>
+<span class="line"><span>          │                     │                     │</span></span>
+<span class="line"><span>    ┌─────▼─────┐         ┌─────▼─────┐         ┌─────▼─────┐</span></span>
+<span class="line"><span>    │  Balance   │         │  Dispute  │         │  Fraud    │</span></span>
+<span class="line"><span>    │  Agent     │         │  Agent    │         │  Agent    │</span></span>
+<span class="line"><span>    │  Pool      │         │  Pool      │         │  Pool     │</span></span>
+<span class="line"><span>    └───────────┘         └───────────┘         └───────────┘</span></span></code></pre>
+<h3 id="52-routing-strategies">5.2 Routing Strategies</h3>
+<p><strong>LLM-based classification.</strong> The simplest approach: ask an LLM to classify the intent and route accordingly. Pro: flexible, handles novel intents. Con: 200-500ms latency, variable quality. Good for low-volume or high-variance routing.</p>
+<p><strong>Embedding-based semantic routing.</strong> Pre-compute embeddings of canonical intents, then find the nearest neighbor for each incoming request. Pro: fast (&lt;10ms), deterministic. Con: can’t handle genuinely novel requests, cold-start for new intents.</p>
+<p><strong>Keyword + regex triage.</strong> For high-throughput systems, a fast pre-filter using keyword matching and regex patterns catches 60-80% of straightforward cases before hitting the LLM router. The LLM only sees the ambiguous tail.</p>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Latency</th>
+<th>Accuracy</th>
+<th>Handles Novelty</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>LLM classification</strong></td>
+<td>200-500ms</td>
+<td>95-98%</td>
+<td>Yes</td>
+<td>$0.001/query</td>
+</tr>
+<tr>
+<td><strong>Embedding similarity</strong></td>
+<td>5-10ms</td>
+<td>90-95%</td>
+<td>No</td>
+<td>$0.0001/query</td>
+</tr>
+<tr>
+<td><strong>Keyword + regex</strong></td>
+<td>&lt;1ms</td>
+<td>80-90%</td>
+<td>No</td>
+<td>Free</td>
+</tr>
+<tr>
+<td><strong>Hybrid (keyword → embedding → LLM)</strong></td>
+<td>1-500ms</td>
+<td>98%+</td>
+<td>Yes</td>
+<td>~$0.0003/query (avg)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-agent-pooling-and-load-balancing">5.3 Agent Pooling and Load Balancing</h3>
+<p>Specialist agents are not stateless — they carry context, tool credentials, and rate-limit state. Load balancing across a pool of identical agents requires careful design:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                    AGENT POOL MANAGER                         │</span></span>
+<span class="line"><span>│                                                               │</span></span>
+<span class="line"><span>│  Agent Pool: DisputeAgent × 10 instances                      │</span></span>
+<span class="line"><span>│                                                               │</span></span>
+<span class="line"><span>│  ┌─────────┐ ┌─────────┐ ┌─────────┐       ┌─────────┐     │</span></span>
+<span class="line"><span>│  │Agent D1 │ │Agent D2 │ │Agent D3 │  ...  │Agent D10│     │</span></span>
+<span class="line"><span>│  │ idle    │ │ busy    │ │ idle    │       │ warming │     │</span></span>
+<span class="line"><span>│  └─────────┘ └─────────┘ └─────────┘       └─────────┘     │</span></span>
+<span class="line"><span>│                                                               │</span></span>
+<span class="line"><span>│  Routing policy: Least Connection (not Round Robin!)          │</span></span>
+<span class="line"><span>│  - Round Robin ignores per-agent latency variance             │</span></span>
+<span class="line"><span>│  - Least Connection routes to the agent with fewest active    │</span></span>
+<span class="line"><span>│    tasks, naturally handling slow agents                      │</span></span>
+<span class="line"><span>│                                                               │</span></span>
+<span class="line"><span>│  Sticky sessions: Optional. If an agent accumulates context   │</span></span>
+<span class="line"><span>│  about a user, route subsequent queries for that user to the  │</span></span>
+<span class="line"><span>│  same agent instance. But this creates hotspots and reduces   │</span></span>
+<span class="line"><span>│  fault tolerance — if the sticky agent goes down, context     │</span></span>
+<span class="line"><span>│  must be reconstructed from cold storage.                     │</span></span>
+<span class="line"><span>│                                                               │</span></span>
+<span class="line"><span>│  Health checking: Each agent instance heartbeats with:        │</span></span>
+<span class="line"><span>│  {agent_id, status, active_tasks, avg_latency_ms,             │</span></span>
+<span class="line"><span>│   error_rate_last_5min, memory_usage_pct}                     │</span></span>
+<span class="line"><span>│  Agents with error_rate > 5% are drained and restarted.       │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<hr>
+<h2 id="6-the-orchestrator-as-a-state-machine">6. The Orchestrator as a State Machine</h2>
+<h3 id="61-workflow-state-management">6.1 Workflow State Management</h3>
+<p>Every multi-agent workflow is a state machine. The orchestrator’s job is to manage transitions between states correctly, even when agents fail or time out.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                    ┌──────────┐</span></span>
+<span class="line"><span>                    │  IDLE    │</span></span>
+<span class="line"><span>                    └────┬─────┘</span></span>
+<span class="line"><span>                         │ request received</span></span>
+<span class="line"><span>                    ┌────▼─────┐</span></span>
+<span class="line"><span>                    │ PLANNING │ ◄──────── Retry (max 3×)</span></span>
+<span class="line"><span>                    └────┬─────┘</span></span>
+<span class="line"><span>                         │ plan generated</span></span>
+<span class="line"><span>                    ┌────▼─────┐</span></span>
+<span class="line"><span>               ┌───▶│EXECUTING │</span></span>
+<span class="line"><span>               │    └────┬─────┘</span></span>
+<span class="line"><span>               │         │</span></span>
+<span class="line"><span>          ┌────┼────┬────┼────┬────┐</span></span>
+<span class="line"><span>          │    │    │    │    │    │</span></span>
+<span class="line"><span>      ┌───▼──┐┌──▼──┐┌──▼──┐┌──▼──┐┌──▼──┐</span></span>
+<span class="line"><span>      │Agent ││Agent││Agent││Agent││Agent│</span></span>
+<span class="line"><span>      │  A   ││  B  ││  C  ││  D  ││  E  │</span></span>
+<span class="line"><span>      └──┬───┘└──┬──┘└──┬──┘└──┬──┘└──┬──┘</span></span>
+<span class="line"><span>         │       │      │      │      │</span></span>
+<span class="line"><span>         └───────┴──────┴──────┴──────┘</span></span>
+<span class="line"><span>                      │</span></span>
+<span class="line"><span>            ┌─────────┼─────────┐</span></span>
+<span class="line"><span>            │         │         │</span></span>
+<span class="line"><span>       ┌────▼────┐┌───▼───┐┌───▼────┐</span></span>
+<span class="line"><span>       │ALL_DONE ││PARTIAL││  ALL    │</span></span>
+<span class="line"><span>       │(success)││_FAIL  ││  FAIL   │</span></span>
+<span class="line"><span>       └────┬────┘└───┬───┘└───┬────┘</span></span>
+<span class="line"><span>            │         │         │</span></span>
+<span class="line"><span>       ┌────▼────┐┌───▼────┐┌──▼──────┐</span></span>
+<span class="line"><span>       │SYNTHESIS││COMPENS.││ESCALATE │</span></span>
+<span class="line"><span>       │(compose ││(undo   ││(to human│</span></span>
+<span class="line"><span>       │ result) ││partial)││ agent)  │</span></span>
+<span class="line"><span>       └────┬────┘└───┬────┘└──┬──────┘</span></span>
+<span class="line"><span>            │         │         │</span></span>
+<span class="line"><span>            └─────────┼─────────┘</span></span>
+<span class="line"><span>                      │</span></span>
+<span class="line"><span>                 ┌────▼─────┐</span></span>
+<span class="line"><span>                 │  DONE    │</span></span>
+<span class="line"><span>                 └──────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>COMPENSATION on PARTIAL_FAIL:</span></span>
+<span class="line"><span>  - RefundAgent ran but PolicyAgent failed</span></span>
+<span class="line"><span>  → Must reverse the refund (compensating transaction)</span></span>
+<span class="line"><span>  - If reverse fails: escalate to human, log incident</span></span></code></pre>
+<h3 id="62-timeout-and-cascading-failure">6.2 Timeout and Cascading Failure</h3>
+<p>The subtle failure mode most teams miss: <strong>transitive timeout amplification.</strong></p>
+<p>Agent B depends on Agent A’s output. If A has a 30-second timeout and B has a 30-second timeout, what happens?</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Scenario: Agent A's tool call hangs at 29 seconds</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  T=0s:    Orchestrator dispatches Agent A</span></span>
+<span class="line"><span>  T=29s:   Agent A's API call hangs (will timeout at T=30s)</span></span>
+<span class="line"><span>  T=30s:   Agent A times out. Orchestrator must decide:</span></span>
+<span class="line"><span>           - Retry Agent A? (+30s, total now 60s)</span></span>
+<span class="line"><span>           - Fail Agent A and propagate failure to dependents?</span></span>
+<span class="line"><span>  </span></span>
+<span class="line"><span>  If retry:</span></span>
+<span class="line"><span>  T=60s:   Agent B hasn't even started. User has been waiting 60s.</span></span>
+<span class="line"><span>  T=90s:   If Agent B also retries, total = 120s. User has left.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  If fail-fast:</span></span>
+<span class="line"><span>  T=30s:   Orchestrator marks Agent A as failed.</span></span>
+<span class="line"><span>           Agent B receives null input → partial result or escalation.</span></span>
+<span class="line"><span>  T=31s:   Orchestrator returns partial response: "We found your account</span></span>
+<span class="line"><span>           but couldn't verify recent transactions. A specialist will</span></span>
+<span class="line"><span>           review and respond within 1 hour."</span></span>
+<span class="line"><span>  Total: 31s. Acceptable.</span></span></code></pre>
+<p><strong>The staff engineer’s rule:</strong> never let agent-level timeouts sum to more than the SLA. If the end-to-end SLA is 5 seconds, and you have a 4-level agent DAG, each level gets at most 1.25 seconds. Use per-level deadlines, not per-agent timeouts, and fail-fast when a deadline is exceeded.</p>
+<h3 id="63-deadlock-detection">6.3 Deadlock Detection</h3>
+<p>Multi-agent DAGs with complex dependencies can deadlock. Consider this scenario:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Agent A → Agent B (B waits for A)</span></span>
+<span class="line"><span>Agent C → Agent D (D waits for C)</span></span>
+<span class="line"><span>Agent B → Agent D (D waits for B)  ← CYCLE!</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>If A and C complete but B is slow:</span></span>
+<span class="line"><span>  - D is waiting for B</span></span>
+<span class="line"><span>  - B is waiting for nothing (just slow)</span></span>
+<span class="line"><span>  - No deadlock, just latency</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>If B → D and D → B (mutual dependency, a cycle):</span></span>
+<span class="line"><span>  - Both wait forever</span></span>
+<span class="line"><span>  - Cycle detection: topological sort the DAG at plan time.</span></span>
+<span class="line"><span>    Reject any plan with a cycle before execution begins.</span></span></code></pre>
+<hr>
+<h2 id="7-observability-and-debugging">7. Observability and Debugging</h2>
+<h3 id="71-the-trace-problem">7.1 The Trace Problem</h3>
+<p>A single user request can spawn 5 agents making 20 tool calls across 8 services. When the user says “the agent gave me wrong information,” how do you find where it went wrong?</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                    DISTRIBUTED AGENT TRACE                    │</span></span>
+<span class="line"><span>│                                                               │</span></span>
+<span class="line"><span>│  trace_id: abc-123    workflow: refund_dispute                │</span></span>
+<span class="line"><span>│  customer_id: C789    start_time: 2026-06-24T10:15:30Z        │</span></span>
+<span class="line"><span>│                                                               │</span></span>
+<span class="line"><span>│  ┌─────────────────────────────────────────────────────────┐ │</span></span>
+<span class="line"><span>│  │ ORCHESTRATOR │ 10:15:30.100 │ PLANNING_START            │ │</span></span>
+<span class="line"><span>│  │              │ 10:15:31.850 │ PLAN_GENERATED (1.75s)    │ │</span></span>
+<span class="line"><span>│  │              │ 10:15:31.900 │ DISPATCH AuthAgent        │ │</span></span>
+<span class="line"><span>│  └──────────────┼──────────────────────────────────────────┘ │</span></span>
+<span class="line"><span>│                 │                                              │</span></span>
+<span class="line"><span>│  ┌──────────────▼──────────────────────────────────────────┐ │</span></span>
+<span class="line"><span>│  │ AuthAgent    │ 10:15:31.950 │ START                      │ │</span></span>
+<span class="line"><span>│  │              │ 10:15:32.100 │ TOOL: get_customer(c789)  │ │</span></span>
+<span class="line"><span>│  │              │ 10:15:32.450 │ TOOL_RESULT: {name:"..."} │ │</span></span>
+<span class="line"><span>│  │              │ 10:15:33.200 │ DONE (1.25s)              │ │</span></span>
+<span class="line"><span>│  └──────────────┼──────────────────────────────────────────┘ │</span></span>
+<span class="line"><span>│                 │                                              │</span></span>
+<span class="line"><span>│  ┌──────────────▼──────────────────────────────────────────┐ │</span></span>
+<span class="line"><span>│  │ ORCHESTRATOR │ 10:15:33.250 │ RECEIVED AuthAgent result │ │</span></span>
+<span class="line"><span>│  │              │ 10:15:33.300 │ DISPATCH TxnAgent,        │ │</span></span>
+<span class="line"><span>│  │              │              │          PolicyAgent       │ │</span></span>
+<span class="line"><span>│  └──────┬───────┴──────────────┴───────────────────────────┘ │</span></span>
+<span class="line"><span>│         │                    │                                 │</span></span>
+<span class="line"><span>│  ┌──────▼──────┐    ┌────────▼───────┐                       │</span></span>
+<span class="line"><span>│  │ TxnAgent    │    │ PolicyAgent    │  (parallel)           │</span></span>
+<span class="line"><span>│  │ 10:15:33.35 │    │ 10:15:33.35    │                       │</span></span>
+<span class="line"><span>│  │ TOOL: get_  │    │ TOOL: check_   │                       │</span></span>
+<span class="line"><span>│  │ transactions│    │ refund_policy  │                       │</span></span>
+<span class="line"><span>│  │ ...         │    │ ...            │                       │</span></span>
+<span class="line"><span>│  └─────────────┘    └────────────────┘                       │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<h3 id="72-key-metrics">7.2 Key Metrics</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>What it measures</th>
+<th>Alert threshold</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>planning_latency_p99</strong></td>
+<td>Time to generate execution plan</td>
+<td>&gt; 3s</td>
+</tr>
+<tr>
+<td><strong>agent_execution_latency_p99</strong></td>
+<td>Per-agent execution time</td>
+<td>&gt; 5s (per agent)</td>
+</tr>
+<tr>
+<td><strong>end_to_end_latency_p99</strong></td>
+<td>User request to final response</td>
+<td>&gt; SLA (e.g., 10s)</td>
+</tr>
+<tr>
+<td><strong>tool_call_error_rate</strong></td>
+<td>Failed tool calls / total calls</td>
+<td>&gt; 2%</td>
+</tr>
+<tr>
+<td><strong>agent_retry_rate</strong></td>
+<td>Agent retries / total invocations</td>
+<td>&gt; 5%</td>
+</tr>
+<tr>
+<td><strong>deadletter_queue_depth</strong></td>
+<td>Tasks that exhausted all retries</td>
+<td>&gt; 100</td>
+</tr>
+<tr>
+<td><strong>orchestrator_context_utilization</strong></td>
+<td>Tokens used / context window</td>
+<td>&gt; 80%</td>
+</tr>
+<tr>
+<td><strong>plan_cache_hit_rate</strong></td>
+<td>Cached plans / total plans</td>
+<td>&lt; 70% (cache too cold)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="8-sharp-question">8. Sharp Question</h2>
+<blockquote>
+<p><strong>“You’re designing a multi-agent system for a bank’s fraud detection pipeline. Three specialist agents — Transaction Analyzer, User Behavior Model, and External Risk API — must all agree before flagging a transaction as fraudulent. If any agent disagrees, the transaction passes. The Transaction Analyzer completes in 200ms, the User Behavior Model takes 800ms, and the External Risk API is unreliable: 95th percentile latency is 3 seconds but it occasionally hangs for 30 seconds. The SLA for the entire pipeline is 1 second. How do you meet the SLA without compromising fraud detection accuracy?”</strong></p>
+</blockquote>
+<h3 id="model-answer">Model Answer</h3>
+<p>The core insight is that the three agents aren’t equally important — the External Risk API is the slowest and least reliable, so it must be handled asynchronously.</p>
+<p><strong>Architecture: Async with post-hoc correction.</strong></p>
+<p>The pipeline executes synchronously with a 1-second deadline:</p>
+<ul>
+<li>Transaction Analyzer (200ms) and User Behavior Model (800ms) run in parallel → 800ms wall time</li>
+<li>External Risk API is NOT called during the synchronous path</li>
+</ul>
+<p>Instead, the External Risk API call is fired asynchronously at the same time, but its result is not waited for. The synchronous path returns a decision based on the two fast agents alone: if either disagrees, the transaction passes immediately. If both agree it’s fraud, the transaction is flagged BUT held in a pending state (not yet blocked).</p>
+<p>The External Risk API result arrives asynchronously (typically 1-3 seconds later, worst case 30 seconds). If the API also agrees it’s fraud, the pending flag becomes a confirmed block. If the API disagrees, the flag is removed. If the API times out after 30 seconds, the pending flag auto-expires after a configurable window (e.g., 60 seconds) — the transaction passes.</p>
+<p><strong>Why this works:</strong> In practice, the two fast agents alone catch 90%+ of fraud. The External Risk API catches an additional 5-8% that the fast agents miss. By deferring the API check to post-transaction, you lose at most 5-8% of fraud catches within the 1-second window — and recover them within seconds when the API result arrives. The net fraud detection rate is nearly identical to the synchronous approach, but P99 latency drops from 3+ seconds to 800ms.</p>
+<p><strong>Trade-off acknowledged:</strong> There’s a small window (1-60 seconds) where a fraudulent transaction is in “pending” state rather than confirmed blocked. For a bank, this is acceptable for low-value transactions (&lt;$500) but not for high-value wires (&gt;$10,000). The system can tier: low-value transactions use async, high-value transactions wait for the full pipeline (with a higher SLA).</p>
+<h3 id="common-pitfall">Common Pitfall</h3>
+<p><strong>Waiting for all agents synchronously with a global timeout.</strong> Many candidates say: “Set a 1-second timeout on the whole pipeline.” The problem: if the External Risk API takes 2.9 seconds (within its normal P95), the 1-second timeout kills a perfectly good result. You’re trading accuracy for latency unnecessarily. Worse, if the timeout fires mid-API-call, you might leave the external system in an inconsistent state (the API processed the check but the orchestrator discarded the result). The correct approach is to decouple the slow dependency, not to kill it.</p>
+<hr>
+<h2 id="9-common-pitfalls-summary">9. Common Pitfalls Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Pitfall</th>
+<th>Why it happens</th>
+<th>How to avoid</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Cascading timeouts</strong></td>
+<td>Agents wait for each other with independent timeouts</td>
+<td>Use end-to-end deadline, propagate downward</td>
+</tr>
+<tr>
+<td><strong>Orchestrator context overflow</strong></td>
+<td>Planner tries to hold all agent states in context</td>
+<td>Macro-plan + micro-executor; planner only sees summaries</td>
+</tr>
+<tr>
+<td><strong>Non-idempotent tool retries</strong></td>
+<td>Retry logic assumes all tools are safe to retry</td>
+<td>Declare side-effect profiles; gate retries on idempotency</td>
+</tr>
+<tr>
+<td><strong>Unbounded memory growth</strong></td>
+<td>Storing every intermediate step forever</td>
+<td>Tiered retention: hot/warm/cold/frozen/discard</td>
+</tr>
+<tr>
+<td><strong>Silent agent failures</strong></td>
+<td>Agent fails but orchestrator doesn’t detect it</td>
+<td>Heartbeat + health check per agent; dead letter queue</td>
+</tr>
+<tr>
+<td><strong>Plan explosion</strong></td>
+<td>LLM generates overly granular plans</td>
+<td>Constrain plan depth (max 5 levels); template-based plans</td>
+</tr>
+<tr>
+<td><strong>Routing to wrong agent</strong></td>
+<td>Intent classifier misclassifies edge case</td>
+<td>Hybrid routing (keyword → embedding → LLM) with confidence threshold</td>
+</tr>
+<tr>
+<td><strong>Stale cached plans</strong></td>
+<td>Plan cache doesn’t invalidate on policy changes</td>
+<td>Version plans; hash includes policy_version; TTL on cache entries</td>
+</tr>
+<tr>
+<td><strong>Tool credential sprawl</strong></td>
+<td>Each agent gets full API access</td>
+<td>Principle of least privilege: each agent gets only the tools it needs</td>
+</tr>
+<tr>
+<td><strong>No human escalation path</strong></td>
+<td>System tries to handle everything autonomously</td>
+<td>Every workflow has an escalation threshold; dead letter queue → human review</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="10-self-check-questions">10. Self-Check Questions</h2>
+<p><em>For self-study review — test yourself on these before moving to the next topic.</em></p>
+<ol>
+<li>
+<p><strong>Explain the tiered orchestration pattern.</strong> Why does a single orchestrator become the bottleneck at scale, and how does macro-planner + micro-executor solve it?</p>
+</li>
+<li>
+<p><strong>What is the adapter isolation vs. throughput trade-off, and how does it apply to agent routing?</strong> (Hint: think about sticky sessions vs. stateless agent pools.)</p>
+</li>
+<li>
+<p><strong>Design the memory architecture for a multi-agent system handling 10M tasks/month.</strong> What storage backends do you use for working, short-term, long-term, and procedural memory? What’s your retention policy for each?</p>
+</li>
+<li>
+<p><strong>An agent’s tool call to a payment API hangs at 29 seconds with a 30-second timeout. Five other agents are waiting for this agent’s output. What does your orchestrator do?</strong></p>
+</li>
+<li>
+<p><strong>What’s the difference between an agent pool and a load-balanced service pool?</strong> Why does Round Robin routing fail for agent pools?</p>
+</li>
+<li>
+<p><strong>Your plan cache hit rate drops from 85% to 40% overnight. What do you investigate?</strong></p>
+</li>
+</ol>
+<hr>
+<h2 id="11-key-takeaways">11. Key Takeaways</h2>
+<ul>
+<li>
+<p><strong>Orchestration is state management.</strong> The orchestrator’s primary job is not “planning” — it’s managing the state machine of a distributed workflow with partial failures, timeouts, and dependencies.</p>
+</li>
+<li>
+<p><strong>Context windows are the scarcest resource.</strong> Every token in the orchestrator’s context window that’s spent reasoning about agent state is a token not spent reasoning about the user’s problem. Compress, summarize, delegate.</p>
+</li>
+<li>
+<p><strong>Decouple slow dependencies.</strong> Never make the fast path wait for the slow path. Use async dispatch with post-hoc correction for anything that doesn’t fit in your latency budget.</p>
+</li>
+<li>
+<p><strong>Memory is a retention problem, not a storage problem.</strong> The question isn’t “can we store it?” — it’s “should we store it, and for how long?” Design your retention tiers before your storage backends.</p>
+</li>
+<li>
+<p><strong>Audit trails are a product requirement, not an afterthought.</strong> In regulated industries (finance, healthcare), the ability to reconstruct exactly what every agent did and why is non-negotiable. Design audit logging into the tool execution layer from day one.</p>
+</li>
+</ul>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Multi-agent = decompose complex tasks across specialized agents, each with a role, tools, and memory</li>
+<li>Patterns: planner-executor, router (pick the right agent), tool-use (agents call external APIs), memory (shared or per-agent)</li>
+<li>The orchestrator/planner is often the bottleneck — its LLM context grows with every agent state update</li>
+<li>Two-tier architecture: macro-planner (produces a DAG once) + micro-executors (handle per-step adaptation)</li>
+<li>Audit trails are non-negotiable for regulated industries — log every tool call, input, output, and decision</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you prevent cascading agent failures?” — Circuit breaker per agent, timeout on tool calls, fallback to a simpler agent or human escalation.</li>
+<li>“How do you handle agent memory at scale?” — Short-term in context window, mid-term in a vector DB (semantic search), long-term summarized and stored in a relational DB.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>The planner’s context window is the scaling bottleneck. At 200 concurrent tasks each with 3 sub-agents, the planner is reasoning about 600 agent states — that’s 600K+ tokens of context. The fix is to make planning a one-time operation and push adaptation down to executors, not re-invoke the planner on every step.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/multi-agent-orchestration-planning-tool-use-memory-routing/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Multi-Agent%20Orchestration%20(Planning%2C%20Tool%20Use%2C%20Memory%2C%20Routing)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fmulti-agent-orchestration-planning-tool-use-memory-routing%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fmulti-agent-orchestration-planning-tool-use-memory-routing%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/multi-agent-orchestration-planning-tool-use-memory-routing" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/metrics-and-monitoring-prometheus-grafana" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Metrics &amp; Monitoring (Prometheus/Grafana)</span></a><a href="/notes/system-design/multi-region-active-active-geo-replication-conflict-resolution" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Multi-Region Active-Active (Geo-replication, Conflict Resolution)</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Multi-Agent Orchestration (Planning, Tool Use, Memory, Routing)" data-selector=".article-prose" data-article-slug="system-design/multi-agent-orchestration-planning-tool-use-memory-routing" data-article-title="Multi-Agent Orchestration (Planning, Tool Use, Memory, Routing)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

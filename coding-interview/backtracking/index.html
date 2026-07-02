@@ -1,0 +1,1026 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Backtracking — Complete Interview Prep Guide · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link active" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#what-is-backtracking" class="toc-link" data-toc-link="what-is-backtracking" data-astro-cid-p33bl5ka>What Is Backtracking?</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#the-universal-backtracking-template" class="toc-link" data-toc-link="the-universal-backtracking-template" data-astro-cid-p33bl5ka>The Universal Backtracking Template</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#critical-details" class="toc-link" data-toc-link="critical-details" data-astro-cid-p33bl5ka>Critical Details</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#template-comparison-table" class="toc-link" data-toc-link="template-comparison-table" data-astro-cid-p33bl5ka>Template Comparison Table</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#subsets-leetcode-78" class="toc-link" data-toc-link="subsets-leetcode-78" data-astro-cid-p33bl5ka>Subsets (LeetCode 78)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach" class="toc-link" data-toc-link="approach" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#recursion-tree-ascii" class="toc-link" data-toc-link="recursion-tree-ascii" data-astro-cid-p33bl5ka>Recursion Tree (ASCII)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution" class="toc-link" data-toc-link="java-solution" data-astro-cid-p33bl5ka>Java Solution</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#subsets-ii-leetcode-90" class="toc-link" data-toc-link="subsets-ii-leetcode-90" data-astro-cid-p33bl5ka>Subsets II (LeetCode 90)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#permutations-leetcode-46" class="toc-link" data-toc-link="permutations-leetcode-46" data-astro-cid-p33bl5ka>Permutations (LeetCode 46)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-1" class="toc-link" data-toc-link="approach-1" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-1" class="toc-link" data-toc-link="java-solution-1" data-astro-cid-p33bl5ka>Java Solution</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#permutations-ii-leetcode-47" class="toc-link" data-toc-link="permutations-ii-leetcode-47" data-astro-cid-p33bl5ka>Permutations II (LeetCode 47)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#combinations-leetcode-77" class="toc-link" data-toc-link="combinations-leetcode-77" data-astro-cid-p33bl5ka>Combinations (LeetCode 77)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#combination-sum-leetcode-39" class="toc-link" data-toc-link="combination-sum-leetcode-39" data-astro-cid-p33bl5ka>Combination Sum (LeetCode 39)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-2" class="toc-link" data-toc-link="approach-2" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-2" class="toc-link" data-toc-link="java-solution-2" data-astro-cid-p33bl5ka>Java Solution</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#combination-sum-ii-leetcode-40" class="toc-link" data-toc-link="combination-sum-ii-leetcode-40" data-astro-cid-p33bl5ka>Combination Sum II (LeetCode 40)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#combination-sum-iii-leetcode-216" class="toc-link" data-toc-link="combination-sum-iii-leetcode-216" data-astro-cid-p33bl5ka>Combination Sum III (LeetCode 216)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#n-queens-leetcode-51" class="toc-link" data-toc-link="n-queens-leetcode-51" data-astro-cid-p33bl5ka>N-Queens (LeetCode 51)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-3" class="toc-link" data-toc-link="approach-3" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#n-queens-board-state-ascii" class="toc-link" data-toc-link="n-queens-board-state-ascii" data-astro-cid-p33bl5ka>N-Queens Board State (ASCII)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-3" class="toc-link" data-toc-link="java-solution-3" data-astro-cid-p33bl5ka>Java Solution</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#n-queens-ii-leetcode-52" class="toc-link" data-toc-link="n-queens-ii-leetcode-52" data-astro-cid-p33bl5ka>N-Queens II (LeetCode 52)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#sudoku-solver-leetcode-37" class="toc-link" data-toc-link="sudoku-solver-leetcode-37" data-astro-cid-p33bl5ka>Sudoku Solver (LeetCode 37)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-4" class="toc-link" data-toc-link="approach-4" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-4" class="toc-link" data-toc-link="java-solution-4" data-astro-cid-p33bl5ka>Java Solution</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#word-search-leetcode-79" class="toc-link" data-toc-link="word-search-leetcode-79" data-astro-cid-p33bl5ka>Word Search (LeetCode 79)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-5" class="toc-link" data-toc-link="approach-5" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-5" class="toc-link" data-toc-link="java-solution-5" data-astro-cid-p33bl5ka>Java Solution</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#word-search-ii-leetcode-212" class="toc-link" data-toc-link="word-search-ii-leetcode-212" data-astro-cid-p33bl5ka>Word Search II (LeetCode 212)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#generate-parentheses-leetcode-22" class="toc-link" data-toc-link="generate-parentheses-leetcode-22" data-astro-cid-p33bl5ka>Generate Parentheses (LeetCode 22)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-6" class="toc-link" data-toc-link="approach-6" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-6" class="toc-link" data-toc-link="java-solution-6" data-astro-cid-p33bl5ka>Java Solution</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#palindrome-partitioning-leetcode-131" class="toc-link" data-toc-link="palindrome-partitioning-leetcode-131" data-astro-cid-p33bl5ka>Palindrome Partitioning (LeetCode 131)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-7" class="toc-link" data-toc-link="approach-7" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-7" class="toc-link" data-toc-link="java-solution-7" data-astro-cid-p33bl5ka>Java Solution</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#letter-combinations-of-a-phone-number-leetcode-17" class="toc-link" data-toc-link="letter-combinations-of-a-phone-number-leetcode-17" data-astro-cid-p33bl5ka>Letter Combinations of a Phone Number (LeetCode 17)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#restore-ip-addresses-leetcode-93" class="toc-link" data-toc-link="restore-ip-addresses-leetcode-93" data-astro-cid-p33bl5ka>Restore IP Addresses (LeetCode 93)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#split-string-into-descending-values-leetcode-1849" class="toc-link" data-toc-link="split-string-into-descending-values-leetcode-1849" data-astro-cid-p33bl5ka>Split String Into Descending Values (LeetCode 1849)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#pattern-recognition-table" class="toc-link" data-toc-link="pattern-recognition-table" data-astro-cid-p33bl5ka>Pattern Recognition Table</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#how-to-identify-the-pattern" class="toc-link" data-toc-link="how-to-identify-the-pattern" data-astro-cid-p33bl5ka>How to Identify the Pattern</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#quick-checklist" class="toc-link" data-toc-link="quick-checklist" data-astro-cid-p33bl5ka>Quick Checklist</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#common-bugs" class="toc-link" data-toc-link="common-bugs" data-astro-cid-p33bl5ka>Common Bugs</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/coding-interview/" class="article-category" data-astro-cid-sgg5joot>Coding Interview</a><h1 class="article-title" data-astro-cid-sgg5joot>Backtracking — Complete Interview Prep Guide</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-medium to hard" data-astro-cid-sgg5joot>Medium to Hard</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 21 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 29 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>backtracking</span><span class="tag" data-astro-cid-sgg5joot>recursion</span><span class="tag" data-astro-cid-sgg5joot>java</span><span class="tag" data-astro-cid-sgg5joot>algorithms</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="backtracking--complete-interview-prep-guide">Backtracking — Complete Interview Prep Guide</h1>
+<p>Backtracking systematically enumerates candidate solutions by exploring the search space depth-first, abandoning (“backtracking from”) a path as soon as it cannot lead to a valid solution. This pruning makes backtracking tractable on problems where brute-force enumeration would be exponential.</p>
+<p>This guide covers the canonical template, every major interview pattern, full Java solutions for the eight most frequently asked problems, ASCII diagrams, a template comparison table, and a pattern-recognition table.</p>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A systematic enumeration that explores a search space depth-first, abandoning paths that can’t lead to valid solutions (pruning).</p>
+<p><strong>How it’s asked:</strong> “Generate all permutations/combinations, solve N-Queens, word search on a grid, sudoku solver — problems asking to enumerate all valid configurations.”</p>
+<hr>
+<h2 id="what-is-backtracking">What Is Backtracking?</h2>
+<p>At each decision point, you make a choice, recurse to explore the consequences, then undo the choice so the state is clean for the next iteration:</p>
+<ul>
+<li><strong>Choose</strong> — make a decision (add an element, place a queen, mark a cell).</li>
+<li><strong>Explore</strong> — recurse into the subproblem.</li>
+<li><strong>Unchoose</strong> — undo the decision so the next branch starts clean.</li>
+</ul>
+<p>Pruning cuts entire subtrees when a partial solution violates a constraint. Without it, backtracking degenerates into exhaustive enumeration. Time complexity is generally exponential — O(2^n), O(n!), or O(n^n) — because the search space itself is exponential.</p>
+<p><strong>When to use backtracking:</strong> find <strong>all</strong> solutions, enumerate combinations/permutations/subsets/partitions, fill a grid under constraints (Sudoku, N-Queens), or determine whether a valid configuration exists. For <strong>optimal</strong> values, use DP or greedy instead.</p>
+<hr>
+<h2 id="the-universal-backtracking-template">The Universal Backtracking Template</h2>
+<p>Almost every problem fits a variation of this skeleton. Only the “choose,” termination condition, and pruning differ.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>function backtrack(state, ...extra params):</span></span>
+<span class="line"><span>    if isComplete(state):          // base case: valid solution</span></span>
+<span class="line"><span>        record(state); return</span></span>
+<span class="line"><span>    for candidate in candidates(state):</span></span>
+<span class="line"><span>        if isValid(candidate, state):   // prune</span></span>
+<span class="line"><span>            choose(candidate, state)</span></span>
+<span class="line"><span>            backtrack(state, ...next params)</span></span>
+<span class="line"><span>            unchoose(candidate, state)</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">void</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(List</span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8">Integer</span><span style="color:#F97583">></span><span style="color:#E1E4E8"> state, </span><span style="color:#6A737D">/* params */</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> (</span><span style="color:#6A737D">/* base case */</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        result.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(state));  </span><span style="color:#6A737D">// DEEP COPY before storing</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#F97583">    for</span><span style="color:#E1E4E8"> (</span><span style="color:#6A737D">/* each candidate */</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (</span><span style="color:#6A737D">/* valid */</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            state.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(candidate);              </span><span style="color:#6A737D">// CHOOSE</span></span>
+<span class="line"><span style="color:#B392F0">            backtrack</span><span style="color:#E1E4E8">(state, </span><span style="color:#6A737D">/* next params */</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">            state.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">(state.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);    </span><span style="color:#6A737D">// UNCHOOSE</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="critical-details">Critical Details</h3>
+<ol>
+<li><strong>Always deep-copy state before storing.</strong> Storing a reference to the mutable list means subsequent modifications corrupt the result. Use <code>new ArrayList&lt;&gt;(state)</code>.</li>
+<li><strong>Unchoose must exactly reverse choose.</strong> <code>add</code> → <code>remove</code> last; mark visited → unmark; push → pop. Mismatched choose/unchoose is the most common bug.</li>
+<li><strong>Candidate loop defines branching.</strong> All unused elements → permutations. From a start index → combinations/subsets. Fixed choices (1-9, ‘(’ vs ‘)’) → enumeration.</li>
+<li><strong>Prune inside the loop, before the recursive call.</strong> Earlier pruning = more time saved.</li>
+<li><strong>Start index vs used[] flag.</strong> Start index (<code>for i from start</code>) — order doesn’t matter (subsets, combinations). Used array (<code>if (!used[i])</code>) — order matters (permutations).</li>
+</ol>
+<hr>
+<h2 id="template-comparison-table">Template Comparison Table</h2>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>+-------------------------+-------------------+--------------------+------------------------+--------------------------------+</span></span>
+<span class="line"><span>| Problem Family          | Choose            | Candidates         | Base Case              | Prune                          |</span></span>
+<span class="line"><span>+-------------------------+-------------------+--------------------+------------------------+--------------------------------+</span></span>
+<span class="line"><span>| Subsets (no dup)        | add nums[i]       | i from start..n-1  | always (every node)    | none                           |</span></span>
+<span class="line"><span>| Subsets II (dups)       | add nums[i]       | i from start..n-1  | always (every node)    | i>start &#x26;&#x26; nums[i]==nums[i-1]  |</span></span>
+<span class="line"><span>| Permutations            | add nums[i]       | i from 0..n-1      | state.size()==n        | used[i]                        |</span></span>
+<span class="line"><span>| Permutations II         | add nums[i]       | i from 0..n-1      | state.size()==n        | used[i] || (dup condition)     |</span></span>
+<span class="line"><span>| Combinations (C(n,k))   | add i+1           | i from start..n    | state.size()==k        | none (start index handles it)  |</span></span>
+<span class="line"><span>| Combination Sum (rep)   | add candidates[i] | i from start..n-1  | target==0              | candidates[i] > remaining      |</span></span>
+<span class="line"><span>| Combination Sum II      | add candidates[i] | i from start..n-1  | target==0              | dup condition + sum overflow   |</span></span>
+<span class="line"><span>| Combination Sum III     | add i             | i from start..9    | k==0 &#x26;&#x26; target==0      | i>remaining or k&#x3C;0             |</span></span>
+<span class="line"><span>| N-Queens                | place Q at (r,c)  | c from 0..n-1      | row==n                 | col/diag conflict              |</span></span>
+<span class="line"><span>| Sudoku                  | place digit d     | d from 1..9        | board fully filled     | d not valid in cell            |</span></span>
+<span class="line"><span>| Word Search             | mark visited      | 4 neighbors        | index==word.length()   | out of bounds / mismatch       |</span></span>
+<span class="line"><span>| Generate Parentheses    | add '(' or ')'    | '(' or ')'         | length==2n             | close>open or open>n           |</span></span>
+<span class="line"><span>| Palindrome Partition    | add substring     | end from start..n  | start==n               | !isPalindrome(s,start,end)     |</span></span>
+<span class="line"><span>| Phone Number            | add letters[c]    | chars of digit     | index==digits.length() | none                           |</span></span>
+<span class="line"><span>| Restore IP              | add octet         | len 1..3 from pos  | 4 parts &#x26;&#x26; pos==n      | invalid octet (>255, leading 0)|</span></span>
+<span class="line"><span>| Split Descending        | add substring     | len 1..n from pos  | pos==n &#x26;&#x26; parts>=2     | !descending || invalid num     |</span></span>
+<span class="line"><span>+-------------------------+-------------------+--------------------+------------------------+--------------------------------+</span></span></code></pre>
+<hr>
+<h2 id="subsets-leetcode-78">Subsets (LeetCode 78)</h2>
+<p><strong>Problem:</strong> Given an array of unique elements, return all possible subsets (the power set).</p>
+<p><strong>Example:</strong> <code>nums = [1,2,3]</code> → <code>[[],[1],[2],[1,2],[3],[1,3],[2,3],[1,2,3]]</code></p>
+<h3 id="approach">Approach</h3>
+<p>Order doesn’t matter, so we use a <strong>start index</strong>: at each level, only consider elements from <code>start</code> onward. Every node is a valid subset, so we record at the <strong>beginning</strong> of each call. Complexity: Time O(n·2^n), Space O(n).</p>
+<h3 id="recursion-tree-ascii">Recursion Tree (ASCII)</h3>
+<p>For <code>nums = [1,2,3]</code>:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                         []                         (level 0, start=0)</span></span>
+<span class="line"><span>                      /  |  \</span></span>
+<span class="line"><span>                   /     |     \</span></span>
+<span class="line"><span>              [1]       [2]      [3]                 (level 1)</span></span>
+<span class="line"><span>             /  \        |</span></span>
+<span class="line"><span>          [1,2] [1,3]  [2,3]                         (level 2)</span></span>
+<span class="line"><span>           |</span></span>
+<span class="line"><span>        [1,2,3]                                        (level 3, leaf)</span></span></code></pre>
+<p>The start index ensures we never go back to earlier elements, so <code>[2,1]</code> is never generated.</p>
+<h3 id="java-solution">Java Solution</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> </span><span style="color:#B392F0">subsets</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> result </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#B392F0">        backtrack</span><span style="color:#E1E4E8">(nums, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(), result);</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> start</span><span style="color:#E1E4E8">, List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> </span><span style="color:#FFAB70">current</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">                           List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> </span><span style="color:#FFAB70">result</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        result.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(current));  </span><span style="color:#6A737D">// every node is a valid subset</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> start; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> nums.length; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            current.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(nums[i]);                       </span><span style="color:#6A737D">// CHOOSE</span></span>
+<span class="line"><span style="color:#B392F0">            backtrack</span><span style="color:#E1E4E8">(nums, i </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">, current, result);    </span><span style="color:#6A737D">// EXPLORE</span></span>
+<span class="line"><span style="color:#E1E4E8">            current.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">(current.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);         </span><span style="color:#6A737D">// UNCHOOSE</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<hr>
+<h2 id="subsets-ii-leetcode-90">Subsets II (LeetCode 90)</h2>
+<p><strong>Problem:</strong> Given an array that <strong>may contain duplicates</strong>, return all subsets without duplicate subsets.</p>
+<p><strong>Example:</strong> <code>nums = [1,2,2]</code> → <code>[[],[1],[1,2],[1,2,2],[2],[2,2]]</code></p>
+<p>Sort the array, then skip duplicates at the same recursion level with <code>i &gt; start &amp;&amp; nums[i] == nums[i-1]</code>. The first occurrence (<code>i == start</code>) is always allowed; subsequent identical values at the same level are skipped. The condition uses <code>i &gt; start</code> (not <code>i &gt; 0</code>) so the first candidate at each level is always taken even if it equals the previous array element (which was chosen at a <em>different</em> level).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> </span><span style="color:#B392F0">subsetsWithDup</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> res </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">        Arrays.</span><span style="color:#B392F0">sort</span><span style="color:#E1E4E8">(nums);</span></span>
+<span class="line"><span style="color:#B392F0">        backtrack</span><span style="color:#E1E4E8">(nums, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(), res);</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> res;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> start</span><span style="color:#E1E4E8">, List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> </span><span style="color:#FFAB70">cur</span><span style="color:#E1E4E8">, List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> </span><span style="color:#FFAB70">res</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        res.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(cur));</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> start; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> nums.length; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> start </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> nums[i] </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> nums[i </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">]) </span><span style="color:#F97583">continue</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            cur.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(nums[i]);</span></span>
+<span class="line"><span style="color:#B392F0">            backtrack</span><span style="color:#E1E4E8">(nums, i </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">, cur, res);</span></span>
+<span class="line"><span style="color:#E1E4E8">            cur.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">(cur.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<hr>
+<h2 id="permutations-leetcode-46">Permutations (LeetCode 46)</h2>
+<p><strong>Problem:</strong> Given an array of distinct integers, return all possible permutations.</p>
+<p><strong>Example:</strong> <code>nums = [1,2,3]</code> → <code>[[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]</code></p>
+<h3 id="approach-1">Approach</h3>
+<p>Permutations care about <strong>order</strong>. We use a <code>used[]</code> boolean array to track placed elements. The loop iterates over <strong>all</strong> elements (from 0, not from a start index), skipping used ones. Base case: current permutation reaches full length. Complexity: Time O(n·n!), Space O(n).</p>
+<p>All 6 leaves (3! = 6) are valid: <code>[1,2],[1,3],[2,1],[2,3],[3,1],[3,2]</code>.</p>
+<h3 id="java-solution-1">Java Solution</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> </span><span style="color:#B392F0">permute</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> result </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#B392F0">        backtrack</span><span style="color:#E1E4E8">(nums, </span><span style="color:#F97583">new</span><span style="color:#F97583"> boolean</span><span style="color:#E1E4E8">[nums.length], </span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(), result);</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">boolean</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">used</span><span style="color:#E1E4E8">, List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> </span><span style="color:#FFAB70">current</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">                           List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> </span><span style="color:#FFAB70">result</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (current.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> nums.length) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            result.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(current));</span></span>
+<span class="line"><span style="color:#F97583">            return</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> nums.length; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (used[i]) </span><span style="color:#F97583">continue</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            used[i] </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            current.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(nums[i]);                       </span><span style="color:#6A737D">// CHOOSE</span></span>
+<span class="line"><span style="color:#B392F0">            backtrack</span><span style="color:#E1E4E8">(nums, used, current, result);     </span><span style="color:#6A737D">// EXPLORE</span></span>
+<span class="line"><span style="color:#E1E4E8">            current.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">(current.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);         </span><span style="color:#6A737D">// UNCHOOSE</span></span>
+<span class="line"><span style="color:#E1E4E8">            used[i] </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Alternative:</strong> swap elements in place at each level (O(1) extra space). The swap-back after the recursive call is the unchoose.</p>
+<hr>
+<h2 id="permutations-ii-leetcode-47">Permutations II (LeetCode 47)</h2>
+<p><strong>Problem:</strong> Given numbers that <strong>may contain duplicates</strong>, return all unique permutations.</p>
+<p><strong>Example:</strong> <code>nums = [1,1,2]</code> → <code>[[1,1,2],[1,2,1],[2,1,1]]</code></p>
+<p>Sort, then skip a duplicate if the previous identical element is <strong>not</strong> used: <code>i &gt; 0 &amp;&amp; nums[i] == nums[i-1] &amp;&amp; !used[i-1]</code>. If <code>nums[i-1]</code> is not used, it was just backtracked at this level, so choosing <code>nums[i]</code> replays the same subtree. This ensures duplicates are always chosen in a fixed order.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> </span><span style="color:#B392F0">permuteUnique</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> res </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">        Arrays.</span><span style="color:#B392F0">sort</span><span style="color:#E1E4E8">(nums);</span></span>
+<span class="line"><span style="color:#B392F0">        backtrack</span><span style="color:#E1E4E8">(nums, </span><span style="color:#F97583">new</span><span style="color:#F97583"> boolean</span><span style="color:#E1E4E8">[nums.length], </span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(), res);</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> res;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">boolean</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">used</span><span style="color:#E1E4E8">, List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> </span><span style="color:#FFAB70">cur</span><span style="color:#E1E4E8">, List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> </span><span style="color:#FFAB70">res</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (cur.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> nums.length) { res.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(cur)); </span><span style="color:#F97583">return</span><span style="color:#E1E4E8">; }</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> nums.length; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (used[i]) </span><span style="color:#F97583">continue</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">></span><span style="color:#79B8FF"> 0</span><span style="color:#F97583"> &#x26;&#x26;</span><span style="color:#E1E4E8"> nums[i] </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> nums[i </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#F97583"> !</span><span style="color:#E1E4E8">used[i </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">]) </span><span style="color:#F97583">continue</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            used[i] </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">; cur.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(nums[i]);</span></span>
+<span class="line"><span style="color:#B392F0">            backtrack</span><span style="color:#E1E4E8">(nums, used, cur, res);</span></span>
+<span class="line"><span style="color:#E1E4E8">            cur.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">(cur.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">); used[i] </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<hr>
+<h2 id="combinations-leetcode-77">Combinations (LeetCode 77)</h2>
+<p><strong>Problem:</strong> Given <code>n</code> and <code>k</code>, return all combinations of <code>k</code> numbers from 1 to <code>n</code>.</p>
+<p><strong>Example:</strong> <code>n = 4, k = 2</code> → <code>[[1,2],[1,3],[1,4],[2,3],[2,4],[3,4]]</code></p>
+<p>Subset problem with a fixed-size constraint. Use a start index and record when size reaches <code>k</code>. Pruning: if there are not enough remaining numbers to fill the combination, stop early.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> </span><span style="color:#B392F0">combine</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> n</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> k</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> res </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#B392F0">        backtrack</span><span style="color:#E1E4E8">(n, k, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(), res);</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> res;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> n</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> k</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> start</span><span style="color:#E1E4E8">, List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> </span><span style="color:#FFAB70">cur</span><span style="color:#E1E4E8">, List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> </span><span style="color:#FFAB70">res</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (cur.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> k) { res.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(cur)); </span><span style="color:#F97583">return</span><span style="color:#E1E4E8">; }</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> start; i </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> (k </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> cur.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">()) </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            cur.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(i);</span></span>
+<span class="line"><span style="color:#B392F0">            backtrack</span><span style="color:#E1E4E8">(n, k, i </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">, cur, res);</span></span>
+<span class="line"><span style="color:#E1E4E8">            cur.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">(cur.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<hr>
+<h2 id="combination-sum-leetcode-39">Combination Sum (LeetCode 39)</h2>
+<p><strong>Problem:</strong> Given <strong>distinct</strong> integers <code>candidates</code> and a target, return all unique combinations that sum to the target. Each number may be used <strong>unlimited times</strong>.</p>
+<p><strong>Example:</strong> <code>candidates = [2,3,6,7], target = 7</code> → <code>[[2,2,3],[7]]</code></p>
+<h3 id="approach-2">Approach</h3>
+<p>Since elements can be reused, the recursive call passes <code>i</code> (not <code>i + 1</code>). Sort for pruning: if <code>candidates[i] &gt; remaining</code>, <code>break</code> (all subsequent are larger). Base case: <code>remaining == 0</code>. Complexity: Time O(2^t), Space O(t).</p>
+<h3 id="java-solution-2">Java Solution</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> </span><span style="color:#B392F0">combinationSum</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">candidates</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> target</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> result </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">        Arrays.</span><span style="color:#B392F0">sort</span><span style="color:#E1E4E8">(candidates);</span></span>
+<span class="line"><span style="color:#B392F0">        backtrack</span><span style="color:#E1E4E8">(candidates, target, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(), result);</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">candidates</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> remaining</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> start</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">                           List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> </span><span style="color:#FFAB70">current</span><span style="color:#E1E4E8">, List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> </span><span style="color:#FFAB70">result</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (remaining </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            result.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(current));</span></span>
+<span class="line"><span style="color:#F97583">            return</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> start; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> candidates.length; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (candidates[i] </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> remaining) </span><span style="color:#F97583">break</span><span style="color:#E1E4E8">;  </span><span style="color:#6A737D">// prune: sorted, so all larger too</span></span>
+<span class="line"><span style="color:#E1E4E8">            current.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(candidates[i]);</span></span>
+<span class="line"><span style="color:#B392F0">            backtrack</span><span style="color:#E1E4E8">(candidates, remaining </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> candidates[i], i, current, result); </span><span style="color:#6A737D">// i, not i+1</span></span>
+<span class="line"><span style="color:#E1E4E8">            current.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">(current.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>Key points: pass <code>i</code> (not <code>i+1</code>) for unlimited reuse; <code>break</code> (not <code>continue</code>) since sorted; no duplicates because candidates are distinct and start index prevents reordering.</p>
+<hr>
+<h2 id="combination-sum-ii-leetcode-40">Combination Sum II (LeetCode 40)</h2>
+<p><strong>Problem:</strong> Given <code>candidates</code> (may contain duplicates) and a target, find all unique combinations summing to target. Each number used <strong>at most once</strong>.</p>
+<p><strong>Example:</strong> <code>candidates = [10,1,2,7,6,1,5], target = 8</code> → <code>[[1,1,6],[1,2,5],[1,7],[2,6]]</code></p>
+<p>Combines duplicate-skipping (Subsets II) with sum-targeting. Sort, use start index (pass <code>i + 1</code> since each element used once), skip duplicates with <code>i &gt; start &amp;&amp; candidates[i] == candidates[i-1]</code>.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> </span><span style="color:#B392F0">combinationSum2</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">candidates</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> target</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> res </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">        Arrays.</span><span style="color:#B392F0">sort</span><span style="color:#E1E4E8">(candidates);</span></span>
+<span class="line"><span style="color:#B392F0">        backtrack</span><span style="color:#E1E4E8">(candidates, target, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(), res);</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> res;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">c</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> rem</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> start</span><span style="color:#E1E4E8">, List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> </span><span style="color:#FFAB70">cur</span><span style="color:#E1E4E8">, List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> </span><span style="color:#FFAB70">res</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (rem </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) { res.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(cur)); </span><span style="color:#F97583">return</span><span style="color:#E1E4E8">; }</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> start; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> c.length; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (c[i] </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> rem) </span><span style="color:#F97583">break</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> start </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> c[i] </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> c[i </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">]) </span><span style="color:#F97583">continue</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            cur.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(c[i]);</span></span>
+<span class="line"><span style="color:#B392F0">            backtrack</span><span style="color:#E1E4E8">(c, rem </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> c[i], i </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">, cur, res);</span></span>
+<span class="line"><span style="color:#E1E4E8">            cur.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">(cur.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>vs Combination Sum I:</strong> I has distinct input + unlimited reuse (pass <code>i</code>); II has duplicate input + single use (pass <code>i+1</code>) + duplicate skip.</p>
+<hr>
+<h2 id="combination-sum-iii-leetcode-216">Combination Sum III (LeetCode 216)</h2>
+<p><strong>Problem:</strong> Find all valid combinations of <code>k</code> numbers from 1-9 that sum to <code>n</code>, each at most once.</p>
+<p><strong>Example:</strong> <code>k = 3, n = 7</code> → <code>[[1,2,4]]</code></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> </span><span style="color:#B392F0">combinationSum3</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> k</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> n</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> res </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#B392F0">        backtrack</span><span style="color:#E1E4E8">(k, n, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(), res);</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> res;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> k</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> rem</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> start</span><span style="color:#E1E4E8">, List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> </span><span style="color:#FFAB70">cur</span><span style="color:#E1E4E8">, List&#x3C;List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> </span><span style="color:#FFAB70">res</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (k </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#F97583"> &#x26;&#x26;</span><span style="color:#E1E4E8"> rem </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) { res.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(cur)); </span><span style="color:#F97583">return</span><span style="color:#E1E4E8">; }</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (k </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#F97583"> ||</span><span style="color:#E1E4E8"> rem </span><span style="color:#F97583">&#x3C;=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> start; i </span><span style="color:#F97583">&#x3C;=</span><span style="color:#79B8FF"> 9</span><span style="color:#E1E4E8">; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> rem) </span><span style="color:#F97583">break</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            cur.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(i);</span></span>
+<span class="line"><span style="color:#B392F0">            backtrack</span><span style="color:#E1E4E8">(k </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">, rem </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> i, i </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">, cur, res);</span></span>
+<span class="line"><span style="color:#E1E4E8">            cur.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">(cur.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<hr>
+<h2 id="n-queens-leetcode-51">N-Queens (LeetCode 51)</h2>
+<p><strong>Problem:</strong> Place <code>n</code> queens on an <code>n x n</code> chessboard so no two attack each other. Return all distinct solutions.</p>
+<p><strong>Example:</strong> <code>n = 4</code> → 2 solutions.</p>
+<h3 id="approach-3">Approach</h3>
+<p>Place queens row by row. In each row, try every column and check if <code>(row, col)</code> is safe — no other queen shares the same column, main diagonal (<code>row - col</code>), or anti-diagonal (<code>row + col</code>). Tracking arrays:</p>
+<ul>
+<li><code>cols[col]</code> — is column occupied?</li>
+<li><code>diag[row - col + n - 1]</code> — main diagonal (add <code>n-1</code> for non-negative index).</li>
+<li><code>antiDiag[row + col]</code> — anti-diagonal (already non-negative).</li>
+</ul>
+<h3 id="n-queens-board-state-ascii">N-Queens Board State (ASCII)</h3>
+<p>For <code>n = 4</code>, the progression of placing queens for one valid solution:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Step 1: Place Q at (0,1)        Step 2: Place Q at (1,3)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  0 1 2 3                         0 1 2 3</span></span>
+<span class="line"><span>0 . Q . .                       0 . Q . .</span></span>
+<span class="line"><span>1 . . . .                       1 . . . Q</span></span>
+<span class="line"><span>2 . . . .                       2 . . . .</span></span>
+<span class="line"><span>3 . . . .                       3 . . . .</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 3: Place Q at (2,0)        Step 4: Place Q at (3,2) — VALID</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  0 1 2 3                         0 1 2 3</span></span>
+<span class="line"><span>0 . Q . .                       0 . Q . .</span></span>
+<span class="line"><span>1 . . . Q                       1 . . . Q</span></span>
+<span class="line"><span>2 Q . . .                       2 Q . . .</span></span>
+<span class="line"><span>3 . . . .                       3 . . Q .</span></span></code></pre>
+<p>Attacked cells from queen at (0,1): all of col 1; diagonal (row-col=-1): (0,1),(1,2),(2,3); anti-diagonal (row+col=1): (0,1),(1,0). Complexity: Time O(n!), Space O(n).</p>
+<h3 id="java-solution-3">Java Solution</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> List&#x3C;List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">>> </span><span style="color:#B392F0">solveNQueens</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> n</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">>> result </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        char</span><span style="color:#E1E4E8">[][] board </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> char</span><span style="color:#E1E4E8">[n][n];</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">char</span><span style="color:#E1E4E8">[] row </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> board) Arrays.</span><span style="color:#B392F0">fill</span><span style="color:#E1E4E8">(row, </span><span style="color:#9ECBFF">'.'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#B392F0">        backtrack</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, n, board, </span><span style="color:#F97583">new</span><span style="color:#F97583"> boolean</span><span style="color:#E1E4E8">[n], </span><span style="color:#F97583">new</span><span style="color:#F97583"> boolean</span><span style="color:#E1E4E8">[</span><span style="color:#79B8FF">2</span><span style="color:#F97583">*</span><span style="color:#E1E4E8">n</span><span style="color:#F97583">-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">], </span><span style="color:#F97583">new</span><span style="color:#F97583"> boolean</span><span style="color:#E1E4E8">[</span><span style="color:#79B8FF">2</span><span style="color:#F97583">*</span><span style="color:#E1E4E8">n</span><span style="color:#F97583">-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">], result);</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> row</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> n</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">char</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">board</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#F97583">                           boolean</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">cols</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">boolean</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">diag</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">boolean</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">antiDiag</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">                           List&#x3C;List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">>> </span><span style="color:#FFAB70">result</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (row </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> n) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">> solution </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">            for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">char</span><span style="color:#E1E4E8">[] r </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> board) solution.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#B392F0"> String</span><span style="color:#E1E4E8">(r));</span></span>
+<span class="line"><span style="color:#E1E4E8">            result.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(solution);</span></span>
+<span class="line"><span style="color:#F97583">            return</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> col </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; col </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> n; col</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> d </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> row </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> col </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">, a </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> row </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> col;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (cols[col] </span><span style="color:#F97583">||</span><span style="color:#E1E4E8"> diag[d] </span><span style="color:#F97583">||</span><span style="color:#E1E4E8"> antiDiag[a]) </span><span style="color:#F97583">continue</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">            board[row][col] </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> 'Q'</span><span style="color:#E1E4E8">;          </span><span style="color:#6A737D">// CHOOSE</span></span>
+<span class="line"><span style="color:#E1E4E8">            cols[col] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> diag[d] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> antiDiag[a] </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#B392F0">            backtrack</span><span style="color:#E1E4E8">(row </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">, n, board, cols, diag, antiDiag, result);  </span><span style="color:#6A737D">// EXPLORE</span></span>
+<span class="line"><span style="color:#E1E4E8">            board[row][col] </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> '.'</span><span style="color:#E1E4E8">;          </span><span style="color:#6A737D">// UNCHOOSE</span></span>
+<span class="line"><span style="color:#E1E4E8">            cols[col] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> diag[d] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> antiDiag[a] </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<hr>
+<h2 id="n-queens-ii-leetcode-52">N-Queens II (LeetCode 52)</h2>
+<p><strong>Problem:</strong> Return the count of distinct N-Queens solutions. Same as N-Queens but increment a counter instead of recording boards. Uses the same three boolean arrays for conflict detection.</p>
+<hr>
+<h2 id="sudoku-solver-leetcode-37">Sudoku Solver (LeetCode 37)</h2>
+<p><strong>Problem:</strong> Solve a Sudoku puzzle. Each row, column, and 3x3 sub-box must contain digits 1-9 without repetition.</p>
+<p>The box index for cell <code>(row, col)</code> is <code>(row/3)*3 + (col/3)</code>. Boxes 0-2 cover rows 0-2, boxes 3-5 cover rows 3-5, boxes 6-8 cover rows 6-8 (each box spans 3 columns).</p>
+<h3 id="approach-4">Approach</h3>
+<p>Find the first empty cell, try digits 1-9, check validity (no conflict in row, column, or 3x3 box), recurse. If the recursive call succeeds, return <code>true</code> (we only need one solution). If no digit works, reset the cell and return <code>false</code>. Key difference: <strong>return boolean</strong> and stop early when found.</p>
+<h3 id="java-solution-4">Java Solution</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> solveSudoku</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">char</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">board</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#B392F0">        backtrack</span><span style="color:#E1E4E8">(board);</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">char</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">board</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> row </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; row </span><span style="color:#F97583">&#x3C;</span><span style="color:#79B8FF"> 9</span><span style="color:#E1E4E8">; row</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> col </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; col </span><span style="color:#F97583">&#x3C;</span><span style="color:#79B8FF"> 9</span><span style="color:#E1E4E8">; col</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (board[row][col] </span><span style="color:#F97583">!=</span><span style="color:#9ECBFF"> '.'</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">continue</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">                for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">char</span><span style="color:#E1E4E8"> d </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> '1'</span><span style="color:#E1E4E8">; d </span><span style="color:#F97583">&#x3C;=</span><span style="color:#9ECBFF"> '9'</span><span style="color:#E1E4E8">; d</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">                    if</span><span style="color:#E1E4E8"> (</span><span style="color:#B392F0">isValid</span><span style="color:#E1E4E8">(board, row, col, d)) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                        board[row][col] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> d;            </span><span style="color:#6A737D">// CHOOSE</span></span>
+<span class="line"><span style="color:#F97583">                        if</span><span style="color:#E1E4E8"> (</span><span style="color:#B392F0">backtrack</span><span style="color:#E1E4E8">(board)) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;  </span><span style="color:#6A737D">// EXPLORE</span></span>
+<span class="line"><span style="color:#E1E4E8">                        board[row][col] </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> '.'</span><span style="color:#E1E4E8">;          </span><span style="color:#6A737D">// UNCHOOSE</span></span>
+<span class="line"><span style="color:#E1E4E8">                    }</span></span>
+<span class="line"><span style="color:#E1E4E8">                }</span></span>
+<span class="line"><span style="color:#F97583">                return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;  </span><span style="color:#6A737D">// no valid digit → backtrack</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;  </span><span style="color:#6A737D">// no empty cell → board complete</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> isValid</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">char</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">board</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> row</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> col</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">char</span><span style="color:#FFAB70"> d</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> boxRow </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (row </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 3</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 3</span><span style="color:#E1E4E8">, boxCol </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (col </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 3</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 3</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#79B8FF"> 9</span><span style="color:#E1E4E8">; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (board[row][i] </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> d </span><span style="color:#F97583">||</span><span style="color:#E1E4E8"> board[i][col] </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> d) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (board[boxRow </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 3</span><span style="color:#E1E4E8">][boxCol </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">%</span><span style="color:#79B8FF"> 3</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> d) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>The unchoose is only reached when the recursive call fails. If it succeeds, we return immediately without undoing — the board holds the solution.</p>
+<hr>
+<h2 id="word-search-leetcode-79">Word Search (LeetCode 79)</h2>
+<p><strong>Problem:</strong> Given an <code>m x n</code> grid and a string <code>word</code>, return <code>true</code> if the word exists. The word is constructed from sequentially adjacent cells (horizontally/vertically), same cell not used twice.</p>
+<p><strong>Example:</strong> <code>board = [["A","B","C","E"],["S","F","C","S"],["A","D","E","E"]], word = "ABCCED"</code> → <code>true</code></p>
+<h3 id="approach-5">Approach</h3>
+<p>For each cell matching the first character, start a DFS. Mark visited in-place (replace with <code>#</code>), recurse into four directions, restore after. If any path matches the full word, return <code>true</code>. Complexity: Time O(m·n·4^L), Space O(L).</p>
+<h3 id="java-solution-5">Java Solution</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> exist</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">char</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">board</span><span style="color:#E1E4E8">, String </span><span style="color:#FFAB70">word</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        char</span><span style="color:#E1E4E8">[] w </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> word.</span><span style="color:#B392F0">toCharArray</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> board.length; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">            for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> j </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; j </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> board[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">].length; j</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (board[i][j] </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> w[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(board, w, i, j, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">)) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">char</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">board</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">char</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">word</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> i</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> j</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> idx</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (idx </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> word.length) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">&#x3C;</span><span style="color:#79B8FF"> 0</span><span style="color:#F97583"> ||</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">>=</span><span style="color:#E1E4E8"> board.length </span><span style="color:#F97583">||</span><span style="color:#E1E4E8"> j </span><span style="color:#F97583">&#x3C;</span><span style="color:#79B8FF"> 0</span><span style="color:#F97583"> ||</span><span style="color:#E1E4E8"> j </span><span style="color:#F97583">>=</span><span style="color:#E1E4E8"> board[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">].length</span></span>
+<span class="line"><span style="color:#F97583">                ||</span><span style="color:#E1E4E8"> board[i][j] </span><span style="color:#F97583">!=</span><span style="color:#E1E4E8"> word[idx]) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        char</span><span style="color:#E1E4E8"> temp </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> board[i][j];</span></span>
+<span class="line"><span style="color:#E1E4E8">        board[i][j] </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> '#'</span><span style="color:#E1E4E8">;  </span><span style="color:#6A737D">// CHOOSE: mark visited</span></span>
+<span class="line"><span style="color:#F97583">        boolean</span><span style="color:#E1E4E8"> found </span><span style="color:#F97583">=</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(board, word, i</span><span style="color:#F97583">+</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, j, idx</span><span style="color:#F97583">+</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">                     ||</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(board, word, i</span><span style="color:#F97583">-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, j, idx</span><span style="color:#F97583">+</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">                     ||</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(board, word, i, j</span><span style="color:#F97583">+</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, idx</span><span style="color:#F97583">+</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">                     ||</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(board, word, i, j</span><span style="color:#F97583">-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, idx</span><span style="color:#F97583">+</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">        board[i][j] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> temp;  </span><span style="color:#6A737D">// UNCHOOSE: restore</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> found;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>In-place marking saves O(m·n) space. <strong>Optimization:</strong> reverse the word if the last character is rarer in the board than the first, reducing the branching factor at the top of the tree.</p>
+<hr>
+<h2 id="word-search-ii-leetcode-212">Word Search II (LeetCode 212)</h2>
+<p><strong>Problem:</strong> Given a board and a list of words, find all words that exist on the board.</p>
+<p>Running Word Search I per word is O(W·m·n·4^L) — too slow. Use a <strong>Trie</strong> to search all words simultaneously: insert all words, then DFS from each cell. If the current path is not a prefix of any word (Trie has no child for the character), prune. If it matches a complete word, add to results.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    class</span><span style="color:#B392F0"> TrieNode</span><span style="color:#E1E4E8"> { </span><span style="color:#F97583">TrieNode</span><span style="color:#E1E4E8">[] children </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> TrieNode</span><span style="color:#E1E4E8">[</span><span style="color:#79B8FF">26</span><span style="color:#E1E4E8">]; String word </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">; }</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">> </span><span style="color:#B392F0">findWords</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">char</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">board</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">String</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">words</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        TrieNode root </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> TrieNode</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (String w </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> words) { TrieNode node </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> root;</span></span>
+<span class="line"><span style="color:#F97583">            for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> w.</span><span style="color:#B392F0">toCharArray</span><span style="color:#E1E4E8">()) { </span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'a'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (node.children[i] </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">) node.children[i] </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> TrieNode</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">                node </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> node.children[i]; } node.word </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> w; }</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">> result </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> board.length; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">            for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> j </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; j </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> board[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">].length; j</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) </span><span style="color:#B392F0">dfs</span><span style="color:#E1E4E8">(board, i, j, root, result);</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> dfs</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">char</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">b</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> i</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> j</span><span style="color:#E1E4E8">, TrieNode </span><span style="color:#FFAB70">node</span><span style="color:#E1E4E8">, List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">> </span><span style="color:#FFAB70">res</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> b[i][j];</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> '#'</span><span style="color:#F97583"> ||</span><span style="color:#E1E4E8"> node.children[c </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'a'</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        node </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> node.children[c </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'a'</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (node.word </span><span style="color:#F97583">!=</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">) { res.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(node.word); node.word </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">; }</span></span>
+<span class="line"><span style="color:#E1E4E8">        b[i][j] </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> '#'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[][] dirs </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> {{</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">},{</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">,</span><span style="color:#F97583">-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">},{</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">},{</span><span style="color:#F97583">-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">}};</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] d </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> dirs) { </span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> ni </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> i</span><span style="color:#F97583">+</span><span style="color:#E1E4E8">d[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">], nj </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> j</span><span style="color:#F97583">+</span><span style="color:#E1E4E8">d[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (ni </span><span style="color:#F97583">>=</span><span style="color:#79B8FF"> 0</span><span style="color:#F97583"> &#x26;&#x26;</span><span style="color:#E1E4E8"> ni </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> b.length </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> nj </span><span style="color:#F97583">>=</span><span style="color:#79B8FF"> 0</span><span style="color:#F97583"> &#x26;&#x26;</span><span style="color:#E1E4E8"> nj </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">].length) </span><span style="color:#B392F0">dfs</span><span style="color:#E1E4E8">(b, ni, nj, node, res); }</span></span>
+<span class="line"><span style="color:#E1E4E8">        b[i][j] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> c;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><code>node.children[c - 'a'] == null</code> prunes any path that cannot lead to a valid word, dramatically reducing the search space.</p>
+<hr>
+<h2 id="generate-parentheses-leetcode-22">Generate Parentheses (LeetCode 22)</h2>
+<p><strong>Problem:</strong> Given <code>n</code> pairs of parentheses, generate all combinations of well-formed parentheses.</p>
+<p><strong>Example:</strong> <code>n = 3</code> → <code>["((()))","(()())","(())()","()(())","()()()"]</code></p>
+<h3 id="approach-6">Approach</h3>
+<p>At each step, add <code>'('</code> if we haven’t used all <code>n</code>, or add <code>')'</code> if there are unmatched <code>'('</code> (<code>close &lt; open</code>). This <strong>guarantees validity by construction</strong>. Complexity: Time O(4^n/√n) (Catalan number), Space O(n).</p>
+<h3 id="java-solution-6">Java Solution</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">> </span><span style="color:#B392F0">generateParenthesis</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> n</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">> result </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#B392F0">        backtrack</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#B392F0"> StringBuilder</span><span style="color:#E1E4E8">(), </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, n, result);</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(StringBuilder </span><span style="color:#FFAB70">current</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> open</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> close</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> n</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">                           List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">> </span><span style="color:#FFAB70">result</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (current.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 2</span><span style="color:#F97583"> *</span><span style="color:#E1E4E8"> n) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            result.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(current.</span><span style="color:#B392F0">toString</span><span style="color:#E1E4E8">());</span></span>
+<span class="line"><span style="color:#F97583">            return</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (open </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> n) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            current.</span><span style="color:#B392F0">append</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'('</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#B392F0">            backtrack</span><span style="color:#E1E4E8">(current, open </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">, close, n, result);</span></span>
+<span class="line"><span style="color:#E1E4E8">            current.</span><span style="color:#B392F0">deleteCharAt</span><span style="color:#E1E4E8">(current.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (close </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> open) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            current.</span><span style="color:#B392F0">append</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">')'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#B392F0">            backtrack</span><span style="color:#E1E4E8">(current, open, close </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">, n, result);</span></span>
+<span class="line"><span style="color:#E1E4E8">            current.</span><span style="color:#B392F0">deleteCharAt</span><span style="color:#E1E4E8">(current.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>The constraints <code>open &lt; n</code> and <code>close &lt; open</code> ensure: (1) no more than <code>n</code> opening parens, (2) never close an unopened paren, (3) every complete string has exactly <code>n</code> of each in valid order. Invalid branches never form — the most elegant form of backtracking.</p>
+<hr>
+<h2 id="palindrome-partitioning-leetcode-131">Palindrome Partitioning (LeetCode 131)</h2>
+<p><strong>Problem:</strong> Given a string <code>s</code>, partition it so every substring is a palindrome. Return all possible partitions.</p>
+<p><strong>Example:</strong> <code>s = "aab"</code> → <code>[["a","a","b"],["aa","b"]]</code></p>
+<h3 id="approach-7">Approach</h3>
+<p>At each position, try all end positions for the next substring. If <code>s[start:end+1]</code> is a palindrome, add it and recurse from <code>end + 1</code>. Base case: <code>start == s.length()</code>. Complexity: Time O(n·2^n), Space O(n).</p>
+<h3 id="java-solution-7">Java Solution</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> List&#x3C;List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">>> </span><span style="color:#B392F0">partition</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">>> result </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#B392F0">        backtrack</span><span style="color:#E1E4E8">(s, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(), result);</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> start</span><span style="color:#E1E4E8">, List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">> </span><span style="color:#FFAB70">current</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">                           List&#x3C;List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">>> </span><span style="color:#FFAB70">result</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (start </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            result.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(current));</span></span>
+<span class="line"><span style="color:#F97583">            return</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> end </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> start; end </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">(); end</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (</span><span style="color:#B392F0">isPalindrome</span><span style="color:#E1E4E8">(s, start, end)) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                current.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(s.</span><span style="color:#B392F0">substring</span><span style="color:#E1E4E8">(start, end </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">));    </span><span style="color:#6A737D">// CHOOSE</span></span>
+<span class="line"><span style="color:#B392F0">                backtrack</span><span style="color:#E1E4E8">(s, end </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">, current, result);      </span><span style="color:#6A737D">// EXPLORE</span></span>
+<span class="line"><span style="color:#E1E4E8">                current.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">(current.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);          </span><span style="color:#6A737D">// UNCHOOSE</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> isPalindrome</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> left</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> right</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (left </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> right)</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (s.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(left</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">!=</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(right</span><span style="color:#F97583">--</span><span style="color:#E1E4E8">)) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>For long strings, precompute a DP table: <code>isPal[i][j] = (s[i]==s[j]) &amp;&amp; (j-i &lt;= 2 || isPal[i+1][j-1])</code>.</p>
+<hr>
+<h2 id="letter-combinations-of-a-phone-number-leetcode-17">Letter Combinations of a Phone Number (LeetCode 17)</h2>
+<p><strong>Problem:</strong> Given digits 2-9, return all possible letter combinations (phone keypad mapping).</p>
+<p><strong>Example:</strong> <code>digits = "23"</code> → <code>["ad","ae","af","bd","be","bf","cd","ce","cf"]</code></p>
+<p>Mapping: <code>2:abc 3:def 4:ghi 5:jkl 6:mno 7:pqrs 8:tuv 9:wxyz</code></p>
+<p>At each digit position, iterate over all letters that digit maps to. Append, recurse to next digit, remove. Base case: current string reaches the length of the input digits. For <code>"23"</code>, the tree branches into <code>a/b/c</code> at level 1, then each branches into <code>d/e/f</code> at level 2, producing 9 leaves.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> String</span><span style="color:#E1E4E8">[] map </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> {</span><span style="color:#9ECBFF">""</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">""</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"abc"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"def"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"ghi"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"jkl"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"mno"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"pqrs"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"tuv"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"wxyz"</span><span style="color:#E1E4E8">};</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">> </span><span style="color:#B392F0">letterCombinations</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">digits</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">> res </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (digits </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> null</span><span style="color:#F97583"> ||</span><span style="color:#E1E4E8"> digits.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">()) </span><span style="color:#F97583">return</span><span style="color:#E1E4E8"> res;</span></span>
+<span class="line"><span style="color:#B392F0">        backtrack</span><span style="color:#E1E4E8">(digits, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">new</span><span style="color:#B392F0"> StringBuilder</span><span style="color:#E1E4E8">(), res);</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> res;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">digits</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> idx</span><span style="color:#E1E4E8">, StringBuilder </span><span style="color:#FFAB70">cur</span><span style="color:#E1E4E8">, List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">> </span><span style="color:#FFAB70">res</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (idx </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> digits.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">()) { res.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(cur.</span><span style="color:#B392F0">toString</span><span style="color:#E1E4E8">()); </span><span style="color:#F97583">return</span><span style="color:#E1E4E8">; }</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> map[digits.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(idx) </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> '0'</span><span style="color:#E1E4E8">].</span><span style="color:#B392F0">toCharArray</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            cur.</span><span style="color:#B392F0">append</span><span style="color:#E1E4E8">(c);</span></span>
+<span class="line"><span style="color:#B392F0">            backtrack</span><span style="color:#E1E4E8">(digits, idx </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">, cur, res);</span></span>
+<span class="line"><span style="color:#E1E4E8">            cur.</span><span style="color:#B392F0">deleteCharAt</span><span style="color:#E1E4E8">(cur.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<hr>
+<h2 id="restore-ip-addresses-leetcode-93">Restore IP Addresses (LeetCode 93)</h2>
+<p><strong>Problem:</strong> Given a string of digits, return all valid IP addresses formed by inserting dots. A valid IP has exactly four octets, each 0-255, no leading zeros (except “0” itself).</p>
+<p><strong>Example:</strong> <code>s = "25525511135"</code> → <code>["255.255.11.135","255.255.111.35"]</code></p>
+<p>Place 3 dots to create 4 segments. Try 1, 2, or 3 characters per octet. Validate (no leading zero unless “0”, value ≤ 255). Record when 4 valid octets consume the entire string. Prune when remaining characters can’t fill remaining octets.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">> </span><span style="color:#B392F0">restoreIpAddresses</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">> res </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#B392F0">        backtrack</span><span style="color:#E1E4E8">(s, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(), res);</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> res;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> start</span><span style="color:#E1E4E8">, List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">> </span><span style="color:#FFAB70">parts</span><span style="color:#E1E4E8">, List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">> </span><span style="color:#FFAB70">res</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (parts.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 4</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (start </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">()) res.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(String.</span><span style="color:#B392F0">join</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"."</span><span style="color:#E1E4E8">, parts));</span></span>
+<span class="line"><span style="color:#F97583">            return</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> rem </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 4</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8"> parts.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> start </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> rem </span><span style="color:#F97583">||</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> start </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> rem </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 3</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> len </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">; len </span><span style="color:#F97583">&#x3C;=</span><span style="color:#79B8FF"> 3</span><span style="color:#E1E4E8">; len</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (start </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> len </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">()) </span><span style="color:#F97583">break</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            String seg </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">substring</span><span style="color:#E1E4E8">(start, start </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> len);</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (seg.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">></span><span style="color:#79B8FF"> 1</span><span style="color:#F97583"> &#x26;&#x26;</span><span style="color:#E1E4E8"> seg.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> '0'</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">continue</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (Integer.</span><span style="color:#B392F0">parseInt</span><span style="color:#E1E4E8">(seg) </span><span style="color:#F97583">></span><span style="color:#79B8FF"> 255</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">continue</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            parts.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(seg);</span></span>
+<span class="line"><span style="color:#B392F0">            backtrack</span><span style="color:#E1E4E8">(s, start </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> len, parts, res);</span></span>
+<span class="line"><span style="color:#E1E4E8">            parts.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">(parts.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<hr>
+<h2 id="split-string-into-descending-values-leetcode-1849">Split String Into Descending Values (LeetCode 1849)</h2>
+<p><strong>Problem:</strong> Given a string <code>s</code> of digits, split it into two or more non-empty substrings such that the values are in <strong>strictly decreasing</strong> order. Return <code>true</code> if such a split exists.</p>
+<p>Backtracking with a “previous value” parameter. Try all split lengths; current segment’s value must be <strong>strictly less than</strong> the previous. Key pruning: if <code>current &gt;= prev</code> (and prev is set), <code>break</code> — longer segments are larger. Use <code>long</code> for large values.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> splitString</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">) { </span><span style="color:#F97583">return</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(s, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">-</span><span style="color:#79B8FF">1L</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">); }</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> backtrack</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> start</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">long</span><span style="color:#FFAB70"> prev</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> count</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (start </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">()) </span><span style="color:#F97583">return</span><span style="color:#E1E4E8"> count </span><span style="color:#F97583">>=</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        long</span><span style="color:#E1E4E8"> cur </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> start; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">(); i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            cur </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> cur </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 10</span><span style="color:#F97583"> +</span><span style="color:#E1E4E8"> (s.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(i) </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> '0'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (prev </span><span style="color:#F97583">!=</span><span style="color:#F97583"> -</span><span style="color:#79B8FF">1</span><span style="color:#F97583"> &#x26;&#x26;</span><span style="color:#E1E4E8"> cur </span><span style="color:#F97583">>=</span><span style="color:#E1E4E8"> prev) </span><span style="color:#F97583">break</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (</span><span style="color:#B392F0">backtrack</span><span style="color:#E1E4E8">(s, i </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">, cur, count </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">)) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>For <code>s = "4321"</code>, valid splits include <code>4&gt;3&gt;2&gt;1</code>, <code>43&gt;21</code>, and <code>432&gt;1</code>.</p>
+<hr>
+<h2 id="pattern-recognition-table">Pattern Recognition Table</h2>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>+---------------------------+--------------------+------------------+-------------------+---------------------------+</span></span>
+<span class="line"><span>| Pattern                   | Signal Words       | Key Technique    | State Tracking    | Common LeetCode Problems  |</span></span>
+<span class="line"><span>+---------------------------+--------------------+------------------+-------------------+---------------------------+</span></span>
+<span class="line"><span>| Subset Enumeration        | "all subsets",     | Start index,     | current list +    | 78 Subsets,               |</span></span>
+<span class="line"><span>|                           | "power set",       | record every     | start position    | 90 Subsets II,            |</span></span>
+<span class="line"><span>|                           | "all combinations" | node             |                   | 784 Letter Case Perm      |</span></span>
+<span class="line"><span>+---------------------------+--------------------+------------------+-------------------+---------------------------+</span></span>
+<span class="line"><span>| Permutation               | "all arrangements",| used[] array,    | current list +    | 46 Permutations,          |</span></span>
+<span class="line"><span>|                           | "all orderings",   | iterate all      | used[] boolean    | 47 Permutations II,       |</span></span>
+<span class="line"><span>|                           | "rearrange"        | elements         | array             | 1079 Letter Tile          |</span></span>
+<span class="line"><span>+---------------------------+--------------------+------------------+-------------------+---------------------------+</span></span>
+<span class="line"><span>| k-Combination             | "choose k",        | Start index +    | current list +    | 77 Combinations,          |</span></span>
+<span class="line"><span>|                           | "pick k from n"    | size constraint  | start + size      | 216 Combination Sum III   |</span></span>
+<span class="line"><span>+---------------------------+--------------------+------------------+-------------------+---------------------------+</span></span>
+<span class="line"><span>| Sum Targeting             | "sum to target",   | Track remaining, | current list +    | 39 Combination Sum,       |</span></span>
+<span class="line"><span>|                           | "add up to"        | prune on overflow| remaining sum +   | 40 Combination Sum II,    |</span></span>
+<span class="line"><span>|                           |                    |                  | start index       | 216 Combo Sum III         |</span></span>
+<span class="line"><span>+---------------------------+--------------------+------------------+-------------------+---------------------------+</span></span>
+<span class="line"><span>| Grid Placement            | "place on board",  | Row-by-row,      | board + conflict  | 51 N-Queens,              |</span></span>
+<span class="line"><span>| (Constraint Satisfaction) | "fill grid",       | check conflicts  | arrays (cols,     | 37 Sudoku Solver,         |</span></span>
+<span class="line"><span>|                           | "non-attacking"    | per placement    | diags)            | 52 N-Queens II            |</span></span>
+<span class="line"><span>+---------------------------+--------------------+------------------+-------------------+---------------------------+</span></span>
+<span class="line"><span>| Grid Search (DFS)         | "find word in      | DFS from each    | board with in-    | 79 Word Search,           |</span></span>
+<span class="line"><span>|                           | grid", "path in    | cell, mark       | place visited     | 212 Word Search II,       |</span></span>
+<span class="line"><span>|                           | matrix"            | visited          | marking           | 980 Unique Paths III      |</span></span>
+<span class="line"><span>+---------------------------+--------------------+------------------+-------------------+---------------------------+</span></span>
+<span class="line"><span>| String Partitioning       | "split string",    | Try all cut      | current list of   | 131 Palindrome Part,      |</span></span>
+<span class="line"><span>|                           | "partition into",  | points, validate | segments +        | 93 Restore IP,            |</span></span>
+<span class="line"><span>|                           | "segment"          | each segment     | start position    | 1849 Split Descending     |</span></span>
+<span class="line"><span>+---------------------------+--------------------+------------------+-------------------+---------------------------+</span></span>
+<span class="line"><span>| Parentheses/Brackets      | "valid parens",    | Track open/close | open count +      | 22 Generate Parens,       |</span></span>
+<span class="line"><span>|                           | "well-formed",     | counts, add '('  | close count       | 301 Remove Invalid Parens |</span></span>
+<span class="line"><span>|                           | "balanced"         | or ')' with      |                   |                           |</span></span>
+<span class="line"><span>|                           |                    | constraints      |                   |                           |</span></span>
+<span class="line"><span>+---------------------------+--------------------+------------------+-------------------+---------------------------+</span></span>
+<span class="line"><span>| Multi-Choice Position     | "all combinations  | Map each         | current string +  | 17 Letter Combos,         |</span></span>
+<span class="line"><span>|                           | of choices",       | position to a    | position index    | 967 Numbers Same Consec   |</span></span>
+<span class="line"><span>|                           | "phone keypad"     | set of choices,  |                   |                           |</span></span>
+<span class="line"><span>|                           |                    | iterate choices  |                   |                           |</span></span>
+<span class="line"><span>+---------------------------+--------------------+------------------+-------------------+---------------------------+</span></span></code></pre>
+<h3 id="how-to-identify-the-pattern">How to Identify the Pattern</h3>
+<ol>
+<li><strong>Match signal words.</strong> “All subsets” → subset enumeration. “All orderings” → permutation. “Sum to target” → sum targeting. “Place on board” → grid placement. “Split string” → string partitioning.</li>
+<li><strong>Determine the candidate loop.</strong> All input elements (permutation), from a start index (subset/combination), fixed choices (parentheses, phone), or split points (string partitioning).</li>
+<li><strong>Determine the base case.</strong> Size reached, target met, board filled, or string consumed.</li>
+<li><strong>Determine the pruning.</strong> Duplicates, conflicts, sum overflow (break when sorted), invalid segments.</li>
+<li><strong>Handle duplicates.</strong> Sort first, then:
+<ul>
+<li><strong>Subset-style</strong>: <code>i &gt; start &amp;&amp; nums[i] == nums[i-1]</code> — skip at same recursion level.</li>
+<li><strong>Permutation-style</strong>: <code>i &gt; 0 &amp;&amp; nums[i] == nums[i-1] &amp;&amp; !used[i-1]</code> — skip if previous duplicate not used.</li>
+</ul>
+</li>
+</ol>
+<h3 id="quick-checklist">Quick Checklist</h3>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> What is the state? What are the candidates? What is the base case?</li>
+<li class="task-list-item"><input type="checkbox" disabled> What is the prune condition? Are there duplicates to skip?</li>
+<li class="task-list-item"><input type="checkbox" disabled> Are you deep-copying the state before storing it?</li>
+<li class="task-list-item"><input type="checkbox" disabled> Does unchoose exactly reverse choose?</li>
+<li class="task-list-item"><input type="checkbox" disabled> Can you sort the input to enable pruning or duplicate skipping?</li>
+</ul>
+<hr>
+<h2 id="common-bugs">Common Bugs</h2>
+<ol>
+<li><strong>Forgetting to deep-copy the state</strong> before storing — stored result references the mutable state, corrupted by subsequent recursion.</li>
+<li><strong>Mismatched choose/unchoose</strong> — unchoose doesn’t exactly reverse choose, corrupting state for the next iteration.</li>
+<li><strong>Wrong duplicate-skipping condition</strong> — using <code>i &gt; 0</code> instead of <code>i &gt; start</code>, or <code>used[i-1]</code> instead of <code>!used[i-1]</code>, leading to missing or duplicate solutions.</li>
+</ol>
+<p>Master these, and backtracking will become one of your most reliable interview tools.</p>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Template: choose → explore → unchoose (backtrack). Pruning is what makes backtracking tractable — prune branches that can’t lead to a valid solution.</li>
+<li>Common patterns: permutations (swap or pick), combinations (pick/not-pick with start index), subsets (pick/not-pick), N-Queens (row-by-row with validity check).</li>
+<li>Always pass a mutable state (list, array) and undo changes after recursion.</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you decide what to backtrack on?” — The choice point is the variable you’re deciding at each step: which character to place next, which number to try, which position to fill.</li>
+<li>“How do you optimize backtracking?” — Prune early (check validity before recursing, not after). Use memoization if subproblems overlap (then it becomes DP).</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Forgetting to undo the choice after the recursive call. The “unchoose” step is what makes it backtracking vs brute force. If you add to the list but don’t remove after recursion, you get wrong results (all solutions share the same list).</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/coding-interview/backtracking/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Backtracking%20%E2%80%94%20Complete%20Interview%20Prep%20Guide&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fcoding-interview%2Fbacktracking%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fcoding-interview%2Fbacktracking%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/coding-interview/backtracking" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/coding-interview/arrays-and-strings/" class="related-card"><div class="related-card-title">Arrays &amp; Strings — Interview Prep Guide</div><div class="related-card-meta">Coding Interview · 47 min</div></a><a href="/notes/coding-interview/big-o-and-pattern-recognition/" class="related-card"><div class="related-card-title">Big O Complexity &amp; Pattern Recognition</div><div class="related-card-meta">Coding Interview · 30 min</div></a><a href="/notes/coding-interview/binary-search/" class="related-card"><div class="related-card-title">Binary Search — Complete Coding Interview Prep</div><div class="related-card-meta">Coding Interview · 23 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/coding-interview/arrays-and-strings" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Arrays &amp; Strings — Interview Prep Guide</span></a><a href="/notes/coding-interview/big-o-and-pattern-recognition" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Big O Complexity &amp; Pattern Recognition</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Backtracking — Complete Interview Prep Guide" data-selector=".article-prose" data-article-slug="coding-interview/backtracking" data-article-title="Backtracking — Complete Interview Prep Guide" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

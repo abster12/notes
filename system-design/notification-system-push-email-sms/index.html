@@ -1,0 +1,698 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Notification System (Push, Email, SMS) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#requirements-and-the-shape-of-the-problem" class="toc-link" data-toc-link="requirements-and-the-shape-of-the-problem" data-astro-cid-p33bl5ka>Requirements and the Shape of the Problem</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#high-level-event-driven-architecture" class="toc-link" data-toc-link="high-level-event-driven-architecture" data-astro-cid-p33bl5ka>High-Level Event-Driven Architecture</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#user-preference-graph" class="toc-link" data-toc-link="user-preference-graph" data-astro-cid-p33bl5ka>User Preference Graph</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#templates-and-localization" class="toc-link" data-toc-link="templates-and-localization" data-astro-cid-p33bl5ka>Templates and Localization</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#multi-channel-delivery-push-email-and-sms" class="toc-link" data-toc-link="multi-channel-delivery-push-email-and-sms" data-astro-cid-p33bl5ka>Multi-Channel Delivery: Push, Email, and SMS</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#priority-queues-and-dispatch-policy" class="toc-link" data-toc-link="priority-queues-and-dispatch-policy" data-astro-cid-p33bl5ka>Priority Queues and Dispatch Policy</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#rate-limiting-per-user-and-per-channel" class="toc-link" data-toc-link="rate-limiting-per-user-and-per-channel" data-astro-cid-p33bl5ka>Rate Limiting Per User and Per Channel</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#deduplication-and-idempotency" class="toc-link" data-toc-link="deduplication-and-idempotency" data-astro-cid-p33bl5ka>Deduplication and Idempotency</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#batching-and-coalescing" class="toc-link" data-toc-link="batching-and-coalescing" data-astro-cid-p33bl5ka>Batching and Coalescing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#retry-with-exponential-backoff" class="toc-link" data-toc-link="retry-with-exponential-backoff" data-astro-cid-p33bl5ka>Retry with Exponential Backoff</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#delivery-guarantees-and-at-least-once-semantics" class="toc-link" data-toc-link="delivery-guarantees-and-at-least-once-semantics" data-astro-cid-p33bl5ka>Delivery Guarantees and At-Least-Once Semantics</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#ab-testing-notifications" class="toc-link" data-toc-link="ab-testing-notifications" data-astro-cid-p33bl5ka>A/B Testing Notifications</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#analytics-tracking-and-observability" class="toc-link" data-toc-link="analytics-tracking-and-observability" data-astro-cid-p33bl5ka>Analytics, Tracking, and Observability</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-estimation" class="toc-link" data-toc-link="capacity-estimation" data-astro-cid-p33bl5ka>Capacity Estimation</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#sharp-interview-question" class="toc-link" data-toc-link="sharp-interview-question" data-astro-cid-p33bl5ka>Sharp Interview Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Notification System (Push, Email, SMS)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-medium" data-astro-cid-sgg5joot>Medium</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 24 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 34 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>scale</span><span class="tag" data-astro-cid-sgg5joot>notifications</span><span class="tag" data-astro-cid-sgg5joot>push</span><span class="tag" data-astro-cid-sgg5joot>email</span><span class="tag" data-astro-cid-sgg5joot>sms</span><span class="tag" data-astro-cid-sgg5joot>fan-out</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="notification-system-push-email-sms">Notification System (Push, Email, SMS)</h1>
+<p>A notification system is one of the most deceptively hard services in a modern platform because it sits at the intersection of three forces that pull in opposite directions: users want timely, relevant, non-spammy messages; product teams want maximum engagement and will happily send everything to everyone; and third-party delivery providers impose hard rate limits, charge per message, and will throttle or ban you if you misbehave. The engineer’s job is to build a pipeline that absorbs bursty, heterogeneous events from dozens of upstream services, fans them out across three delivery channels with radically different cost and latency profiles, respects per-user preference and quiet-hours rules, and still delivers within a few seconds for time-sensitive notifications. Get it wrong and you either leak money on SMS spam, get your APNS certificate revoked for pushing to stale tokens, or silently drop the password-reset email that locks a user out of their account. The design that follows is the one a staff engineer would whiteboard in an interview, with the trade-offs made explicit at every layer.</p>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A system that fans out notifications across push, email, and SMS channels, respecting user preferences, quiet hours, rate limits, and deduplication.</p>
+<p><strong>How it’s asked:</strong> “Design a notification system supporting 10M notifications/sec across push, email, and SMS with per-user preferences, priority queues, and deduplication at multiple layers.”</p>
+<hr>
+<h2 id="requirements-and-the-shape-of-the-problem">Requirements and the Shape of the Problem</h2>
+<p>The functional surface is small: upstream services (orders, billing, social, security) emit events, the system transforms them into human-readable notifications, and delivers them through one or more channels. The non-functional requirements are where the difficulty lives. Throughput is bursty and unpredictable — a product launch or a credential breach can generate a hundredfold spike in seconds, while a quiet Tuesday morning trickles at a few events per second. Latency targets differ by notification class: a 2FA code must arrive in under five seconds or the user reloads and generates a second, while a weekly digest can tolerate minutes. Reliability is asymmetric: a missed marketing push is tolerable, a missed transactional email is a support ticket, and a missed security alert is a security incident. Cost is dominated by SMS (cents per message) and email (fractions of a cent but volume is enormous), while push is nearly free but capacity-constrained by Apple and Google. Availability must be high because the notification system is often the <em>only</em> way users learn their account was compromised, so it cannot share a failure domain with the services that generate the alerts.</p>
+<p>A useful framing is to separate the notification into three lifecycle stages: ingestion (accepting and validating the intent to notify), orchestration (deciding who gets what, through which channel, and when), and delivery (the actual handoff to a provider and the tracking of the result). Each stage has its own scaling characteristics, its own failure modes, and its own queue, and the architecture is cleanest when those stages are decoupled by message brokers rather than stitched together with synchronous RPC.</p>
+<h2 id="high-level-event-driven-architecture">High-Level Event-Driven Architecture</h2>
+<p>The system is fundamentally event-driven because the sources of notifications are themselves event producers and because decoupling ingestion from delivery is the only way to survive bursts without shedding load indiscriminately. An upstream service — say, the payments service confirming a charge — publishes a <code>payment.succeeded</code> event to an event bus (Kafka or SNS). A notification ingestion service consumes that event, enriches it with user context, and writes a notification intent record to the database. It then publishes an internal <code>notification.requested</code> event to a Kafka topic partitioned by <code>user_id</code>. This partitioning is load-bearing: it guarantees that all notifications for a given user are processed by the same consumer in order, which matters because a user receiving “your order shipped” before “your order was placed” is a real and embarrassing bug.</p>
+<p>The notification orchestrator consumes <code>notification.requested</code>, resolves the user’s preferences, selects channels and templates, applies rate limiting and deduplication, and produces one <code>delivery.requested</code> event per (user, channel) pair, pushing each into the appropriate priority queue. Channel workers — separate consumer groups for push, email, and SMS — pull from their queues, call the provider SDK, and emit <code>delivery.completed</code> or <code>delivery.failed</code> events back to the bus, which a tracking service persists for analytics and which a retry service consumes to schedule backoff retries. This pipeline has no synchronous cross-service calls in the hot path: every handoff is through Kafka, which means a downstream provider outage backs up the queue instead of cascading a timeout back into the upstream service that triggered the notification. That back-pressure behavior is the single most important architectural property and the reason a queue-based design beats a synchronous fan-out for anything beyond trivial scale.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span> EVENT-DRIVEN ARCHITECTURE</span></span>
+<span class="line"><span> =========================</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span> [Upstream Services]            [Event Bus]              [Ingestion Service]</span></span>
+<span class="line"><span>  orders                         Kafka / SNS              validate + enrich</span></span>
+<span class="line"><span>  billing           event ----->  (topics)    ----->      user context</span></span>
+<span class="line"><span>  social            payment.                               |</span></span>
+<span class="line"><span>  security          succeeded                              | notification.requested</span></span>
+<span class="line"><span>                                                          | (Kafka, partitioned by user_id)</span></span>
+<span class="line"><span>                                                          v</span></span>
+<span class="line"><span>                                               [Orchestrator]</span></span>
+<span class="line"><span>                                               - resolve preferences</span></span>
+<span class="line"><span>                                               - select channels + templates</span></span>
+<span class="line"><span>                                               - rate limit + dedup check</span></span>
+<span class="line"><span>                                               - render content</span></span>
+<span class="line"><span>                                                  |</span></span>
+<span class="line"><span>                +--------------------------------+--------------------------------+</span></span>
+<span class="line"><span>                |                                |                                |</span></span>
+<span class="line"><span>                v                                v                                v</span></span>
+<span class="line"><span>          [Push Queue]                    [Email Queue]                    [SMS Queue]</span></span>
+<span class="line"><span>         (per priority)                  (per priority)                  (per priority)</span></span>
+<span class="line"><span>                |                                |                                |</span></span>
+<span class="line"><span>                v                                v                                v</span></span>
+<span class="line"><span>          [Push Worker]                   [Email Worker]                   [SMS Worker]</span></span>
+<span class="line"><span>                |                                |                                |</span></span>
+<span class="line"><span>                v                                v                                v</span></span>
+<span class="line"><span>             FCM / APNS                      SES / SendGrid                     Twilio</span></span>
+<span class="line"><span>                |                                |                                |</span></span>
+<span class="line"><span>                +--------------------------------+--------------------------------+</span></span>
+<span class="line"><span>                                                 |</span></span>
+<span class="line"><span>                                      delivery.completed / .failed</span></span>
+<span class="line"><span>                                                 |</span></span>
+<span class="line"><span>                                        +--------+--------+</span></span>
+<span class="line"><span>                                        |                 |</span></span>
+<span class="line"><span>                                        v                 v</span></span>
+<span class="line"><span>                                 [Tracking Service]  [Retry Service]</span></span>
+<span class="line"><span>                                 delivery log +       exponential backoff</span></span>
+<span class="line"><span>                                 in-app bell icon     + jitter scheduler</span></span></code></pre>
+<h2 id="user-preference-graph">User Preference Graph</h2>
+<p>Before any notification is sent, the orchestrator must answer a surprisingly complex question: does this user want this notification, through this channel, at this time, in this language? The naive model — a single <code>notification_preferences</code> table with a boolean per category — collapses the moment a real product grows, because preferences are multi-dimensional and contextual. A user may want push for direct messages but email for weekly summaries and nothing for marketing. They may want security alerts on every channel regardless of their other settings, because those are non-suppressible. They may have quiet hours (no push between 22:00 and 07:00 local time), device-level Do Not Disturb that the OS surfaces back to you, per-channel bundling preferences (digest emails instead of individual ones), and locale-specific template selection.</p>
+<p>The right model is a preference graph rather than a flat table. At the top is the user, who has a global default (opted in to all, opted out of marketing). Below that are channel-level defaults (push on, email on, SMS off unless verified). Below that are category-level overrides (I want order updates by push but not email). Below that are specific notification-type rules (I want “price drop” alerts for my saved items but not “back in stock”). Resolution walks this graph from most-specific to least-specific and takes the first explicit setting, falling back to category, then channel, then global default. This is implemented as a small rules engine backed by a document store (DynamoDB or Mongo) where each user’s preference tree is a single document, allowing the entire resolution to happen in one read. A separate immutable <code>preference_history</code> table records every change for audit and for “you turned this off on March 3” support flows. The security-alert exemption is enforced as a hard override in code, not as a preference, because no user preference should ever have the power to suppress a “your password was changed” notification.</p>
+<h2 id="templates-and-localization">Templates and Localization</h2>
+<p>Notifications are rendered from templates, not constructed inline by the emitting service, for three reasons: it keeps the rendering logic in one place so a brand voice change doesn’t require touching forty services; it enables localization without the upstream service knowing the user’s language; and it allows non-engineers (product, marketing, legal) to edit copy through a CMS without a deploy. The template service stores versioned templates keyed by <code>(notification_type, channel, locale)</code>, with a fallback chain: if the <code>fr-CA</code> push template doesn’t exist, fall back to <code>fr</code>, then to the default locale. Templates use a restricted expression language (Handlebars or a sandboxed subset) that can interpolate event payload fields and a small set of user context fields, but cannot execute arbitrary code — this matters because template authors are not always engineers and a template that calls into the database would be a performance and security disaster.</p>
+<p>Rendering happens at the orchestrator, not at the channel worker, so that the worker stays a thin provider adapter and so that rendered content can be deduplicated and batched before it hits the provider. A subtle but important detail: the subject line, preheader, and body of an email are all rendered together and hashed, and that hash feeds both the deduplication key and the A/B test assignment, ensuring that a user who qualifies for two logically identical notifications in quick succession gets one, not two.</p>
+<h2 id="multi-channel-delivery-push-email-and-sms">Multi-Channel Delivery: Push, Email, and SMS</h2>
+<p>The three delivery channels are architecturally similar (a worker pulls a job, calls a provider, records the result) but operationally very different, and treating them as interchangeable is a common mistake. The multi-channel pipeline fans a single notification intent out to one or more channel-specific workers, each with its own provider, rate-limit profile, and failure semantics.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span> MULTI-CHANNEL NOTIFICATION PIPELINE</span></span>
+<span class="line"><span> ===================================</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  [Orchestrator]</span></span>
+<span class="line"><span>  (rendered content ready)</span></span>
+<span class="line"><span>       |</span></span>
+<span class="line"><span>       |  one delivery.requested per (user, channel) pair</span></span>
+<span class="line"><span>       |</span></span>
+<span class="line"><span>       +------------------+------------------+------------------+</span></span>
+<span class="line"><span>       |                  |                  |                  |</span></span>
+<span class="line"><span>       v                  v                  v                  v</span></span>
+<span class="line"><span>  [Push Queue]      [Email Queue]      [SMS Queue]        [In-App]</span></span>
+<span class="line"><span>       |                  |                  |             (bell icon)</span></span>
+<span class="line"><span>       v                  v                  v                  |</span></span>
+<span class="line"><span>  [Push Worker]     [Email Worker]     [SMS Worker]            |</span></span>
+<span class="line"><span>       |                  |                  |                 |</span></span>
+<span class="line"><span>       | batch?           | batch?           | coalesce?       | always free</span></span>
+<span class="line"><span>       | FCM multicast    | SES SendBulk     | merge within    | always delivered</span></span>
+<span class="line"><span>       | (up to 1000      | SMTP reuse       | 10-sec window   |</span></span>
+<span class="line"><span>       |  tokens)         |                  |                 |</span></span>
+<span class="line"><span>       v                  v                  v                 |</span></span>
+<span class="line"><span>  +---------+        +---------+        +---------+            |</span></span>
+<span class="line"><span>  | FCM     |        | SES /   |        | Twilio  |            |</span></span>
+<span class="line"><span>  | APNS    |        | SendGrid|        | Vonage  |            |</span></span>
+<span class="line"><span>  +---------+        +---------+        +---------+            |</span></span>
+<span class="line"><span>       |                  |                  |                 |</span></span>
+<span class="line"><span>       +------------------+------------------+-----------------+</span></span>
+<span class="line"><span>                          |</span></span>
+<span class="line"><span>               delivery.completed / .failed</span></span>
+<span class="line"><span>                          |</span></span>
+<span class="line"><span>                 +--------+--------+</span></span>
+<span class="line"><span>                 |                 |</span></span>
+<span class="line"><span>                 v                 v</span></span>
+<span class="line"><span>          [Tracking]         [Retry Service]</span></span>
+<span class="line"><span>          (delivery log)     (backoff + jitter)</span></span></code></pre>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Push</th>
+<th>Email</th>
+<th>SMS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Providers</strong></td>
+<td>FCM (Android), APNS (iOS, HTTP/2 API)</td>
+<td>Amazon SES, SendGrid, Postmark, self-hosted Postfix</td>
+<td>Twilio, Vonage, MessageBird</td>
+</tr>
+<tr>
+<td><strong>Cost per message</strong></td>
+<td>Nearly free</td>
+<td>Fractions of a cent (enormous volume)</td>
+<td>Cents per message (varies by country/carrier)</td>
+</tr>
+<tr>
+<td><strong>Latency</strong></td>
+<td>Sub-second</td>
+<td>Seconds (TLS handshake dominates small messages)</td>
+<td>Seconds (carrier handoff)</td>
+</tr>
+<tr>
+<td><strong>Reliability</strong></td>
+<td>Unreliable by design — OS may silently drop if app backgrounded</td>
+<td>Adversarial receiving side — aggressive spam filtering</td>
+<td>Carrier-dependent; delivery receipts unreliable internationally</td>
+</tr>
+<tr>
+<td><strong>Throughput constraint</strong></td>
+<td>Capacity-constrained by Apple/Google; throttled on invalid tokens</td>
+<td>Very high (bulk APIs, SMTP reuse)</td>
+<td>Limited; most aggressively rate-limited channel</td>
+</tr>
+<tr>
+<td><strong>Regulatory burden</strong></td>
+<td>Minimal</td>
+<td>DKIM/SPF/DMARC alignment, CAN-SPAM, List-Unsubscribe</td>
+<td>TCPA (US), A2P 10DLC, GDPR consent (EU), DLT registration (India)</td>
+</tr>
+<tr>
+<td><strong>Batching mechanism</strong></td>
+<td>FCM multicast (up to 1,000 device tokens per send)</td>
+<td>SES <code>SendBulkEmail</code> (hundreds per call), SMTP connection reuse</td>
+<td>Coalescing into concatenated SMS (merge within a window)</td>
+</tr>
+<tr>
+<td><strong>Idempotency support</strong></td>
+<td>FCM message ID</td>
+<td>SES MessageId</td>
+<td>Twilio <code>IdempotencyKey</code> header (clearest native support)</td>
+</tr>
+<tr>
+<td><strong>Key failure mode</strong></td>
+<td>Stale/rotated tokens → provider throttling or certificate revocation</td>
+<td>Sender reputation decay → legitimate messages land in spam</td>
+<td>Duplicate sends → cost burn + user annoyance</td>
+</tr>
+<tr>
+<td><strong>Primary mitigation</strong></td>
+<td>Mark dead tokens inactive in device registry on APNS/FCM feedback</td>
+<td>Dedicated IP pools, suppress bounces, honor unsubscribe headers</td>
+<td>Verification gate, dedicated short codes / toll-free numbers</td>
+</tr>
+</tbody>
+</table>
+<p>Push notifications go through Firebase Cloud Messaging (FCM) for Android and the Apple Push Notification service (APNS) for iOS, with FCM also able to proxy to APNS via the legacy pathway though most teams now call APNS directly using the modern HTTP/2 API with token-based authentication. Push is nearly free and sub-second, but it is unreliable by design: the OS may silently drop the message if the app is backgrounded and the user has not engaged recently, the device token rotates and must be refreshed, and Apple will throttle or reject your connection if you send to invalid tokens repeatedly. The worker must handle token-expiration feedback from APNS and FCM and mark those tokens inactive in the device registry so future sends skip them, because sending to dead tokens is the fastest way to get rate-limited by the providers.</p>
+<p>Email is delivered through Amazon SES (or SendGrid, Postmark, or a self-hosted Postfix fleet). Email has the highest deliverability complexity of the three channels because the receiving side is adversarial: Gmail, Outlook, and Yahoo run aggressive spam filtering that scores your sender reputation, your DKIM/SPF/DMARC alignment, your engagement rates, and your content. A notification system that blasts low-engagement transactional email will see its sender reputation decay until legitimate messages start landing in spam, which is effectively a silent outage. The email worker must handle bounces and complaints (SES SNS notifications for bounce and complaint), suppress addresses that bounce, honor unsubscribe headers (List-Unsubscribe-One-Click), and segment sending through dedicated IP pools so that a marketing campaign’s reputation cannot drag down password-reset deliverability. Email is also the channel where batching pays off the most: SES accepts a SendEmail call per message but SendBulkEmail batches hundreds, and SMTP connection reuse across messages avoids the TLS handshake cost that dominates small-message latency.</p>
+<p>SMS is delivered through Twilio (or Vonage, MessageBird) and is the most expensive and most regulated channel. SMS costs cents per message, varies by country and carrier, and is subject to strict regulatory rules — TCPA in the US requiring opt-in and STOP/HELP/QUIT keyword handling, A2P 10DLC registration, GDPR consent in Europe, and DLT template registration in India. The SMS worker must respect these per-region rules, must use dedicated numbers or sender IDs where required, and must be the most aggressively rate-limited and deduplicated channel because duplicate SMS messages are both expensive and deeply annoying. SMS is also the channel most often gated behind a verification step: a user must have verified their phone number before receiving any SMS, and high-value SMS (2FA codes) should use a dedicated short code or toll-free number to improve throughput and deliverability over a shared long code.</p>
+<h2 id="priority-queues-and-dispatch-policy">Priority Queues and Dispatch Policy</h2>
+<p>Not all notifications are equal, and a single FIFO queue will let a million low-priority “your friend posted” pushes starve a thousand “your account was accessed from a new device” security alerts. The system uses multiple priority queues per channel — typically three: critical (security, 2FA, account changes), high (transactional: orders, payments, appointments), and low (marketing, social, digests). The dispatcher uses a weighted round-robin or strict-preemption policy: critical messages jump to the head of the line, high messages are served as long as the critical queue is empty, and low messages are served only when the higher queues are drained. In Kafka this is modeled as separate topics per priority with a consumer that polls the critical topic first, then high, then low, or as a single topic with a priority field and a custom partitioner plus a head-of-line bypass for critical messages via a separate fast-path topic.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span> PRIORITY QUEUE DISPATCH (per channel)</span></span>
+<span class="line"><span> =====================================</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>                      [Dispatcher / Consumer]</span></span>
+<span class="line"><span>                              |</span></span>
+<span class="line"><span>           +------------------+------------------+------------------+</span></span>
+<span class="line"><span>           |                  |                  |                  |</span></span>
+<span class="line"><span>           v                  v                  v                  v</span></span>
+<span class="line"><span>     +-----------+      +-----------+      +-----------+    +---------------+</span></span>
+<span class="line"><span>     | CRITICAL  |      | HIGH      |      | LOW       |    | RESERVED      |</span></span>
+<span class="line"><span>     | security  |      | orders    |      | marketing |    | CAPACITY      |</span></span>
+<span class="line"><span>     | 2FA       |      | payments  |      | social    |    | (min fraction |</span></span>
+<span class="line"><span>     | account   |      | appts     |      | digests   |    |  of workers   |</span></span>
+<span class="line"><span>     | changes   |      |           |      |           |    |  for critical)|</span></span>
+<span class="line"><span>     +-----+-----+      +-----+-----+      +-----+-----+    +-------+-------+</span></span>
+<span class="line"><span>           |                  |                  |                  |</span></span>
+<span class="line"><span>           |   1. poll first  |                  |                  |</span></span>
+<span class="line"><span>           |&#x3C;-----------------+                  |                  |</span></span>
+<span class="line"><span>           |                                    |                  |</span></span>
+<span class="line"><span>           |   2. serve when critical empty      |                  |</span></span>
+<span class="line"><span>           +&#x3C;-----------------------------------+                  |</span></span>
+<span class="line"><span>           |                                                       |</span></span>
+<span class="line"><span>           |   3. serve only when critical + high drained           |</span></span>
+<span class="line"><span>           +&#x3C;-------------------------------------------------------+</span></span>
+<span class="line"><span>           |</span></span>
+<span class="line"><span>           v</span></span>
+<span class="line"><span>    [Channel Workers]  (push / email / sms)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Policy rules:</span></span>
+<span class="line"><span>  - Critical:  jump to head of line via fast-path topic</span></span>
+<span class="line"><span>  - High:      served when critical queue is empty</span></span>
+<span class="line"><span>  - Low:       served only when critical + high are drained</span></span>
+<span class="line"><span>  - Reserved:  a minimum fraction of worker capacity is always</span></span>
+<span class="line"><span>               held for critical, even during a low-priority flood</span></span>
+<span class="line"><span>  - Depth signal: low queue growing = OK (drains later)</span></span>
+<span class="line"><span>                  critical queue growing beyond threshold = PAGE</span></span>
+<span class="line"><span>  - Deadline:   notifications carry not_after timestamp;</span></span>
+<span class="line"><span>                if still queued past it, drop (late is worse than absent)</span></span></code></pre>
+<p>The depth of each queue is a primary operational signal: if the low-priority queue grows unbounded during a burst, that is acceptable and expected (it will drain later), but if the critical queue depth grows beyond a threshold, it is a paging incident. A refinement is to reserve a minimum fraction of worker capacity for critical messages even during a low-priority flood, so that a marketing blast cannot fully monopolize the worker pool. Some systems also implement deadline-based scheduling: a notification carries a <code>not_after</code> timestamp, and if it is still in the queue past that time it is dropped rather than delivered late, because a “your flight is boarding” push delivered after landing is worse than no push at all.</p>
+<h2 id="rate-limiting-per-user-and-per-channel">Rate Limiting Per User and Per Channel</h2>
+<p>Rate limiting exists at three levels, and conflating them is a common source of both spam and false drops.</p>
+<ul>
+<li><strong>Provider-side rate limits:</strong> APNS, FCM, SES, and Twilio each impose rate limits on the sender. The channel worker must pace its outgoing calls to stay under those limits, typically using a token bucket per provider connection.</li>
+<li><strong>Per-user, per-channel, per-window rate limits:</strong> even within the provider’s allowance, sending a user thirty pushes in a minute will get them to disable notifications or uninstall the app. The system enforces a per-user, per-channel, per-window rate limit (for example, at most five pushes per user per hour for low-priority, no cap for critical). This is implemented with a sliding window or token bucket in Redis keyed by <code>user_id:channel</code>, checked by the orchestrator before enqueuing a delivery.</li>
+<li><strong>Per-notification-type rate limits:</strong> a “friend went live” notification might be capped at one per user per friend per day, so that a hyperactive friend does not generate a flood.</li>
+</ul>
+<p>A critical design decision is what to do when a notification is rate-limited. The available options are:</p>
+<ul>
+<li><strong>Drop it silently</strong> — discard the notification without further action.</li>
+<li><strong>Coalesce into a digest</strong> — merge with sibling notifications (“3 friends posted while you were away”).</li>
+<li><strong>Downgrade the channel</strong> — push suppressed, email queued instead.</li>
+<li><strong>Hold for retry</strong> — retain and retry within the window.</li>
+</ul>
+<p>The right answer depends on notification class:</p>
+<ul>
+<li><strong>Critical notifications</strong> bypass all user-level rate limits (the security exemption again).</li>
+<li><strong>High-priority notifications</strong> coalesce or digest.</li>
+<li><strong>Low-priority notifications</strong> are dropped with a counter that feeds a “you would have received 12 notifications today, tap to see them” badge.</li>
+</ul>
+<p>The rate-limit decision must be logged so that analytics can attribute “notifications not sent” to rate limiting rather than to a delivery failure, otherwise the metrics will silently undercount intent.</p>
+<h2 id="deduplication-and-idempotency">Deduplication and Idempotency</h2>
+<p>Duplicate notifications are the single most common user-visible bug in notification systems, and they arise from two distinct causes that require two distinct defenses. The first cause is upstream duplication: an event is published twice (because the producer retried, or because a Kafka consumer offset was rewound), producing two identical notification intents. The defense is a deduplication key, typically a hash of <code>(event_id, user_id, notification_type)</code> or an explicit idempotency key provided by the producer, stored in Redis with a TTL of a few hours and checked at ingestion. If the key exists, the second event is acknowledged and dropped. This must happen at ingestion, before the notification is rendered and enqueued, because deduplicating after enqueue requires coordinating across workers and is far more expensive.</p>
+<p>The second cause is delivery-level duplication from at-least-once semantics: a channel worker sends a message successfully, but the ACK from the provider is lost or the worker crashes before recording the result, so the message is redelivered and sent again. The defense here is a delivery-level idempotency check using a <code>delivery_id</code> that is sent to the provider where supported (SES MessageId, FCS message ID) and is recorded in the delivery log before the send and confirmed after. Some providers support idempotency keys natively (Twilio’s <code>IdempotencyKey</code> header is the clearest example), and using them turns “send at least once” into “send exactly once” at the provider boundary. Where the provider does not support it, the worker must check the delivery log for a recent successful send with the same <code>delivery_id</code> before re-sending, accepting a small window of risk in exchange for avoiding duplicates. The tension is real: leaning too far toward deduplication risks dropping a legitimate retry that should have been sent, while leaning too far toward retry risks duplicates. The pragmatic rule is to prefer duplicates for critical notifications (a duplicate 2FA code is harmless; a missing one is a lockout) and to prefer drops for marketing notifications (a duplicate marketing email is a complaint; a missing one is invisible).</p>
+<h2 id="batching-and-coalescing">Batching and Coalescing</h2>
+<p>Batching reduces both cost and load, and it applies differently to each channel. For email, SES <code>SendBulkEmail</code> can dispatch up to hundreds of templated emails in a single API call, and SMTP connection reuse allows a single authenticated connection to carry many messages, amortizing the TLS and auth overhead that otherwise dominates small-message latency. The email worker holds messages for a short window (a few hundred milliseconds to a few seconds, configurable per notification type) and groups them by template and recipient domain, then dispatches in batches. For push, FCM supports multicast messaging where a single send targets up to a thousand device tokens, which is essential for broadcast notifications (“new feature available”) but less useful for personalized notifications. For SMS, batching is less about the provider API and more about coalescing: if a user has three pending SMS notifications within a ten-second window, the system can merge them into a single concatenated SMS (“Your code is 123456. Also: your order shipped.”), which saves cost and reduces annoyance.</p>
+<p>Coalescing interacts with the priority queue: a low-priority notification can afford to wait in a coalescing buffer for a few seconds to see if siblings arrive, but a critical notification must flush the buffer immediately and send alone. The coalescing logic runs in the orchestrator and uses a per-user, per-channel buffer keyed in Redis with a short TTL; when a notification arrives it is appended to the buffer, and either a timer or a buffer-size threshold triggers a flush that renders the merged message and enqueues it as a single delivery. This is the mechanism behind digest emails (“your daily summary: 4 events”) and behind push stacking (replacing the previous unread push with an updated one rather than adding a new one).</p>
+<h2 id="retry-with-exponential-backoff">Retry with Exponential Backoff</h2>
+<p>Delivery fails for transient reasons constantly: APNS returns a 503, SES throttles a burst, Twilio times out on a carrier handoff, a network blip drops the connection. The retry strategy must handle these without amplifying load during a provider degradation, which is where naive retries cause thundering herds. The standard approach is exponential backoff with jitter: a failed delivery is rescheduled after <code>base * 2^attempt</code> seconds with a random jitter of up to 50% of that value, capped at a maximum delay (typically 5–15 minutes) and a maximum attempt count (typically 5–8). The jitter is essential because without it, every worker that hit a 503 at the same instant will retry at the same instant, reproducing the burst that caused the 503. Full jitter (randomizing uniformly between 0 and <code>base * 2^attempt</code>) is more effective than equal jitter at spreading load and is the default in well-designed retry libraries.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span> RETRY WITH EXPONENTIAL BACKOFF + JITTER</span></span>
+<span class="line"><span> =======================================</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  [Channel Worker] ---- sends ----> [Provider]</span></span>
+<span class="line"><span>        ^                                |</span></span>
+<span class="line"><span>        |                                | response</span></span>
+<span class="line"><span>        |&#x3C;-------------------------------+</span></span>
+<span class="line"><span>        |                            success?</span></span>
+<span class="line"><span>        |                           /        \</span></span>
+<span class="line"><span>        |                         yes         no</span></span>
+<span class="line"><span>        |                        /              \</span></span>
+<span class="line"><span>        |                       v                v</span></span>
+<span class="line"><span>        |              delivery.completed   delivery.failed</span></span>
+<span class="line"><span>        |                       |                |</span></span>
+<span class="line"><span>        |                       v                v</span></span>
+<span class="line"><span>        |              [Tracking Service]  [Retry Service]</span></span>
+<span class="line"><span>        |                                      |</span></span>
+<span class="line"><span>        |                                 retryable error?</span></span>
+<span class="line"><span>        |                                (5xx, timeout, 429)  vs  (invalid token,</span></span>
+<span class="line"><span>        |                               /          \              bounce, unverified)</span></span>
+<span class="line"><span>        |                             yes          no</span></span>
+<span class="line"><span>        |                            /               \</span></span>
+<span class="line"><span>        |                           v                 v</span></span>
+<span class="line"><span>        |                  compute backoff       terminal error</span></span>
+<span class="line"><span>        |                  delay = base * 2^attempt      |</span></span>
+<span class="line"><span>        |                  + full jitter                 v</span></span>
+<span class="line"><span>        |                  (uniform 0 .. delay)    [Suppression List]</span></span>
+<span class="line"><span>        |                  cap: 5-15 min            (mark endpoint</span></span>
+<span class="line"><span>        |                  max attempts: 5-8         permanently bad)</span></span>
+<span class="line"><span>        |                          |</span></span>
+<span class="line"><span>        |                          v</span></span>
+<span class="line"><span>        |                  [Delay Queue]</span></span>
+<span class="line"><span>        |                  (Redis sorted set scored</span></span>
+<span class="line"><span>        |                   by next-attempt time,</span></span>
+<span class="line"><span>        |                   or SQS delay seconds,</span></span>
+<span class="line"><span>        |                   or Kafka per-message delay)</span></span>
+<span class="line"><span>        |                          |</span></span>
+<span class="line"><span>        |                   wait until next-attempt time</span></span>
+<span class="line"><span>        |                          |</span></span>
+<span class="line"><span>        +&#x3C;-------------------------+</span></span>
+<span class="line"><span>        |</span></span>
+<span class="line"><span>     re-deliver to worker</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Circuit breaker on 429:</span></span>
+<span class="line"><span>  - 429 rate exceeds threshold --> worker pauses new sends</span></span>
+<span class="line"><span>  - In-flight messages drain, provider rate-limit window resets</span></span>
+<span class="line"><span>  - Worker resumes after backoff window</span></span></code></pre>
+<p>Retries are scheduled by a retry service that consumes <code>delivery.failed</code> events, computes the next attempt time, and writes the delivery back to a delayed queue (Kafka with a per-message delay, or a Redis sorted set scored by next-attempt time, or a dedicated delay queue like SQS with delay seconds). The retry service must distinguish retryable errors (5xx, timeouts, rate limits) from terminal errors (invalid device token, bounced email, unverified phone), which are marked failed permanently and routed to suppression rather than retried. A particularly important detail: a 429 from the provider must trigger not just a retry of that message but a global backoff of the worker, because a 429 means the provider is throttling the account and continuing to send will deepen the throttle. This is implemented as a circuit breaker around the provider client: when the 429 rate exceeds a threshold, the worker pauses enqueuing new sends for a backoff window, letting the in-flight messages drain and the provider’s rate-limit window reset.</p>
+<h2 id="delivery-guarantees-and-at-least-once-semantics">Delivery Guarantees and At-Least-Once Semantics</h2>
+<p>The system provides at-least-once delivery, not exactly-once, and being explicit about this with stakeholders is important because exactly-once across a distributed system with third-party providers is provably impossible without provider-side idempotency support. At-least-once means every notification that is acknowledged into the system will be delivered to the provider at least once, assuming the user’s channel endpoint is valid and the provider is reachable within the retry budget. The guarantee is implemented by acknowledging the Kafka offset only after the delivery result is durably recorded, so that a worker crash before the ACK causes the offset to be reprocessed and the message re-sent. Combined with the delivery-level idempotency check described above, the practical observed duplicate rate can be driven below 0.1%, which is acceptable for all but the most cost-sensitive SMS workloads.</p>
+<p>The harder guarantee is end-to-end: did the notification actually reach the user? For push, the answer is unknowable past the provider — APNS does not confirm device-level delivery, only that it accepted the message, and the OS may drop it silently. For email, delivery confirmation is probabilistic: open tracking pixels and link click tracking tell you when a user engaged, but absence of an open does not mean non-delivery (many clients block images). For SMS, delivery receipts from carriers exist but are unreliable internationally. The system must be honest in its analytics about the distinction between “sent to provider,” “accepted by provider,” and “engaged by user,” and must never report the first as the third.</p>
+<h2 id="ab-testing-notifications">A/B Testing Notifications</h2>
+<p>Notification content is a product surface, and like any product surface it should be experimented on. A/B testing notifications adds two complications over standard web experimentation: the unit of assignment must be the user (not the request), so that a given user consistently sees variant A across multiple notifications, otherwise within-user carryover effects confound the measurement; and the outcome metric is often delayed and engagement-based (did they open the app within 24 hours), not immediate. The experiment service assigns each user to a variant at notification-render time using a deterministic hash of <code>(user_id, experiment_id)</code>, and the variant selection is recorded in the delivery log so that analytics can join deliveries to outcomes.</p>
+<p>A subtlety is that notification A/B tests can cannibalize themselves: if variant B’s push causes more app opens, those opens displace organic opens that variant A’s users would have had anyway, so the measured lift overstates the true lift. The cleanest design holds out a control group that receives no notification at all, so the measured effect is notification-versus-no-notification rather than variant-versus-variant, and runs variant comparisons only when the baseline notification effect is already established. Notification experiments also need to respect the preference graph: a user opted out of marketing must not be pulled into a marketing experiment, and the experiment assignment must happen after preference resolution so that suppressed notifications are not counted in the experiment’s denominator.</p>
+<h2 id="analytics-tracking-and-observability">Analytics, Tracking, and Observability</h2>
+<p>The notification system generates three classes of telemetry that serve different consumers. Operational metrics — queue depth per priority, send rate per channel, provider error rate, retry rate, end-to-end latency percentiles — feed dashboards and alerts and are emitted as a time series to Prometheus or CloudWatch, with the critical queue depth and the provider 5xx rate wired to paging alerts. Delivery logs — one record per delivery attempt with user, channel, template, variant, status, provider response, and timestamps — are written to the delivery log database (typically DynamoDB or a OLAP store like ClickHouse) and are the source of truth for “did we send this.” Engagement events — push opens, email opens and clicks, SMS link clicks — are captured via instrumentation (the SDK callbacks for push, tracking pixels and wrapped links for email and SMS) and are joined to delivery logs in the analytics warehouse to compute open rate, click-through rate, and downstream conversion.</p>
+<p>A frequently overlooked observability requirement is notification-level tracing: because a single user-facing notification can traverse five services (event bus, ingestion, orchestrator, channel worker, provider) and because “why didn’t I get my notification” is a common support ticket, every notification must carry a correlation ID that is logged at each hop and that support can use to trace the notification’s path through the system. Without this, a missed notification becomes an unanswerable question. The tracking service that consumes <code>delivery.*</code> events is also the system that powers the in-app notification center (the bell icon), which is itself a fourth delivery channel — one that is free, always delivered, and where the user can catch up on notifications they dismissed or that were suppressed by quiet hours.</p>
+<h2 id="capacity-estimation">Capacity Estimation</h2>
+<p>Consider a mid-scale platform with 50 million monthly active users, of whom roughly 10 million are active on a peak day. A reasonable notification mix is: each active user receives an average of 4 push notifications, 0.5 emails, and 0.1 SMS per day.</p>
+<p><strong>Throughput:</strong></p>
+<ul>
+<li>40 million pushes, 5 million emails, and 1 million SMS daily — roughly 46 million notifications per day</li>
+<li>~530 notifications per second on average</li>
+<li>Peak: 5–10x average (batch sends, marketing pushes, daily digest runs) = 3,000–5,000 notifications per second</li>
+<li>Burst tolerance: up to 10,000 per second</li>
+<li>Push and email workers: a few hundred sends per second per instance → fleet of 10–20 workers per channel with autoscaling covers peak with headroom</li>
+<li>SMS workers: fewer needed (low-volume, high-latency) but more careful pacing required</li>
+</ul>
+<p><strong>Storage:</strong></p>
+<ul>
+<li>Delivery log: 46M deliveries/day × ~1 KB = 46 GB/day, ~1.4 TB/month, ~4 TB for 90-day retention (ClickHouse cluster or S3-backed Athena, with hot data in DynamoDB for point lookups)</li>
+<li>Preference store: 50M user documents × 2 KB = 100 GB (trivial for DynamoDB)</li>
+<li>Redis (rate-limit counters, dedup keys, coalescing buffers): dedup key set dominates — 530 notifications/sec × 2-hour TTL = ~3.8M steady-state keys at a few hundred bytes each = a few GB (small Redis cluster with replication)</li>
+<li>Event bus (Kafka): sized for ~5,000 events/sec peak ingress with 24–72 hour retention, ~1 KB per event = under 50 GB per partition-day, handled by a 3–5 broker cluster with comfortable headroom</li>
+</ul>
+<p><strong>Cost:</strong></p>
+<ul>
+<li>SMS is the dominant variable cost: 1M SMS/day × $0.01–$0.05 per message = $300K–$1.5M per month</li>
+<li>This is why SMS is the channel most aggressively gated behind verification, deduplication, and coalescing</li>
+</ul>
+<h2 id="sharp-interview-question">Sharp Interview Question</h2>
+<p><strong>Question:</strong> Your notification system delivers at-least-once, and a user reports receiving the same password-reset email three times within a minute. Walk me through where the duplication could have originated and how you would diagnose and prevent it.</p>
+<p><strong>Model Answer:</strong> There are three candidate sources, and a good diagnosis checks them in order of likelihood. First, upstream duplication: the auth service published <code>password.reset_requested</code> three times because its own retry logic fired before the first event was acknowledged, or because a Kafka consumer rebalance caused the offset to be reprocessed. I would check the event bus for duplicate <code>event_id</code> values within the window; if found, the fix is producer-side idempotency — the auth service must use an idempotency key (a hash of <code>user_id + reset_token</code>) and the ingestion service must dedup on that key in Redis before creating a notification intent. Second, orchestrator duplication: the preference resolution and channel selection happened three times because the <code>notification.requested</code> event was redelivered after a consumer crash before the offset was committed. I would check the delivery log for three records with the same <code>notification_id</code> but different <code>delivery_id</code>s; if found, the fix is to commit the Kafka offset only after the delivery intent is durably enqueued, and to make the orchestrator idempotent on <code>notification_id</code>. Third, delivery duplication: the email worker sent the message, SES accepted it, but the worker crashed before recording the success, so the redelivery sent it again — and this happened twice. I would check for three delivery records with the same <code>delivery_id</code>; if found, the fix is to check the delivery log for a recent successful send with that <code>delivery_id</code> before re-sending, or to use SES’s native message ID for idempotency. The pragmatic prevention is layered: dedup at ingestion on the event key, idempotent processing on <code>notification_id</code>, and a delivery-level guard on <code>delivery_id</code>, plus alerting on the duplicate rate so this surfaces before a user reports it. For password-reset specifically, I would also add a server-side cooldown — at most one reset email per user per 60 seconds — because the cost of a duplicate is user confusion and the cost of a dropped retry is a lockout, and the cooldown tips that tradeoff correctly.</p>
+<p><strong>Common Pitfall:</strong> The most common mistake is treating deduplication as a single layer at ingestion and assuming it covers delivery-level duplication. It does not: ingestion dedup catches upstream re-publishes, but a crash between the provider send and the result recording will produce a duplicate that ingestion dedup cannot see because the ingestion already succeeded. Engineers who have not internalized at-least-once semantics often build the ingestion dedup, declare the duplicate problem solved, and then are surprised when duplicates still occur at a 0.1% rate during deployments or broker rebalances. The second, related pitfall is retrying without jitter during a provider outage, which converts a transient 503 into a sustained self-inflicted load spike that deepens the outage — the retry logic must use full jitter and must back off the whole worker on 429s, not just the individual message.</p>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Three channels with different cost/latency: push (free, instant), email (cheap, seconds), SMS (expensive, instant)</li>
+<li>Fan-out pattern: event → notification service → channel-specific queues → provider adapters</li>
+<li>User preferences and quiet hours must be checked before sending — this is a product requirement, not just nice-to-have</li>
+<li>Deduplication at multiple layers: ingestion (same event twice), delivery (crash between send and ack)</li>
+<li>Provider rate limits are real — APNS/FCM will throttle, SMS gateways will charge per message</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you handle priority — a password reset vs a marketing push?” — Priority queue with weighted scheduling. Security notifications pre-empt promotional notifications.</li>
+<li>“How do you prevent notification spam?” — Rate limit per user per channel, deduplicate similar notifications within a time window, and respect user preferences rigorously.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Deduplication at ingestion is not enough. If the system crashes between sending to the provider and recording the send, a retry will produce a duplicate that ingestion dedup can’t catch. You need delivery-level dedup (idempotent send with a message ID the provider recognizes) plus at-least-once semantics with consumer-side dedup.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/notification-system-push-email-sms/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Notification%20System%20(Push%2C%20Email%2C%20SMS)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fnotification-system-push-email-sms%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fnotification-system-push-email-sms%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/notification-system-push-email-sms" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/whatsapp-architecture" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>WhatsApp Architecture</span></a><a href="/notes/system-design/consistent-hashing" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Consistent Hashing</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Notification System (Push, Email, SMS)" data-selector=".article-prose" data-article-slug="system-design/notification-system-push-email-sms" data-article-title="Notification System (Push, Email, SMS)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

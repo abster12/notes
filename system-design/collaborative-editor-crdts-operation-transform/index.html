@@ -1,0 +1,936 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Collaborative Editor (CRDTs, Operation Transform) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview" class="toc-link" data-toc-link="overview" data-astro-cid-p33bl5ka>Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#key-requirements" class="toc-link" data-toc-link="key-requirements" data-astro-cid-p33bl5ka>Key Requirements</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#functional-requirements" class="toc-link" data-toc-link="functional-requirements" data-astro-cid-p33bl5ka>Functional Requirements</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#non-functional-requirements-slas" class="toc-link" data-toc-link="non-functional-requirements-slas" data-astro-cid-p33bl5ka>Non-Functional Requirements (SLAs)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-planning" class="toc-link" data-toc-link="capacity-planning" data-astro-cid-p33bl5ka>Capacity Planning</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#real-time-collaboration-architecture" class="toc-link" data-toc-link="real-time-collaboration-architecture" data-astro-cid-p33bl5ka>Real-Time Collaboration Architecture</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#real-time-collaboration-architecture-diagram" class="toc-link" data-toc-link="real-time-collaboration-architecture-diagram" data-astro-cid-p33bl5ka>Real-Time Collaboration Architecture Diagram</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#data-model" class="toc-link" data-toc-link="data-model" data-astro-cid-p33bl5ka>Data Model</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ot-based-model-google-docs-style" class="toc-link" data-toc-link="ot-based-model-google-docs-style" data-astro-cid-p33bl5ka>OT-Based Model (Google Docs style)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#crdt-based-model" class="toc-link" data-toc-link="crdt-based-model" data-astro-cid-p33bl5ka>CRDT-Based Model</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#operational-transformation-ot" class="toc-link" data-toc-link="operational-transformation-ot" data-astro-cid-p33bl5ka>Operational Transformation (OT)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-transformation-function-xform" class="toc-link" data-toc-link="the-transformation-function-xform" data-astro-cid-p33bl5ka>The Transformation Function (xform)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ot-transform-function-flow-diagram" class="toc-link" data-toc-link="ot-transform-function-flow-diagram" data-astro-cid-p33bl5ka>OT Transform Function Flow Diagram</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#tp1-and-tp2-the-convergence-properties" class="toc-link" data-toc-link="tp1-and-tp2-the-convergence-properties" data-astro-cid-p33bl5ka>TP1 and TP2: The Convergence Properties</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-jupiter--control-algorithm" class="toc-link" data-toc-link="the-jupiter--control-algorithm" data-astro-cid-p33bl5ka>The Jupiter / Control Algorithm</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#why-a-central-server" class="toc-link" data-toc-link="why-a-central-server" data-astro-cid-p33bl5ka>Why a Central Server</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#conflict-free-replicated-data-types-crdts" class="toc-link" data-toc-link="conflict-free-replicated-data-types-crdts" data-astro-cid-p33bl5ka>Conflict-Free Replicated Data Types (CRDTs)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#mathematical-basis" class="toc-link" data-toc-link="mathematical-basis" data-astro-cid-p33bl5ka>Mathematical Basis</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#lww-registers-and-maps" class="toc-link" data-toc-link="lww-registers-and-maps" data-astro-cid-p33bl5ka>LWW Registers and Maps</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#rga-replicated-growable-array" class="toc-link" data-toc-link="rga-replicated-growable-array" data-astro-cid-p33bl5ka>RGA (Replicated Growable Array)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#crdt-rga-tombstone-structure-diagram" class="toc-link" data-toc-link="crdt-rga-tombstone-structure-diagram" data-astro-cid-p33bl5ka>CRDT RGA Tombstone Structure Diagram</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#yjs-and-automerge" class="toc-link" data-toc-link="yjs-and-automerge" data-astro-cid-p33bl5ka>Yjs and Automerge</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#position-identifiers-and-fractional-indexing" class="toc-link" data-toc-link="position-identifiers-and-fractional-indexing" data-astro-cid-p33bl5ka>Position Identifiers and Fractional Indexing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#ot-vs-crdt-comparison" class="toc-link" data-toc-link="ot-vs-crdt-comparison" data-astro-cid-p33bl5ka>OT vs CRDT Comparison</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ot-vs-crdt-core-trade-off-summary" class="toc-link" data-toc-link="ot-vs-crdt-core-trade-off-summary" data-astro-cid-p33bl5ka>OT vs CRDT: Core Trade-Off Summary</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#conflict-resolution-strategies" class="toc-link" data-toc-link="conflict-resolution-strategies" data-astro-cid-p33bl5ka>Conflict Resolution Strategies</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#undo-and-redo" class="toc-link" data-toc-link="undo-and-redo" data-astro-cid-p33bl5ka>Undo and Redo</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#cursor-tracking" class="toc-link" data-toc-link="cursor-tracking" data-astro-cid-p33bl5ka>Cursor Tracking</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#presence" class="toc-link" data-toc-link="presence" data-astro-cid-p33bl5ka>Presence</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#offline-editing-and-sync" class="toc-link" data-toc-link="offline-editing-and-sync" data-astro-cid-p33bl5ka>Offline Editing and Sync</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#offline-sync-and-merge-flow-diagram" class="toc-link" data-toc-link="offline-sync-and-merge-flow-diagram" data-astro-cid-p33bl5ka>Offline Sync and Merge Flow Diagram</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#history-trimming-and-garbage-collection" class="toc-link" data-toc-link="history-trimming-and-garbage-collection" data-astro-cid-p33bl5ka>History Trimming and Garbage Collection</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#scaling-and-bottlenecks" class="toc-link" data-toc-link="scaling-and-bottlenecks" data-astro-cid-p33bl5ka>Scaling and Bottlenecks</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ot-single-document-hotspot" class="toc-link" data-toc-link="ot-single-document-hotspot" data-astro-cid-p33bl5ka>OT: Single Document Hotspot</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#crdt-metadata-bloat" class="toc-link" data-toc-link="crdt-metadata-bloat" data-astro-cid-p33bl5ka>CRDT: Metadata Bloat</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#presence-fan-out" class="toc-link" data-toc-link="presence-fan-out" data-astro-cid-p33bl5ka>Presence Fan-Out</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#consistency-and-replication" class="toc-link" data-toc-link="consistency-and-replication" data-astro-cid-p33bl5ka>Consistency and Replication</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#caching-strategy" class="toc-link" data-toc-link="caching-strategy" data-astro-cid-p33bl5ka>Caching Strategy</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#weaknesses-and-improvements" class="toc-link" data-toc-link="weaknesses-and-improvements" data-astro-cid-p33bl5ka>Weaknesses and Improvements</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-question" class="toc-link" data-toc-link="interview-question" data-astro-cid-p33bl5ka>Interview Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#related" class="toc-link" data-toc-link="related" data-astro-cid-p33bl5ka>Related</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Collaborative Editor (CRDTs, Operation Transform)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 30 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 42 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>advanced</span><span class="tag" data-astro-cid-sgg5joot>collaboration</span><span class="tag" data-astro-cid-sgg5joot>crdt</span><span class="tag" data-astro-cid-sgg5joot>ot</span><span class="tag" data-astro-cid-sgg5joot>real-time</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="collaborative-editor-crdts-operation-transform">Collaborative Editor (CRDTs, Operation Transform)</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>Systems that allow multiple users to edit the same document simultaneously using Operational Transformation (OT) or Conflict-free Replicated Data Types (CRDTs) to merge changes without conflicts. OT sequences operations through a central server that transforms concurrent edits, while CRDTs push conflict resolution into the data structure itself for peer-to-peer and offline-first convergence.</p>
+<p><strong>How it’s asked:</strong> “Design a collaborative text editor like Google Docs supporting 10 concurrent editors, real-time cursor positions, and offline editing with conflict-free merge.”</p>
+<hr>
+<h2 id="overview">Overview</h2>
+<p>A collaborative editor lets multiple users edit a shared document — text, drawings, spreadsheets, or structured blocks — simultaneously, with each user seeing the others’ changes arrive within a few hundred milliseconds. The hard computer-science problem hiding behind this UX is <strong>conflict resolution under concurrency</strong>: when two people edit the same paragraph at the same time, the system must converge to one identical state on every client without popping up a merge dialog. Solving this well, at scale, while preserving sub-second latency, offline editing, and undo, is one of the genuinely difficult distributed-systems designs in mainstream software.</p>
+<p>Two algorithm families dominate production systems. <strong>Operational Transformation (OT)</strong>, invented in the late 1980s and made famous by Google Docs/Wave, sequences operations through a central server and <em>transforms</em> concurrent edits against each other so they compose correctly. <strong>Conflict-free Replicated Data Types (CRDTs)</strong>, formalised by Shapiro et al. in 2011, push conflict resolution into the data structure itself so that any two replicas converge deterministically without a server mediating — enabling peer-to-peer and offline-first sync. Real-world deployments: Google Docs (OT, Jupiter protocol), Figma (custom CRDT over a scene graph), Notion (CRDT-ish blocks with a server authority), Microsoft Loop / Fluid Framework (CRDT), Linear (a CRDT-ish sync engine), and the open-source stacks Yjs and Automerge used by Notion-style apps, JupyterLab, and many collaborative whiteboards.</p>
+<blockquote>
+<p>The single most important framing for an interview: OT trades algorithmic complexity for a simple consistency model (one server sequences everything), while CRDTs trade data-structure complexity and metadata overhead for a simple distributed model (no server needed for correctness). Every other difference — offline support, interleaving artifacts, undo difficulty, metadata cost — flows from that core trade.</p>
+</blockquote>
+<h2 id="key-requirements">Key Requirements</h2>
+<h3 id="functional-requirements">Functional Requirements</h3>
+<ul>
+<li>Real-time concurrent editing of text and structured objects with sub-second propagation.</li>
+<li>Offline editing with automatic reconciliation on reconnect.</li>
+<li>Presence indicators: who else is editing, their cursor positions and selection ranges.</li>
+<li>Version history, undo/redo (both per-user and global), comments and suggestions.</li>
+<li>Late-joiner support: a user opening a live document must catch up to the current state quickly.</li>
+</ul>
+<h3 id="non-functional-requirements-slas">Non-Functional Requirements (SLAs)</h3>
+<ul>
+<li><strong>Operation propagation latency:</strong> under 100 ms for co-located users, under 500 ms cross-region.</li>
+<li><strong>Convergence guarantee:</strong> all clients that have seen the same set of operations reach an identical final state — no divergence, ever.</li>
+<li><strong>Causal ordering:</strong> an edit that depends on a prior edit (e.g. deleting a character someone else just typed) must be applied in causal order.</li>
+<li><strong>Bandwidth:</strong> send deltas, never full-document retransmission on every keystroke.</li>
+<li><strong>Availability:</strong> editing must work offline and against an unreachable server; sync happens later.</li>
+<li><strong>Integrity:</strong> no lost updates even under client crashes, duplicate deliveries, and reordered packets.</li>
+</ul>
+<h2 id="capacity-planning">Capacity Planning</h2>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Google Docs–scale estimate</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DAU</td>
+<td>300M+</td>
+<td></td>
+</tr>
+<tr>
+<td>Concurrent editors / doc</td>
+<td>1–50 typical, 100+ burst</td>
+<td>Most docs have &lt; 5 concurrent editors; the long tail matters</td>
+</tr>
+<tr>
+<td>Operations / sec / doc</td>
+<td>2–10 writes/sec</td>
+<td>Typing bursts, not continuous streaming</td>
+</tr>
+<tr>
+<td>Document size</td>
+<td>1 KB–2 MB text</td>
+<td>Most docs &lt; 100 KB; CRDT metadata multiplies this</td>
+</tr>
+<tr>
+<td>WebSocket connections / server</td>
+<td>~50k–100k</td>
+<td>Per-connection memory is the real ceiling, not sockets</td>
+</tr>
+<tr>
+<td>Peak ops/sec (global)</td>
+<td>Millions/sec</td>
+<td>Sharded by document</td>
+</tr>
+<tr>
+<td>Memory / live document</td>
+<td>10–500 KB state + op buffer</td>
+<td>Scales with doc size and recent-op window</td>
+</tr>
+</tbody>
+</table>
+<p>The key insight is that the bottleneck is not raw throughput — it is <strong>conflict-resolution latency and consistency overhead</strong>. OT servers must sequence operations globally per document, which turns each active document into a single hot shard. CRDTs avoid the sequencer but pay per-character metadata and tombstone bloat that inflates storage and memory 5–20×. Sizing must account for the metadata multiplier, not just the user-visible text. For presence, plan separately: cursor/selection broadcasts scale as O(editors²) per document if done naively, so throttling and batching are part of the capacity model, not an afterthought.</p>
+<h2 id="real-time-collaboration-architecture">Real-Time Collaboration Architecture</h2>
+<p>The transport of choice is <strong>WebSocket</strong> — a single full-duplex TCP connection per client, upgraded from HTTP, kept alive with heartbeats. WebSockets beat HTTP long-polling and SSE here because edits flow in both directions at high frequency and you want low per-message overhead (no HTTP headers on every keystroke). Each client holds one persistent connection to a collaboration server; that server is the fan-out point for the document’s subscribers. For reliability across regions, connections are often fronted by a sticky load balancer so a given client reconnects to the same server holding its in-memory document state, with a Redis/Memcached pub-sub backbone bridging servers when subscribers to one document are split across machines.</p>
+<p>The authoritative unit per document is an <strong>operational log</strong>: an append-only sequence of operations (OT) or a causally-ordered set of CRDT updates. The server keeps the current document state in memory plus a sliding window of recent operations, and persists every operation to this log (typically an append-only store — a partitioned Kafka topic, a per-document append-only row set, or an object-store segment). This log is the source of truth; the in-memory state is a materialised projection that can always be rebuilt by replaying the log from the last snapshot. Late joiners are handled by sending them a recent snapshot followed by the operations after that snapshot — they never replay the entire history for a live document. Because the log is append-only and monotonic, replication and recovery are straightforward: a server restarting for a document simply loads the latest snapshot and tails the log forward.</p>
+<p>A typical message flow: the client applies its own edit optimistically to its local view, then sends the operation to the server tagged with the revision (OT) or the version vector (CRDT) it was based on. The server validates, sequences or merges, appends to the log, updates the in-memory state, and fans the operation out to all other subscribers over their WebSockets. The originating client gets an acknowledgement (possibly with a transformed position) and corrects its local state if needed. If a client disconnects, its queued operations are reconciled on reconnect against whatever happened in the interim — trivial for CRDTs, requiring server-side transformation for OT.</p>
+<h3 id="real-time-collaboration-architecture-diagram">Real-Time Collaboration Architecture Diagram</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  Client A            Client B            Client C (late-joiner)</span></span>
+<span class="line"><span>     |                   |                      |</span></span>
+<span class="line"><span>     | WebSocket (edit)  | WebSocket (edit)     | WebSocket (subscribe)</span></span>
+<span class="line"><span>     v                   v                      |</span></span>
+<span class="line"><span>  +-------------------------------------------------------+</span></span>
+<span class="line"><span>  |          Sticky Load Balancer (per-doc affinity)      |</span></span>
+<span class="line"><span>  +-------------------------------------------------------+</span></span>
+<span class="line"><span>     |                |                      |</span></span>
+<span class="line"><span>     v                v                      v</span></span>
+<span class="line"><span>  +-----------+  +-----------+        +-----------+</span></span>
+<span class="line"><span>  | Collab    |  | Collab    |        | Collab    |</span></span>
+<span class="line"><span>  | Server 1  |  | Server 2  |  ...   | Server N  |</span></span>
+<span class="line"><span>  | (doc X)   |  | (doc Y)   |        | (doc Z)   |</span></span>
+<span class="line"><span>  +-----------+  +-----------+        +-----------+</span></span>
+<span class="line"><span>     |                |                      |</span></span>
+<span class="line"><span>     |  in-memory doc state + recent op window (sliding)</span></span>
+<span class="line"><span>     |                |                      |</span></span>
+<span class="line"><span>     +----------------+----------------------+</span></span>
+<span class="line"><span>                      |</span></span>
+<span class="line"><span>              +---------------+</span></span>
+<span class="line"><span>              |  Op Log Store |  &#x3C;-- source of truth</span></span>
+<span class="line"><span>              |  (append-only:|</span></span>
+<span class="line"><span>              |   Kafka / row |</span></span>
+<span class="line"><span>              |   / object)   |</span></span>
+<span class="line"><span>              +---------------+</span></span>
+<span class="line"><span>                      ^</span></span>
+<span class="line"><span>                      |  snapshot + tail for late-joiner</span></span>
+<span class="line"><span>                      |</span></span>
+<span class="line"><span>     +-------------------------------------------------+</span></span>
+<span class="line"><span>     |   Redis / Memcached Pub-Sub Backbone           |</span></span>
+<span class="line"><span>     |   (bridges servers when doc subscribers span    |</span></span>
+<span class="line"><span>     |    multiple machines; fan-out across regions)   |</span></span>
+<span class="line"><span>     +-------------------------------------------------+</span></span>
+<span class="line"><span>                      |</span></span>
+<span class="line"><span>                      v</span></span>
+<span class="line"><span>   Snapshot Store (object storage, every ~1000 ops)</span></span></code></pre>
+<p>Message flow, step by step:</p>
+<ol>
+<li>Client applies its edit <strong>optimistically</strong> to its local view.</li>
+<li>Client sends the operation to the server, tagged with the base <strong>revision (OT)</strong> or <strong>version vector (CRDT)</strong>.</li>
+<li>Server <strong>validates</strong>, then sequences (OT) or merges (CRDT).</li>
+<li>Server <strong>appends</strong> the operation to the op log (source of truth).</li>
+<li>Server <strong>updates</strong> the in-memory document state.</li>
+<li>Server <strong>fans out</strong> the operation to all other subscribers over their WebSockets.</li>
+<li>Originating client receives an <strong>acknowledgement</strong> (possibly with a transformed position) and corrects local state if needed.</li>
+<li>If a client disconnects, its queued operations are <strong>reconciled on reconnect</strong> — trivial for CRDTs, requiring server-side transformation for OT.</li>
+</ol>
+<h2 id="data-model">Data Model</h2>
+<h3 id="ot-based-model-google-docs-style">OT-Based Model (Google Docs style)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Document</span></span>
+<span class="line"><span>  - id: UUID</span></span>
+<span class="line"><span>  - revision: int            (monotonic, server-assigned, strict total order)</span></span>
+<span class="line"><span>  - content: rich-text AST   (paragraphs, formatting spans, tables)</span></span>
+<span class="line"><span>  - cursors: [{user_id, position, selection_end, color}]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Operation</span></span>
+<span class="line"><span>  - type: insert | delete | format | move</span></span>
+<span class="line"><span>  - position: int            (character offset in the base revision)</span></span>
+<span class="line"><span>  - [content: string]        (for insert)</span></span>
+<span class="line"><span>  - [length: int]            (for delete)</span></span>
+<span class="line"><span>  - base_revision: int       (the revision this op was authored against)</span></span>
+<span class="line"><span>  - user_id: UUID</span></span></code></pre>
+<h3 id="crdt-based-model">CRDT-Based Model</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>CRDT Item (per character or block)</span></span>
+<span class="line"><span>  - id: {site_id, lamport_counter}   &#x3C;- globally unique, orderable</span></span>
+<span class="line"><span>  - left_id, right_id: item ids       &#x3C;- insertion position (RGA)</span></span>
+<span class="line"><span>  - value: char / block content</span></span>
+<span class="line"><span>  - tombstone: bool                   (soft-delete for convergence)</span></span>
+<span class="line"><span>  - origin_id: item id                (for undo linkage)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Document CRDT</span></span>
+<span class="line"><span>  - items: ordered set&#x3C;CRDT Item>     &#x3C;- total order via id + tie-break</span></span>
+<span class="line"><span>  - version_vector: map&#x3C;site_id -> counter>   &#x3C;- tracks seen operations</span></span>
+<span class="line"><span>  - delete_set: set&#x3C;item id>          &#x3C;- tombstones</span></span></code></pre>
+<p><strong>Storage choice.</strong> OT documents sit well in a relational store keyed by document id and revision — the server is the single writer, so strict consistency is natural. CRDT documents are a log of immutable operations plus a periodically compacted snapshot, which fits object storage and append-only logs better than mutable rows. Both use WebSocket for real-time sync; both keep a recent-operation buffer in memory for fast late-join replay.</p>
+<h2 id="operational-transformation-ot">Operational Transformation (OT)</h2>
+<h3 id="the-transformation-function-xform">The Transformation Function (xform)</h3>
+<p>The heart of OT is a binary function, conventionally written <code>T(op_a, op_b) -&gt; op_b'</code>, that takes two operations concurrent against the same base state and returns a version of <code>op_b</code> adjusted to account for <code>op_a</code> having been applied first. For plain text, the transformation is mostly position arithmetic. If <code>op_a</code> is <code>insert('H', 0)</code> and <code>op_b</code> is <code>insert('W', 0)</code>, then <code>T(op_b, op_a)</code> shifts <code>op_b</code>’s position to 1 because <code>op_a</code> inserted a character before it. Deletes shift positions in the opposite direction; an insert inside a deleted range requires either splitting the delete or pushing the insert to the delete’s start. The subtle case is <strong>same-position concurrent inserts</strong>: both target index 0, so the transform must pick a deterministic tie-break, typically by client id, to ensure both clients converge to the same order. Rich-text editors add operation types — format-range, split-paragraph, move-block — and every pair of types needs its own transformation rule, which is where OT’s notorious O(n²) rule matrix comes from.</p>
+<h3 id="ot-transform-function-flow-diagram">OT Transform Function Flow Diagram</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                Base State S0 (revision N)</span></span>
+<span class="line"><span>                     /            \</span></span>
+<span class="line"><span>            op_a applied        op_b applied</span></span>
+<span class="line"><span>                  /                \</span></span>
+<span class="line"><span>             State S_a            State S_b</span></span>
+<span class="line"><span>                |                    |</span></span>
+<span class="line"><span>   transform op_b against op_a   transform op_a against op_b</span></span>
+<span class="line"><span>   T(op_b, op_a) -> op_b'       T(op_a, op_b) -> op_a'</span></span>
+<span class="line"><span>                |                    |</span></span>
+<span class="line"><span>   apply op_b' to S_a            apply op_a' to S_b</span></span>
+<span class="line"><span>                |                    |</span></span>
+<span class="line"><span>                v                    v</span></span>
+<span class="line"><span>            State S_ab           State S_ba</span></span>
+<span class="line"><span>                \                    /</span></span>
+<span class="line"><span>                 \    TP1: S_ab == S_ba    (convergence!)</span></span>
+<span class="line"><span>                  \                  /</span></span>
+<span class="line"><span>                   -> Converged State &#x3C;-</span></span>
+<span class="line"><span>                          (revision N+2)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Example: op_a = insert("Hi", 0),  op_b = insert("Yo", 0)</span></span>
+<span class="line"><span>  ----------------------------------------------------------------</span></span>
+<span class="line"><span>  Server (or replica) applies op_a first:  doc = "Hi"</span></span>
+<span class="line"><span>  T(op_b, op_a): op_b targets pos 0, op_a inserted 2 chars before it</span></span>
+<span class="line"><span>                 -> shift op_b to pos 2      => insert("Yo", 2)</span></span>
+<span class="line"><span>  Apply op_b':   doc = "HiYo"</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Other replica applies op_b first:  doc = "Yo"</span></span>
+<span class="line"><span>  T(op_a, op_b): op_a targets pos 0, op_b inserted 2 chars before it</span></span>
+<span class="line"><span>                 -> shift op_a to pos 2      => insert("Hi", 2)</span></span>
+<span class="line"><span>  Apply op_a':   doc = "YoHi"   &#x3C;-- DIVERGENCE without a tiebreak rule!</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Fix: deterministic tiebreak by client_id.</span></span>
+<span class="line"><span>  If client_id(A) &#x3C; client_id(B): A always sorts before B at same pos.</span></span>
+<span class="line"><span>  Both replicas must apply the SAME tiebreak so both yield "HiYo".</span></span>
+<span class="line"><span>  This is exactly why a central server (single total order) is needed:</span></span>
+<span class="line"><span>  it collapses the two transformation paths into one.</span></span></code></pre>
+<h3 id="tp1-and-tp2-the-convergence-properties">TP1 and TP2: The Convergence Properties</h3>
+<p>OT correctness rests on two formal properties of the transformation function.</p>
+<p><strong>TP1</strong> (Transformation Property 1) says that for any two concurrent operations <code>O1, O2</code>, applying <code>O1</code> then <code>T(O2, O1)</code> produces the same state as applying <code>O2</code> then <code>T(O1, O2)</code>. TP1 guarantees pairwise convergence: two replicas that each saw the same two ops in different orders end up identical. This is necessary but not sufficient once you have three or more concurrent operations, because the order in which you <em>transform</em> matters as much as the order in which you <em>apply</em>.</p>
+<p><strong>TP2</strong> (Transformation Property 2) is the harder, often-skipped condition: for any three concurrent operations <code>O1, O2, O3</code>, the result of <code>T(O3, T(O2, O1))</code> must equal <code>T(T(O3, O2), O1)</code>. In plain terms, the transformation function itself must be commutative under composition — you must reach the same transformed operation regardless of the path through the transformation lattice. Most published OT algorithms <em>do not satisfy TP2</em> and instead sidestep the problem by funnelling all operations through a central server that imposes a single total order, so only one transformation path is ever taken. This is the real reason Google Docs needs its server: not for storage, but to avoid the multi-way transformation diamond that TP2 would otherwise have to close. Algorithms that genuinely satisfy TP2 (e.g. TTF, adOPTed) are rare and complex; the practical industry choice is “central sequencer + TP1-only transform.” Knowing this distinction — that the server exists primarily to dodge TP2 — is a sharp interview signal.</p>
+<p>Convergence properties at a glance:</p>
+<ul>
+<li><strong>TP1 — pairwise convergence:</strong> for any two concurrent ops <code>O1, O2</code>, <code>apply(O1) ; apply(T(O2, O1))</code> yields the same state as <code>apply(O2) ; apply(T(O1, O2))</code>. Ensures two replicas seeing the same two ops in different orders end up identical.</li>
+<li><strong>TP2 — transform-path convergence:</strong> for any three concurrent ops, the result of transforming is independent of the order in which transforms are composed. <code>T(O3, T(O2, O1)) == T(T(O3, O2), O1)</code>.</li>
+<li><strong>Why TP1 is not enough:</strong> with three or more concurrent ops, different <em>transformation paths</em> (not just application orders) can produce different transformed operations, leading to divergence unless TP2 holds.</li>
+<li><strong>Production reality:</strong> most OT systems satisfy only TP1 and rely on a central server to collapse all possible transform paths into a single linear order, so TP2 never needs to be tested.</li>
+<li><strong>The server’s real job:</strong> the sequencer exists primarily to <em>avoid</em> the TP2 requirement, not for storage or durability — it picks one transformation path so replicas only ever transform against that one linear history.</li>
+<li><strong>Algorithms that satisfy TP2</strong> (TTF, adOPTed) are rare and complex; the industry standard is “central sequencer + TP1-only transform.”</li>
+</ul>
+<h3 id="the-jupiter--control-algorithm">The Jupiter / Control Algorithm</h3>
+<p>Google’s Jupiter algorithm (the basis of Google Docs) keeps the client and server synchronised through a shared notion of “the state.” Both sides maintain a queue of operations that have been applied locally but not yet acknowledged by the other side. When the client sends an op, the server transforms it against any ops it has already applied since the client’s base revision, applies it, and sends back the transformed result plus the new revision. The client likewise transforms incoming server ops against its own pending queue. This bidirectional transform loop keeps both sides convergent without ever requiring the client to understand the full global operation graph. The server’s monotonic revision counter is the anchor: every operation names the revision it was authored against, and the server’s job is to fold each op into the linear history at the right point.</p>
+<h3 id="why-a-central-server">Why a Central Server</h3>
+<p>OT requires global ordering. Without a sequencer, independent replicas can take transformation cascades like <code>T(O1, T(O2, O3))</code> versus <code>T(T(O1, O2), O3)</code> that produce different results — the diamond problem — unless your transform satisfies TP2, which almost no production system does. The server collapses the branching history into a single linear sequence, so every replica is transforming against the <em>same</em> linear order and TP1 alone suffices. The cost is that OT is <strong>CP</strong> in CAP terms: if the server for a document is unreachable, that document cannot accept new consensus edits, which is exactly why OT’s offline story is weak.</p>
+<h2 id="conflict-free-replicated-data-types-crdts">Conflict-Free Replicated Data Types (CRDTs)</h2>
+<h3 id="mathematical-basis">Mathematical Basis</h3>
+<p>A CRDT is a data structure whose merge operation forms a <strong>join-semilattice</strong>: every state is an element of a partially ordered set, and merging two states takes their least upper bound. Because the merge is commutative, associative, and idempotent, the order and duplication of message delivery does not matter — any two replicas that have received the same set of updates will compute the same least upper bound and end up identical. This property is called <strong>Strong Eventual Consistency (SEC)</strong>: eventual convergence without coordination, and without ever having to run a conflict resolver. The price is that the data structure must be carefully designed so that <em>every</em> concurrent update has a deterministic resolution baked in — there is no server to adjudicate.</p>
+<p>Convergence properties of CRDT merge (Strong Eventual Consistency):</p>
+<ul>
+<li><strong>Commutative:</strong> merge(A, B) == merge(B, A) — delivery order of updates does not affect the result.</li>
+<li><strong>Associative:</strong> merge(A, merge(B, C)) == merge(merge(A, B), C) — grouping of updates does not affect the result.</li>
+<li><strong>Idempotent:</strong> merge(A, A) == A — duplicate/delayed retransmits have no effect.</li>
+<li><strong>Deterministic resolution:</strong> every concurrent update has a deterministic resolution baked into the data structure (e.g. higher Lamport timestamp wins, or id ordering for sequence inserts).</li>
+<li><strong>Strong Eventual Consistency:</strong> any two replicas that have received the same set of updates converge to the identical state without coordination and without running a conflict resolver.</li>
+<li><strong>Causality preserved:</strong> version vectors track causality so dependent operations (delete the character someone just inserted) apply in causal order, never producing a state where an effect precedes its cause.</li>
+</ul>
+<h3 id="lww-registers-and-maps">LWW Registers and Maps</h3>
+<p>The simplest CRDT is a <strong>Last-Writer-Wins register</strong>: a value paired with a timestamp (usually a Lamport clock, not wall time, to avoid skew), where merge picks the value with the larger timestamp. LWW maps compose registers per-key and are the backbone of many “settings” or “presence” CRDTs. They are simple and cheap, but they silently drop concurrent writes — if two users set the same key at once, one update is lost by design. That is acceptable for ephemeral state (cursor color, presence status) but wrong for content where you never want to lose an edit, which is why text CRDTs use richer structures.</p>
+<h3 id="rga-replicated-growable-array">RGA (Replicated Growable Array)</h3>
+<p>The <strong>Replicated Growable Array</strong> is the workhorse text-sequence CRDT. Each inserted element carries a unique id and a reference to the element it was inserted <em>after</em> (its left neighbour). To insert between two existing elements, you record “insert after this id”; concurrent inserts after the same anchor are ordered by comparing their ids (typically Lamport counter then site id). Deletions are <strong>tombstones</strong> — the element is marked deleted but stays in the structure so that a late-arriving insert that references it as an anchor still lands in the right place. This is why CRDTs cannot simply erase deleted characters: a delete must remain addressable for any concurrent or delayed insert that points at it. RGA gives you a list you can grow from any replica in any order and always converge, at the cost of permanent tombstone metadata until garbage collection reclaims it under safe conditions.</p>
+<h3 id="crdt-rga-tombstone-structure-diagram">CRDT RGA Tombstone Structure Diagram</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  RGA linked list (each node: id={site,counter}, value, tombstone flag, left_id)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  HEAD (origin)</span></span>
+<span class="line"><span>   |</span></span>
+<span class="line"><span>   v</span></span>
+<span class="line"><span>  +----------+    +----------+    +-----------+    +----------+    +----------+</span></span>
+<span class="line"><span>  | id:A:1   |--->| id:A:2   |--->| id:B:1    |--->| id:A:3   |--->| id:B:2   |</span></span>
+<span class="line"><span>  | val:'H'  |    | val:'e'  |    | val:'l'   |    | val:'l'  |    | val:'o'  |</span></span>
+<span class="line"><span>  | tomb:F   |    | tomb:F   |    | tomb:TRUE |    | tomb:F   |    | tomb:TRUE|</span></span>
+<span class="line"><span>  | left:HEAD|    | left:A:1 |    | left:HEAD |    | left:B:1 |    | left:A:3 |</span></span>
+<span class="line"><span>  +----------+    +----------+    +-----------+    +----------+    +----------+</span></span>
+<span class="line"><span>                                          ^               ^               |</span></span>
+<span class="line"><span>                                          |               |               |</span></span>
+<span class="line"><span>                                   (deleted, but          |          rendered output:</span></span>
+<span class="line"><span>                                    addressable)          |          "Hello" with 'l'(B:1)</span></span>
+<span class="line"><span>                                                          |          and 'o'(B:2) hidden</span></span>
+<span class="line"><span>                                   late insert after B:1 -+          (tombstones retained)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Why tombstones cannot be removed eagerly:</span></span>
+<span class="line"><span>    - A disconnected replica may later send an insert with left_id = B:1.</span></span>
+<span class="line"><span>    - If B:1 were physically erased, that insert would have no anchor</span></span>
+<span class="line"><span>      and could not be placed correctly -> divergence.</span></span>
+<span class="line"><span>    - Safe GC requires proof that ALL replicas have seen the deletion</span></span>
+<span class="line"><span>      (via a version vector of "all sites seen up to here").</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Concurrent inserts after the SAME anchor (e.g. HEAD):</span></span>
+<span class="line"><span>    Site A inserts X (id A:5), Site B inserts Y (id B:4), both after HEAD.</span></span>
+<span class="line"><span>    Tie-break: compare ids -> (counter, then site_id).</span></span>
+<span class="line"><span>    Both replicas compute the same relative order deterministically.</span></span>
+<span class="line"><span>    -> No server needed; convergence by construction.</span></span></code></pre>
+<h3 id="yjs-and-automerge">Yjs and Automerge</h3>
+<p>In production, most teams do not hand-roll RGA — they use <strong>Yjs</strong> or <strong>Automerge</strong>, the two dominant open-source CRDT libraries. Yjs is optimised for performance and is the engine behind many collaborative editors (Tiptap, JupyterLab collaboration, Evernote’s real-time mode). It uses a custom binary encoding and a clever “skip-list” CRDT for text that keeps operations compact and GC-efficient; it ships with providers for WebSockets, WebRTC (peer-to-peer), and IndexedDB (offline), so the same document can sync over a server or directly between browsers. Automerge is the academic-leaning Rust/JS implementation from the original CRDT research lineage; it emphasises a clean JSON-like document model, branching history (think “git for app state”), and explicit change objects. Both expose higher-level types — text, maps, arrays, counters — on top of sequence and register CRDTs. The practical takeaway: picking a CRDT library is largely about its encoding efficiency, GC story, and provider ecosystem, not about the underlying math, which is settled.</p>
+<h3 id="position-identifiers-and-fractional-indexing">Position Identifiers and Fractional Indexing</h3>
+<p>A recurring CRDT design question is how to represent “position between two elements” without renumbering. Two approaches dominate. <strong>Linked-list anchors</strong> (RGA, Yjs): each element points at its predecessor, so position is implicit in the linked structure and insertions never touch existing ids. <strong>Fractional indexing</strong> (used by some list CRDTs and by ordering UIs like Notion/Figma): a position is a rational number between two existing positions, e.g. inserting between 0.1 and 0.2 yields 0.15. Fractional indexing is intuitive but has a subtle trap — repeated insertions at the same gap cause the identifier to grow unboundedly (0.15, 0.175, 0.1875…), eventually hitting precision limits and requiring a global renumber. Most production text CRDTs therefore prefer anchored ids; fractional indexing is fine for block-level ordering where insertions are rare relative to the number of blocks.</p>
+<h2 id="ot-vs-crdt-comparison">OT vs CRDT Comparison</h2>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>OT</th>
+<th>CRDT</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Server role</td>
+<td>Central server required as sequencer</td>
+<td>Peer-to-peer possible; server optional</td>
+</tr>
+<tr>
+<td>Consistency</td>
+<td>Strong (CP) within a doc</td>
+<td>Strong Eventual Consistency (SEC)</td>
+</tr>
+<tr>
+<td>Convergence mechanism</td>
+<td>Transform concurrent ops against a linear order</td>
+<td>Deterministic merge in a join-semilattice</td>
+</tr>
+<tr>
+<td>Offline support</td>
+<td>Weak — needs server to transform queued ops</td>
+<td>Natural — merge on reconnect via version vectors</td>
+</tr>
+<tr>
+<td>Algorithmic complexity</td>
+<td>Transform rules grow O(n²) with op types</td>
+<td>Data structure is complex; one-time design cost</td>
+</tr>
+<tr>
+<td>Metadata overhead</td>
+<td>Minimal (revision numbers)</td>
+<td>Significant (~50–200 bytes/char, plus tombstones)</td>
+</tr>
+<tr>
+<td>Interleaving artefacts</td>
+<td>Clean — server linearises ops</td>
+<td>Concurrent inserts at same point can interleave (“HeWlolorld”)</td>
+</tr>
+<tr>
+<td>Undo</td>
+<td>Well-understood (inverse + transform)</td>
+<td>Hard — CRDTs are monotonic, undo needs extra machinery</td>
+</tr>
+<tr>
+<td>Late-join cost</td>
+<td>Replay from snapshot + ops</td>
+<td>Replay from snapshot + missing ops via version vector</td>
+</tr>
+<tr>
+<td>CAP classification</td>
+<td>CP — unavailable without server</td>
+<td>AP — available offline, converges eventually</td>
+</tr>
+<tr>
+<td>Adding new op types</td>
+<td>Expensive — must define T against every existing type</td>
+<td>Cheap — “insert/delete an element with an id” is generic</td>
+</tr>
+<tr>
+<td>P2P support</td>
+<td>No (needs sequencer)</td>
+<td>Yes (WebRTC/browser-to-browser)</td>
+</tr>
+<tr>
+<td>Proven at scale</td>
+<td>Google Docs, Etherpad</td>
+<td>Figma, Notion, Linear, Yjs/Automerge ecosystem</td>
+</tr>
+</tbody>
+</table>
+<p>The honest summary: <strong>OT wins on metadata efficiency and clean interleaving but loses on offline and on the cost of adding new operation types; CRDTs win on offline/P2P and extensibility but lose on metadata bloat and interleaving ergonomics.</strong> Most modern greenfield collaborative products lean CRDT (often Yjs) because offline-first and extensibility matter more than per-character metadata, and because the library ecosystem removes the implementation risk. Google Docs sticks with OT because rewriting a billion-user converged system is not worth it and OT’s metadata leanness compounds at their scale.</p>
+<h3 id="ot-vs-crdt-core-trade-off-summary">OT vs CRDT: Core Trade-Off Summary</h3>
+<table>
+<thead>
+<tr>
+<th>Trade axis</th>
+<th>OT choice</th>
+<th>CRDT choice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Where complexity lives</td>
+<td>In the algorithm (transform rules)</td>
+<td>In the data structure (merge semantics)</td>
+</tr>
+<tr>
+<td>What is simple</td>
+<td>The consistency model (one server sequences)</td>
+<td>The distributed model (no server needed for correctness)</td>
+</tr>
+<tr>
+<td>What you pay in</td>
+<td>O(n²) transform rule matrix + server availability</td>
+<td>Per-char metadata + tombstone bloat + interleaving</td>
+</tr>
+<tr>
+<td>When it shines</td>
+<td>Real-time, online, single-region, rich text</td>
+<td>Offline-first, P2P, multi-region, extensibility</td>
+</tr>
+</tbody>
+</table>
+<h2 id="conflict-resolution-strategies">Conflict Resolution Strategies</h2>
+<p>In OT there are no “conflicts” to resolve at the data level — the server’s linear sequencing <em>is</em> the resolution. Two users edit the same spot; the server picks an order, transforms both ops, and both clients converge. The only conflict-like situation is a same-position tie, resolved by a deterministic client-id tiebreak. The cost of this simplicity is that the resolution is whatever the server order produces, which may not be what either user intended, but it is always consistent.</p>
+<p>In CRDTs, conflict resolution is <strong>baked into the merge function and is deterministic by construction</strong>. For an LWW register, the higher timestamp wins. For a sequence CRDT, concurrent inserts at the same anchor are ordered by id. There is never a branch that requires a human decision; there is only the question of whether the deterministic result is <em>ergonomic</em>. The famous failure mode is <strong>interleaving</strong>: two users typing “Hello” and “World” at the same cursor can produce “HeWlolrld” because each character is a separate concurrent insert ordered independently. This is correct under SEC but user-hostile. Mitigations include grouping a burst of keystrokes from one user into a single atomic insert (so the word stays contiguous), applying light server-side reordering heuristics, or using a hybrid where a server authority collapses near-concurrent same-position edits. Some products (Notion) run a thin OT pass on top of a CRDT to clean up interleaving while keeping the offline benefits.</p>
+<p>A third strategy is <strong>server authority with client CRDTs</strong> — the server is the only one allowed to “commit” a version, and clients send proposed operations that the server serialises. This is effectively OT-shaped control flow over CRDT-shaped data, and it is increasingly common because it combines CRDT’s clean data model with OT’s clean concurrency model. The trade is that you lose pure P2P sync; the server becomes a required participant for live editing even if offline edits still merge via the CRDT on reconnect.</p>
+<h2 id="undo-and-redo">Undo and Redo</h2>
+<p>Undo is where OT and CRDT diverge sharply, and a common interview probe. <strong>OT undo</strong> is well-understood: to undo an operation <code>O</code>, you compute its inverse <code>O⁻¹</code> (delete ↔ insert, format ↔ unformat) and apply it — but the inverse must first be <strong>transformed against every operation applied since <code>O</code></strong>, so that it targets the right position in the current document. This is called <em>selective undo</em> (undo one specific op, possibly out of order) versus <em>linear undo</em> (undo the most recent op on your own stack). The transform-against-subsequent-ops step is what makes undo work in a live multi-user document: if someone else typed after your deleted word, your “undo delete” must insert at the transformed position, not the stale one. Redo is just undo-of-undo with the same transform discipline.</p>
+<p><strong>CRDT undo</strong> is genuinely hard because CRDTs are monotonic — the merge semilattice only moves “up,” there is no native notion of reverting. The common patterns are:</p>
+<ul>
+<li><strong>Compensating operations:</strong> keep a per-user undo stack of operation ids; to undo, emit a <em>new</em> operation that reverses the effect — an undo-delete re-inserts with a <em>new</em> id, an undo-insert tombstones the original. Convergence is preserved because the reversing op is just another CRDT update, but the bookkeeping is client-side and fiddly.</li>
+<li><strong>Branching history (Automerge):</strong> model undo as rewinding to a prior change object and treating that as a new branch, git-style. Clean conceptually but expensive to render.</li>
+<li><strong>UndoManager (Yjs):</strong> an <code>UndoManager</code> tracks which users/scopes you want to undo and emits compensating operations automatically.</li>
+</ul>
+<p>The key principle in all cases: <strong>undo in a CRDT is a forward operation, not a rollback</strong> — you never delete history, you emit a new operation that counteracts a prior one. This preserves convergence but means undo does not shrink the operation log.</p>
+<h2 id="cursor-tracking">Cursor Tracking</h2>
+<p>Cursors and selections must track the right location even as the document shifts underneath them. With OT, a cursor is an integer position that gets <strong>transformed alongside operations</strong>: when an insert arrives at position 5 and your cursor sits at position 10, the client bumps your cursor to 11 before rendering. Every incoming operation runs through the same transform function used for content, applied to all live cursors. With CRDTs, a cursor is better modelled as an <strong>anchor on a CRDT item id</strong> rather than an integer offset — “my cursor sits after item <code>id(A,7)</code>.” This relative anchor survives insertions and deletions around it automatically: if someone inserts before that item, the cursor stays glued to the item; if the item is deleted, the cursor falls back to the nearest live predecessor. Anchoring to ids is more robust than integer positions because it never needs recomputation on remote edits, only when the anchored item itself is removed.</p>
+<p>Operationally, cursor updates are high-frequency and must be <strong>throttled aggressively</strong>. A naïve broadcast of every cursor move at 30 fps for 50 editors is 1500 messages/sec per document. Real systems throttle to changes only, batch into 50–100 ms windows, and use client-side interpolation/dead-reckoning to smooth remote cursors between updates. Cursor traffic is often sent over a separate, cheaper channel than content edits so it can be dropped or coalesced without affecting edit integrity.</p>
+<h2 id="presence">Presence</h2>
+<p>Presence — “who is online, where is their cursor, what are they selecting” — is lower-stakes than content but higher-frequency. It is typically modelled as its own LWW-CRDT or a Redis pub/sub channel with a TTL heartbeat: each client publishes a heartbeat every few seconds; a missing heartbeat for 10–15 seconds marks the user as away and triggers a tombstone broadcast. Presence state (cursor, selection, color, name) is merged with LWW semantics keyed by user id, so the latest heartbeat wins and stale entries expire. Because presence is ephemeral, it is usually <em>not</em> persisted to the operational log — it would bloat the log with noise — and is instead kept in a separate in-memory/Redis store. The design rule: never let presence updates participate in the same durability and replay path as content edits, or your snapshots and logs will be dominated by cursor jitter.</p>
+<h2 id="offline-editing-and-sync">Offline Editing and Sync</h2>
+<p>Offline editing is the starkest OT/CRDT difference. <strong>CRDTs are offline-native.</strong> A disconnected client simply keeps appending local operations to its own log, tagged with its version vector. On reconnect, the client and server exchange “here is what I have seen” (version vectors) and each sends the operations the other is missing. Because merge is commutative and idempotent, no matter how long the offline gap or how many concurrent offline editors there were, the merge converges to one state without any server adjudication. This is why Linear and Notion can offer “edit on the plane, sync when you land” without conflicts.</p>
+<p><strong>OT offline is harder.</strong> The client queues operations tagged with the base revision it last knew. On reconnect, the server must transform each queued op against every operation applied since that base revision — potentially a long cascade if the client was offline for hours while others kept editing. The longer the offline gap, the more transformation work and the higher the chance the transformed op lands somewhere semantically odd (you deleted a paragraph that has since been rewritten). Most OT systems limit offline editing to short windows or to a single offline user, and fall back to a full document re-sync or manual merge for long divergences. This is the structural reason Google Docs is poor at long offline sessions while CRDT-based editors handle them gracefully.</p>
+<p>A practical hybrid: store the document as a CRDT for offline resilience and merge, but run a server authority for live sessions to linearise and clean up interleaving. The CRDT guarantees you can always reconcile; the server authority guarantees the live experience is tidy.</p>
+<h3 id="offline-sync-and-merge-flow-diagram">Offline Sync and Merge Flow Diagram</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  === CRDT Offline Sync (offline-native) ===</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Client A (offline)                Server / Client B (online)</span></span>
+<span class="line"><span>  +-----------------------+         +-----------------------+</span></span>
+<span class="line"><span>  | local op log          |         | server op log         |</span></span>
+<span class="line"><span>  | vv: {A:5, B:3}        |         | vv: {A:4, B:7, C:2}   |</span></span>
+<span class="line"><span>  | ops A:4, A:5 queued   |         | (kept editing while   |</span></span>
+<span class="line"><span>  | while disconnected    |         |  A was offline)       |</span></span>
+<span class="line"><span>  +-----------------------+         +-----------------------+</span></span>
+<span class="line"><span>          |                                 |</span></span>
+<span class="line"><span>          |  1. reconnect                   |</span></span>
+<span class="line"><span>          |  2. send my version vector      |</span></span>
+<span class="line"><span>          |     {A:5, B:3}                  |</span></span>
+<span class="line"><span>          +-------------------------------->|</span></span>
+<span class="line"><span>          |                                 |</span></span>
+<span class="line"><span>          |  3. server compares VVs:        |</span></span>
+<span class="line"><span>          |     server has A up to 4,       |</span></span>
+<span class="line"><span>          |     needs A:5 (and A:4)         |</span></span>
+<span class="line"><span>          |     A needs B:4..7, C:1..2      |</span></span>
+<span class="line"><span>          |                                 |</span></span>
+<span class="line"><span>          |  4. server sends missing ops    |</span></span>
+<span class="line"><span>          |     B:4, B:5, B:6, B:7, C:1, C:2|</span></span>
+<span class="line"><span>          |&#x3C;--------------------------------+</span></span>
+<span class="line"><span>          |                                 |</span></span>
+<span class="line"><span>          |  5. A sends its missing ops     |</span></span>
+<span class="line"><span>          |     A:4, A:5                     |</span></span>
+<span class="line"><span>          +-------------------------------->|</span></span>
+<span class="line"><span>          |                                 |</span></span>
+<span class="line"><span>          v                                 v</span></span>
+<span class="line"><span>  +-----------------------+         +-----------------------+</span></span>
+<span class="line"><span>  | merge incoming ops    |         | merge A's ops         |</span></span>
+<span class="line"><span>  | (commutative,         |         | (commutative,         |</span></span>
+<span class="line"><span>  |  associative,         |         |  associative,         |</span></span>
+<span class="line"><span>  |  idempotent)          |         |  idempotent)          |</span></span>
+<span class="line"><span>  | -> converged state    |         | -> converged state    |</span></span>
+<span class="line"><span>  +-----------------------+         +-----------------------+</span></span>
+<span class="line"><span>          \                           /</span></span>
+<span class="line"><span>           \   both identical state   /</span></span>
+<span class="line"><span>            \   no server adjudication/</span></span>
+<span class="line"><span>             >-- SEC guaranteed --&#x3C;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  === OT Offline Sync (harder, server-mediated) ===</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Client A (offline)                Server (online, kept sequencing)</span></span>
+<span class="line"><span>  +-----------------------+         +-----------------------+</span></span>
+<span class="line"><span>  | queued ops with       |         | revision now N+200    |</span></span>
+<span class="line"><span>  | base_revision = N     |         | (200 ops applied      |</span></span>
+<span class="line"><span>  | op1, op2, op3         |         |  while A offline)     |</span></span>
+<span class="line"><span>  +-----------------------+         +-----------------------+</span></span>
+<span class="line"><span>          |                                 |</span></span>
+<span class="line"><span>          |  1. reconnect                   |</span></span>
+<span class="line"><span>          |  2. send queued ops + base_rev N|</span></span>
+<span class="line"><span>          +-------------------------------->|</span></span>
+<span class="line"><span>          |                                 |</span></span>
+<span class="line"><span>          |  3. server transforms EACH op   |</span></span>
+<span class="line"><span>          |     against ops N+1 .. N+200    |</span></span>
+<span class="line"><span>          |     (long cascade!)             |</span></span>
+<span class="line"><span>          |     op1' = T(op1, N+1..N+200)   |</span></span>
+<span class="line"><span>          |     op2' = T(op2, N+1..N+200+op1')|</span></span>
+<span class="line"><span>          |     op3' = T(op3, ... + op1' + op2')|</span></span>
+<span class="line"><span>          |                                 |</span></span>
+<span class="line"><span>          |  4. server applies transformed   |</span></span>
+<span class="line"><span>          |     ops, sends acks back         |</span></span>
+<span class="line"><span>          |&#x3C;--------------------------------+|</span></span>
+<span class="line"><span>          |                                 |</span></span>
+<span class="line"><span>          |  risk: transformed op may land  |</span></span>
+<span class="line"><span>          |  in a semantically odd spot     |</span></span>
+<span class="line"><span>          |  (deleted a rewritten paragraph)|</span></span>
+<span class="line"><span>          v                                 v</span></span>
+<span class="line"><span>  +-----------------------+         +-----------------------+</span></span>
+<span class="line"><span>  | corrected local state |         | server linear history |</span></span>
+<span class="line"><span>  | (server-transformed)  |         | (single total order)  |</span></span>
+<span class="line"><span>  +-----------------------+         +-----------------------+</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Key difference: CRDT merge needs NO transformation cascade;</span></span>
+<span class="line"><span>  OT requires N-length transform cascade per offline op.</span></span></code></pre>
+<h2 id="history-trimming-and-garbage-collection">History Trimming and Garbage Collection</h2>
+<p>Both models accumulate history that eventually must be trimmed, but the safety conditions differ.</p>
+<p><strong>OT trimming</strong> is straightforward because history is a linear log. The server periodically snapshots the full document state (every N operations, or every few minutes) and can discard operations older than the snapshot. A late-joining client behind the snapshot simply receives the snapshot plus the operations after it; it never needs the discarded ops. Version history for user-facing undo is kept separately and can be pruned to a retention window. The only subtlety is keeping enough ops in the buffer to serve any currently-connected client whose base revision is old — you cannot trim ops that a live client might still reference.</p>
+<p><strong>CRDT garbage collection</strong> is harder because tombstones must survive as long as any replica might still reference them. You cannot delete a tombstoned character if some disconnected replica could later send an insert anchored to it. Safe GC requires knowing that <em>all</em> replicas have seen the deletion — typically tracked via a version vector of “all sites have seen up to here,” which in turn requires either a known peer set or a quorum/lease mechanism. Yjs implements GC for deleted items once it can prove no peer needs them; Automerge handles bloat via <strong>compaction</strong> — materialise the current state into a fresh document with a new history starting point, discarding the old operation graph. Compaction is simpler and safer than incremental tombstone GC but produces a history break (you lose the ability to undo across the compaction boundary unless you archive the old graph). For long-lived documents (a Notion page edited daily for years), periodic compaction is essential or the CRDT metadata grows without bound.</p>
+<p>A common pitfall is forgetting that <strong>snapshots and GC interact with undo.</strong> If you trim OT ops or compact a CRDT past the user’s undo stack, you break undo. Production systems either keep the user-facing undo stack independent of the trimmed server history (storing the ops needed for undo client-side) or accept that undo only reaches back to the last snapshot.</p>
+<h2 id="scaling-and-bottlenecks">Scaling and Bottlenecks</h2>
+<h3 id="ot-single-document-hotspot">OT: Single Document Hotspot</h3>
+<p>A document with 10 editors funnels every operation through one server process — the document is the shard key, not the user. Google Docs solves this by pinning a document to a single server (not a server per editor) and sharding the <em>document space</em> across a fleet. The per-document throughput ceiling is one server’s transform-and-broadcast loop, typically low thousands of ops/sec, which is plenty for human typing but matters for programmatic edits or huge documents. Failover requires migrating the in-memory document state and log ownership to another server, coordinated via a lease/leader-election layer.</p>
+<h3 id="crdt-metadata-bloat">CRDT: Metadata Bloat</h3>
+<p>A 100 KB text document becomes 500 KB–2 MB once each character carries an id, anchor, tombstone flag, and lamport timestamp. Mitigations:</p>
+<ul>
+<li><strong>Block-level CRDTs</strong> that treat a paragraph or block as the unit instead of a character (Notion, Figma).</li>
+<li><strong>Garbage collection</strong> of tombstones once safe.</li>
+<li><strong>Compaction</strong> to reset the history.</li>
+<li><strong>Binary encodings</strong> (Yjs’s updates are far smaller than naive JSON).</li>
+<li><strong>Hybrid CRDT-for-offline + OT-for-online</strong> that periodically collapses to a server snapshot, bounding live metadata.</li>
+</ul>
+<h3 id="presence-fan-out">Presence Fan-Out</h3>
+<p>Cursor and selection broadcasting is O(editors²) per document if every editor broadcasts to every other. The fix is a fan-out server that collects, batches, and relays with throttling, plus client-side interpolation. Treat presence as a separate, lossy channel from content.</p>
+<h2 id="consistency-and-replication">Consistency and Replication</h2>
+<ul>
+<li><strong>OT:</strong> Strictly consistent within one document. Revision numbers form a server-assigned total order. Clients apply their own op optimistically, then correct on acknowledgement if the server transformed it. The document is effectively single-writer (the server) from the consistency model’s perspective.</li>
+<li><strong>CRDT:</strong> Strong Eventual Consistency — all replicas that have seen the same operation set are identical. No conflicts to adjudicate because the merge is a deterministic join in a semilattice. Causality is tracked via version vectors so dependent operations (delete the character someone just inserted) apply in the right order.</li>
+<li><strong>Conflict resolution:</strong> OT uses server authority and a deterministic tiebreak for same-position edits. CRDT uses deterministic tie-breaking by globally unique ids — there is never a conflict to resolve, only a question of whether the deterministic result is ergonomic.</li>
+</ul>
+<h2 id="caching-strategy">Caching Strategy</h2>
+<table>
+<thead>
+<tr>
+<th>Cache</th>
+<th>Strategy</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Document state</td>
+<td>In-memory per server</td>
+<td>Avoid rebuilding the document from the op log on every read/edit</td>
+</tr>
+<tr>
+<td>Recent operations</td>
+<td>In-memory sliding window (last 5 min or N ops)</td>
+<td>Fast replay for late-joining clients</td>
+</tr>
+<tr>
+<td>Version snapshots</td>
+<td>Object storage, every 1000 ops or few minutes</td>
+<td>Cold-load without replaying entire history</td>
+</tr>
+<tr>
+<td>Presence</td>
+<td>Redis pub/sub, 10s TTL</td>
+<td>Real-time cursor/collaborator visibility without persisting noise</td>
+</tr>
+<tr>
+<td>Client reconnect buffer</td>
+<td>Client-side IndexedDB</td>
+<td>Replay local edits after reconnect; CRDT stores full local op log</td>
+</tr>
+</tbody>
+</table>
+<p>The snapshot cadence is a tuning knob: too frequent and you spend bandwidth/storage on snapshots; too rare and late-joiners replay long op streams. The right number is “snapshot when the op-replay cost for a fresh join exceeds the snapshot transfer cost,” typically a few thousand ops or a few minutes.</p>
+<h2 id="weaknesses-and-improvements">Weaknesses and Improvements</h2>
+<ul>
+<li><strong>OT complexity explosion:</strong> adding a new operation type (split a table row, move a block) means defining <code>T</code> against every existing type — the O(n²) rule matrix. This is why OT-based rich editors evolve slowly. CRDTs avoid this by making “the op” just “insert/delete an element with an id,” regardless of what the element is.</li>
+<li><strong>CRDT interleaving:</strong> two users typing at the same cursor can produce “HeWlolorld.” Mitigations: batch a user’s keystroke burst into one atomic insert, server-side reordering, or a hybrid OT pass on top of the CRDT.</li>
+<li><strong>CRDT metadata cost:</strong> the per-character id and tombstone overhead is the structural tax for serverless convergence. Block-level CRDTs and compaction are the main levers.</li>
+<li><strong>Undo asymmetry:</strong> OT undo is clean (inverse + transform); CRDT undo requires compensating operations and careful per-user stack management, and history trimming can break it.</li>
+<li><strong>Rich text formatting:</strong> OT models formatting as range operations that must themselves be transformed against inserts/deletes that move the range. CRDTs model formatting as “mark” CRDTs — a set of marks anchored to character id ranges — which compose cleanly but make overlapping bold/italic from different users another deterministic-merge case.</li>
+<li><strong>Long-lived documents:</strong> without compaction, a CRDT document edited for years grows unbounded; without snapshotting, an OT log does the same. Both need explicit lifecycle management.</li>
+</ul>
+<hr>
+<h2 id="interview-question">Interview Question</h2>
+<p><strong>Question:</strong> Two users start with the empty document. User A types “Hi” and user B types “Yo” at the same time, both at position 0, over a flaky connection. Walk through exactly what an OT system and a CRDT system each do, and explain why OT requires a central server for this case while a CRDT does not.</p>
+<p><strong>Model answer.</strong> In OT, both clients send <code>insert("Hi", 0)</code> and <code>insert("Yo", 0)</code> against the same base revision. Without coordination, client A would apply “Hi” then “Yo” producing “HiYo”, while client B applies “Yo” then “Hi” producing “YoHi” — divergence. The central server’s job is to impose one order: it receives A’s op first, applies it (revision -&gt; “Hi”), then <em>transforms</em> B’s op against A’s. The transform function sees both inserts target position 0 and applies the deterministic tiebreak (say, A’s client id sorts first), so B’s “Yo” is shifted to position 2, yielding “HiYo” — and the server broadcasts that order to both clients so both converge. The server exists to collapse the two possible transformation paths into one; without it, you’d need the transform function to satisfy TP2 so that <code>T(O_B, O_A)</code> and <code>T(O_A, O_B)</code> lead to the same final state regardless of path, which is far harder and rarely done in practice.</p>
+<p>In a CRDT, “Hi” and “Yo” are sequences of character inserts, each with a unique id <code>(site, counter)</code> and an anchor (“after the document start”). When the two replicas sync, the merge function orders concurrent inserts after the same anchor by comparing ids: all of A’s characters have A’s site id, all of B’s have B’s, so the merge deterministically places A’s run before B’s (or vice versa) on <em>both</em> replicas with no server involved. Because the merge is a join-semilattice operation — commutative, associative, idempotent — the delivery order and any duplicate retransmits do not matter; both replicas compute the same least upper bound. The CRDT pays for this with per-character ids and the risk of interleaving (if the characters were interleaved by id rather than grouped, you could get “HYio”), but it needs no sequencer for correctness.</p>
+<p><strong>Common pitfall.</strong> Answering “the server resolves the conflict” for OT without naming the <em>transform function</em> and the <em>tiebreak</em> — the server does not pick a winner, it linearises and transforms. For CRDT, the pitfall is saying “last write wins” — that is an LWW register, not a sequence CRDT; sequence CRDTs order by id, not timestamp, so neither write is “lost.” A deeper pitfall is claiming CRDTs “never have conflicts” — true at the data level, but the deterministic merge can still produce user-hostile interleaving, which is a UX conflict even if it is not a consistency conflict.</p>
+<hr>
+<h2 id="related">Related</h2>
+<ul>
+<li>[[topic-queue]]</li>
+<li>[[Weakness Vault/Day-19-Collaborative-Editor]]</li>
+</ul>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>OT (Operational Transformation): transform incoming operations against concurrent ones. Requires central server for ordering. Used by Google Docs.</li>
+<li>CRDTs: data structures that merge without conflicts by design. Decentralized. Used by Figma, Notion, Yjs.</li>
+<li>OT is simpler to understand but harder to implement correctly; CRDTs are harder to understand but composable</li>
+<li>The core challenge is preserving intent — two users typing at the same position shouldn’t delete each other’s text</li>
+<li>Latency matters: high-latency edits cause “jumping” — debouncing and optimistic UI are essential</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How does Google Docs handle real-time collaboration?” — OT with a central server serializing all operations. Operational log is the source of truth.</li>
+<li>“When would you choose CRDTs over OT?” — When you need offline editing, peer-to-peer collaboration, or no central server. CRDTs merge automatically on reconnect.</li>
+<li>“How do you handle cursor positions during concurrent edits?” — Map cursor positions through the transformation function (OT) or use a position-based CRDT counter.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>OT correctness depends on transformation properties TP1 and TP2 — most custom implementations get these wrong. Use a proven library (ShareDB, Yjs, Automerge) rather than implementing from scratch.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/collaborative-editor-crdts-operation-transform/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Collaborative%20Editor%20(CRDTs%2C%20Operation%20Transform)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fcollaborative-editor-crdts-operation-transform%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fcollaborative-editor-crdts-operation-transform%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/collaborative-editor-crdts-operation-transform" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/cloud-cost-optimization-at-scale" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Cloud Cost Optimization at Scale (FinOps, Spot, Right-sizing)</span></a><a href="/notes/system-design/data-pipeline-architecture-kafka-flink-lakehouse" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Data Pipeline Architecture (Kafka + Flink + Lakehouse)</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Collaborative Editor (CRDTs, Operation Transform)" data-selector=".article-prose" data-article-slug="system-design/collaborative-editor-crdts-operation-transform" data-article-title="Collaborative Editor (CRDTs, Operation Transform)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

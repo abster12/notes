@@ -1,0 +1,814 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Distributed Cache (Redis/Memcached) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#why-cache-the-three-forces" class="toc-link" data-toc-link="why-cache-the-three-forces" data-astro-cid-p33bl5ka>Why Cache: The Three Forces</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#cache-population-patterns" class="toc-link" data-toc-link="cache-population-patterns" data-astro-cid-p33bl5ka>Cache Population Patterns</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#pattern-comparison-at-a-glance" class="toc-link" data-toc-link="pattern-comparison-at-a-glance" data-astro-cid-p33bl5ka>Pattern Comparison at a Glance</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#readwrite-flow-diagram" class="toc-link" data-toc-link="readwrite-flow-diagram" data-astro-cid-p33bl5ka>Read/Write Flow Diagram</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#cache-aside-lazy-loading" class="toc-link" data-toc-link="cache-aside-lazy-loading" data-astro-cid-p33bl5ka>Cache-Aside (Lazy Loading)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#read-through" class="toc-link" data-toc-link="read-through" data-astro-cid-p33bl5ka>Read-Through</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#write-through" class="toc-link" data-toc-link="write-through" data-astro-cid-p33bl5ka>Write-Through</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#write-behind-write-back" class="toc-link" data-toc-link="write-behind-write-back" data-astro-cid-p33bl5ka>Write-Behind (Write-Back)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#redis-architecture-single-threaded-command-execution-with-io-multiplexing" class="toc-link" data-toc-link="redis-architecture-single-threaded-command-execution-with-io-multiplexing" data-astro-cid-p33bl5ka>Redis Architecture: Single-Threaded Command Execution with I/O Multiplexing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#memcached-architecture-multi-threaded-with-slab-allocation" class="toc-link" data-toc-link="memcached-architecture-multi-threaded-with-slab-allocation" data-astro-cid-p33bl5ka>Memcached Architecture: Multi-Threaded with Slab Allocation</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#redis-vs-memcached-side-by-side" class="toc-link" data-toc-link="redis-vs-memcached-side-by-side" data-astro-cid-p33bl5ka>Redis vs Memcached: Side-by-Side</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#eviction-policies" class="toc-link" data-toc-link="eviction-policies" data-astro-cid-p33bl5ka>Eviction Policies</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#eviction-policy--victim-selection" class="toc-link" data-toc-link="eviction-policy--victim-selection" data-astro-cid-p33bl5ka>Eviction Policy — Victim Selection</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#lru-least-recently-used" class="toc-link" data-toc-link="lru-least-recently-used" data-astro-cid-p33bl5ka>LRU (Least Recently Used)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#lfu-least-frequently-used" class="toc-link" data-toc-link="lfu-least-frequently-used" data-astro-cid-p33bl5ka>LFU (Least Frequently Used)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#random" class="toc-link" data-toc-link="random" data-astro-cid-p33bl5ka>Random</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ttl-based-eviction" class="toc-link" data-toc-link="ttl-based-eviction" data-astro-cid-p33bl5ka>TTL-based Eviction</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#production-policy-choices" class="toc-link" data-toc-link="production-policy-choices" data-astro-cid-p33bl5ka>Production Policy Choices</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#cache-stampede-and-thundering-herd" class="toc-link" data-toc-link="cache-stampede-and-thundering-herd" data-astro-cid-p33bl5ka>Cache Stampede and Thundering Herd</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#stampede-flow-diagram" class="toc-link" data-toc-link="stampede-flow-diagram" data-astro-cid-p33bl5ka>Stampede Flow Diagram</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#defense-1--lock-based-cache-fill-request-coalescing" class="toc-link" data-toc-link="defense-1--lock-based-cache-fill-request-coalescing" data-astro-cid-p33bl5ka>Defense 1 — Lock-Based Cache Fill (Request Coalescing)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#defense-2--probabilistic-early-expiration-per--xfetch" class="toc-link" data-toc-link="defense-2--probabilistic-early-expiration-per--xfetch" data-astro-cid-p33bl5ka>Defense 2 — Probabilistic Early Expiration (PER / XFetch)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#defense-3--background-refresh--cache-warming" class="toc-link" data-toc-link="defense-3--background-refresh--cache-warming" data-astro-cid-p33bl5ka>Defense 3 — Background Refresh / Cache Warming</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#cache-warming" class="toc-link" data-toc-link="cache-warming" data-astro-cid-p33bl5ka>Cache Warming</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#distributed-cache-consistency" class="toc-link" data-toc-link="distributed-cache-consistency" data-astro-cid-p33bl5ka>Distributed Cache Consistency</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#redis-cluster-slots-sharding-and-resharding" class="toc-link" data-toc-link="redis-cluster-slots-sharding-and-resharding" data-astro-cid-p33bl5ka>Redis Cluster: Slots, Sharding, and Resharding</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#slot-distribution-diagram" class="toc-link" data-toc-link="slot-distribution-diagram" data-astro-cid-p33bl5ka>Slot Distribution Diagram</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#resharding" class="toc-link" data-toc-link="resharding" data-astro-cid-p33bl5ka>Resharding</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#replication-and-failover" class="toc-link" data-toc-link="replication-and-failover" data-astro-cid-p33bl5ka>Replication and Failover</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#pubsub" class="toc-link" data-toc-link="pubsub" data-astro-cid-p33bl5ka>Pub/Sub</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#redis-persistence-rdb-and-aof" class="toc-link" data-toc-link="redis-persistence-rdb-and-aof" data-astro-cid-p33bl5ka>Redis Persistence: RDB and AOF</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#rdb-redis-database-snapshots" class="toc-link" data-toc-link="rdb-redis-database-snapshots" data-astro-cid-p33bl5ka>RDB (Redis Database) Snapshots</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#aof-append-only-file" class="toc-link" data-toc-link="aof-append-only-file" data-astro-cid-p33bl5ka>AOF (Append-Only File)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#combining-rdb-and-aof" class="toc-link" data-toc-link="combining-rdb-and-aof" data-astro-cid-p33bl5ka>Combining RDB and AOF</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#memory-optimization" class="toc-link" data-toc-link="memory-optimization" data-astro-cid-p33bl5ka>Memory Optimization</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-planning" class="toc-link" data-toc-link="capacity-planning" data-astro-cid-p33bl5ka>Capacity Planning</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-question" class="toc-link" data-toc-link="interview-question" data-astro-cid-p33bl5ka>Interview Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#common-pitfall" class="toc-link" data-toc-link="common-pitfall" data-astro-cid-p33bl5ka>Common Pitfall</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Distributed Cache (Redis/Memcached)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-intermediate" data-astro-cid-sgg5joot>intermediate</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 35 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 49 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>basics</span><span class="tag" data-astro-cid-sgg5joot>caching</span><span class="tag" data-astro-cid-sgg5joot>redis</span><span class="tag" data-astro-cid-sgg5joot>memcached</span><span class="tag" data-astro-cid-sgg5joot>eviction</span><span class="tag" data-astro-cid-sgg5joot>persistence</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="distributed-cache-redismemcached">Distributed Cache (Redis/Memcached)</h1>
+<p>A distributed cache is a layer of in-memory storage positioned between an application and its backing database, and its purpose is to absorb the read traffic that would otherwise be served from disk-backed storage. The justification is mechanical, not stylistic: a memory read completes in roughly 100 nanoseconds, a flash SSD read in 50–150 microseconds, and a network round-trip to a primary database in 1–10 milliseconds. A cache collapses that stack by two to five orders of magnitude, and at scale the compounding effect is that a single Redis node can serve 100,000 to 1 million operations per second while a primary database instance of comparable cost might handle 5,000–20,000 queries per second before its connection pool saturates.</p>
+<p>The cache is therefore the single highest-leverage optimization in most production systems, but it is also the layer where staleness, consistency, and failure-mode reasoning become most subtle, because the cache is by definition a derivative copy of data whose authority lives elsewhere. Designing a cache well is less about choosing Redis over Memcached and more about making deliberate decisions about population strategy, [[Glossary#Eviction Policy|eviction policy]], consistency guarantees, failure behavior, and capacity — each of which has a correct answer only in the context of a specific read-write pattern.</p>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>An in-memory key-value store shared across application instances, absorbing 90%+ of read traffic before it hits the database. Redis and Memcached are the primary implementations, offering 100K-1M ops/sec per node with sub-millisecond latency through population strategies, eviction policies, and failure-mode handling.</p>
+<p><strong>How it’s asked:</strong> “Design a distributed cache layer using Redis for a system with 1M QPS, 95% hit rate, and &lt;5ms p99 latency. Handle cache penetration, avalanche, stampede, and eviction policies.”</p>
+<h2 id="why-cache-the-three-forces">Why Cache: The Three Forces</h2>
+<p>Three forces drive caching decisions and it is worth naming them explicitly because they pull in different directions:</p>
+<ul>
+<li><strong>[[Glossary#Latency|Latency]]</strong> — users perceive interactions below 100ms as instant and above 1 second as sluggish, and for many read-heavy workloads the database is the bottleneck on that budget.</li>
+<li><strong>[[Glossary#Throughput|Throughput]]</strong> — a cache absorbs repeated reads so the database can spend its limited connection slots and IOPS on writes and cold reads, which means the cache is effectively a load-shedding mechanism as much as a latency mechanism.</li>
+<li><strong>Cost</strong> — hot data served from memory costs less per query than the same data served from a provisioned database, because database pricing scales with storage, compute, and IOPS while cache pricing scales primarily with memory.</li>
+</ul>
+<p>The tension between these forces is that maximizing hit rate (cost, throughput) pushes you toward long TTLs and aggressive caching, while minimizing staleness (correctness) pushes you toward short TTLs and conservative caching. Every caching decision is a point on that spectrum, and the engineer’s job is to pick the point deliberately for each data class rather than applying one global policy.</p>
+<h2 id="cache-population-patterns">Cache Population Patterns</h2>
+<p>The four canonical cache population patterns — cache-aside, read-through, write-through, and write-behind — differ in who is responsible for populating the cache, when population happens relative to reads and writes, and what consistency and failure trade-offs result. Choosing among them is the first architectural decision and it should be driven by the read-write ratio, the staleness tolerance, and the write-latency sensitivity of the workload.</p>
+<h3 id="pattern-comparison-at-a-glance">Pattern Comparison at a Glance</h3>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Who populates cache</th>
+<th>Write latency</th>
+<th>Consistency</th>
+<th>Cache in critical path?</th>
+<th>Best for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Cache-Aside</strong></td>
+<td>Application (on miss)</td>
+<td>Low (DB only)</td>
+<td>Eventual; TTL-bounded</td>
+<td>No (cache failure → slow, not broken)</td>
+<td>General default; fault-tolerant reads</td>
+</tr>
+<tr>
+<td><strong>Read-Through</strong></td>
+<td>Cache layer (loader callback)</td>
+<td>Low (DB only)</td>
+<td>Eventual; TTL-bounded</td>
+<td>No</td>
+<td>Many read paths; single gateway to DB</td>
+</tr>
+<tr>
+<td><strong>Write-Through</strong></td>
+<td>Cache (sync write to DB)</td>
+<td>High (~2x: cache + DB)</td>
+<td>Strong (no stale window)</td>
+<td>Yes (cache down → writes fail)</td>
+<td>Config, flags, session, write-then-read</td>
+</tr>
+<tr>
+<td><strong>Write-Behind</strong></td>
+<td>Cache (async batch flush)</td>
+<td>Lowest (cache only)</td>
+<td>Weakest (data loss on crash)</td>
+<td>Yes (cache is sole authority)</td>
+<td>Telemetry, counters; not transactional</td>
+</tr>
+</tbody>
+</table>
+<h3 id="readwrite-flow-diagram">Read/Write Flow Diagram</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌─────────────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                      CACHE POPULATION PATTERNS                              │</span></span>
+<span class="line"><span>└─────────────────────────────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>CACHE-ASIDE  (lazy loading — application owns the cache)</span></span>
+<span class="line"><span>  App            Cache          DB</span></span>
+<span class="line"><span>   │── get(k) ───▶│              │</span></span>
+<span class="line"><span>   │              │ (MISS)       │</span></span>
+<span class="line"><span>   │── get(k) ──────────────────▶│</span></span>
+<span class="line"><span>   │◀──── value ─────────────────│</span></span>
+<span class="line"><span>   │── set(k,v)─▶│               │</span></span>
+<span class="line"><span>   │◀── value ───│               │</span></span>
+<span class="line"><span>  WRITE path:  update DB ──▶ DEL cache   (never SET on write — race risk)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>READ-THROUGH  (cache layer owns the loader)</span></span>
+<span class="line"><span>  App            Cache          DB</span></span>
+<span class="line"><span>   │── get(k) ───▶│              │</span></span>
+<span class="line"><span>   │              │ (MISS)       │</span></span>
+<span class="line"><span>   │              │── loader() ─▶│</span></span>
+<span class="line"><span>   │              │◀── value ───│</span></span>
+<span class="line"><span>   │              │── set(k,v) ▶│  (internal)</span></span>
+<span class="line"><span>   │◀── value ────│              │</span></span>
+<span class="line"><span>  App never talks to DB for cached reads; miss logic in one place.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>WRITE-THROUGH  (synchronous double write)</span></span>
+<span class="line"><span>  App            Cache          DB</span></span>
+<span class="line"><span>   │── set(k,v)─▶│              │</span></span>
+<span class="line"><span>   │             │── set(k,v) ─▶│   (synchronous)</span></span>
+<span class="line"><span>   │◀── ok ──────│◀── ok ───────│</span></span>
+<span class="line"><span>  Returns only after BOTH writes succeed → no stale-read window.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>WRITE-BEHIND / WRITE-BACK  (async batch flush)</span></span>
+<span class="line"><span>  App            Cache          DB</span></span>
+<span class="line"><span>   │── set(k,v)─▶│              │</span></span>
+<span class="line"><span>   │◀── ok ──────│              │   (returns immediately)</span></span>
+<span class="line"><span>   │             │  ··· batch ···│</span></span>
+<span class="line"><span>   │             │── flush ────▶│   (timer / count / pressure)</span></span>
+<span class="line"><span>  Lowest write latency; BUT cache crash before flush = permanent loss.</span></span>
+<span class="line"><span>  Reads must always prefer the cache (DB may be stale until flush).</span></span></code></pre>
+<h3 id="cache-aside-lazy-loading">Cache-Aside (Lazy Loading)</h3>
+<p>Cache-aside is the most common pattern because it is the simplest to reason about and the most fault-tolerant. The application code explicitly manages the cache: on a read, it checks the cache first, and only on a miss does it query the database and then backfill the cache with a TTL. On a write, it updates the database and then deletes the cache entry — not updates it, deletes it — so the next read is forced to reload fresh data.</p>
+<p>The elegance of cache-aside is that the cache is purely an optimization: if the cache crashes or is flushed, the system continues to function correctly, just slower, because every cache miss transparently falls through to the database. This makes cache-aside the safest default for systems where the cache is not in the critical path of correctness. The downsides are three:</p>
+<ul>
+<li>Every cache miss incurs three round-trips (cache check, database read, cache backfill).</li>
+<li>The cache is cold for data that has never been read.</li>
+<li>The application code must carry cache-management logic in every read path, which is a source of bugs if one code path forgets to backfill.</li>
+</ul>
+<p>The deletion-on-write rule is non-negotiable: updating the cache with <code>SET</code> after a database write creates a race where a concurrent read loads the old value from the database and overwrites your fresh cache entry with stale data, and this race is the single most common caching bug in production.</p>
+<h3 id="read-through">Read-Through</h3>
+<p>Read-through moves the cache-population logic into the cache layer itself: the application calls a single <code>get</code> API on the cache, and if the key is absent the cache internally invokes a configurable loader callback that fetches from the database, populates the cache, and returns the value. The application never talks to the database directly for cached reads. This is cleaner than cache-aside because the read path has a single call and the cache-miss logic lives in one place rather than being scattered across every read site, which eliminates the “forgot to backfill” class of bug.</p>
+<p>Read-through still has the cold-start cost of cache-aside — the first read of any key hits the database — and it introduces a coupling between the cache and the database that makes the cache layer slightly harder to swap out. Redis does not natively support read-through; it is typically implemented in a client library (like Spring Cache or a custom wrapper) that intercepts cache misses and invokes the loader. Read-through is the right choice when you have many read paths that would otherwise duplicate cache-aside logic, and when you want the cache to be the single gateway to the database for reads.</p>
+<h3 id="write-through">Write-Through</h3>
+<p>Write-through inverts the write path: the application writes to the cache, and the cache synchronously writes to the database before returning success to the application. The cache is always warm and always consistent with the database — there is no stale-read window because the cache and database are updated atomically from the caller’s perspective.</p>
+<p>This is the strongest consistency guarantee of the four patterns, and it is the right choice for data where staleness is unacceptable: configuration, feature flags, session state, or any write-then-immediately-read workflow. The cost is write latency: every write now pays for both a cache write and a database write before the caller can proceed, which roughly doubles write latency compared to writing to the database alone. Write-through works best when writes are relatively infrequent compared to reads (so the latency overhead is amortized) and when the cache and database are co-located enough that the double write is cheap. It also requires the cache to be in the critical path of correctness: if the cache is down, writes fail, which means write-through demands higher availability for the cache layer than cache-aside does.</p>
+<h3 id="write-behind-write-back">Write-Behind (Write-Back)</h3>
+<p>Write-behind is the highest-throughput write pattern: the application writes only to the cache, and the cache asynchronously flushes to the database in batches, either on a timer, after a configurable number of writes, or when memory pressure triggers a flush. This gives the lowest possible write latency because the caller never waits for the database, and it smooths out write spikes by absorbing them into memory and draining to the database at a controlled rate.</p>
+<p>The trade-off is the most severe of any pattern: if the cache node crashes before a flush completes, those writes are permanently lost, because the cache was the sole authority and the database never saw them. This makes write-behind unsuitable for transactional data — financial records, orders, anything with audit or compliance requirements — and suitable for telemetry, counters, session updates, and other data where a small loss window is acceptable in exchange for throughput. Write-behind also complicates reads: if a read hits the cache it gets the latest value, but if it falls through to the database it gets a stale value because the database hasn’t been flushed yet, so the read path must always prefer the cache. Redis does not natively support write-behind; it is implemented with client-side write buffering, or with Redis Streams as a durable write-ahead log that a consumer drains to the database, which adds durability at the cost of complexity.</p>
+<h2 id="redis-architecture-single-threaded-command-execution-with-io-multiplexing">Redis Architecture: Single-Threaded Command Execution with I/O Multiplexing</h2>
+<p>Redis’s architecture is often summarized as “single-threaded,” but that summary is incomplete and the full picture matters for capacity planning and for understanding why Redis behaves the way it does under load. The core model is that a single Redis process handles all command execution on a single main thread, using an event loop based on <code>epoll</code> (on Linux) or <code>kqueue</code> (on macOS) for I/O multiplexing. This means Redis processes one command at a time, serially, and because there is no parallel command execution, every command is inherently atomic with respect to every other command — there are no locks, no mutexes, no race conditions within a single Redis instance, and this is the structural reason Redis can offer atomic operations like <code>INCR</code>, <code>GETSET</code>, and <code>LPUSH</code> without any explicit locking mechanism. The event loop accepts connections, reads commands from sockets into an input buffer, executes them one at a time on the main thread, and writes responses back to sockets — all without blocking, because the I/O is non-blocking and multiplexed.</p>
+<p>Since Redis 6.0, the I/O threading model has been extended: Redis can now use a pool of I/O threads to handle the read and write of socket buffers in parallel, while command execution remains on the single main thread. This is because for high-throughput workloads with many connections, the bottleneck is often not command execution but the CPU cost of reading from and writing to sockets — the <code>read</code> and <code>write</code> system calls and the buffer copying. I/O threads parallelize that work, but they do not execute commands, so the single-threaded execution semantics are preserved. This is an important nuance for interviews: Redis 6+ is not multi-threaded in the sense that Memcached is; it is single-threaded for command execution with optional multi-threaded I/O, and the atomicity guarantees are unchanged.</p>
+<p>The practical implication is that a single Redis instance is CPU-bound on a single core for command execution, so vertical scaling is limited to the speed of one core, and horizontal scaling requires Redis Cluster or multiple instances. A slow command — <code>KEYS *</code>, <code>SMEMBERS</code> on a large set, <code>LRANGE 0 -1</code> on a million-element list — blocks the entire event loop and stalls every other client, which is why Redis commands are designed to be O(1) or O(log N) and why the <code>KEYS</code> command is forbidden in production in favor of <code>SCAN</code>.</p>
+<h2 id="memcached-architecture-multi-threaded-with-slab-allocation">Memcached Architecture: Multi-Threaded with Slab Allocation</h2>
+<p>Memcached takes the opposite architectural bet: it is multi-threaded, with a configurable number of worker threads (typically set to the number of CPU cores), each handling commands independently and sharing access to the hash table via a fine-grained per-bucket lock. This means Memcached can utilize all available CPU cores for command execution, which makes it more throughput-efficient on multi-core machines than a single Redis instance, and it is the reason Memcached can scale vertically by adding cores while Redis cannot without clustering. The trade-off is that Memcached’s command set is intentionally minimal — <code>get</code>, <code>set</code>, <code>add</code>, <code>replace</code>, <code>delete</code>, <code>incr</code>, <code>decr</code>, <code>cas</code> — because any complex operation would require cross-thread coordination that would defeat the purpose of the multi-threaded design. There are no lists, sets, sorted sets, or Lua scripts; every value is an opaque blob, and the application is responsible for any structural interpretation.</p>
+<p>Memcached’s memory management is built around the slab allocator, which is the second defining difference from Redis. Rather than using a general-purpose allocator like <code>jemalloc</code> (which Redis uses) and accepting the fragmentation that comes with variable-size allocations, Memcached pre-divides memory into slabs, each slab class serving objects of a specific size range (e.g., slab class 1 serves 1–64 byte objects, class 2 serves 65–128 byte objects, and so on, doubling up to the maximum item size of 1MB by default). When a <code>set</code> arrives, Memcached determines the slab class for the value size and allocates from that class’s free chunk list. This eliminates per-allocation fragmentation within a slab class because every chunk in a class is the same size, and allocation and deallocation are O(1) pointer manipulations.</p>
+<p>The cost is that memory is partitioned by size class and cannot be dynamically rebalanced: if your workload stores many 70-byte objects, slab class 2 fills up while slab class 1 (64-byte chunks) sits empty, and Memcached will evict from class 2 rather than reclaim class 1’s memory. This is called slab assignment imbalance and it is a known operational concern with Memcached, mitigated by the <code>-f</code> growth factor flag (which controls the ratio between slab class sizes) and by monitoring <code>stats slabs</code> output to verify that no class is starved while another is over-provisioned. The 1MB item size limit is also a hard constraint: Memcached cannot store a value larger than 1MB without recompilation, while Redis can store values up to 512MB.</p>
+<h2 id="redis-vs-memcached-side-by-side">Redis vs Memcached: Side-by-Side</h2>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Redis</th>
+<th>Memcached</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Threading model</strong></td>
+<td>Single main thread for command execution; optional I/O threads (6.0+)</td>
+<td>Multi-threaded; one worker per core, per-bucket locks</td>
+</tr>
+<tr>
+<td><strong>CPU scaling</strong></td>
+<td>Vertical limited to one core; scale horizontally via Cluster</td>
+<td>Scales vertically with cores</td>
+</tr>
+<tr>
+<td><strong>Atomicity</strong></td>
+<td>Inherent — no locks needed (serial execution)</td>
+<td>Per-bucket locks; <code>CAS</code> for check-and-set</td>
+</tr>
+<tr>
+<td><strong>Data types</strong></td>
+<td>Strings, hashes, lists, sets, sorted sets, streams, bitmaps, HyperLogLog</td>
+<td>Opaque blobs only</td>
+</tr>
+<tr>
+<td><strong>Max value size</strong></td>
+<td>512 MB</td>
+<td>1 MB (hard, unless recompiled)</td>
+</tr>
+<tr>
+<td><strong>Memory allocator</strong></td>
+<td><code>jemalloc</code> (variable-size; fragmentation possible)</td>
+<td>Slab allocator (size-classed; O(1) alloc, imbalance risk)</td>
+</tr>
+<tr>
+<td><strong>Eviction</strong></td>
+<td>Approximate LRU / LFU / random / TTL / noeviction</td>
+<td>True LRU per slab class</td>
+</tr>
+<tr>
+<td><strong>Persistence</strong></td>
+<td>RDB snapshots + AOF log</td>
+<td>None (purely in-memory)</td>
+</tr>
+<tr>
+<td><strong>Replication / HA</strong></td>
+<td>Primary-replica async replication; Redis Cluster failover</td>
+<td>None built-in (client-side sharding; no replicas)</td>
+</tr>
+<tr>
+<td><strong>Sharding</strong></td>
+<td>Redis Cluster — 16,384 hash slots, <code>MOVED</code>/<code>ASK</code> redirects</td>
+<td>Client-side consistent hashing</td>
+</tr>
+<tr>
+<td><strong>Pub/Sub &amp; Streams</strong></td>
+<td>Native Pub/Sub + Streams (durable, consumer groups)</td>
+<td>None</td>
+</tr>
+<tr>
+<td><strong>Scripting</strong></td>
+<td>Lua, functions</td>
+<td>None</td>
+</tr>
+<tr>
+<td><strong>Best fit</strong></td>
+<td>Rich data structures, persistence, HA, complex workloads</td>
+<td>Pure, simple, high-throughput opaque-key caching</td>
+</tr>
+</tbody>
+</table>
+<h2 id="eviction-policies">Eviction Policies</h2>
+<p>When a cache reaches its memory limit, it must evict existing keys to make room for new ones, and the eviction policy determines which keys are sacrificed. The choice of policy should be driven by the access pattern of the workload: some workloads have a stable hot set where recency is a good predictor of future access, others have a long tail where frequency matters more, and others are essentially random.</p>
+<h3 id="eviction-policy--victim-selection">Eviction Policy — Victim Selection</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌─────────────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                  EVICTION POLICY — VICTIM SELECTION                         │</span></span>
+<span class="line"><span>│   sample keys with access history (age = time since last access)            │</span></span>
+<span class="line"><span>└─────────────────────────────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  key     last access        count    TTL left</span></span>
+<span class="line"><span>  ──────  ───────────────    ──────   ──────────</span></span>
+<span class="line"><span>  A       5 min ago          100      none</span></span>
+<span class="line"><span>  B       1 hour ago         2        30s</span></span>
+<span class="line"><span>  C       just now           1        10m</span></span>
+<span class="line"><span>  D       10 min ago         50       2s</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  LRU            ─▶ evicts B   (accessed longest ago)        recency predicts future</span></span>
+<span class="line"><span>  LFU            ─▶ evicts C   (lowest frequency count)      frequency predicts value</span></span>
+<span class="line"><span>  RANDOM         ─▶ evicts ?   (uniform random pick)         zero tracking overhead</span></span>
+<span class="line"><span>  volatile-ttl   ─▶ evicts D   (shortest remaining TTL)      ephemeral first, keep permanent</span></span>
+<span class="line"><span>  noeviction     ─▶ evicts none — returns OOM error          refuse writes; no data loss</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Redis implements APPROXIMATE LRU/LFU: samples `maxmemory-samples` random keys</span></span>
+<span class="line"><span>  (default 5) and evicts the worst among the sample — cheap, near-optimal in practice.</span></span></code></pre>
+<h3 id="lru-least-recently-used">LRU (Least Recently Used)</h3>
+<p>LRU evicts the key that was accessed longest ago, under the assumption that keys accessed recently are more likely to be accessed again. Redis implements an approximate LRU: rather than maintaining a globally sorted linked list of all keys by access time (which would be expensive in memory and CPU), Redis samples a configurable number of random keys (default 5, tunable via <code>maxmemory-samples</code>) and evicts the least recently used among the sample. This approximation is effective in practice because the sampled subset is usually representative, and increasing <code>maxmemory-samples</code> to 10 brings the approximation close to true LRU at the cost of slightly more CPU per eviction. Memcached uses a true LRU per slab class, which is feasible because each class has its own doubly-linked list and the number of items per class is bounded by the slab’s memory.</p>
+<h3 id="lfu-least-frequently-used">LFU (Least Frequently Used)</h3>
+<p>LFU evicts keys with the lowest access frequency count, under the assumption that keys accessed many times are more valuable than keys accessed recently but rarely. Redis 4.0 introduced LFU with a probabilistic counter: each key carries a logarithmic access counter that decays over time, so a key accessed 100 times in the last hour has a higher count than a key accessed 100 times over the last week. LFU is the right choice for workloads with a stable hot set and a long cold tail — recommendation systems, configuration data, product catalogs — where the hot keys are hot because of intrinsic popularity, not recency. The decay mechanism ensures that a key that was popular last month but is now dead will eventually be evicted even if its historical count is high.</p>
+<h3 id="random">Random</h3>
+<p>Random eviction removes a random key when memory is full. This sounds naive but is surprisingly effective for workloads where all keys have roughly equal access probability — session storage where all sessions are equally likely to be accessed next, for example. Random eviction has zero tracking overhead (no access timestamps, no frequency counters) and is the fastest eviction policy in terms of per-eviction CPU cost. Memcached does not support random eviction natively; Redis supports it via <code>maxmemory-policy allkeys-random</code>.</p>
+<h3 id="ttl-based-eviction">TTL-based Eviction</h3>
+<p>TTL-based eviction is not strictly an eviction policy but a complementary mechanism: keys with a TTL expire automatically after their lifetime, reducing the need for eviction under memory pressure. Redis’s <code>volatile-ttl</code> policy evicts keys with the shortest remaining TTL first among keys that have a TTL set, which is useful when you can distinguish between “important” keys (no TTL, never evict) and “ephemeral” keys (TTL set, evict these first). Redis’s <code>noeviction</code> policy, the default, refuses writes when memory is full and returns an error to the client — this is the safest policy for caches that are in the write-path of correctness, because silent eviction can cause data loss in write-through or write-behind patterns, but it requires the operator to monitor memory and scale before the limit is hit.</p>
+<h3 id="production-policy-choices">Production Policy Choices</h3>
+<p>The Redis eviction policy is set via <code>maxmemory-policy</code> and the common production choices are:</p>
+<table>
+<thead>
+<tr>
+<th>Policy</th>
+<th>Behavior</th>
+<th>Use when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>allkeys-lru</code></td>
+<td>Evict any key by LRU</td>
+<td>Standard cache-aside choice</td>
+</tr>
+<tr>
+<td><code>volatile-lru</code></td>
+<td>Evict only TTL keys, by LRU</td>
+<td>Mixed workloads; some keys permanent</td>
+</tr>
+<tr>
+<td><code>allkeys-lfu</code></td>
+<td>Evict any key by LFU</td>
+<td>Stable hot-set workloads</td>
+</tr>
+<tr>
+<td><code>volatile-lfu</code></td>
+<td>Evict only TTL keys, by LFU</td>
+<td>Mixed workloads with stable hot set</td>
+</tr>
+<tr>
+<td><code>allkeys-random</code></td>
+<td>Evict any key at random</td>
+<td>Uniform-access workloads (e.g. sessions)</td>
+</tr>
+<tr>
+<td><code>volatile-ttl</code></td>
+<td>Evict shortest-TTL keys first</td>
+<td>Distinguish permanent vs ephemeral</td>
+</tr>
+<tr>
+<td><code>noeviction</code></td>
+<td>Refuse writes; return OOM error</td>
+<td>Write-through/write-behind (eviction = data loss)</td>
+</tr>
+</tbody>
+</table>
+<p>The choice should be documented and reviewed, because the default <code>noeviction</code> will cause write failures under memory pressure that are easy to misdiagnose as network issues.</p>
+<h2 id="cache-stampede-and-thundering-herd">Cache Stampede and Thundering Herd</h2>
+<p>A cache stampede, also called a thundering herd or dog-pile, occurs when a popular cache key expires and a large number of concurrent requests simultaneously discover the miss and all attempt to load the same data from the database. Instead of one database query, you get hundreds or thousands of identical queries hitting the database at the same instant, and because the database is typically not provisioned for this burst, the result is a latency spike, connection pool exhaustion, or a cascading failure where the database slows down, which causes the application’s request timeout to fire, which causes retries, which further load the database. The stampede is particularly dangerous because it is self-reinforcing: the more requests that pile up, the longer each one takes, and the longer they take, the more new requests arrive while the old ones are still in flight.</p>
+<h3 id="stampede-flow-diagram">Stampede Flow Diagram</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌─────────────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                   CACHE STAMPEDE / THUNDERING HERD                          │</span></span>
+<span class="line"><span>└─────────────────────────────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  T0: hot key's TTL expires</span></span>
+<span class="line"><span>        │</span></span>
+<span class="line"><span>        ▼</span></span>
+<span class="line"><span>   ┌──────────┐  miss   ┌───────────┐</span></span>
+<span class="line"><span>   │  Req 1   │────────▶│ DB query  │</span></span>
+<span class="line"><span>   └──────────┘         └───────────┘</span></span>
+<span class="line"><span>   ┌──────────┐  miss   ┌───────────┐</span></span>
+<span class="line"><span>   │  Req 2   │────────▶│ DB query  │   N identical queries</span></span>
+<span class="line"><span>   └──────────┘         └───────────┘   hit the DB at once ──▶ overload</span></span>
+<span class="line"><span>   ┌──────────┐  miss   ┌───────────┐</span></span>
+<span class="line"><span>   │  Req N   │────────▶│ DB query  │   (self-reinforcing: pile-up</span></span>
+<span class="line"><span>   └──────────┘         └───────────┘    slows each req → more arrive)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  ── DEFENSE 1: LOCK-BASED FILL (request coalescing) ─────────────────────────</span></span>
+<span class="line"><span>     Req1 ──SET NX lock──▶ [ DB query + backfill ] ──DEL lock</span></span>
+<span class="line"><span>     Req2..N ──poll cache──▶ read fresh value</span></span>
+<span class="line"><span>     → collapses N queries into 1; lock TTL must outlast DB query</span></span>
+<span class="line"><span>       but be short enough that a crashed holder doesn't block all.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  ── DEFENSE 2: PROBABILISTIC EARLY EXPIRATION (PER / XFetch) ────────────────</span></span>
+<span class="line"><span>     on HIT: compute early-refresh time = now + (TTL − β·rand^α)</span></span>
+<span class="line"><span>     if now > early-refresh ──▶ background refresh, return cached value</span></span>
+<span class="line"><span>     → staggered refreshers; no lock contention; no synchronized miss.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  ── DEFENSE 3: BACKGROUND REFRESH / CACHE WARMING ───────────────────────────</span></span>
+<span class="line"><span>     scheduled job refreshes known hot keys BEFORE TTL expiry</span></span>
+<span class="line"><span>     → read path never sees a miss for those keys; only helps known hot set.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  In production: combine all three — warming for known hot keys,</span></span>
+<span class="line"><span>  PER for the middle tier, lock-based fill as the fallback.</span></span></code></pre>
+<h3 id="defense-1--lock-based-cache-fill-request-coalescing">Defense 1 — Lock-Based Cache Fill (Request Coalescing)</h3>
+<p>The first line of defense is lock-based cache fill, also called request coalescing: when a cache miss is detected, the requesting thread acquires a distributed lock (using Redis <code>SET NX</code> or a dedicated lock service) for that key, and only the lock holder queries the database and backfills the cache. All other concurrent requests for the same key poll the cache and wait for the lock holder to populate it, then read the freshly cached value. This collapses N identical database queries into one, but it introduces a dependency on the lock service and a failure mode where the lock holder crashes before backfilling, leaving the other requests waiting until the lock expires. The lock TTL must be set carefully: long enough that the database query can complete, short enough that a crashed lock holder doesn’t block everyone for too long.</p>
+<h3 id="defense-2--probabilistic-early-expiration-per--xfetch">Defense 2 — Probabilistic Early Expiration (PER / XFetch)</h3>
+<p>The second defense is probabilistic early expiration (PER), also known as XFetch, which avoids the lock entirely by having each client probabilistically decide to refresh the cache before the TTL expires. The algorithm is elegant: on a cache hit, the client computes a probabilistic early refresh time based on the key’s TTL and a random factor, and if the current time exceeds that threshold, the client refreshes the cache in the background while still returning the cached value to the caller. The probability distribution is tuned so that the expected number of early refreshes is small (typically one or two) while the chance of a stampede — where no client refreshes early and all hit the miss simultaneously — is negligible. PER has no lock contention, no extra infrastructure, and degrades gracefully, making it the preferred solution for high-traffic hot keys where lock contention itself would be a bottleneck.</p>
+<h3 id="defense-3--background-refresh--cache-warming">Defense 3 — Background Refresh / Cache Warming</h3>
+<p>The third defense is background refresh or cache warming: a separate process or scheduled job proactively refreshes hot keys before they expire, so the application read path never sees a miss for those keys. This is the most robust approach for a small, known set of hot keys — the homepage of a news site, the top 100 products on an e-commerce platform — but it requires identifying the hot keys in advance and it does not help for the long tail of less-popular keys that can still stampede if they happen to expire simultaneously. In practice, production systems combine all three: background refresh for known hot keys, PER for the middle tier, and lock-based fill as the fallback for everything else.</p>
+<h2 id="cache-warming">Cache Warming</h2>
+<p>Cache warming is the practice of pre-populating the cache with data before it is needed, rather than waiting for organic reads to fill it. The most common trigger is a cold start: after a cache flush, a deployment, or a failover, the cache is empty and the first wave of traffic will produce a 100% miss rate that floods the database. Without warming, this cold-start period can last minutes to hours depending on traffic volume, and during that window the database is vulnerable to overload. Warming collapses that window by loading the expected hot set into the cache before traffic is directed to it.</p>
+<p>The warming process typically iterates over a known list of hot keys — derived from historical access logs, analytics, or a static configuration — and loads each from the database into the cache with an appropriate TTL. For systems with a stable hot set, warming can be done once at startup; for systems with a shifting hot set, warming can be run on a schedule (e.g., every 10 minutes) to keep the cache populated with the current hot keys. The key insight is that warming is a trade-off between database load during warming and database load during cold starts: warming spreads the database queries over a controlled period, while a cold start concentrates them into a burst. For any cache that serves a workload with a identifiable hot set and a restart or failover scenario, warming should be a standard operational procedure, not an afterthought.</p>
+<h2 id="distributed-cache-consistency">Distributed Cache Consistency</h2>
+<p>The fundamental tension in cache consistency is that the cache is a guess about future reads while the database is the ground truth, and any time the database is updated without a corresponding cache update (or invalidation), the cache becomes stale. The question is not whether staleness occurs but how large the staleness window is and whether it is bounded.</p>
+<p>The most common consistency bug is the <strong>write-after-delete race</strong> in cache-aside: Thread A reads the cache and gets a miss, Thread A reads the old value from the database, Thread B updates the database with a new value, Thread B deletes the cache entry, Thread A writes the old value back into the cache. Now the cache has stale data that will persist until the TTL expires, and the staleness window is the full TTL, which could be minutes or hours. This race is subtle because it requires a specific interleaving of a slow read and a fast write, but at high concurrency it happens with non-trivial probability, especially for keys with long read latencies (large values, complex database queries). The mitigation is to never write the old value to the cache after a database read if the database read took longer than the write-to-delete window — or more practically, to use a cache versioning scheme where each cached value carries a version number, and the cache is only populated if the version matches the current version in the database. Another mitigation is to delay the cache deletion slightly (the “delayed double delete” pattern): after updating the database and deleting the cache, schedule a second deletion after a short delay (e.g., 500ms) to clean up any stale value that was written by a racing read.</p>
+<p>A broader consistency concern is <strong>cross-key consistency</strong>: when a database transaction updates multiple keys, the cache invalidations for those keys are not atomic — one key may be invalidated while another still holds the old value, and a read that spans both keys can see an inconsistent snapshot. This is inherent to cache-aside with a non-transactional cache and cannot be fully solved without making cache invalidation transactional with the database write, which is what write-through achieves at the cost of latency. For most workloads, the pragmatic approach is to accept a short inconsistency window for cross-key reads and to design the application to tolerate it (e.g., by reading the full object from a single cached key rather than assembling it from multiple keys), or to use a database change data capture (CDC) stream to invalidate cache entries in a controlled, ordered manner after each transaction commits.</p>
+<h2 id="redis-cluster-slots-sharding-and-resharding">Redis Cluster: Slots, Sharding, and Resharding</h2>
+<p>Redis Cluster is Redis’s built-in [[Glossary#Sharding|sharding]] and high-availability solution, and understanding its slot-based architecture is essential for operating Redis at scale. Redis Cluster divides the entire keyspace into 16,384 hash slots, and each key is mapped to a slot by a CRC16 hash of the key modulo 16,384. Each node in the cluster is responsible for a contiguous or non-contiguous range of slots, and every node knows the full slot-to-node mapping, so any node can redirect a client to the correct node for a given key. This slot-based approach has two important properties: first, the number of slots is fixed at 16,384 regardless of the number of nodes, which means the mapping function is stable and does not change when nodes are added or removed; second, because the slot assignment is deterministic from the key, clients can compute the target node locally and connect directly, avoiding a proxy hop for every request.</p>
+<h3 id="slot-distribution-diagram">Slot Distribution Diagram</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌─────────────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│              REDIS CLUSTER — 16,384 HASH SLOTS                              │</span></span>
+<span class="line"><span>│            key  ──CRC16(key) % 16384──▶  slot  ──▶  owner node             │</span></span>
+<span class="line"><span>└─────────────────────────────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   slot 0                slot 5461            slot 10923         slot 16383</span></span>
+<span class="line"><span>     ▼                      ▼                    ▼                  ▼</span></span>
+<span class="line"><span>  ┌────────────────────┬─────────────────────┬─────────────────────┐</span></span>
+<span class="line"><span>  │  Node A (primary)  │  Node B (primary)   │  Node C (primary)   │</span></span>
+<span class="line"><span>  │  slots 0 – 5460    │  slots 5461 – 10922 │  slots 10923 – 16383│</span></span>
+<span class="line"><span>  │     ▲ async repl   │     ▲ async repl    │     ▲ async repl    │</span></span>
+<span class="line"><span>  │     │               │     │              │     │               │</span></span>
+<span class="line"><span>  │     ▼               │     ▼              │     ▼               │</span></span>
+<span class="line"><span>  │  Node A' (replica) │  Node B' (replica) │  Node C' (replica)  │</span></span>
+<span class="line"><span>  └────────────────────┴─────────────────────┴─────────────────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   client computes slot locally ──▶ connects directly to owner node (no proxy)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   wrong node?  ──MOVED──▶  permanent redirect; client updates slot map, retries</span></span>
+<span class="line"><span>               ──ASK────▶  temporary redirect (slot mid-migration);</span></span>
+<span class="line"><span>                           client follows but does NOT update slot map</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   primary fails?  gossip detects (≈30s) ──▶ promote replica for its slots</span></span>
+<span class="line"><span>                  no replica?  slots UNAVAILABLE (cluster may keep serving</span></span>
+<span class="line"><span>                  other slots unless cluster-require-full-coverage = yes)</span></span></code></pre>
+<h3 id="resharding">Resharding</h3>
+<p><strong>Resharding</strong> is the process of moving hash slots from one node to another, typically when adding or removing nodes to change the cluster’s capacity. Redis Cluster supports online resharding: the cluster remains available for reads and writes while slots are being migrated. The process works at the slot level: for each slot being moved, the source node marks the slot as “migrating” and the destination node marks it as “importing,” and keys in that slot are moved one at a time using the <code>MIGRATE</code> command. During migration, a key lookup on the source node for a key that has already been moved returns an <code>ASK</code> redirect to the destination node, and a key lookup on the destination node for a key that has not yet been moved returns a <code>MOVED</code> redirect to the source node (since the slot is not yet fully owned by the destination). Clients must handle both redirects: <code>MOVED</code> is a permanent redirect that updates the client’s slot map, while <code>ASK</code> is a temporary redirect that does not update the slot map (because the slot is mid-migration and the mapping is not yet final). This distinction is important for interview depth: <code>MOVED</code> means “this slot lives on a different node permanently, update your cache,” while <code>ASK</code> means “this specific key has been moved ahead of the slot migration, follow me but don’t remember it.”</p>
+<h3 id="replication-and-failover">Replication and Failover</h3>
+<p>Each slot range is served by a primary node and one or more replica nodes, and the replicas use asynchronous replication from the primary. If a primary fails, the cluster’s gossip protocol detects the failure (after a configurable timeout, default 30 seconds) and promotes a replica to primary for the affected slots. If a primary fails and has no replica, the slots served by that primary become unavailable, and the cluster can be configured to either continue serving other slots (the default) or to stop serving all slots (the <code>cluster-require-full-coverage</code> option). This is a trade-off between availability and consistency: partial availability means some keys are unreachable while others are served, which is acceptable for most cache workloads but problematic for systems that require all-or-nothing availability.</p>
+<h2 id="pubsub">Pub/Sub</h2>
+<p>Redis Pub/Sub is a messaging mechanism where publishers send messages to channels without knowledge of subscribers, and subscribers receive messages in real-time as they are published. Unlike list-based queues, Pub/Sub does not persist messages: if no subscriber is listening, the message is dropped, and if a subscriber disconnects and reconnects, it does not receive messages that were published during the disconnection. This fire-and-forget semantic makes Pub/Sub suitable for real-time signaling — chat presence notifications, cache invalidation broadcasts, live leaderboard updates — but unsuitable for reliable delivery where every message must be processed. Redis maintains a global command queue for each subscriber, and if a subscriber is slow to consume, the queue grows, and Redis will eventually disconnect the subscriber if its output buffer exceeds a configurable limit (<code>client-output-buffer-limit pubsub</code>), which is a backpressure mechanism to prevent one slow subscriber from degrading the entire Redis instance.</p>
+<p>For use cases that need reliable delivery, Redis Streams (introduced in Redis 5.0) provide a persistent, consumer-group-capable log that combines the real-time feel of Pub/Sub with the durability of a message queue. Streams support multiple consumers reading from the same stream with consumer groups, automatic acknowledgment, and message replay from any offset, making them a better fit for event-driven architectures where message loss is unacceptable. The common interview point is that Pub/Sub is for ephemeral fan-out (the message is valuable only at the moment of publication) while Streams are for durable fan-out (the message must be processed even if the consumer is temporarily unavailable), and conflating the two leads to either lost messages (using Pub/Sub where durability is needed) or unnecessary complexity (using Streams where fire-and-forget suffices).</p>
+<h2 id="redis-persistence-rdb-and-aof">Redis Persistence: RDB and AOF</h2>
+<p>Redis is primarily an in-memory store, but it offers two persistence mechanisms that allow data to survive a restart or crash, and the choice between them (or their combination) depends on the acceptable data loss window and the performance budget.</p>
+<h3 id="rdb-redis-database-snapshots">RDB (Redis Database) Snapshots</h3>
+<p>RDB snapshots are point-in-time binary dumps of the entire dataset, written to a single file (<code>dump.rdb</code>). Redis forks a child process that writes the snapshot while the parent continues serving traffic, using copy-on-write semantics so the child sees a consistent snapshot of memory at the fork moment. RDB is compact (a single binary file, efficient to transfer for backups), fast to load on restart (reading a binary file into memory is quicker than replaying a log), and has zero impact on the main thread’s command execution during the snapshot (the fork does the work). The downside is granularity: if Redis crashes between snapshots, all writes since the last snapshot are lost. The snapshot frequency is configurable (<code>save 900 1</code> means “snapshot if at least 1 key changed in the last 900 seconds”), but more frequent snapshots increase fork frequency, and on large datasets the fork itself can cause a latency spike due to copy-on-write page table duplication, even though the main thread is not blocked. RDB is the right choice for backup and disaster recovery where losing the last few minutes of writes is acceptable and where fast restart is important.</p>
+<h3 id="aof-append-only-file">AOF (Append-Only File)</h3>
+<p>AOF is a log of every write command, appended to a file as it is received. On restart, Redis replays the AOF to reconstruct the dataset. The AOF can be configured with three sync policies:</p>
+<table>
+<thead>
+<tr>
+<th>Policy</th>
+<th>Behavior</th>
+<th>Trade-off</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>always</code></td>
+<td>fsync after every write</td>
+<td>Most durable, but very slow (each fsync is a disk sync, ms-scale)</td>
+</tr>
+<tr>
+<td><code>everysec</code></td>
+<td>fsync once per second</td>
+<td>Recommended default; max loss window ≈ 1 second</td>
+</tr>
+<tr>
+<td><code>no</code></td>
+<td>OS decides when to fsync</td>
+<td>Fastest; unpredictable loss window up to ~30s</td>
+</tr>
+</tbody>
+</table>
+<p>The AOF grows over time as every write is logged, so Redis periodically rewrites the AOF: the rewrite forks a child process that constructs a new, minimal AOF by reading the current dataset state and writing the minimal set of commands needed to reproduce it, which collapses a log that has accumulated thousands of increments on the same key into a single <code>SET</code> with the final value. AOF is the right choice when the data loss window must be bounded to approximately one second, which covers most session, configuration, and application-state workloads.</p>
+<h3 id="combining-rdb-and-aof">Combining RDB and AOF</h3>
+<p>The production best practice is to enable both RDB and AOF: RDB provides fast restart and a compact backup artifact, while AOF provides a bounded data-loss window. On restart, Redis loads the AOF (which is more complete than the last RDB), so the RDB serves as a fallback and backup. The combined approach has slightly higher disk usage and write overhead, but for any Redis instance where data persistence matters, the overhead is justified by the resilience.</p>
+<h2 id="memory-optimization">Memory Optimization</h2>
+<p>Redis memory efficiency is a critical operational concern because Redis stores everything in RAM, and RAM is the most expensive resource per gigabyte in a server. Several techniques can dramatically reduce memory usage, and they should be applied proactively during capacity planning rather than reactively after OOM events.</p>
+<ul>
+<li>
+<p><strong>Use the right data structure for the access pattern.</strong> Redis offers hashes, lists, sets, and sorted sets as first-class types, and for small collections, Redis uses a compact encoding called <code>ziplist</code> (or <code>listpack</code> in Redis 7.0+) that stores the entire collection as a single contiguous memory block with no per-element overhead. A hash with 10 fields stored as a ziplist takes roughly 100–200 bytes, while the same 10 fields stored as 10 separate string keys takes 10 × (key overhead + value overhead + dict entry) ≈ 600–1000 bytes, because each top-level key has a Redis object header, a dict table entry, and an expires table entry if it has a TTL. The thresholds for compact encoding are configurable: <code>hash-max-ziplist-entries</code> (default 128) and <code>hash-max-ziplist-value</code> (default 64 bytes) control when a hash switches from ziplist to the standard hashtable encoding. Increasing these thresholds keeps more hashes in compact encoding at the cost of O(N) access time for operations on the ziplist, which is acceptable for small N. The general rule is: if you are storing many small objects with a shared prefix (<code>user:1001:name</code>, <code>user:1001:email</code>, <code>user:1001:age</code>), use a single hash per object (<code>HSET user:1001 name ... email ... age ...</code>) rather than separate string keys — the memory savings can be 5–10x for workloads with many small objects.</p>
+</li>
+<li>
+<p><strong>Shorten keys and values.</strong> Every byte in a key is stored in memory for the lifetime of the key, and for workloads with millions of keys, key length is a dominant memory factor. A key named <code>user:session:authentication:token:12345</code> (43 bytes) vs <code>u:s:a:t:12345</code> (14 bytes) saves 29 bytes per key, and at 10 million keys that is 290 MB of savings. The trade-off is readability, which is why key shortening should be applied to high-cardinality, high-volume keys and not to configuration or low-volume keys where clarity matters more. Similarly, values should use the smallest representation that preserves semantics: store integers as integers (Redis encodes small integers in a special 7-byte format), use MessagePack or Protobuf instead of JSON for serialized values, and consider whether boolean flags need to be stored as the string “true” (4 bytes) or as the integer 1 (a few bytes).</p>
+</li>
+<li>
+<p><strong>Set TTLs on all ephemeral keys.</strong> Keys without a TTL accumulate indefinitely, and in a long-running cache, a significant fraction of memory can be consumed by keys that are no longer being accessed but were never expired. Setting a TTL on every key — even a generous one — ensures that dead keys are eventually reclaimed, and the TTL should be chosen based on the data’s staleness tolerance, not set to the maximum possible value “just in case.” Redis’s active expiration cycle runs incrementally in the event loop, sampling keys with TTLs and deleting expired ones, so expiration does not cause latency spikes; the passive path also deletes keys on access if they are found to be expired.</p>
+</li>
+<li>
+<p><strong>Enable <code>activedefrag</code> (Redis 4.0+).</strong> This runs an active defragmentation thread that reclaims memory fragmented by jemalloc’s allocation patterns. Without defragmentation, Redis’s <code>used_memory_rss</code> (resident set size) can be significantly larger than <code>used_memory</code> (logical data size), because freed allocations leave holes that jemalloc cannot return to the OS. Active defragmentation coalesces these holes by copying live data into contiguous regions and freeing the fragmented pages, which can reduce RSS by 10–30% on workloads with high churn (frequent sets and deletes). It is enabled with <code>activedefrag yes</code> and tuned with <code>active-defrag-ignore-bytes</code> and <code>active-defrag-threshold-lower</code> to control when defragmentation triggers.</p>
+</li>
+</ul>
+<h2 id="capacity-planning">Capacity Planning</h2>
+<p>Cache capacity planning is the process of determining how much memory, how many nodes, and what topology are needed to serve a workload at a target hit rate, and it should be done before deployment rather than after an OOM incident. The planning process starts with the <strong>working set size</strong>: the total size of all keys that are accessed frequently enough that they should be in the cache. The working set is not the total dataset size — the total dataset may be 1 TB while the working set (the hot 20% that receives 80% of traffic) may be 50 GB. The cache must be sized to hold the working set with headroom for churn, because if the cache is smaller than the working set, the eviction rate will be high and the hit rate will suffer — this is the point of diminishing returns where adding more memory produces a disproportionate hit-rate improvement until the working set fits, after which additional memory yields diminishing returns.</p>
+<p>The rule of thumb is to provision cache memory at 1.5–2x the working set size: the working set itself plus headroom for new keys being written, for keys that are temporarily hot during a traffic spike, and for the overhead of Redis’s data structures (dict table, expires table, object headers — roughly 30–50% overhead on top of the raw key-value bytes for string types, less for compact-encoded hashes). The memory headroom also gives the eviction policy room to make good decisions: a cache at 95% capacity evicts aggressively and may evict keys that would have been accessed soon, while a cache at 70% capacity evicts lazily and preserves a deeper history.</p>
+<p><strong>Hit rate targets</strong> depend on the workload: 95–99% is typical for read-heavy workloads with a well-defined hot set, while 80–90% may be acceptable for workloads with a long tail. The hit rate directly determines the database load: at 99% hit rate, 1% of reads hit the database, while at 90% hit rate, 10% of reads hit the database — a 10x difference in database load for a 9-point hit-rate change. This is why capacity planning should start from the database’s capacity: if the database can handle 5,000 QPS and the peak read traffic is 100,000 QPS, the cache must achieve at least 95% hit rate (100,000 × 0.05 = 5,000 QPS to the database), which sets a minimum on the cache size needed to hold the working set.</p>
+<p><strong>Node count and topology</strong> are determined by the total memory requirement and the per-node memory limit. A single Redis instance is typically limited to 10–25 GB of data because of the fork-on-snapshot latency (larger datasets mean longer fork times and bigger copy-on-write memory spikes during RDB or AOF rewrite), so a 100 GB working set requires 5–10 Redis instances, which in turn requires Redis Cluster or a client-side sharding layer. The per-node memory limit is also influenced by the failure model: if a node fails, the data on that node is unavailable until a replica is promoted, and the failover causes a temporary spike in miss rate for the affected keys. More nodes means smaller blast radius per failure but more operational complexity, while fewer nodes means simpler operations but larger blast radius. The common production topology for a 100 GB working set is 5–10 primary nodes with 1–2 replicas each, deployed across availability zones, with Redis Cluster managing the slot distribution and failover.</p>
+<h2 id="interview-question">Interview Question</h2>
+<blockquote>
+<p><strong>Q: You run a Redis cache in front of a PostgreSQL database serving a product catalog. After a bulk price update that touches 50,000 products, you see a 10x spike in database QPS that lasts for 20 minutes. Walk through the root cause and your fix. Then: how would you prevent this if the bulk update runs every hour?</strong></p>
+</blockquote>
+<p><strong>Model Answer:</strong> The root cause is a mass cache invalidation stampede. The bulk update deleted 50,000 cache entries at once, and the next read for each of those products is a cache miss that queries PostgreSQL. If your peak read rate is 100,000 QPS and those 50,000 keys were collectively receiving 80% of read traffic, the miss rate jumps from ~1% to ~80% instantaneously, which is a 60–80x increase in database QPS, not 10x — the 10x you observed is probably the averaged view; the instantaneous spike is worse. The spike lasts 20 minutes because that is how long it takes for the organic read traffic to repopulate the cache and bring the hit rate back above 95%.</p>
+<p><strong>Immediate fix:</strong> Rate-limit the cache invalidation. Instead of deleting all 50,000 keys in one batch, delete them in a trickle — e.g., delete 500 keys per second over 100 seconds — so the miss rate rises gradually rather than instantaneously, and the database sees a 5% increase in QPS sustained for 100 seconds rather than a 60x spike for 20 minutes. This requires the application to tolerate a short staleness window for some products (those whose cache entries are deleted later in the trickle), which is almost always acceptable for a price catalog. Alternatively, use a <strong>cache warming</strong> approach: after the bulk update, proactively reload the hot products into the cache from the database in a controlled, rate-limited manner before allowing organic traffic to hit the misses.</p>
+<p><strong>Prevention for hourly bulk updates:</strong> The deeper fix is to decouple the cache invalidation from the bulk update entirely. Instead of deleting keys on write, use a <strong>version-based invalidation</strong> scheme: each cached product entry stores a version number, and the bulk update increments a global “price version” counter. On read, the client checks the cached entry’s version against the current global version (which can itself be cached and is a single key), and if they differ, the entry is treated as stale and refreshed. This means the invalidation is a single <code>INCR</code> command rather than 50,000 <code>DEL</code> commands, and the refresh happens lazily and spread out over time as each key is organically accessed, which naturally rate-limits the database load. For the hottest keys, a background warmer refreshes them proactively before the next bulk update runs. The combination of version-based invalidation (for correctness) and background warming (for hot-key latency) eliminates the stampede entirely while keeping the cache fresh.</p>
+<h2 id="common-pitfall">Common Pitfall</h2>
+<blockquote>
+<p><strong>Setting <code>maxmemory</code> but forgetting to set <code>maxmemory-policy</code>, or setting it to <code>noeviction</code> for a cache-aside workload.</strong> Redis’s default <code>maxmemory-policy</code> is <code>noeviction</code>, which means when Redis hits the memory limit it starts refusing writes with an <code>OOM command not allowed when used memory &gt; 'maxmemory'</code> error — it does not evict. For a cache-aside pattern where the cache is not the source of truth and stale-or-missing data is acceptable, this is the wrong policy: you want <code>allkeys-lru</code> or <code>allkeys-lfu</code>, which evict old keys to make room for new ones and keep the cache serving. The failure mode of <code>noeviction</code> on a cache is insidious: reads still work (they return cached values), but every cache-miss backfill (the <code>SET</code> after a database read) fails silently or with an error that the application may not handle, so the cache hit rate degrades over time as keys expire and cannot be replaced, and the database load climbs steadily until it is overwhelmed. Always set <code>maxmemory</code> to 70–80% of the available RAM (leaving room for the OS, the fork’s copy-on-write overhead, and the output buffers) and set <code>maxmemory-policy</code> to <code>allkeys-lru</code> for general cache-aside workloads. Monitor <code>evicted_keys</code> in <code>INFO stats</code> — a steady, low eviction rate is healthy; a suddenly increasing rate signals that the working set has grown beyond the cache capacity and it is time to scale up.</p>
+</blockquote>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Cache-aside (lazy loading) is the safest default: the cache is purely an optimization, and if it fails the system still works, just slower. Always delete (not update) the cache on write to avoid the stale-overwrite race.</li>
+<li>Redis is single-threaded for command execution (commands are inherently atomic) but CPU-bound on one core; Memcached is multi-threaded but stores only opaque blobs with no persistence or replication.</li>
+<li>Eviction policy must match the access pattern: LRU for recency-driven workloads, LFU for stable hot sets, and <code>noeviction</code> only when the cache is in the write-path of correctness (write-through/write-behind).</li>
+<li>A cache stampede (thundering herd) happens when a hot key expires and every concurrent request hammers the database at once — defend with request coalescing (locks), probabilistic early expiration (PER), and background warming.</li>
+<li>Size the cache to 1.5–2x the working set (not the full dataset); the hit rate directly determines database load, and a 9-point hit-rate swing means a 10x difference in database QPS.</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li><strong>“What happens if the cache goes down entirely?”</strong> — In cache-aside, reads fall through to the database and the system degrades gracefully (slower but correct); in write-through/write-behind, writes fail because the cache is in the critical path, so you need replicas and failover.</li>
+<li><strong>“How do you keep the cache consistent with the database?”</strong> — Use delete-on-write (not set), accept TTL-bounded eventual consistency for most data, and apply delayed double-delete or version-based invalidation for high-consistency needs; write-through gives strong consistency at the cost of doubled write latency.</li>
+<li><strong>“Redis or Memcached?”</strong> — Redis for rich data structures, persistence, replication, and pub/sub; Memcached for pure, simple, high-throughput opaque-key caching where you want multi-core vertical scaling and nothing else.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>The default Redis <code>maxmemory-policy</code> is <code>noeviction</code>, which silently refuses cache-miss backfills (<code>SET</code> after a DB read) when memory is full — the cache hit rate decays over time and database load climbs until it’s overwhelmed, and the error is easy to misdiagnose as a network issue. Always set <code>maxmemory</code> to 70–80% of RAM and <code>maxmemory-policy</code> to <code>allkeys-lru</code> for cache-aside workloads.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/distributed-cache-redis-memcached/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Distributed%20Cache%20(Redis%2FMemcached)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fdistributed-cache-redis-memcached%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fdistributed-cache-redis-memcached%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/distributed-cache-redis-memcached" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/design-an-idempotent-api" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Design an Idempotent API</span></a><a href="/notes/system-design/distributed-tracing" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Distributed Tracing</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Distributed Cache (Redis/Memcached)" data-selector=".article-prose" data-article-slug="system-design/distributed-cache-redis-memcached" data-article-title="Distributed Cache (Redis/Memcached)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

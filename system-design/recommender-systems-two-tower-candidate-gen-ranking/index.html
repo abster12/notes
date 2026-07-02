@@ -1,0 +1,1097 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Recommender Systems (Two-Tower, Candidate Gen, Ranking) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-overview" class="toc-link" data-toc-link="1-overview" data-astro-cid-p33bl5ka>1. Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-key-requirements" class="toc-link" data-toc-link="2-key-requirements" data-astro-cid-p33bl5ka>2. Key Requirements</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#functional-requirements" class="toc-link" data-toc-link="functional-requirements" data-astro-cid-p33bl5ka>Functional Requirements</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#non-functional-requirements-slas" class="toc-link" data-toc-link="non-functional-requirements-slas" data-astro-cid-p33bl5ka>Non-Functional Requirements (SLAs)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-capacity-planning" class="toc-link" data-toc-link="3-capacity-planning" data-astro-cid-p33bl5ka>3. Capacity Planning</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#4-data-model" class="toc-link" data-toc-link="4-data-model" data-astro-cid-p33bl5ka>4. Data Model</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#5-the-two-tower-model--deep-dive" class="toc-link" data-toc-link="5-the-two-tower-model--deep-dive" data-astro-cid-p33bl5ka>5. The Two-Tower Model — Deep Dive</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#how-it-works" class="toc-link" data-toc-link="how-it-works" data-astro-cid-p33bl5ka>How it works</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-real-time-user-embedding-problem" class="toc-link" data-toc-link="the-real-time-user-embedding-problem" data-astro-cid-p33bl5ka>The real-time user embedding problem</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#6-candidate-generation-pipeline" class="toc-link" data-toc-link="6-candidate-generation-pipeline" data-astro-cid-p33bl5ka>6. Candidate Generation Pipeline</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-item2item-and-user2user-graphs" class="toc-link" data-toc-link="the-item2item-and-user2user-graphs" data-astro-cid-p33bl5ka>The Item2Item and User2User Graphs</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ann-index-choices" class="toc-link" data-toc-link="ann-index-choices" data-astro-cid-p33bl5ka>ANN Index Choices</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#7-ranking--from-2000-to-20" class="toc-link" data-toc-link="7-ranking--from-2000-to-20" data-astro-cid-p33bl5ka>7. Ranking — From 2,000 to 20</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#model-architecture-deep--cross-network-dcn" class="toc-link" data-toc-link="model-architecture-deep--cross-network-dcn" data-astro-cid-p33bl5ka>Model Architecture: Deep &amp; Cross Network (DCN)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#multi-task-learning" class="toc-link" data-toc-link="multi-task-learning" data-astro-cid-p33bl5ka>Multi-Task Learning</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#8-post-processing--the-filter-funnel" class="toc-link" data-toc-link="8-post-processing--the-filter-funnel" data-astro-cid-p33bl5ka>8. Post-Processing — The Filter Funnel</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#why-filter-ordering-is-a-staff-engineer-question" class="toc-link" data-toc-link="why-filter-ordering-is-a-staff-engineer-question" data-astro-cid-p33bl5ka>Why filter ordering is a staff-engineer question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#9-cold-start-strategy" class="toc-link" data-toc-link="9-cold-start-strategy" data-astro-cid-p33bl5ka>9. Cold-Start Strategy</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#new-user-no-interaction-history" class="toc-link" data-toc-link="new-user-no-interaction-history" data-astro-cid-p33bl5ka>New User (no interaction history)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#new-item-zero-interactions" class="toc-link" data-toc-link="new-item-zero-interactions" data-astro-cid-p33bl5ka>New Item (zero interactions)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#10-scaling--bottlenecks" class="toc-link" data-toc-link="10-scaling--bottlenecks" data-astro-cid-p33bl5ka>10. Scaling &amp; Bottlenecks</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#read-path-serving-a-recommendation" class="toc-link" data-toc-link="read-path-serving-a-recommendation" data-astro-cid-p33bl5ka>Read Path (serving a recommendation)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#write-path-updating-embeddings" class="toc-link" data-toc-link="write-path-updating-embeddings" data-astro-cid-p33bl5ka>Write Path (updating embeddings)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#bottlenecks-and-mitigations" class="toc-link" data-toc-link="bottlenecks-and-mitigations" data-astro-cid-p33bl5ka>Bottlenecks and Mitigations</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#11-consistency--freshness" class="toc-link" data-toc-link="11-consistency--freshness" data-astro-cid-p33bl5ka>11. Consistency &amp; Freshness</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#12-caching-strategy" class="toc-link" data-toc-link="12-caching-strategy" data-astro-cid-p33bl5ka>12. Caching Strategy</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#13-weaknesses--improvements" class="toc-link" data-toc-link="13-weaknesses--improvements" data-astro-cid-p33bl5ka>13. Weaknesses &amp; Improvements</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#14-sharp-question" class="toc-link" data-toc-link="14-sharp-question" data-astro-cid-p33bl5ka>14. Sharp Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#related" class="toc-link" data-toc-link="related" data-astro-cid-p33bl5ka>Related</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Recommender Systems (Two-Tower, Candidate Gen, Ranking)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 23 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 32 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>ai-ml</span><span class="tag" data-astro-cid-sgg5joot>recommender-systems</span><span class="tag" data-astro-cid-sgg5joot>two-tower</span><span class="tag" data-astro-cid-sgg5joot>candidate-generation</span><span class="tag" data-astro-cid-sgg5joot>ranking</span><span class="tag" data-astro-cid-sgg5joot>retrieval</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="recommender-systems-two-tower-candidate-gen-ranking">Recommender Systems (Two-Tower, Candidate Gen, Ranking)</h1>
+<blockquote>
+<p><strong>Staff-Engineer Focus:</strong> “We use collaborative filtering and a two-tower model for recommendations” is the senior-MLE answer. <strong>The staff engineer doesn’t stop at model architecture. They ask: “Our product catalog has 80 million items, we serve 5 million DAU, and every user session generates 200 recommendation requests across 6 surfaces (homepage, search, cart, checkout, email, push). That’s 1 billion candidate-generation calls and 50 million ranking calls per day, all within a P99 latency budget of 30ms for the homepage widget and 10ms for the mid-article ‘you might also like’ slot. The two-tower model computes 256-dimensional embeddings for both users and items, but the user tower takes 47 features — 12 of which are real-time (last-30-min behavior stream) and 35 are batch-computed overnight. When a user adds an item to their cart, the ANN index for that user’s candidate set is already 15 minutes stale with 2000 candidates pre-computed. Walk me through: (a) how you’d design the candidate-generation pipeline so that real-time user actions (clicks, adds-to-cart, purchases) update the user embedding within 500ms and refresh the ANN retrieval set — do you recompute the full embedding, partial-update, or use a separate ‘recent intent’ signal blended post-retrieval, (b) your strategy for multi-stage filtering when the business rules engine says ‘no out-of-stock items, no items the user already purchased, respect the user’s blocked-creator list and brand-safety denylist, cap at most 2 items from the same brand, and boost items from the A/B experiment group X by 15%’ — at which stage does each filter apply and what’s the cost of getting the ordering wrong, (c) the cold-start problem for a new item added 3 minutes ago with zero interactions — how do you make it discoverable without waiting for collaborative signals, and what happens when a viral item goes from 0 to 100K interactions in 20 minutes, and (d) how you’d detect that the ranking model’s CTR is up 3% but long-term retention is down 1.2% — and what you’d tell the VP of Product who’s asking why we can’t just ship the model with the higher CTR?”</strong> The interview question isn’t “What’s a two-tower model?” It’s: “You have 80M items, 5M users, and 200ms end-to-end. Design the system.”</p>
+</blockquote>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A two-stage system — candidate generation retrieves relevant items via two-tower neural networks and ANN search, then ranking scores them with a deep model using user and item features.</p>
+<p><strong>How it’s asked:</strong> “Design a recommendation system for 80M items and 5M users with 200ms latency budget. Cover candidate generation, ranking, cold-start, and real-time feature updates.”</p>
+<hr>
+<h2 id="1-overview">1. Overview</h2>
+<p>A recommender system at internet scale is not one model. It is a multi-stage funnel — a pipeline that narrows an enormous item corpus (tens or hundreds of millions) down to a handful of personalized candidates (dozens) in under 200 milliseconds. Each stage trades recall for precision, and the architecture of this funnel — not the details of any single model — determines whether your recommendations are fast enough to serve and good enough to matter.</p>
+<p>The three canonical stages are <strong>candidate generation</strong> (retrieval), <strong>ranking</strong> (scoring), and <strong>post-processing</strong> (filtering/re-ranking). Candidate generation is the recall stage: it takes the full catalog and produces a few hundred to a few thousand plausible items. Ranking is the precision stage: it scores those candidates and picks the top N to display. Post-processing applies business rules, diversity constraints, and freshness boosts.</p>
+<p>At the heart of modern large-scale candidate generation is the <strong>two-tower model</strong>: one neural network (the user tower) encodes users into a dense vector, another (the item tower) encodes items into the same vector space. Recommendation becomes a nearest-neighbor search: given a user embedding, find the items whose embeddings are closest. This decoupling is the key insight — user and item embeddings can be computed independently and cached, making retrieval blazingly fast via approximate nearest neighbor (ANN) indexes.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                    RECOMMENDER SYSTEM — THREE-STAGE FUNNEL                 │</span></span>
+<span class="line"><span>│                                                                           │</span></span>
+<span class="line"><span>│  80M ITEMS                                                                │</span></span>
+<span class="line"><span>│  ───────────────────────────────────────────────────────────────────────  │</span></span>
+<span class="line"><span>│     │                                                                     │</span></span>
+<span class="line"><span>│     │  STAGE 1: CANDIDATE GENERATION (Recall)                             │</span></span>
+<span class="line"><span>│     │  ┌──────────────────────────────────────────┐                       │</span></span>
+<span class="line"><span>│     │  │ Two-Tower ANN │ Collaborative Filtering   │                       │</span></span>
+<span class="line"><span>│     │  │ Graph Traversal│ Real-Time Behavior Match  │                       │</span></span>
+<span class="line"><span>│     │  └──────────────────────────────────────────┘                       │</span></span>
+<span class="line"><span>│     │  Latency: 5-15ms  |  Recall target: >95% of relevant items          │</span></span>
+<span class="line"><span>│     ▼                                                                     │</span></span>
+<span class="line"><span>│  ~2,000 CANDIDATES                                                        │</span></span>
+<span class="line"><span>│  ───────────────────────────────────────────────────────────────────────  │</span></span>
+<span class="line"><span>│     │                                                                     │</span></span>
+<span class="line"><span>│     │  STAGE 2: RANKING (Precision)                                       │</span></span>
+<span class="line"><span>│     │  ┌──────────────────────────────────────────┐                       │</span></span>
+<span class="line"><span>│     │  │ Deep Cross Network │ Multi-Task (CTR+CVR) │                       │</span></span>
+<span class="line"><span>│     │  │ Feature Crosses    │ Gradient-Boosted Tree│                       │</span></span>
+<span class="line"><span>│     │  └──────────────────────────────────────────┘                       │</span></span>
+<span class="line"><span>│     │  Latency: 20-50ms  |  Scores: CTR, CVR, engagement, diversity       │</span></span>
+<span class="line"><span>│     ▼                                                                     │</span></span>
+<span class="line"><span>│  ~200 SCORED CANDIDATES                                                   │</span></span>
+<span class="line"><span>│  ───────────────────────────────────────────────────────────────────────  │</span></span>
+<span class="line"><span>│     │                                                                     │</span></span>
+<span class="line"><span>│     │  STAGE 3: POST-PROCESSING (Filter + Re-Rank)                        │</span></span>
+<span class="line"><span>│     │  ┌──────────────────────────────────────────┐                       │</span></span>
+<span class="line"><span>│     │  │ Business Rules │ Diversity │ Freshness    │                       │</span></span>
+<span class="line"><span>│     │  │ A/B Experiment  │ Ad Policy │ Frequency Cap│                      │</span></span>
+<span class="line"><span>│     │  └──────────────────────────────────────────┘                       │</span></span>
+<span class="line"><span>│     │  Latency: 1-5ms                                                      │</span></span>
+<span class="line"><span>│     ▼                                                                     │</span></span>
+<span class="line"><span>│  TOP-20 ITEMS → USER SCREEN                                               │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<p>The separation into stages is not an optimization — it’s an architectural necessity. You cannot run a deep neural network with hundreds of feature crosses on 80 million items in 200ms. You can, however, run a cheap similarity search (dot product in embedding space via ANN) on 80M items in &lt;10ms, then run the expensive ranker on the top 2,000. This is the fundamental trade-off of recommender systems: <strong>recall at the first stage, precision at the second, business logic at the third.</strong></p>
+<hr>
+<h2 id="2-key-requirements">2. Key Requirements</h2>
+<h3 id="functional-requirements">Functional Requirements</h3>
+<ul>
+<li>Serve personalized recommendations across multiple surfaces (homepage feed, related items, search autocomplete, email, push notifications)</li>
+<li>Support real-time updates — user clicks an item, next page load reflects that signal</li>
+<li>Multi-objective optimization: optimize for clicks AND purchases AND session length AND diversity (not just CTR)</li>
+<li>Cold-start handling for new users (no history) and new items (no interactions)</li>
+<li>A/B experimentation framework — canary 1% of traffic to a new candidate-generation strategy without affecting the other 99%</li>
+<li>Business rules engine: block out-of-stock, respect creator blocklists, apply brand-safety filters, cap brand frequency, boost promotional items</li>
+<li>Explainability: why was this item recommended? (for both user trust and debugging)</li>
+</ul>
+<h3 id="non-functional-requirements-slas">Non-Functional Requirements (SLAs)</h3>
+<ul>
+<li><strong>End-to-end latency:</strong> P99 &lt; 200ms for full funnel (candidate gen + ranking + post-processing), P99 &lt; 30ms for lightweight surfaces</li>
+<li><strong>Throughput:</strong> 1B+ candidate-generation calls/day, 50M+ ranking calls/day at peak</li>
+<li><strong>Availability:</strong> 99.95% — degraded recommendations (stale embeddings, fallback to global-popular) are acceptable; empty results are not</li>
+<li><strong>Freshness:</strong> User embedding updated within 500ms of a real-time event; item embedding updated within 5 minutes of metadata change</li>
+<li><strong>Consistency:</strong> Eventual — it is acceptable for a recommendation to be 30 seconds stale; it is not acceptable for it to be 30 minutes stale on an active session</li>
+<li><strong>Cost:</strong> 80% of inference cost should be in the cheap candidate-generation stage, not the expensive ranking stage</li>
+</ul>
+<hr>
+<h2 id="3-capacity-planning">3. Capacity Planning</h2>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Estimate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DAU</td>
+<td>5 million</td>
+</tr>
+<tr>
+<td>Items in catalog</td>
+<td>80 million</td>
+</tr>
+<tr>
+<td>Surfaces per user session</td>
+<td>6 (homepage, search, cart, checkout, email, push)</td>
+</tr>
+<tr>
+<td>Recommendation requests per user per session</td>
+<td>~200 (includes scroll-as-you-go pagination)</td>
+</tr>
+<tr>
+<td>Candidate gen calls/day</td>
+<td>5M × 200 = 1 billion</td>
+</tr>
+<tr>
+<td>Ranking calls/day (2K candidates each)</td>
+<td>1 billion retrievals × (varies) ≈ 50M ranking calls</td>
+</tr>
+<tr>
+<td>Embedding dimension</td>
+<td>256 (user and item)</td>
+</tr>
+<tr>
+<td>Embedding storage (80M items × 256 × 4 bytes)</td>
+<td>~82 GB</td>
+</tr>
+<tr>
+<td>User embedding cache (5M users × 256 × 4 bytes)</td>
+<td>~5 GB</td>
+</tr>
+<tr>
+<td>ANN index size (80M × 256 × 4 bytes + graph overhead ~2x)</td>
+<td>~164 GB</td>
+</tr>
+<tr>
+<td>Peak QPS candidate gen (10% of daily in peak hour)</td>
+<td>~28,000 QPS</td>
+</tr>
+<tr>
+<td>Peak QPS ranking</td>
+<td>~1,400 QPS</td>
+</tr>
+<tr>
+<td>Real-time event stream throughput</td>
+<td>~50K events/sec (clicks, purchases, views)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Storage choice:</strong> Embeddings stored in a vector database or ANN index (Faiss IVF-PQ, ScaNN, HNSW in-memory). Item metadata in a key-value store (DynamoDB/Redis) for fast post-retrieval enrichment. Training data in a data lake (Parquet/Iceberg) for offline training pipelines.</p>
+<hr>
+<h2 id="4-data-model">4. Data Model</h2>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>User Profile (offline, daily batch)</span></span>
+<span class="line"><span>  - user_id: UUID</span></span>
+<span class="line"><span>  - user_embedding: float[256]  (computed nightly, refreshed intra-session)</span></span>
+<span class="line"><span>  - demographic_features: {age_bucket, country, language, device_type}</span></span>
+<span class="line"><span>  - long_term_interests: [{category_id, weight}]</span></span>
+<span class="line"><span>  - recent_interactions: [{item_id, action_type, timestamp}]  (last 30 days)</span></span>
+<span class="line"><span>  - segment: enum[new, casual, power, dormant]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Item Catalog</span></span>
+<span class="line"><span>  - item_id: UUID</span></span>
+<span class="line"><span>  - item_embedding: float[256]</span></span>
+<span class="line"><span>  - title, description, category, brand_id, creator_id</span></span>
+<span class="line"><span>  - price, currency, availability_status</span></span>
+<span class="line"><span>  - content_tags: [string]</span></span>
+<span class="line"><span>  - creation_timestamp, last_updated</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Interaction Event (real-time stream, Kafka)</span></span>
+<span class="line"><span>  - event_id: UUID</span></span>
+<span class="line"><span>  - user_id, item_id</span></span>
+<span class="line"><span>  - event_type: enum[impression, click, add_to_cart, purchase, share, hide, report]</span></span>
+<span class="line"><span>  - timestamp: epoch_ms</span></span>
+<span class="line"><span>  - surface: enum[homepage, search, cart, ...]</span></span>
+<span class="line"><span>  - session_id: UUID</span></span>
+<span class="line"><span>  - experiment_ids: [string]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Recommendation Request (gRPC)</span></span>
+<span class="line"><span>  - user_id: UUID</span></span>
+<span class="line"><span>  - surface: enum</span></span>
+<span class="line"><span>  - context: {device, locale, time_of_day, session_active_duration}</span></span>
+<span class="line"><span>  - num_results: int (default 20)</span></span>
+<span class="line"><span>  - exclude_items: [UUID]  (already seen this session)</span></span>
+<span class="line"><span>  - experiment_overrides: map[string]string</span></span></code></pre>
+<hr>
+<h2 id="5-the-two-tower-model--deep-dive">5. The Two-Tower Model — Deep Dive</h2>
+<p>The two-tower architecture is the workhorse of large-scale candidate generation. Its defining property is that the user tower and item tower are <strong>independent at inference time</strong> — you compute the user embedding once, then find the nearest item embeddings in a pre-built index. No cross-features between user and item at retrieval time.</p>
+<h3 id="how-it-works">How it works</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌─────────────────────┐          ┌─────────────────────┐</span></span>
+<span class="line"><span>│     USER TOWER      │          │     ITEM TOWER       │</span></span>
+<span class="line"><span>│                     │          │                      │</span></span>
+<span class="line"><span>│  user_id            │          │  item_id             │</span></span>
+<span class="line"><span>│  demographics ──┐   │          │  category ───────┐    │</span></span>
+<span class="line"><span>│  long_term ─────┤   │          │  brand ──────────┤    │</span></span>
+<span class="line"><span>│  recent_acts ───┤   │          │  price ──────────┤    │</span></span>
+<span class="line"><span>│  context ───────┘   │          │  content_tags ───┘    │</span></span>
+<span class="line"><span>│       │             │          │       │               │</span></span>
+<span class="line"><span>│       ▼             │          │       ▼               │</span></span>
+<span class="line"><span>│  ┌─────────┐        │          │  ┌─────────┐          │</span></span>
+<span class="line"><span>│  │ DNN     │        │          │  │ DNN     │          │</span></span>
+<span class="line"><span>│  │ (FC +   │        │          │  │ (FC +   │          │</span></span>
+<span class="line"><span>│  │  ReLU)  │        │          │  │  ReLU)  │          │</span></span>
+<span class="line"><span>│  └────┬────┘        │          │  └────┬────┘          │</span></span>
+<span class="line"><span>│       │             │          │       │               │</span></span>
+<span class="line"><span>│       ▼             │          │       ▼               │</span></span>
+<span class="line"><span>│   user_emb          │          │   item_emb            │</span></span>
+<span class="line"><span>│   float[256]        │          │   float[256]          │</span></span>
+<span class="line"><span>│   L2-normalized     │          │   L2-normalized       │</span></span>
+<span class="line"><span>└─────────────────────┘          └─────────────────────┘</span></span>
+<span class="line"><span>         │                               │</span></span>
+<span class="line"><span>         │         similarity =          │</span></span>
+<span class="line"><span>         └─────── user_emb · item_emb ───┘</span></span>
+<span class="line"><span>                  (dot product / cosine)</span></span></code></pre>
+<p><strong>Training objective:</strong> During training, the two towers ARE connected — the dot product of user and item embeddings is fed into a loss function. A common loss for implicit feedback is the <strong>sampled softmax loss</strong> (also called batch softmax or in-batch negative sampling): treat the correct (user, item) pair as the positive, and all other items in the same batch as negatives. This scales to massive catalogs because you only need to compute the item embeddings for ~1,000 items per batch, not 80 million.</p>
+<p>The user tower takes features that can be a mix of:</p>
+<ul>
+<li><strong>Static/demographic:</strong> age bucket, country, language, device, account age</li>
+<li><strong>Long-term behavioral:</strong> category affinities, average purchase frequency, price sensitivity</li>
+<li><strong>Recent behavioral (sequence features):</strong> last 50 item IDs → embedding lookup → average pooling or lightweight transformer</li>
+<li><strong>Contextual:</strong> time of day, day of week, session duration, surface type</li>
+</ul>
+<p>The item tower takes:</p>
+<ul>
+<li><strong>Categorical:</strong> item_id, category, brand, creator</li>
+<li><strong>Textual:</strong> title, description → pretrained text embedding (e.g., from a small BERT)</li>
+<li><strong>Numerical:</strong> price, rating, popularity score, age of item</li>
+<li><strong>Content-based:</strong> image embedding, video embedding (for multimedia platforms)</li>
+</ul>
+<h3 id="the-real-time-user-embedding-problem">The real-time user embedding problem</h3>
+<p>The classic two-tower setup re-computes user embeddings daily in batch. But if a user just clicked on three running shoes, the nightly embedding doesn’t know that — and the next 50 page loads will recommend based on yesterday’s interests.</p>
+<p><strong>Solution: hybrid embedding with a “fast” and “slow” component.</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>User Embedding = α × slow_emb  +  β × fast_emb  +  γ × context_emb</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>slow_emb:  recomputed nightly, captures long-term interests</span></span>
+<span class="line"><span>           (computed by user tower offline, cached in Redis with 24h TTL)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>fast_emb:  updated in real-time from the last 50 interactions</span></span>
+<span class="line"><span>           (lightweight: interaction item embeddings → weighted average)</span></span>
+<span class="line"><span>           (stored in Redis with 30-min TTL, updated on each event)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>context_emb: session-level signals — current surface, time of day, scroll depth</span></span>
+<span class="line"><span>           (computed at request time, cheap — just feature lookup + tiny MLP)</span></span></code></pre>
+<p>The blending weights α, β, γ can themselves be learned (a small gating network) or tuned as hyperparameters. The key insight: the slow embedding provides stability and long-term personalization, the fast embedding provides reactivity to immediate intent, and the context embedding handles surface-specific behavior (what you want on the homepage vs. in search results is different even for the same user).</p>
+<hr>
+<h2 id="6-candidate-generation-pipeline">6. Candidate Generation Pipeline</h2>
+<p>Candidate generation is not one method — it’s a <strong>blended retrieval</strong> strategy that combines multiple sources. No single method achieves both high recall and freshness across all scenarios.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌─────────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                    CANDIDATE GENERATION — BLENDED RETRIEVAL               │</span></span>
+<span class="line"><span>│                                                                           │</span></span>
+<span class="line"><span>│  REQUEST: user_id=42, surface=homepage, context={...}                     │</span></span>
+<span class="line"><span>│       │                                                                   │</span></span>
+<span class="line"><span>│       ├──▶ SOURCE 1: Two-Tower ANN (1,500 candidates)                     │</span></span>
+<span class="line"><span>│       │    ┌──────────────────────────────────────────┐                   │</span></span>
+<span class="line"><span>│       │    │ user_emb = redis.get("emb:u:42")          │                   │</span></span>
+<span class="line"><span>│       │    │ results  = ann_index.search(user_emb, k=1500)│                │</span></span>
+<span class="line"><span>│       │    │ Latency: 3-5ms   Recall: 60-70%           │                   │</span></span>
+<span class="line"><span>│       │    └──────────────────────────────────────────┘                   │</span></span>
+<span class="line"><span>│       │                                                                   │</span></span>
+<span class="line"><span>│       ├──▶ SOURCE 2: Real-Time Behavior Match (300 candidates)            │</span></span>
+<span class="line"><span>│       │    ┌──────────────────────────────────────────┐                   │</span></span>
+<span class="line"><span>│       │    │ recent_items = redis.lrange("u:42:recent", 0, 50)│           │</span></span>
+<span class="line"><span>│       │    │ for each item: co_visited = item2item_graph.neighbors(item) │ │</span></span>
+<span class="line"><span>│       │    │ Latency: 2-4ms   Recall: 15-20% (freshness) │                │</span></span>
+<span class="line"><span>│       │    └──────────────────────────────────────────┘                   │</span></span>
+<span class="line"><span>│       │                                                                   │</span></span>
+<span class="line"><span>│       ├──▶ SOURCE 3: Collaborative Filtering (100 candidates)             │</span></span>
+<span class="line"><span>│       │    ┌──────────────────────────────────────────┐                   │</span></span>
+<span class="line"><span>│       │    │ similar_users = user2user_graph.neighbors(user_id)│          │</span></span>
+<span class="line"><span>│       │    │ candidates = popular_items_from(similar_users)  │           │</span></span>
+<span class="line"><span>│       │    │ Latency: 1-2ms   Recall: 5-10%            │                   │</span></span>
+<span class="line"><span>│       │    └──────────────────────────────────────────┘                   │</span></span>
+<span class="line"><span>│       │                                                                   │</span></span>
+<span class="line"><span>│       ├──▶ SOURCE 4: Global Popular / Trending (50 candidates)            │</span></span>
+<span class="line"><span>│       │    ┌──────────────────────────────────────────┐                   │</span></span>
+<span class="line"><span>│       │    │ top_items = redis.zrevrange("trending:global", 0, 50)│       │</span></span>
+<span class="line"><span>│       │    │ Latency: &#x3C;1ms   Recall: N/A (exploration) │                   │</span></span>
+<span class="line"><span>│       │    └──────────────────────────────────────────┘                   │</span></span>
+<span class="line"><span>│       │                                                                   │</span></span>
+<span class="line"><span>│       └──▶ SOURCE 5: New-Item Boost (50 candidates)                       │</span></span>
+<span class="line"><span>│            ┌──────────────────────────────────────────┐                   │</span></span>
+<span class="line"><span>│            │ new_items = redis.zrevrange("new:items", 0, 50)│             │</span></span>
+<span class="line"><span>│            │ Latency: &#x3C;1ms   Recall: N/A (cold-start)  │                   │</span></span>
+<span class="line"><span>│            │            (scored by category match + content sim)│         │</span></span>
+<span class="line"><span>│            └──────────────────────────────────────────┘                   │</span></span>
+<span class="line"><span>│                                                                           │</span></span>
+<span class="line"><span>│       ▼                                                                   │</span></span>
+<span class="line"><span>│  FUSION: deduplicate, interleave (round-robin from each source)           │</span></span>
+<span class="line"><span>│  ───────────────────────────────────────────────────────────────────────  │</span></span>
+<span class="line"><span>│  ~2,000 UNIQUE CANDIDATES → Ranking Stage                                 │</span></span>
+<span class="line"><span>└─────────────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<h3 id="the-item2item-and-user2user-graphs">The Item2Item and User2User Graphs</h3>
+<p>The item-to-item co-occurrence graph is built from session data: “users who interacted with item A also interacted with item B.” This is essentially a sparse adjacency matrix, stored as:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Key: "i2i:{item_id}"</span></span>
+<span class="line"><span>Value: [(neighbor_item_id, co_occurrence_score), ...]  (top 200 neighbors)</span></span></code></pre>
+<p>Updated hourly from a Spark job that reads the last 30 days of interaction logs. The graph captures collaborative patterns without needing embeddings — it’s inherently real-time responsive because new interactions feed into the next hourly update.</p>
+<h3 id="ann-index-choices">ANN Index Choices</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Index Build Time</th>
+<th>Query Latency (k=1000)</th>
+<th>Memory</th>
+<th>Recall@1000</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Faiss IVF-PQ</td>
+<td>Minutes</td>
+<td>2-5ms</td>
+<td>Low (compressed)</td>
+<td>90-95%</td>
+</tr>
+<tr>
+<td>Faiss HNSW</td>
+<td>Minutes</td>
+<td>1-3ms</td>
+<td>High (graph)</td>
+<td>95-99%</td>
+</tr>
+<tr>
+<td>ScaNN (Google)</td>
+<td>Hours</td>
+<td>1-2ms</td>
+<td>Medium</td>
+<td>95-99%</td>
+</tr>
+<tr>
+<td>Brute-force</td>
+<td>N/A</td>
+<td>80ms</td>
+<td>N/A</td>
+<td>100%</td>
+</tr>
+</tbody>
+</table>
+<p>At 80M items, brute-force is out. The pragmatic choice for most teams is <strong>Faiss IVF-PQ</strong> for cost efficiency or <strong>ScaNN</strong> for latency-sensitive surfaces. The index is rebuilt nightly after item embeddings are recomputed. For real-time item additions (new products), a separate small in-memory index holds the last 24 hours of new items and is queried in parallel.</p>
+<hr>
+<h2 id="7-ranking--from-2000-to-20">7. Ranking — From 2,000 to 20</h2>
+<p>Once candidate generation has narrowed 80M items to ~2,000, the ranking stage applies a much more expensive model. Here, cross-features between user and item ARE computed — this is where the model learns that “user_123 likes sports shoes from Brand X in the $80-120 range, but only on weekends.”</p>
+<h3 id="model-architecture-deep--cross-network-dcn">Model Architecture: Deep &amp; Cross Network (DCN)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                     RANKING MODEL — DCN-V2                             │</span></span>
+<span class="line"><span>│                                                                        │</span></span>
+<span class="line"><span>│  INPUT: (user_features, item_features, context_features)               │</span></span>
+<span class="line"><span>│     │                                                                  │</span></span>
+<span class="line"><span>│     ├──▶ Cross Network (explicit feature crosses)                      │</span></span>
+<span class="line"><span>│     │    x_0 = concat(all_features)                                    │</span></span>
+<span class="line"><span>│     │    x_1 = x_0 ⊙ (W × x_0) + b + x_0                              │</span></span>
+<span class="line"><span>│     │    x_2 = x_0 ⊙ (W × x_1) + b + x_1                              │</span></span>
+<span class="line"><span>│     │    ... (6 cross layers)                                          │</span></span>
+<span class="line"><span>│     │    Captures: user_age_bucket × item_category × price_range       │</span></span>
+<span class="line"><span>│     │                                                                  │</span></span>
+<span class="line"><span>│     └──▶ Deep Network (fully connected)                                │</span></span>
+<span class="line"><span>│          h_0 = concat(all_features)                                    │</span></span>
+<span class="line"><span>│          h_1 = ReLU(W × h_0 + b)                                       │</span></span>
+<span class="line"><span>│          h_2 = ReLU(W × h_1 + b)                                       │</span></span>
+<span class="line"><span>│          ... (4 hidden layers, 1024 → 512 → 256 → 128)                 │</span></span>
+<span class="line"><span>│          Captures: complex non-linear interactions                     │</span></span>
+<span class="line"><span>│                                                                        │</span></span>
+<span class="line"><span>│     Both → concat(cross_output, deep_output) → output_layer            │</span></span>
+<span class="line"><span>│                                                                        │</span></span>
+<span class="line"><span>│  OUTPUT:                                                                │</span></span>
+<span class="line"><span>│     ┌──────────────┬──────────────┬──────────────┐                     │</span></span>
+<span class="line"><span>│     │  CTR head    │  CVR head    │  Engagement   │                     │</span></span>
+<span class="line"><span>│     │  (sigmoid)   │  (sigmoid)   │  (regression) │                     │</span></span>
+<span class="line"><span>│     │  "will click"│ "will buy"   │  "time on pg" │                     │</span></span>
+<span class="line"><span>│     └──────────────┴──────────────┴──────────────┘                     │</span></span>
+<span class="line"><span>│                                                                        │</span></span>
+<span class="line"><span>│  FINAL SCORE = w₁·CTR + w₂·CVR + w₃·engagement + w₄·diversity_bonus  │</span></span>
+<span class="line"><span>│                (weights tuned per surface via Bayesian optimization)    │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<p>The cross network is what makes this more powerful than a plain MLP. In a regular DNN, feature interactions (like “user from Germany + item priced in USD”) must be learned implicitly from data. The cross network computes them explicitly, which means it learns faster with less data and generalizes better to rare feature combinations.</p>
+<h3 id="multi-task-learning">Multi-Task Learning</h3>
+<p>Recommenders are fundamentally multi-objective: you want clicks (engagement), purchases (revenue), session length (retention), and diversity (discovery). Optimizing for any single metric leads to pathological behavior:</p>
+<ul>
+<li><strong>Maximizing CTR only:</strong> clickbait titles, sensational items, rage-bait</li>
+<li><strong>Maximizing CVR only:</strong> only show items the user would definitely buy → boring, no discovery</li>
+<li><strong>Maximizing session length only:</strong> infinite scroll traps, addiction-maximizing</li>
+</ul>
+<p>The multi-task setup shares the bottom layers (feature representation) and has task-specific heads. The loss is a weighted sum: <code>L = α·L_ctr + β·L_cvr + γ·L_engagement</code>. The weights α, β, γ are hyperparameters tuned against a long-term business metric (e.g., 30-day retention), not the individual task metrics. This is crucial — you tune the weights so that optimizing the composite loss improves retention, even if individual task metrics appear worse.</p>
+<hr>
+<h2 id="8-post-processing--the-filter-funnel">8. Post-Processing — The Filter Funnel</h2>
+<p>Even perfect ML outputs need business logic. The post-processing stage applies filters and re-ranking rules. <strong>Order matters enormously</strong> — filtering 1,900 items out of 2,000 before ranking is cheap; filtering them after ranking wastes 1,900 expensive inferences.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                    POST-PROCESSING FILTER CHAIN                      │</span></span>
+<span class="line"><span>│                                                                      │</span></span>
+<span class="line"><span>│  2,000 RANKED CANDIDATES                                             │</span></span>
+<span class="line"><span>│     │                                                                │</span></span>
+<span class="line"><span>│     ├──▶ 1. HARD FILTERS (remove, no recovery)                       │</span></span>
+<span class="line"><span>│     │    • Out of stock / delisted / expired                         │</span></span>
+<span class="line"><span>│     │    • Blocked creator / brand-safety denylist                   │</span></span>
+<span class="line"><span>│     │    • User already purchased (optional, configurable)           │</span></span>
+<span class="line"><span>│     │    • Items already seen this session (dedup)                   │</span></span>
+<span class="line"><span>│     │    Cost: O(n) lookups, ~1ms                                    │</span></span>
+<span class="line"><span>│     │    ~1,800 remain                                               │</span></span>
+<span class="line"><span>│     │                                                                │</span></span>
+<span class="line"><span>│     ├──▶ 2. SOFT CONSTRAINTS (re-rank, don't remove)                 │</span></span>
+<span class="line"><span>│     │    • Max 2 items per brand (promote top 2, demote rest)        │</span></span>
+<span class="line"><span>│     │    • Max 3 items per category                                  │</span></span>
+<span class="line"><span>│     │    • Price diversity: ensure at least 1 budget, 1 mid, 1 premium│</span></span>
+<span class="line"><span>│     │    Cost: O(n log n) sort within groups, ~2ms                   │</span></span>
+<span class="line"><span>│     │                                                                │</span></span>
+<span class="line"><span>│     ├──▶ 3. EXPERIMENT BOOSTS (multiply score)                       │</span></span>
+<span class="line"><span>│     │    • A/B group X: boost items from seller cohort Y by 15%      │</span></span>
+<span class="line"><span>│     │    • New-item boost: boost items &#x3C; 7 days old by 10%           │</span></span>
+<span class="line"><span>│     │    • Re-engagement boost: boost dormant-category items by 5%   │</span></span>
+<span class="line"><span>│     │    Cost: O(n), ~1ms                                            │</span></span>
+<span class="line"><span>│     │                                                                │</span></span>
+<span class="line"><span>│     └──▶ 4. FINAL DIVERSITY RE-RANK (MMR)                            │</span></span>
+<span class="line"><span>│          • Maximum Marginal Relevance: greedily select items         │</span></span>
+<span class="line"><span>│            that maximize score × (1 - λ·max_similarity_to_selected)  │</span></span>
+<span class="line"><span>│          • Ensures the final list isn't 20 nearly-identical items    │</span></span>
+<span class="line"><span>│          • Cost: O(n × k) where k=20, ~3ms                           │</span></span>
+<span class="line"><span>│                                                                      │</span></span>
+<span class="line"><span>│  TOP-20 ITEMS → RESPONSE                                             │</span></span>
+<span class="line"><span>└────────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<h3 id="why-filter-ordering-is-a-staff-engineer-question">Why filter ordering is a staff-engineer question</h3>
+<p>If you put business-rule filters AFTER ranking, you waste ranking compute on items you’ll discard. If you put them BEFORE candidate generation, you might filter out the very items the user would have loved (recall loss). The correct answer: <strong>hard filters (availability, blocklists) before ranking; soft constraints (diversity, brand caps) after ranking</strong> because they depend on the relative scores.</p>
+<hr>
+<h2 id="9-cold-start-strategy">9. Cold-Start Strategy</h2>
+<p>Every recommender has a cold-start problem. There are two variants:</p>
+<h3 id="new-user-no-interaction-history">New User (no interaction history)</h3>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>How It Works</th>
+<th>When to Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Demographic prior</td>
+<td>Use age/location/device to serve popular items in that cohort</td>
+<td>First session</td>
+</tr>
+<tr>
+<td>Onboarding survey</td>
+<td>Ask for 3-5 categories/topics of interest</td>
+<td>During signup (if UX allows)</td>
+</tr>
+<tr>
+<td>Context-only embedding</td>
+<td>Use time-of-day, surface, device → trained embedding from other users</td>
+<td>Always available</td>
+</tr>
+<tr>
+<td>Explore-exploit mix</td>
+<td>70% popular + 30% random high-quality items</td>
+<td>First 10 sessions</td>
+</tr>
+</tbody>
+</table>
+<h3 id="new-item-zero-interactions">New Item (zero interactions)</h3>
+<p>This is harder. The two-tower model’s item embedding depends on interaction data that doesn’t exist yet.</p>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>How It Works</th>
+<th>Latency Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Content-based embedding</td>
+<td>Use title/description/image → text/image encoder → embedding</td>
+<td>None (pre-computed at item creation)</td>
+</tr>
+<tr>
+<td>Category/brand prior</td>
+<td>Average embedding of items in same category + brand</td>
+<td>None (pre-computed)</td>
+</tr>
+<tr>
+<td>New-item boost in retrieval</td>
+<td>Always include top-N new items in candidate blend (Source 5 above)</td>
+<td>+1ms</td>
+</tr>
+<tr>
+<td>Forced exploration slots</td>
+<td>Reserve 1-2 slots in every feed for items &lt; 24h old</td>
+<td>None</td>
+</tr>
+<tr>
+<td>Creator-fan injection</td>
+<td>Show new item to followers of its creator (if creator-follow exists)</td>
+<td>+2ms for graph lookup</td>
+</tr>
+</tbody>
+</table>
+<p>The content-based path is the backbone: even without interactions, the item has a title, description, image, price, and category. An embedding from these alone gets you 60-70% of the way to a fully-trained collaborative embedding. As interactions accumulate, the collaborative signal gradually overrides the content signal.</p>
+<hr>
+<h2 id="10-scaling--bottlenecks">10. Scaling &amp; Bottlenecks</h2>
+<h3 id="read-path-serving-a-recommendation">Read Path (serving a recommendation)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>1. Client → API Gateway (gRPC, 200ms timeout)</span></span>
+<span class="line"><span>2. Gateway → Candidate Gen Service</span></span>
+<span class="line"><span>   a. Fetch user embedding from Redis (or compute fast_emb + context_emb) — 2ms</span></span>
+<span class="line"><span>   b. ANN search in Faiss index — 3-5ms</span></span>
+<span class="line"><span>   c. Parallel: item2item graph lookup — 2-4ms</span></span>
+<span class="line"><span>   d. Parallel: collaborative filter, trending, new-items — 1-2ms each</span></span>
+<span class="line"><span>   e. Fuse + deduplicate — 1ms</span></span>
+<span class="line"><span>   → Returns ~2,000 candidate IDs — total 10-15ms</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>3. Gateway → Ranking Service</span></span>
+<span class="line"><span>   a. Fetch item features for 2,000 items from feature store — 5ms (batched, cached)</span></span>
+<span class="line"><span>   b. Run DCN model inference (batched) — 10-20ms on GPU, 30-50ms on CPU</span></span>
+<span class="line"><span>   c. Sort by final score — 1ms</span></span>
+<span class="line"><span>   → Returns top 200 scored items — total 20-40ms</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>4. Gateway → Post-Processing (often in-process with ranking)</span></span>
+<span class="line"><span>   a. Hard filters, soft constraints, diversity re-rank — 3-5ms</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Total: 35-60ms P50, 100-150ms P99 (well under 200ms budget)</span></span></code></pre>
+<h3 id="write-path-updating-embeddings">Write Path (updating embeddings)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>1. User clicks "Add to Cart" → event published to Kafka (topic: user_events)</span></span>
+<span class="line"><span>2. Real-Time Consumer Group:</span></span>
+<span class="line"><span>   a. Updates Redis: LPUSH "u:42:recent" item_id; LTRIM to 50</span></span>
+<span class="line"><span>   b. Updates "fast_emb" in Redis: recompute weighted avg of last 50 item embeddings</span></span>
+<span class="line"><span>   c. Updates item2item graph edge weights (async, batched every 5 min)</span></span>
+<span class="line"><span>   → User's next request sees updated fast embedding — ~300ms end-to-end</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>3. Hourly Batch Jobs (Spark):</span></span>
+<span class="line"><span>   a. Rebuild item2item and user2user graphs from last 30 days of events</span></span>
+<span class="line"><span>   b. Recompute item popularity scores, trending scores</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>4. Nightly Batch Jobs (Spark on GPU cluster):</span></span>
+<span class="line"><span>   a. Retrain two-tower model on last 30 days of interaction data</span></span>
+<span class="line"><span>   b. Recompute all 80M item embeddings</span></span>
+<span class="line"><span>   c. Rebuild ANN index</span></span>
+<span class="line"><span>   d. Recompute slow user embeddings for all 5M users → bulk-load Redis</span></span></code></pre>
+<h3 id="bottlenecks-and-mitigations">Bottlenecks and Mitigations</h3>
+<table>
+<thead>
+<tr>
+<th>Bottleneck</th>
+<th>Symptom</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ANN index memory</td>
+<td>164 GB doesn’t fit on one machine</td>
+<td>Shard by item_id modulo N across N machines; query all shards, merge top-K</td>
+</tr>
+<tr>
+<td>Redis user embedding cache</td>
+<td>5M users, reads at 28K QPS → hotspot</td>
+<td>Client-side local cache (LRU, 10K entries, 30-sec TTL) in each candidate-gen instance</td>
+</tr>
+<tr>
+<td>Ranking model inference</td>
+<td>2K items × 50ms CPU = 100ms (too slow)</td>
+<td>Batch inference on GPU (2K items in one forward pass ~10ms); use TensorRT/ONNX for optimized inference</td>
+</tr>
+<tr>
+<td>Real-time event backpressure</td>
+<td>50K events/sec overwhelms consumer</td>
+<td>Partition Kafka by user_id; consumer auto-scales with Consumer Group; fast_emb update is idempotent (last-write-wins is fine)</td>
+</tr>
+<tr>
+<td>Cold-start latency spikes</td>
+<td>New item embedding not yet in ANN index</td>
+<td>Separate “new items” index (&lt;100K items, brute-force OK); merge results client-side</td>
+</tr>
+<tr>
+<td>Feature store latency</td>
+<td>2,000 items × 100 features = 200K lookups per ranking call</td>
+<td>Batch fetch + client-side feature cache (TTL 5 min for stable features like category, 1 min for dynamic like price)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="11-consistency--freshness">11. Consistency &amp; Freshness</h2>
+<p>Recommender systems are <strong>eventually consistent by design.</strong> The question is: how eventual?</p>
+<table>
+<thead>
+<tr>
+<th>Data</th>
+<th>Staleness Window</th>
+<th>Consistency Model</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Item metadata (title, price, stock)</td>
+<td>&lt; 1 min</td>
+<td>Eventual (CDC from source DB)</td>
+<td>Must be fast to prevent recommending out-of-stock items</td>
+</tr>
+<tr>
+<td>User slow embedding</td>
+<td>24 hours</td>
+<td>Eventual (nightly batch)</td>
+<td>Long-term interests don’t change hour-to-hour</td>
+</tr>
+<tr>
+<td>User fast embedding</td>
+<td>&lt; 500ms</td>
+<td>Eventual (real-time stream)</td>
+<td>Immediate intent — must react to “just searched for camping gear”</td>
+</tr>
+<tr>
+<td>Item embedding</td>
+<td>24 hours (rebuilt nightly) + 5 min for new items</td>
+<td>Eventual</td>
+<td>Catalog changes slowly; content embedding bridges the gap for new items</td>
+</tr>
+<tr>
+<td>Item2Item graph</td>
+<td>1 hour</td>
+<td>Eventual (hourly Spark job)</td>
+<td>Co-occurrence patterns evolve slowly</td>
+</tr>
+<tr>
+<td>Trending/popularity scores</td>
+<td>15 min</td>
+<td>Eventual (sliding window)</td>
+<td>“What’s hot right now” must be fresh</td>
+</tr>
+</tbody>
+</table>
+<p>There is no strong consistency requirement anywhere. A recommendation that’s 30 seconds stale due to cache is imperceptible. A recommendation that’s 30 minutes stale because the batch job failed is a problem — but it’s a freshness problem, not a correctness bug. The system degrades gracefully: serve the stale embedding rather than return nothing.</p>
+<hr>
+<h2 id="12-caching-strategy">12. Caching Strategy</h2>
+<p>Recommendation systems cache aggressively because latency budgets are tight and perfect freshness is unnecessary.</p>
+<table>
+<thead>
+<tr>
+<th>Cache Layer</th>
+<th>What</th>
+<th>Where</th>
+<th>Size</th>
+<th>TTL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1: Request-scoped dedup</td>
+<td>Items already seen this session</td>
+<td>In-memory (request context)</td>
+<td>~200 IDs</td>
+<td>Request duration</td>
+</tr>
+<tr>
+<td>L2: User embedding (slow)</td>
+<td>user_emb[256]</td>
+<td>Redis cluster</td>
+<td>5M × 1KB = 5 GB</td>
+<td>24 hours</td>
+</tr>
+<tr>
+<td>L2: User embedding (fast)</td>
+<td>fast_emb[256]</td>
+<td>Redis cluster</td>
+<td>5M × 1KB = 5 GB</td>
+<td>30 min</td>
+</tr>
+<tr>
+<td>L3: Item embeddings</td>
+<td>item_emb[256]</td>
+<td>In Faiss index (memory-mapped)</td>
+<td>80M × 1KB = 80 GB</td>
+<td>24 hours (index rebuild)</td>
+</tr>
+<tr>
+<td>L4: Item features</td>
+<td>category, brand, price, etc.</td>
+<td>Redis / feature store</td>
+<td>80M × 2KB = 160 GB</td>
+<td>5 min (metadata), 1 min (price/stock)</td>
+</tr>
+<tr>
+<td>L5: Popular/trending lists</td>
+<td>top-N item IDs</td>
+<td>Redis sorted sets</td>
+<td>~1K items × 5 lists</td>
+<td>15 min</td>
+</tr>
+<tr>
+<td>L6: Client-side LRU</td>
+<td>user embeddings</td>
+<td>In candidate-gen service memory</td>
+<td>10K entries</td>
+<td>30 sec</td>
+</tr>
+</tbody>
+</table>
+<p>Cache invalidation is TTL-based — no explicit invalidation. This is acceptable because recommendations are inherently tolerant of staleness. The one exception: when an item goes out of stock, the hard-filter stage (post-processing, before final response) will catch it regardless of cache state — the cache may still return the item as a candidate, but the filter blocks it before the user sees it.</p>
+<hr>
+<h2 id="13-weaknesses--improvements">13. Weaknesses &amp; Improvements</h2>
+<ul>
+<li><strong>Position bias feedback loop:</strong> Items shown at position 1 get more clicks because they’re at position 1, which trains the model to rank them higher, which keeps them at position 1. Mitigation: during training, use position as a feature but strip it at inference; periodically inject random items at top positions to collect unbiased feedback.</li>
+<li><strong>Popularity bias:</strong> Popular items appear in more training examples, get better embeddings, get retrieved more often. Mitigation: negative sampling weights inversely proportional to item popularity; separate exploration budget.</li>
+<li><strong>Echo chambers:</strong> The system recommends what you already like, never challenging or expanding your interests. Mitigation: diversity constraints in post-processing; a dedicated “discovery” surface with higher exploration weight.</li>
+<li><strong>Single embedding per item is limiting:</strong> An item that appeals to wildly different user segments (e.g., a book that is both a romance novel and a historical fiction) gets averaged into one embedding that captures neither well. Improvement: multi-embedding approaches — learn K embeddings per item, route users to the most relevant one via a small gating network.</li>
+<li><strong>ANN index rebuild is a single point of staleness:</strong> If the nightly job fails, the index is 48 hours stale. Improvement: online index update — insert/update embeddings in the HNSW graph incrementally; periodic compaction to reclaim deleted nodes.</li>
+<li><strong>Training-serving skew in feature computation:</strong> If the “user_30d_avg_purchase” feature is computed with a 30-day rolling window in training but a 30-day fixed window at serving, the values differ. Mitigation: feature store with point-in-time correctness (see Day 50 — Feature Store).</li>
+</ul>
+<hr>
+<h2 id="14-sharp-question">14. Sharp Question</h2>
+<p><strong>Q:</strong> You’re designing the recommendation system for an e-commerce platform with 80M items. The product manager wants to add a “real-time trending” section to the homepage that shows items spiking in popularity within the last 15 minutes. Your two-tower ANN index is rebuilt nightly, so new trending items won’t have strong collaborative embeddings yet. How do you make this work without blowing your 200ms latency budget?</p>
+<p><strong>Model Answer:</strong></p>
+<p>The trending section should NOT go through the two-tower retrieval path — the two-tower is fundamentally a collaborative-filtering model that needs interaction history, which trending items by definition don’t have enough of.</p>
+<p>Instead, build a separate lightweight pipeline:</p>
+<ol>
+<li>
+<p><strong>Trending detection (offline, streaming):</strong> A Flink/Kafka Streams job consumes the click/purchase event stream, maintains a sliding 15-minute window of per-item interaction counts, and compares to a 24-hour baseline. Items with a z-score above threshold (e.g., &gt;3 standard deviations above baseline) are flagged as trending. Results are written to a Redis sorted set: <code>trending:homepage → [(item_id, trending_score), ...]</code>.</p>
+</li>
+<li>
+<p><strong>Candidate injection at retrieval time:</strong> The candidate generation service always fetches the top 50 trending items (latency &lt;1ms from Redis) and injects them as a separate source in the blended retrieval pool. They bypass the ANN lookup entirely.</p>
+</li>
+<li>
+<p><strong>Content-based relevance filter:</strong> Before the trending candidates enter the ranking pool, apply a lightweight relevance check — compute the cosine similarity between the user’s slow embedding and the item’s content-based embedding (pre-computed from title/description at item creation time, stored in Redis). Trending items below a similarity threshold are dropped. This prevents showing a trending car tire to a user who only buys fashion.</p>
+</li>
+<li>
+<p><strong>Ranking still applies:</strong> The trending candidates flow through the same ranking model as all other candidates. The ranking model will naturally down-rank items that don’t match the user’s preferences — but the trending signal gives them a chance to be scored that they wouldn’t have gotten through the ANN path alone.</p>
+</li>
+<li>
+<p><strong>Dedicated slots in post-processing:</strong> Reserve 2 out of 20 slots on the homepage for trending items (if any pass the relevance filter). This ensures they get visibility without overwhelming the feed.</p>
+</li>
+</ol>
+<p>Latency breakdown: Redis trending fetch (&lt;1ms) + content-similarity check (~2ms for 50 items) + flow through existing ranking pipeline (already accounted for). No net increase to P99.</p>
+<p><strong>Common Pitfall:</strong> Candidates try to solve this by “just making the two-tower handle it” — increasing the real-time update frequency of item embeddings or rebuilding the ANN index more often. This is the wrong lever. The two-tower’s embedding for a 15-minute-old trending item will be dominated by the content-based initialization (title/description), which the ANN index already has. The problem isn’t the embedding quality — it’s that the ANN index, by design, surfaces items near the user embedding. A trending item that’s outside the user’s normal interest cluster won’t surface regardless of how fresh its embedding is. You need a separate path — a “popularity” signal that bypasses the personalized retrieval entirely and lets the ranker decide if the user would actually like it.</p>
+<hr>
+<h2 id="related">Related</h2>
+<ul>
+<li>[[topic-queue]]</li>
+<li>[[Feature Store &amp; Online-Offline Consistency]]</li>
+<li>[[Vector Database Internals (HNSW, IVF, Sharding)]]</li>
+<li>[[Real-Time ML Inference (Streaming Features, Online Learning)]]</li>
+</ul>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Two-stage pipeline: candidate generation (two-tower ANN, fast, high recall) → ranking (deep model, slow, high precision)</li>
+<li>Two-tower model trains user and item towers separately; dot product of embeddings measures relevance</li>
+<li>ANN index (HNSW, IVF) enables sub-10ms retrieval over millions of items</li>
+<li>Business rules (out-of-stock filter, brand caps, diversity) apply between candidate gen and ranking</li>
+<li>Cold-start: use content features (text, category, image embeddings) for new items with no interaction history</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you update the ANN index when new items are added?” — For HNSW, insert incrementally (O(log N)). For IVF, periodically rebuild. Real-time insertion is possible but monitor index quality degradation.</li>
+<li>“How do you handle A/B testing of recommendation models?” — Route a percentage of traffic to the new model via a feature flag. Compare not just CTR but also revenue, retention, and diversity metrics over 1-2 weeks.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>The candidate generation stage’s recall is the ceiling for ranking quality. If the best item isn’t in the candidate set, the ranker can’t surface it. Always measure candidate recall (did the relevant item make it into the top-K candidates?) before optimizing the ranker.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/recommender-systems-two-tower-candidate-gen-ranking/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Recommender%20Systems%20(Two-Tower%2C%20Candidate%20Gen%2C%20Ranking)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Frecommender-systems-two-tower-candidate-gen-ranking%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Frecommender-systems-two-tower-candidate-gen-ranking%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/recommender-systems-two-tower-candidate-gen-ranking" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/real-time-ml-inference-streaming-features-online-learning" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Real-Time ML Inference (Streaming Features, Online Learning)</span></a><a href="/notes/system-design/s3-like-object-storage" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>S3-like Object Storage</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Recommender Systems (Two-Tower, Candidate Gen, Ranking)" data-selector=".article-prose" data-article-slug="system-design/recommender-systems-two-tower-candidate-gen-ranking" data-article-title="Recommender Systems (Two-Tower, Candidate Gen, Ranking)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

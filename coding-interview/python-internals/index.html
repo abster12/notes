@@ -1,0 +1,1774 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Python Internals &amp; Interview Prep · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link active" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview" class="toc-link" data-toc-link="overview" data-astro-cid-p33bl5ka>Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#python-memory-model" class="toc-link" data-toc-link="python-memory-model" data-astro-cid-p33bl5ka>Python Memory Model</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#everything-is-an-object" class="toc-link" data-toc-link="everything-is-an-object" data-astro-cid-p33bl5ka>Everything Is an Object</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#reference-counting--garbage-collection" class="toc-link" data-toc-link="reference-counting--garbage-collection" data-astro-cid-p33bl5ka>Reference Counting &amp; Garbage Collection</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#mutable-vs-immutable" class="toc-link" data-toc-link="mutable-vs-immutable" data-astro-cid-p33bl5ka>Mutable vs Immutable</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#how-python-data-structures-work-internally" class="toc-link" data-toc-link="how-python-data-structures-work-internally" data-astro-cid-p33bl5ka>How Python Data Structures Work Internally</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#lists--dynamic-arrays" class="toc-link" data-toc-link="lists--dynamic-arrays" data-astro-cid-p33bl5ka>Lists — Dynamic Arrays</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#dictionaries--hash-tables-with-open-addressing" class="toc-link" data-toc-link="dictionaries--hash-tables-with-open-addressing" data-astro-cid-p33bl5ka>Dictionaries — Hash Tables with Open Addressing</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#sets--dicts-without-values" class="toc-link" data-toc-link="sets--dicts-without-values" data-astro-cid-p33bl5ka>Sets — Dicts Without Values</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#tuples--fixed-size-pointer-arrays" class="toc-link" data-toc-link="tuples--fixed-size-pointer-arrays" data-astro-cid-p33bl5ka>Tuples — Fixed-Size Pointer Arrays</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#strings--immutable-arrays-of-unicode" class="toc-link" data-toc-link="strings--immutable-arrays-of-unicode" data-astro-cid-p33bl5ka>Strings — Immutable Arrays of Unicode</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#the-gil-global-interpreter-lock" class="toc-link" data-toc-link="the-gil-global-interpreter-lock" data-astro-cid-p33bl5ka>The GIL (Global Interpreter Lock)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#collections-module--interview-power-tools" class="toc-link" data-toc-link="collections-module--interview-power-tools" data-astro-cid-p33bl5ka>Collections Module — Interview Power Tools</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#defaultdict" class="toc-link" data-toc-link="defaultdict" data-astro-cid-p33bl5ka>defaultdict</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#counter" class="toc-link" data-toc-link="counter" data-astro-cid-p33bl5ka>Counter</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#deque" class="toc-link" data-toc-link="deque" data-astro-cid-p33bl5ka>deque</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ordereddict-less-relevant-now" class="toc-link" data-toc-link="ordereddict-less-relevant-now" data-astro-cid-p33bl5ka>OrderedDict (Less Relevant Now)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#namedtuple" class="toc-link" data-toc-link="namedtuple" data-astro-cid-p33bl5ka>namedtuple</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#heapq--min-heap" class="toc-link" data-toc-link="heapq--min-heap" data-astro-cid-p33bl5ka>heapq — Min-Heap</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#bisect--binary-search" class="toc-link" data-toc-link="bisect--binary-search" data-astro-cid-p33bl5ka>bisect — Binary Search</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#iterators-generators-and-comprehensions" class="toc-link" data-toc-link="iterators-generators-and-comprehensions" data-astro-cid-p33bl5ka>Iterators, Generators, and Comprehensions</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-iterator-protocol" class="toc-link" data-toc-link="the-iterator-protocol" data-astro-cid-p33bl5ka>The Iterator Protocol</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#generators--lazy-evaluation" class="toc-link" data-toc-link="generators--lazy-evaluation" data-astro-cid-p33bl5ka>Generators — Lazy Evaluation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#comprehensions" class="toc-link" data-toc-link="comprehensions" data-astro-cid-p33bl5ka>Comprehensions</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#decorators" class="toc-link" data-toc-link="decorators" data-astro-cid-p33bl5ka>Decorators</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#decorator-with-arguments" class="toc-link" data-toc-link="decorator-with-arguments" data-astro-cid-p33bl5ka>Decorator with Arguments</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#class-decorator" class="toc-link" data-toc-link="class-decorator" data-astro-cid-p33bl5ka>Class Decorator</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#functoolswraps--preserve-metadata" class="toc-link" data-toc-link="functoolswraps--preserve-metadata" data-astro-cid-p33bl5ka>functools.wraps — Preserve Metadata</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#context-managers" class="toc-link" data-toc-link="context-managers" data-astro-cid-p33bl5ka>Context Managers</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#args-kwargs-and-function-arguments" class="toc-link" data-toc-link="args-kwargs-and-function-arguments" data-astro-cid-p33bl5ka>*args, **kwargs, and Function Arguments</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#classes-and-oop-in-python" class="toc-link" data-toc-link="classes-and-oop-in-python" data-astro-cid-p33bl5ka>Classes and OOP in Python</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#class-internals" class="toc-link" data-toc-link="class-internals" data-astro-cid-p33bl5ka>Class Internals</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#new-vs-init" class="toc-link" data-toc-link="new-vs-init" data-astro-cid-p33bl5ka>new vs init</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#method-resolution-order-mro" class="toc-link" data-toc-link="method-resolution-order-mro" data-astro-cid-p33bl5ka>Method Resolution Order (MRO)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#dunder-methods-cheat-sheet" class="toc-link" data-toc-link="dunder-methods-cheat-sheet" data-astro-cid-p33bl5ka>Dunder Methods Cheat Sheet</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#common-python-interview-questions" class="toc-link" data-toc-link="common-python-interview-questions" data-astro-cid-p33bl5ka>Common Python Interview Questions</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#q1-whats-the-difference-between-is-and-" class="toc-link" data-toc-link="q1-whats-the-difference-between-is-and-" data-astro-cid-p33bl5ka>Q1: What’s the difference between is and ==?</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#q2-whats-the-difference-between-deepcopy-and-copy" class="toc-link" data-toc-link="q2-whats-the-difference-between-deepcopy-and-copy" data-astro-cid-p33bl5ka>Q2: What’s the difference between deepcopy and copy?</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#q3-explain-args-and-kwargs" class="toc-link" data-toc-link="q3-explain-args-and-kwargs" data-astro-cid-p33bl5ka>Q3: Explain *args and **kwargs</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#q4-what-are-decorators-and-how-do-they-work" class="toc-link" data-toc-link="q4-what-are-decorators-and-how-do-they-work" data-astro-cid-p33bl5ka>Q4: What are decorators and how do they work?</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#q5-how-does-pythons-garbage-collection-work" class="toc-link" data-toc-link="q5-how-does-pythons-garbage-collection-work" data-astro-cid-p33bl5ka>Q5: How does Python’s garbage collection work?</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#q6-whats-the-gil-and-why-does-it-matter" class="toc-link" data-toc-link="q6-whats-the-gil-and-why-does-it-matter" data-astro-cid-p33bl5ka>Q6: What’s the GIL and why does it matter?</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#q7-whats-the-difference-between-a-list-and-a-tuple" class="toc-link" data-toc-link="q7-whats-the-difference-between-a-list-and-a-tuple" data-astro-cid-p33bl5ka>Q7: What’s the difference between a list and a tuple?</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#q8-how-do-staticmethod-and-classmethod-differ" class="toc-link" data-toc-link="q8-how-do-staticmethod-and-classmethod-differ" data-astro-cid-p33bl5ka>Q8: How do @staticmethod and @classmethod differ?</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#python-specific-leetcode-tricks" class="toc-link" data-toc-link="python-specific-leetcode-tricks" data-astro-cid-p33bl5ka>Python-Specific LeetCode Tricks</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#1-one-liners-for-common-patterns" class="toc-link" data-toc-link="1-one-liners-for-common-patterns" data-astro-cid-p33bl5ka>1. One-liners for Common Patterns</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#2-slicing--the-full-syntax" class="toc-link" data-toc-link="2-slicing--the-full-syntax" data-astro-cid-p33bl5ka>2. Slicing — The Full Syntax</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#3-useful-standard-library-for-interviews" class="toc-link" data-toc-link="3-useful-standard-library-for-interviews" data-astro-cid-p33bl5ka>3. Useful Standard Library for Interviews</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#4-sorting-with-complex-keys" class="toc-link" data-toc-link="4-sorting-with-complex-keys" data-astro-cid-p33bl5ka>4. Sorting with Complex Keys</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#python-vs-java--quick-reference-for-interviews" class="toc-link" data-toc-link="python-vs-java--quick-reference-for-interviews" data-astro-cid-p33bl5ka>Python vs Java — Quick Reference for Interviews</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#common-pitfalls-in-python-interviews" class="toc-link" data-toc-link="common-pitfalls-in-python-interviews" data-astro-cid-p33bl5ka>Common Pitfalls in Python Interviews</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#1-integer-division-gotcha" class="toc-link" data-toc-link="1-integer-division-gotcha" data-astro-cid-p33bl5ka>1. Integer Division Gotcha</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#2-default-mutable-arguments" class="toc-link" data-toc-link="2-default-mutable-arguments" data-astro-cid-p33bl5ka>2. Default Mutable Arguments</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#3-late-binding-in-closures" class="toc-link" data-toc-link="3-late-binding-in-closures" data-astro-cid-p33bl5ka>3. Late Binding in Closures</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#4-is-vs--with-numbers" class="toc-link" data-toc-link="4-is-vs--with-numbers" data-astro-cid-p33bl5ka>4. is vs == with Numbers</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#5-shallow-copy-gotchas" class="toc-link" data-toc-link="5-shallow-copy-gotchas" data-astro-cid-p33bl5ka>5. Shallow Copy Gotchas</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#6-sorted-vs-sort" class="toc-link" data-toc-link="6-sorted-vs-sort" data-astro-cid-p33bl5ka>6. sorted() vs .sort()</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#7-float-comparison" class="toc-link" data-toc-link="7-float-comparison" data-astro-cid-p33bl5ka>7. Float Comparison</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-strategy-for-python" class="toc-link" data-toc-link="interview-strategy-for-python" data-astro-cid-p33bl5ka>Interview Strategy for Python</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#when-to-use-python-vs-java" class="toc-link" data-toc-link="when-to-use-python-vs-java" data-astro-cid-p33bl5ka>When to Use Python vs Java</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#python-coding-interview-checklist" class="toc-link" data-toc-link="python-coding-interview-checklist" data-astro-cid-p33bl5ka>Python Coding Interview Checklist</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#time-complexity-of-python-operations" class="toc-link" data-toc-link="time-complexity-of-python-operations" data-astro-cid-p33bl5ka>Time Complexity of Python Operations</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#key-takeaways" class="toc-link" data-toc-link="key-takeaways" data-astro-cid-p33bl5ka>Key Takeaways</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/coding-interview/" class="article-category" data-astro-cid-sgg5joot>Coding Interview</a><h1 class="article-title" data-astro-cid-sgg5joot>Python Internals &amp; Interview Prep</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-intermediate to advanced" data-astro-cid-sgg5joot>Intermediate to Advanced</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 25 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 35 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>python</span><span class="tag" data-astro-cid-sgg5joot>internals</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>memory-model</span><span class="tag" data-astro-cid-sgg5joot>gil</span><span class="tag" data-astro-cid-sgg5joot>collections</span><span class="tag" data-astro-cid-sgg5joot>generators</span><span class="tag" data-astro-cid-sgg5joot>decorators</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="python-internals--interview-prep">Python Internals &amp; Interview Prep</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>Deep Python knowledge — how dict works (hash table), the GIL, <code>is</code> vs <code>==</code>, memory model, and language-specific gotchas.</p>
+<p><strong>How it’s asked:</strong> “How does a Python dict work internally? What is the GIL? Why is <code>is</code> different from <code>==</code>? — questions testing language depth, not just usage.”</p>
+<hr>
+<h2 id="overview">Overview</h2>
+<p>This document covers Python-specific internals, idioms, and details that matter for coding interviews and systems discussions. If you’re primarily a Java engineer who also writes Python (or needs to switch languages for an interview), this is your cheat sheet for the things that differ from Java — and the things interviewers love to probe.</p>
+<hr>
+<h2 id="python-memory-model">Python Memory Model</h2>
+<h3 id="everything-is-an-object">Everything Is an Object</h3>
+<p>In Python, everything — integers, functions, classes, <code>None</code>, <code>True</code> — is an object with a type, a reference count, and a value. There are no primitives. The number <code>5</code> is a full object with a <code>__class__</code>, <code>__add__</code>, <code>__repr__</code>, and an identity (<code>id()</code>).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────────────────────────────────┐</span></span>
+<span class="line"><span>│  Python Object Header (CPython)          │</span></span>
+<span class="line"><span>├──────────────────────────────────────────┤</span></span>
+<span class="line"><span>│  ob_refcnt   → reference count (8 bytes) │</span></span>
+<span class="line"><span>│  ob_type     → pointer to type object    │</span></span>
+<span class="line"><span>│  ob_size     → variable-length items     │</span></span>
+<span class="line"><span>│  [object-specific data follows]          │</span></span>
+<span class="line"><span>└──────────────────────────────────────────┘</span></span></code></pre>
+<p>This has implications:</p>
+<ul>
+<li><strong>Small integers are cached</strong>: CPython pre-creates integer objects for -5 to 256. So <code>a = 100; b = 100; a is b</code> returns <code>True</code>, but <code>a = 300; b = 300; a is b</code> returns <code>False</code> (they’re separate objects). This is a common interview trick.</li>
+<li><strong>Strings are interned</strong>: Short strings and compile-time constants may share the same object. <code>a = "hello"; b = "hello"; a is b</code> is usually <code>True</code> due to string interning, but dynamically constructed strings may not be.</li>
+<li><code>id()</code> returns the memory address (in CPython). Use <code>is</code> to compare identity, <code>==</code> to compare value.</li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">a </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1000</span></span>
+<span class="line"><span style="color:#E1E4E8">b </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1000</span></span>
+<span class="line"><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(a </span><span style="color:#F97583">is</span><span style="color:#E1E4E8"> b)      </span><span style="color:#6A737D"># False — different objects (outside cached range)</span></span>
+<span class="line"><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(a </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> b)      </span><span style="color:#6A737D"># True  — same value</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># But in the same line, CPython optimizes:</span></span>
+<span class="line"><span style="color:#E1E4E8">c </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1000</span><span style="color:#E1E4E8">; d </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1000</span></span>
+<span class="line"><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(c </span><span style="color:#F97583">is</span><span style="color:#E1E4E8"> d)      </span><span style="color:#6A737D"># True — compile-time constant folding</span></span></code></pre>
+<h3 id="reference-counting--garbage-collection">Reference Counting &amp; Garbage Collection</h3>
+<p>Python uses <strong>reference counting</strong> as its primary memory management, supplemented by a <strong>cyclic garbage collector</strong> for detecting reference cycles.</p>
+<ul>
+<li>Every object has a <code>ob_refcnt</code> field. When it drops to zero, the object is immediately deallocated.</li>
+<li>Reference cycles (e.g., <code>a.b = b; b.a = a</code>) can’t be caught by refcounting alone. The cyclic GC periodically scans for these.</li>
+<li><code>sys.getrefcount(obj)</code> shows the reference count (note: it’s always +1 because the function argument itself is a reference).</li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> sys, gc</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Reference cycle</span></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Node</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __init__</span><span style="color:#E1E4E8">(self):</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.ref </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> None</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">a </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Node()</span></span>
+<span class="line"><span style="color:#E1E4E8">b </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Node()</span></span>
+<span class="line"><span style="color:#E1E4E8">a.ref </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> b      </span><span style="color:#6A737D"># a → b</span></span>
+<span class="line"><span style="color:#E1E4E8">b.ref </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> a      </span><span style="color:#6A737D"># b → a (cycle!)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">del</span><span style="color:#E1E4E8"> a</span></span>
+<span class="line"><span style="color:#F97583">del</span><span style="color:#E1E4E8"> b</span></span>
+<span class="line"><span style="color:#6A737D"># Neither was freed because refcount of each is still 1 (they reference each other)</span></span>
+<span class="line"><span style="color:#6A737D"># The cyclic GC will eventually collect them</span></span>
+<span class="line"><span style="color:#E1E4E8">gc.collect()   </span><span style="color:#6A737D"># Force collection</span></span></code></pre>
+<table>
+<thead>
+<tr>
+<th>Mechanism</th>
+<th>What it catches</th>
+<th>What it misses</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reference counting</td>
+<td>Non-cyclic objects (immediate)</td>
+<td>Reference cycles</td>
+</tr>
+<tr>
+<td>Cyclic GC (generation 0/1/2)</td>
+<td>Reference cycles</td>
+<td>Non-Python objects (C extensions)</td>
+</tr>
+<tr>
+<td><code>__del__</code></td>
+<td>Finalization hook</td>
+<td>Order of <code>__del__</code> calls in cycles is undefined</td>
+</tr>
+</tbody>
+</table>
+<h3 id="mutable-vs-immutable">Mutable vs Immutable</h3>
+<p>This is one of the most common Python interview topics.</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Mutable?</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>int, float, bool, complex</td>
+<td>Immutable</td>
+<td><code>x = 5; x += 1</code> creates a new int</td>
+</tr>
+<tr>
+<td>str</td>
+<td>Immutable</td>
+<td><code>s = "hi"; s += "!"</code> creates a new string</td>
+</tr>
+<tr>
+<td>tuple</td>
+<td>Immutable</td>
+<td><code>t = (1, 2); t[0] = 3</code> → TypeError</td>
+</tr>
+<tr>
+<td>frozenset</td>
+<td>Immutable</td>
+<td><code>fs = frozenset([1,2])</code></td>
+</tr>
+<tr>
+<td>list</td>
+<td>Mutable</td>
+<td><code>l = [1]; l.append(2)</code> modifies in place</td>
+</tr>
+<tr>
+<td>dict</td>
+<td>Mutable</td>
+<td><code>d = {}; d['k'] = 'v'</code></td>
+</tr>
+<tr>
+<td>set</td>
+<td>Mutable</td>
+<td><code>s = set(); s.add(1)</code></td>
+</tr>
+<tr>
+<td>bytearray</td>
+<td>Mutable</td>
+<td><code>ba = bytearray(b'hi'); ba[0] = 72</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>The trap with mutable default arguments</strong> — this is the #1 Python interview question:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># </span><span style="color:#F97583">BUG</span><span style="color:#6A737D">: mutable default argument</span></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> add_item</span><span style="color:#E1E4E8">(item, lst</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">[]):</span></span>
+<span class="line"><span style="color:#E1E4E8">    lst.append(item)</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> lst</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(add_item(</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">))  </span><span style="color:#6A737D"># [1]</span></span>
+<span class="line"><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(add_item(</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">))  </span><span style="color:#6A737D"># [1, 2] — NOT [2]! The default list is shared across calls</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># FIX: use None as sentinel</span></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> add_item</span><span style="color:#E1E4E8">(item, lst</span><span style="color:#F97583">=</span><span style="color:#79B8FF">None</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> lst </span><span style="color:#F97583">is</span><span style="color:#79B8FF"> None</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#E1E4E8">        lst </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> []</span></span>
+<span class="line"><span style="color:#E1E4E8">    lst.append(item)</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> lst</span></span></code></pre>
+<p>This happens because default argument values are evaluated <strong>once</strong> at function definition time, not each time the function is called. The same list object persists across all calls that use the default.</p>
+<p><strong>Immutable doesn’t mean its contents are immutable</strong> — a tuple containing a list:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">t </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> ([</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">], [</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">])</span></span>
+<span class="line"><span style="color:#E1E4E8">t[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">].append(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)     </span><span style="color:#6A737D"># Works! The tuple still points to the same list object</span></span>
+<span class="line"><span style="color:#E1E4E8">t[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [</span><span style="color:#79B8FF">99</span><span style="color:#E1E4E8">]        </span><span style="color:#6A737D"># TypeError — can't reassign tuple element</span></span></code></pre>
+<hr>
+<h2 id="how-python-data-structures-work-internally">How Python Data Structures Work Internally</h2>
+<h3 id="lists--dynamic-arrays">Lists — Dynamic Arrays</h3>
+<p>Python lists are dynamic arrays of <strong>pointers</strong> to PyObject, not arrays of the values themselves. This means:</p>
+<ul>
+<li>A list of 5 integers stores 5 pointers (8 bytes each on 64-bit) + the int objects themselves</li>
+<li>Appending is amortized O(1) — the list over-allocates. When it runs out of space, it grows by ~12.5% (new_size = old_size + (old_size &gt;&gt; 3) + 6)</li>
+<li>Random access by index is O(1)</li>
+<li>Insert at front is O(n) — all pointers must shift</li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>list = [42, "hello", 3.14]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Memory layout:</span></span>
+<span class="line"><span>┌──────────┬──────────┬──────────┐</span></span>
+<span class="line"><span>│ ptr ───► │ ptr ───► │ ptr ───► │  (pointer array, over-allocated)</span></span>
+<span class="line"><span>└──────────┴──────────┴──────────┘</span></span>
+<span class="line"><span>     │          │          │</span></span>
+<span class="line"><span>     ▼          ▼          ▼</span></span>
+<span class="line"><span>  [int 42]  [str "hello"] [float 3.14]  (separate heap objects)</span></span></code></pre>
+<p><strong>Growth pattern</strong>: <code>[], [4], [8], [16], [25], [35], [46], [58]...</code> — not doubling, but adding a percentage. This means list append is amortized O(1) but with more reallocations than a doubling strategy.</p>
+<h3 id="dictionaries--hash-tables-with-open-addressing">Dictionaries — Hash Tables with Open Addressing</h3>
+<p>Since Python 3.6, dictionaries are <strong>ordered</strong> (insertion order preserved) and use a compact hash table implementation. Before 3.6, dicts were unordered and used more memory.</p>
+<p><strong>How it works internally:</strong></p>
+<ol>
+<li>Python uses <strong>open addressing</strong> (not chaining) for collision resolution</li>
+<li>The dict maintains two arrays:
+<ul>
+<li>A <strong>sparse array</strong> of indices (hash → slot mapping)</li>
+<li>A <strong>dense array</strong> of entries (key, value pairs in insertion order)</li>
+</ul>
+</li>
+</ol>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌─────────────────────────────┐</span></span>
+<span class="line"><span>│  Indices Array (sparse)      │  ← hash mod size → slot</span></span>
+<span class="line"><span>│  [_, 0, _, _, 1, _, 2, _]   │  ← points into entries array</span></span>
+<span class="line"><span>└─────────────────────────────┘</span></span>
+<span class="line"><span>           │         │    │</span></span>
+<span class="line"><span>           ▼         ▼    ▼</span></span>
+<span class="line"><span>┌─────────────────────────────┐</span></span>
+<span class="line"><span>│  Entries Array (dense)       │</span></span>
+<span class="line"><span>│  0: (hash_a, key_a, val_a)  │</span></span>
+<span class="line"><span>│  1: (hash_b, key_b, val_b)  │  ← insertion order preserved</span></span>
+<span class="line"><span>│  2: (hash_c, key_c, val_c)  │</span></span>
+<span class="line"><span>└─────────────────────────────┘</span></span></code></pre>
+<p><strong>Key details for interviews:</strong></p>
+<ul>
+<li>Dict lookup is average O(1), worst case O(n) (with many hash collisions)</li>
+<li>Dict keys must be <strong>hashable</strong> — they need <code>__hash__()</code> and <code>__eq__()</code>. Mutable types (list, dict, set) are unhashable. Tuples are hashable if all their elements are hashable.</li>
+<li>A frozenset can be a dict key; a set cannot.</li>
+<li>Dict resizing happens when it’s ~2/3 full. It roughly doubles.</li>
+<li>Python 3.7+ guarantees insertion order as a language feature (3.6 was an implementation detail of CPython).</li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># Hashability check</span></span>
+<span class="line"><span style="color:#79B8FF">hash</span><span style="color:#E1E4E8">([</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">])       </span><span style="color:#6A737D"># TypeError: unhashable type: 'list'</span></span>
+<span class="line"><span style="color:#79B8FF">hash</span><span style="color:#E1E4E8">((</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">))       </span><span style="color:#6A737D"># Works — tuples of hashables are hashable</span></span>
+<span class="line"><span style="color:#79B8FF">hash</span><span style="color:#E1E4E8">((</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, [</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">]))  </span><span style="color:#6A737D"># TypeError — tuple contains unhashable list</span></span></code></pre>
+<h3 id="sets--dicts-without-values">Sets — Dicts Without Values</h3>
+<p>Sets are implemented exactly like dicts but without the value entries. Same hash table, same O(1) average lookup, same open addressing. This is why:</p>
+<ul>
+<li><code>x in my_set</code> is O(1) average</li>
+<li><code>x in my_list</code> is O(n) — linear scan</li>
+<li>Sets don’t preserve insertion order (well, they do in CPython 3.7+ but it’s not guaranteed)</li>
+</ul>
+<h3 id="tuples--fixed-size-pointer-arrays">Tuples — Fixed-Size Pointer Arrays</h3>
+<p>Tuples are immutable arrays of pointers. Unlike lists, they don’t over-allocate — they’re exactly the right size. This makes them slightly more memory-efficient than lists for fixed collections.</p>
+<p><strong>Tuple caching</strong>: CPython caches empty tuples and some small tuples. <code>()</code> always returns the same object. Tuples of small integers may also be cached.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">a </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">b </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">a </span><span style="color:#F97583">is</span><span style="color:#E1E4E8"> b    </span><span style="color:#6A737D"># May be True (cached) or False — implementation detail</span></span></code></pre>
+<h3 id="strings--immutable-arrays-of-unicode">Strings — Immutable Arrays of Unicode</h3>
+<p>Python 3 strings are sequences of Unicode code points. Internally, CPython uses one of three representations depending on the content:</p>
+<table>
+<thead>
+<tr>
+<th>Representation</th>
+<th>When used</th>
+<th>Memory per char</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1-byte (Latin-1)</td>
+<td>All chars ≤ U+00FF</td>
+<td>1 byte</td>
+</tr>
+<tr>
+<td>2-byte (UCS-2)</td>
+<td>All chars ≤ U+FFFF</td>
+<td>2 bytes</td>
+</tr>
+<tr>
+<td>4-byte (UCS-4)</td>
+<td>Any char &gt; U+FFFF</td>
+<td>4 bytes</td>
+</tr>
+</tbody>
+</table>
+<p>This is why <code>len("a") == 1</code> but <code>len("🎉") == 1</code> (it’s a single code point), while <code>len("👨‍👩‍👧")</code> might be more than 1 (it’s composed of multiple code points joined by ZWJ).</p>
+<p><strong>String immutability implications:</strong></p>
+<ul>
+<li><code>s += "x"</code> creates a new string every time. In a loop, this is O(n²).</li>
+<li>Use <code>"".join(parts)</code> instead of repeated concatenation.</li>
+<li>CPython sometimes optimizes <code>s += "x"</code> in-place when the refcount is 1, but don’t rely on it.</li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># BAD — O(n²)</span></span>
+<span class="line"><span style="color:#E1E4E8">s </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> ""</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> word </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> words:</span></span>
+<span class="line"><span style="color:#E1E4E8">    s </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> word </span><span style="color:#F97583">+</span><span style="color:#9ECBFF"> " "</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># GOOD — O(n)</span></span>
+<span class="line"><span style="color:#E1E4E8">s </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> " "</span><span style="color:#E1E4E8">.join(words)</span></span></code></pre>
+<hr>
+<h2 id="the-gil-global-interpreter-lock">The GIL (Global Interpreter Lock)</h2>
+<p>The GIL is a mutex that allows only one thread to execute Python bytecode at a time. It’s the single most important thing to understand about Python concurrency.</p>
+<p><strong>Why it exists:</strong> CPython’s memory management (reference counting) is not thread-safe. Rather than using fine-grained locks on every object, Python uses a single global lock. The GIL is released periodically (every 100 bytecode instructions by default, or on I/O operations) to allow other threads to run.</p>
+<p><strong>What this means:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>GIL impact</th>
+<th>Solution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU-bound threading</td>
+<td>No speedup (serialized)</td>
+<td>Use <code>multiprocessing</code> or C extensions</td>
+</tr>
+<tr>
+<td>I/O-bound threading</td>
+<td>Works fine (GIL released on I/O)</td>
+<td><code>threading</code> or <code>asyncio</code></td>
+</tr>
+<tr>
+<td>C extension (NumPy, etc.)</td>
+<td>Can release GIL manually</td>
+<td>Use libraries that release GIL</td>
+</tr>
+<tr>
+<td>Multi-core utilization</td>
+<td>Impossible with threads</td>
+<td><code>multiprocessing</code>, <code>concurrent.futures.ProcessPoolExecutor</code></td>
+</tr>
+</tbody>
+</table>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> threading</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> time</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># CPU-bound work — threading gives NO speedup due to GIL</span></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> count_down</span><span style="color:#E1E4E8">(n):</span></span>
+<span class="line"><span style="color:#F97583">    while</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">></span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#E1E4E8">        n </span><span style="color:#F97583">-=</span><span style="color:#79B8FF"> 1</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># This will take ~2x as long as single-threaded, not 1x</span></span>
+<span class="line"><span style="color:#E1E4E8">t1 </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> threading.Thread(</span><span style="color:#FFAB70">target</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">count_down, </span><span style="color:#FFAB70">args</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">10</span><span style="color:#F97583">**</span><span style="color:#79B8FF">8</span><span style="color:#E1E4E8">,))</span></span>
+<span class="line"><span style="color:#E1E4E8">t2 </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> threading.Thread(</span><span style="color:#FFAB70">target</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">count_down, </span><span style="color:#FFAB70">args</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">10</span><span style="color:#F97583">**</span><span style="color:#79B8FF">8</span><span style="color:#E1E4E8">,))</span></span>
+<span class="line"><span style="color:#E1E4E8">t1.start(); t2.start()</span></span>
+<span class="line"><span style="color:#E1E4E8">t1.join(); t2.join()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Use multiprocessing instead for CPU-bound work</span></span>
+<span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> multiprocessing </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> Process</span></span>
+<span class="line"><span style="color:#E1E4E8">p1 </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Process(</span><span style="color:#FFAB70">target</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">count_down, </span><span style="color:#FFAB70">args</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">10</span><span style="color:#F97583">**</span><span style="color:#79B8FF">8</span><span style="color:#E1E4E8">,))</span></span>
+<span class="line"><span style="color:#E1E4E8">p2 </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Process(</span><span style="color:#FFAB70">target</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">count_down, </span><span style="color:#FFAB70">args</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">10</span><span style="color:#F97583">**</span><span style="color:#79B8FF">8</span><span style="color:#E1E4E8">,))</span></span>
+<span class="line"><span style="color:#E1E4E8">p1.start(); p2.start()</span></span>
+<span class="line"><span style="color:#E1E4E8">p1.join(); p2.join()</span></span>
+<span class="line"><span style="color:#6A737D"># This will actually be ~2x faster (true parallelism)</span></span></code></pre>
+<p><strong>The <code>GIL</code> is per-interpreter, not per-process.</strong> Each Python process has its own GIL. This is why multiprocessing works — each process has its own interpreter and GIL.</p>
+<hr>
+<h2 id="collections-module--interview-power-tools">Collections Module — Interview Power Tools</h2>
+<p>The <code>collections</code> module is your best friend in Python interviews. Know these cold:</p>
+<h3 id="defaultdict">defaultdict</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> collections </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> defaultdict</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Group words by first letter</span></span>
+<span class="line"><span style="color:#E1E4E8">words </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [</span><span style="color:#9ECBFF">"apple"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"banana"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"avocado"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"blueberry"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"cherry"</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#E1E4E8">groups </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> defaultdict(</span><span style="color:#79B8FF">list</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> w </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> words:</span></span>
+<span class="line"><span style="color:#E1E4E8">    groups[w[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]].append(w)</span></span>
+<span class="line"><span style="color:#6A737D"># {'a': ['apple', 'avocado'], 'b': ['banana', 'blueberry'], 'c': ['cherry']}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Counter pattern without defaultdict</span></span>
+<span class="line"><span style="color:#E1E4E8">count </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> {}</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> w </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> words:</span></span>
+<span class="line"><span style="color:#E1E4E8">    count[w[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> count.get(w[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">], </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#6A737D">  # More verbose</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># With defaultdict</span></span>
+<span class="line"><span style="color:#E1E4E8">count </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> defaultdict(</span><span style="color:#79B8FF">int</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> w </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> words:</span></span>
+<span class="line"><span style="color:#E1E4E8">    count[w[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]] </span><span style="color:#F97583">+=</span><span style="color:#79B8FF"> 1</span><span style="color:#6A737D">  # Cleaner</span></span></code></pre>
+<h3 id="counter">Counter</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> collections </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> Counter</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Frequency counting</span></span>
+<span class="line"><span style="color:#E1E4E8">c </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Counter(</span><span style="color:#9ECBFF">"abracadabra"</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#6A737D"># Counter({'a': 5, 'b': 2, 'r': 2, 'c': 1, 'd': 1})</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">c.most_common(</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">)  </span><span style="color:#6A737D"># [('a', 5), ('b', 2)]</span></span>
+<span class="line"><span style="color:#E1E4E8">c[</span><span style="color:#9ECBFF">'z'</span><span style="color:#E1E4E8">]            </span><span style="color:#6A737D"># 0 (missing keys return 0, not KeyError)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Set operations on counters</span></span>
+<span class="line"><span style="color:#E1E4E8">c1 </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Counter(</span><span style="color:#FFAB70">a</span><span style="color:#F97583">=</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">b</span><span style="color:#F97583">=</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">c2 </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Counter(</span><span style="color:#FFAB70">a</span><span style="color:#F97583">=</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">b</span><span style="color:#F97583">=</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">c1 </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> c2  </span><span style="color:#6A737D"># Counter({'a': 4, 'b': 3}) — addition</span></span>
+<span class="line"><span style="color:#E1E4E8">c1 </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> c2  </span><span style="color:#6A737D"># Counter({'a': 2}) — subtraction (min 0, drops negatives)</span></span>
+<span class="line"><span style="color:#E1E4E8">c1 </span><span style="color:#F97583">&#x26;</span><span style="color:#E1E4E8"> c2  </span><span style="color:#6A737D"># Counter({'a': 1, 'b': 1}) — intersection (min)</span></span>
+<span class="line"><span style="color:#E1E4E8">c1 </span><span style="color:#F97583">|</span><span style="color:#E1E4E8"> c2  </span><span style="color:#6A737D"># Counter({'a': 3, 'b': 2}) — union (max)</span></span></code></pre>
+<h3 id="deque">deque</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> collections </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> deque</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># O(1) append/pop from both ends</span></span>
+<span class="line"><span style="color:#E1E4E8">d </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> deque([</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">])</span></span>
+<span class="line"><span style="color:#E1E4E8">d.appendleft(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">)    </span><span style="color:#6A737D"># deque([0, 1, 2, 3])</span></span>
+<span class="line"><span style="color:#E1E4E8">d.append(</span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">)        </span><span style="color:#6A737D"># deque([0, 1, 2, 3, 4])</span></span>
+<span class="line"><span style="color:#E1E4E8">d.popleft()        </span><span style="color:#6A737D"># 0, deque([1, 2, 3, 4])</span></span>
+<span class="line"><span style="color:#E1E4E8">d.pop()            </span><span style="color:#6A737D"># 4, deque([1, 2, 3])</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Sliding window</span></span>
+<span class="line"><span style="color:#E1E4E8">d </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> deque(</span><span style="color:#FFAB70">maxlen</span><span style="color:#F97583">=</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#E1E4E8">    d.append(i)    </span><span style="color:#6A737D"># After 0,1,2,3,4: deque([2, 3, 4], maxlen=3)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># BFS queue — use deque, NOT list</span></span>
+<span class="line"><span style="color:#E1E4E8">queue </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> deque([start])</span></span>
+<span class="line"><span style="color:#F97583">while</span><span style="color:#E1E4E8"> queue:</span></span>
+<span class="line"><span style="color:#E1E4E8">    node </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> queue.popleft()  </span><span style="color:#6A737D"># O(1) — list.pop(0) is O(n)!</span></span>
+<span class="line"><span style="color:#F97583">    for</span><span style="color:#E1E4E8"> neighbor </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> graph[node]:</span></span>
+<span class="line"><span style="color:#E1E4E8">        queue.append(neighbor)</span></span></code></pre>
+<h3 id="ordereddict-less-relevant-now">OrderedDict (Less Relevant Now)</h3>
+<p>Since Python 3.7, regular <code>dict</code> preserves insertion order. <code>OrderedDict</code> is now mainly useful for:</p>
+<ul>
+<li><code>move_to_end(key)</code> and <code>popitem(last=False)</code> — useful for LRU cache implementation</li>
+<li>Explicit ordering on older Python versions</li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> collections </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> OrderedDict</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> LRUCache</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __init__</span><span style="color:#E1E4E8">(self, capacity):</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.cache </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> OrderedDict()</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.capacity </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> capacity</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> get</span><span style="color:#E1E4E8">(self, key):</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> key </span><span style="color:#F97583">not</span><span style="color:#F97583"> in</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.cache:</span></span>
+<span class="line"><span style="color:#F97583">            return</span><span style="color:#F97583"> -</span><span style="color:#79B8FF">1</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.cache.move_to_end(key)  </span><span style="color:#6A737D"># Mark as recently used</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.cache[key]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> put</span><span style="color:#E1E4E8">(self, key, value):</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> key </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.cache:</span></span>
+<span class="line"><span style="color:#79B8FF">            self</span><span style="color:#E1E4E8">.cache.move_to_end(key)</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.cache[key] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> value</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#79B8FF"> len</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">self</span><span style="color:#E1E4E8">.cache) </span><span style="color:#F97583">></span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.capacity:</span></span>
+<span class="line"><span style="color:#79B8FF">            self</span><span style="color:#E1E4E8">.cache.popitem(</span><span style="color:#FFAB70">last</span><span style="color:#F97583">=</span><span style="color:#79B8FF">False</span><span style="color:#E1E4E8">)  </span><span style="color:#6A737D"># Remove LRU item</span></span></code></pre>
+<h3 id="namedtuple">namedtuple</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> collections </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> namedtuple</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">Point </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> namedtuple(</span><span style="color:#9ECBFF">'Point'</span><span style="color:#E1E4E8">, [</span><span style="color:#9ECBFF">'x'</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">'y'</span><span style="color:#E1E4E8">])</span></span>
+<span class="line"><span style="color:#E1E4E8">p </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Point(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">p.x          </span><span style="color:#6A737D"># 3</span></span>
+<span class="line"><span style="color:#E1E4E8">p.y          </span><span style="color:#6A737D"># 4</span></span>
+<span class="line"><span style="color:#E1E4E8">p[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]         </span><span style="color:#6A737D"># 3 (also indexable)</span></span>
+<span class="line"><span style="color:#E1E4E8">x, y </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> p     </span><span style="color:#6A737D"># Unpacking works</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Lighter than a class, more readable than a tuple</span></span>
+<span class="line"><span style="color:#6A737D"># Useful for returning multiple values with names</span></span></code></pre>
+<h3 id="heapq--min-heap">heapq — Min-Heap</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> heapq</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Python's heapq is a min-heap. For max-heap, negate values.</span></span>
+<span class="line"><span style="color:#E1E4E8">nums </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">9</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">6</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#E1E4E8">heapq.heapify(nums)  </span><span style="color:#6A737D"># O(n) in-place heapify</span></span>
+<span class="line"><span style="color:#E1E4E8">heapq.heappop(nums)  </span><span style="color:#6A737D"># 1 (smallest)</span></span>
+<span class="line"><span style="color:#E1E4E8">heapq.heappush(nums, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">)  </span><span style="color:#6A737D"># Add element</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># K largest elements</span></span>
+<span class="line"><span style="color:#E1E4E8">heapq.nlargest(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, nums)  </span><span style="color:#6A737D"># [9, 6, 5]</span></span>
+<span class="line"><span style="color:#6A737D"># K smallest elements</span></span>
+<span class="line"><span style="color:#E1E4E8">heapq.nsmallest(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, nums)  </span><span style="color:#6A737D"># [0, 1, 1]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Max-heap pattern (negate values)</span></span>
+<span class="line"><span style="color:#E1E4E8">max_heap </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> []</span></span>
+<span class="line"><span style="color:#E1E4E8">heapq.heappush(max_heap, </span><span style="color:#F97583">-</span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">heapq.heappush(max_heap, </span><span style="color:#F97583">-</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">largest </span><span style="color:#F97583">=</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8">heapq.heappop(max_heap)  </span><span style="color:#6A737D"># 5</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Merge K sorted lists</span></span>
+<span class="line"><span style="color:#E1E4E8">heapq.merge([</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">], [</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">6</span><span style="color:#E1E4E8">], [</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">7</span><span style="color:#E1E4E8">,</span><span style="color:#79B8FF">8</span><span style="color:#E1E4E8">])  </span><span style="color:#6A737D"># Iterator: 0,1,2,3,4,5,6,7,8</span></span></code></pre>
+<h3 id="bisect--binary-search">bisect — Binary Search</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> bisect</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># bisect maintains a sorted list with O(log n) insert</span></span>
+<span class="line"><span style="color:#E1E4E8">sorted_list </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">7</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">9</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#E1E4E8">bisect.insort(sorted_list, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">)  </span><span style="color:#6A737D"># [1, 3, 4, 5, 7, 9]</span></span>
+<span class="line"><span style="color:#E1E4E8">bisect.bisect_left(sorted_list, </span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">)  </span><span style="color:#6A737D"># 3 (leftmost position for 5)</span></span>
+<span class="line"><span style="color:#E1E4E8">bisect.bisect_right(sorted_list, </span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">)  </span><span style="color:#6A737D"># 4 (rightmost position for 5)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Binary search template using bisect</span></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> binary_search</span><span style="color:#E1E4E8">(arr, target):</span></span>
+<span class="line"><span style="color:#E1E4E8">    idx </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> bisect.bisect_left(arr, target)</span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> idx </span><span style="color:#F97583">&#x3C;</span><span style="color:#79B8FF"> len</span><span style="color:#E1E4E8">(arr) </span><span style="color:#F97583">and</span><span style="color:#E1E4E8"> arr[idx] </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> target:</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> idx</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#F97583"> -</span><span style="color:#79B8FF">1</span></span></code></pre>
+<hr>
+<h2 id="iterators-generators-and-comprehensions">Iterators, Generators, and Comprehensions</h2>
+<h3 id="the-iterator-protocol">The Iterator Protocol</h3>
+<p>Python’s for loop works via the iterator protocol — <code>__iter__()</code> returns an iterator, <code>__next__()</code> returns the next element or raises <code>StopIteration</code>.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────┐     __iter__()     ┌──────────┐     __next__()     ┌──────────────┐</span></span>
+<span class="line"><span>│ Iterable │  ──────────────►  │ Iterator │  ──────────────►  │  next value  │</span></span>
+<span class="line"><span>│ (list,   │                   │ (has     │                   │  or          │</span></span>
+<span class="line"><span>│  dict,   │                   │  state)  │                   │  StopIter-   │</span></span>
+<span class="line"><span>│  str...) │                   │          │                   │  ation       │</span></span>
+<span class="line"><span>└──────────┘                   └──────────┘                   └──────────────┘</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># Custom iterator</span></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Range</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __init__</span><span style="color:#E1E4E8">(self, start, end):</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.current </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> start</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.end </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> end</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __iter__</span><span style="color:#E1E4E8">(self):</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> self</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __next__</span><span style="color:#E1E4E8">(self):</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.current </span><span style="color:#F97583">>=</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.end:</span></span>
+<span class="line"><span style="color:#F97583">            raise</span><span style="color:#79B8FF"> StopIteration</span></span>
+<span class="line"><span style="color:#E1E4E8">        val </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.current</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.current </span><span style="color:#F97583">+=</span><span style="color:#79B8FF"> 1</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> val</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> Range(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#79B8FF">    print</span><span style="color:#E1E4E8">(i)  </span><span style="color:#6A737D"># 0, 1, 2</span></span></code></pre>
+<h3 id="generators--lazy-evaluation">Generators — Lazy Evaluation</h3>
+<p>Generators are iterators that yield values one at a time, suspending and resuming execution. They’re memory-efficient because they don’t compute all values upfront.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># Generator function (uses yield)</span></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> fibonacci</span><span style="color:#E1E4E8">():</span></span>
+<span class="line"><span style="color:#E1E4E8">    a, b </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span></span>
+<span class="line"><span style="color:#F97583">    while</span><span style="color:#79B8FF"> True</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#F97583">        yield</span><span style="color:#E1E4E8"> a</span></span>
+<span class="line"><span style="color:#E1E4E8">        a, b </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> b, a </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> b</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">fib </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> fibonacci()</span></span>
+<span class="line"><span style="color:#79B8FF">next</span><span style="color:#E1E4E8">(fib)  </span><span style="color:#6A737D"># 0</span></span>
+<span class="line"><span style="color:#79B8FF">next</span><span style="color:#E1E4E8">(fib)  </span><span style="color:#6A737D"># 1</span></span>
+<span class="line"><span style="color:#79B8FF">next</span><span style="color:#E1E4E8">(fib)  </span><span style="color:#6A737D"># 1</span></span>
+<span class="line"><span style="color:#79B8FF">next</span><span style="color:#E1E4E8">(fib)  </span><span style="color:#6A737D"># 2</span></span>
+<span class="line"><span style="color:#6A737D"># Infinite sequence — no memory issue because it's lazy</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Generator expression (like list comprehension but lazy)</span></span>
+<span class="line"><span style="color:#E1E4E8">squares </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (x</span><span style="color:#F97583">**</span><span style="color:#79B8FF">2</span><span style="color:#F97583"> for</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">10</span><span style="color:#E1E4E8">))  </span><span style="color:#6A737D"># Generator — O(1) memory</span></span>
+<span class="line"><span style="color:#E1E4E8">squares_list </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [x</span><span style="color:#F97583">**</span><span style="color:#79B8FF">2</span><span style="color:#F97583"> for</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">10</span><span style="color:#E1E4E8">)]  </span><span style="color:#6A737D"># List — O(n) memory</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Use generators for streaming/large data</span></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> read_large_file</span><span style="color:#E1E4E8">(path):</span></span>
+<span class="line"><span style="color:#F97583">    with</span><span style="color:#79B8FF"> open</span><span style="color:#E1E4E8">(path) </span><span style="color:#F97583">as</span><span style="color:#E1E4E8"> f:</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> line </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> f:</span></span>
+<span class="line"><span style="color:#F97583">            yield</span><span style="color:#E1E4E8"> line.strip()  </span><span style="color:#6A737D"># One line at a time, not all in memory</span></span></code></pre>
+<p><strong>Key differences:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>List comprehension</th>
+<th>Generator expression</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Syntax</td>
+<td><code>[x for x in ...]</code></td>
+<td><code>(x for x in ...)</code></td>
+</tr>
+<tr>
+<td>Memory</td>
+<td>O(n) — all in memory</td>
+<td>O(1) — one at a time</td>
+</tr>
+<tr>
+<td>Reusable</td>
+<td>Yes — iterate multiple times</td>
+<td>No — single use</td>
+</tr>
+<tr>
+<td>Indexing</td>
+<td>Yes — <code>lst[0]</code></td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>len()</code></td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<h3 id="comprehensions">Comprehensions</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># List comprehension</span></span>
+<span class="line"><span style="color:#E1E4E8">squares </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [x</span><span style="color:#F97583">**</span><span style="color:#79B8FF">2</span><span style="color:#F97583"> for</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">10</span><span style="color:#E1E4E8">)]</span></span>
+<span class="line"><span style="color:#E1E4E8">evens </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [x </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">20</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">if</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">%</span><span style="color:#79B8FF"> 2</span><span style="color:#F97583"> ==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#E1E4E8">pairs </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [(x, y) </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> y </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">if</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">!=</span><span style="color:#E1E4E8"> y]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Dict comprehension</span></span>
+<span class="line"><span style="color:#E1E4E8">word_len </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> {w: </span><span style="color:#79B8FF">len</span><span style="color:#E1E4E8">(w) </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> w </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> [</span><span style="color:#9ECBFF">"hello"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"world"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"python"</span><span style="color:#E1E4E8">]}</span></span>
+<span class="line"><span style="color:#6A737D"># {'hello': 5, 'world': 5, 'python': 6}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Set comprehension</span></span>
+<span class="line"><span style="color:#E1E4E8">unique_lens </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> {</span><span style="color:#79B8FF">len</span><span style="color:#E1E4E8">(w) </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> w </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> [</span><span style="color:#9ECBFF">"hello"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"world"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"python"</span><span style="color:#E1E4E8">]}</span></span>
+<span class="line"><span style="color:#6A737D"># {5, 6}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Nested comprehension (read inside-out)</span></span>
+<span class="line"><span style="color:#E1E4E8">matrix </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [[i </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 3</span><span style="color:#F97583"> +</span><span style="color:#E1E4E8"> j </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> j </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)] </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)]</span></span>
+<span class="line"><span style="color:#6A737D"># [[0,1,2], [3,4,5], [6,7,8]]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Flattening</span></span>
+<span class="line"><span style="color:#E1E4E8">flat </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [x </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> row </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> matrix </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> row]</span></span>
+<span class="line"><span style="color:#6A737D"># [0,1,2,3,4,5,6,7,8]</span></span></code></pre>
+<hr>
+<h2 id="decorators">Decorators</h2>
+<p>Decorators are functions that wrap other functions to add behavior. They’re syntactic sugar for higher-order functions.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># Basic decorator</span></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> timer</span><span style="color:#E1E4E8">(func):</span></span>
+<span class="line"><span style="color:#F97583">    import</span><span style="color:#E1E4E8"> time</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> wrapper</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">*</span><span style="color:#E1E4E8">args, </span><span style="color:#F97583">**</span><span style="color:#E1E4E8">kwargs):</span></span>
+<span class="line"><span style="color:#E1E4E8">        start </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> time.time()</span></span>
+<span class="line"><span style="color:#E1E4E8">        result </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> func(</span><span style="color:#F97583">*</span><span style="color:#E1E4E8">args, </span><span style="color:#F97583">**</span><span style="color:#E1E4E8">kwargs)</span></span>
+<span class="line"><span style="color:#79B8FF">        print</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">f</span><span style="color:#9ECBFF">"</span><span style="color:#79B8FF">{</span><span style="color:#E1E4E8">func.</span><span style="color:#79B8FF">__name__}</span><span style="color:#9ECBFF"> took </span><span style="color:#79B8FF">{</span><span style="color:#E1E4E8">time.time() </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> start</span><span style="color:#F97583">:.4f</span><span style="color:#79B8FF">}</span><span style="color:#9ECBFF">s"</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> result</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> wrapper</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#B392F0">@timer</span></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> slow_function</span><span style="color:#E1E4E8">():</span></span>
+<span class="line"><span style="color:#F97583">    import</span><span style="color:#E1E4E8"> time</span></span>
+<span class="line"><span style="color:#E1E4E8">    time.sleep(</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># @timer is equivalent to: slow_function = timer(slow_function)</span></span></code></pre>
+<h3 id="decorator-with-arguments">Decorator with Arguments</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> repeat</span><span style="color:#E1E4E8">(n):</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> decorator</span><span style="color:#E1E4E8">(func):</span></span>
+<span class="line"><span style="color:#F97583">        def</span><span style="color:#B392F0"> wrapper</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">*</span><span style="color:#E1E4E8">args, </span><span style="color:#F97583">**</span><span style="color:#E1E4E8">kwargs):</span></span>
+<span class="line"><span style="color:#F97583">            for</span><span style="color:#E1E4E8"> _ </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(n):</span></span>
+<span class="line"><span style="color:#E1E4E8">                result </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> func(</span><span style="color:#F97583">*</span><span style="color:#E1E4E8">args, </span><span style="color:#F97583">**</span><span style="color:#E1E4E8">kwargs)</span></span>
+<span class="line"><span style="color:#F97583">            return</span><span style="color:#E1E4E8"> result</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> wrapper</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> decorator</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#B392F0">@repeat</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)  </span><span style="color:#6A737D"># Call the function 3 times</span></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> greet</span><span style="color:#E1E4E8">(name):</span></span>
+<span class="line"><span style="color:#79B8FF">    print</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">f</span><span style="color:#9ECBFF">"Hello, </span><span style="color:#79B8FF">{</span><span style="color:#E1E4E8">name</span><span style="color:#79B8FF">}</span><span style="color:#9ECBFF">"</span><span style="color:#E1E4E8">)</span></span></code></pre>
+<h3 id="class-decorator">Class Decorator</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> singleton</span><span style="color:#E1E4E8">(cls):</span></span>
+<span class="line"><span style="color:#E1E4E8">    instances </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> {}</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> get_instance</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">*</span><span style="color:#E1E4E8">args, </span><span style="color:#F97583">**</span><span style="color:#E1E4E8">kwargs):</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#79B8FF"> cls</span><span style="color:#F97583"> not</span><span style="color:#F97583"> in</span><span style="color:#E1E4E8"> instances:</span></span>
+<span class="line"><span style="color:#E1E4E8">            instances[</span><span style="color:#79B8FF">cls</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> cls</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">*</span><span style="color:#E1E4E8">args, </span><span style="color:#F97583">**</span><span style="color:#E1E4E8">kwargs)</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> instances[</span><span style="color:#79B8FF">cls</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> get_instance</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#B392F0">@singleton</span></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Database</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __init__</span><span style="color:#E1E4E8">(self):</span></span>
+<span class="line"><span style="color:#79B8FF">        print</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"Connecting to DB..."</span><span style="color:#E1E4E8">)</span></span></code></pre>
+<h3 id="functoolswraps--preserve-metadata">functools.wraps — Preserve Metadata</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> functools </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> wraps</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> my_decorator</span><span style="color:#E1E4E8">(func):</span></span>
+<span class="line"><span style="color:#B392F0">    @wraps</span><span style="color:#E1E4E8">(func)  </span><span style="color:#6A737D"># Preserves __name__, __doc__, etc.</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> wrapper</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">*</span><span style="color:#E1E4E8">args, </span><span style="color:#F97583">**</span><span style="color:#E1E4E8">kwargs):</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> func(</span><span style="color:#F97583">*</span><span style="color:#E1E4E8">args, </span><span style="color:#F97583">**</span><span style="color:#E1E4E8">kwargs)</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> wrapper</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Without @wraps, wrapper.__name__ would be "wrapper"</span></span>
+<span class="line"><span style="color:#6A737D"># With @wraps, wrapper.__name__ is the original function's name</span></span></code></pre>
+<hr>
+<h2 id="context-managers">Context Managers</h2>
+<p>Context managers handle setup and teardown (resource management) using the <code>with</code> statement.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># Using built-in context managers</span></span>
+<span class="line"><span style="color:#F97583">with</span><span style="color:#79B8FF"> open</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"file.txt"</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">as</span><span style="color:#E1E4E8"> f:</span></span>
+<span class="line"><span style="color:#E1E4E8">    data </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> f.read()</span></span>
+<span class="line"><span style="color:#6A737D"># File is automatically closed, even if an exception occurs</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Custom context manager (class-based)</span></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Timer</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __enter__</span><span style="color:#E1E4E8">(self):</span></span>
+<span class="line"><span style="color:#F97583">        import</span><span style="color:#E1E4E8"> time</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.start </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> time.time()</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> self</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __exit__</span><span style="color:#E1E4E8">(self, exc_type, exc_val, exc_tb):</span></span>
+<span class="line"><span style="color:#F97583">        import</span><span style="color:#E1E4E8"> time</span></span>
+<span class="line"><span style="color:#79B8FF">        print</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">f</span><span style="color:#9ECBFF">"Elapsed: </span><span style="color:#79B8FF">{</span><span style="color:#E1E4E8">time.time() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.start</span><span style="color:#F97583">:.4f</span><span style="color:#79B8FF">}</span><span style="color:#9ECBFF">s"</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> False</span><span style="color:#6A737D">  # Don't suppress exceptions</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">with</span><span style="color:#E1E4E8"> Timer():</span></span>
+<span class="line"><span style="color:#79B8FF">    sum</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">range</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">10</span><span style="color:#F97583">**</span><span style="color:#79B8FF">6</span><span style="color:#E1E4E8">))</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Custom context manager (decorator-based, simpler)</span></span>
+<span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> contextlib </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> contextmanager</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#B392F0">@contextmanager</span></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> open_file</span><span style="color:#E1E4E8">(path):</span></span>
+<span class="line"><span style="color:#E1E4E8">    f </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> open</span><span style="color:#E1E4E8">(path)</span></span>
+<span class="line"><span style="color:#F97583">    try</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#F97583">        yield</span><span style="color:#E1E4E8"> f</span></span>
+<span class="line"><span style="color:#F97583">    finally</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#E1E4E8">        f.close()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">with</span><span style="color:#E1E4E8"> open_file(</span><span style="color:#9ECBFF">"file.txt"</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">as</span><span style="color:#E1E4E8"> f:</span></span>
+<span class="line"><span style="color:#E1E4E8">    data </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> f.read()</span></span></code></pre>
+<hr>
+<h2 id="args-kwargs-and-function-arguments">*args, **kwargs, and Function Arguments</h2>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> func</span><span style="color:#E1E4E8">(positional, </span><span style="color:#F97583">/</span><span style="color:#E1E4E8">, default</span><span style="color:#F97583">=</span><span style="color:#79B8FF">10</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">*</span><span style="color:#E1E4E8">args, keyword_only, </span><span style="color:#F97583">**</span><span style="color:#E1E4E8">kwargs):</span></span>
+<span class="line"><span style="color:#9ECBFF">    """</span></span>
+<span class="line"><span style="color:#9ECBFF">    Argument passing order:</span></span>
+<span class="line"><span style="color:#9ECBFF">    1. positional-only (before /)</span></span>
+<span class="line"><span style="color:#9ECBFF">    2. regular positional</span></span>
+<span class="line"><span style="color:#9ECBFF">    3. default values</span></span>
+<span class="line"><span style="color:#9ECBFF">    4. *args (variadic positional)</span></span>
+<span class="line"><span style="color:#9ECBFF">    5. keyword-only (after *args)</span></span>
+<span class="line"><span style="color:#9ECBFF">    6. **kwargs (variadic keyword)</span></span>
+<span class="line"><span style="color:#9ECBFF">    """</span></span>
+<span class="line"><span style="color:#F97583">    pass</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Unpacking</span></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> add</span><span style="color:#E1E4E8">(a, b, c):</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> a </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> b </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> c</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">nums </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#E1E4E8">add(</span><span style="color:#F97583">*</span><span style="color:#E1E4E8">nums)       </span><span style="color:#6A737D"># Unpack list as positional args → add(1, 2, 3)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">config </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> {</span><span style="color:#9ECBFF">'a'</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">'b'</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">'c'</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">}</span></span>
+<span class="line"><span style="color:#E1E4E8">add(</span><span style="color:#F97583">**</span><span style="color:#E1E4E8">config)    </span><span style="color:#6A737D"># Unpack dict as keyword args → add(a=1, b=2, c=3)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Extended unpacking (Python 3)</span></span>
+<span class="line"><span style="color:#E1E4E8">first, </span><span style="color:#F97583">*</span><span style="color:#E1E4E8">rest </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">]    </span><span style="color:#6A737D"># first=1, rest=[2,3,4,5]</span></span>
+<span class="line"><span style="color:#F97583">*</span><span style="color:#E1E4E8">init, last </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">]    </span><span style="color:#6A737D"># init=[1,2,3,4], last=5</span></span>
+<span class="line"><span style="color:#E1E4E8">first, </span><span style="color:#F97583">*</span><span style="color:#E1E4E8">mid, last </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">] </span><span style="color:#6A737D"># first=1, mid=[2,3], last=4</span></span></code></pre>
+<hr>
+<h2 id="classes-and-oop-in-python">Classes and OOP in Python</h2>
+<h3 id="class-internals">Class Internals</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Animal</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#6A737D">    # Class variable — shared across all instances</span></span>
+<span class="line"><span style="color:#E1E4E8">    species_count </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __init__</span><span style="color:#E1E4E8">(self, name):</span></span>
+<span class="line"><span style="color:#6A737D">        # Instance variable — unique per instance</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.name </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> name</span></span>
+<span class="line"><span style="color:#E1E4E8">        Animal.species_count </span><span style="color:#F97583">+=</span><span style="color:#79B8FF"> 1</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">    # Instance method — takes self</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> speak</span><span style="color:#E1E4E8">(self):</span></span>
+<span class="line"><span style="color:#F97583">        raise</span><span style="color:#79B8FF"> NotImplementedError</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">    # Class method — takes cls</span></span>
+<span class="line"><span style="color:#B392F0">    @</span><span style="color:#79B8FF">classmethod</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> get_count</span><span style="color:#E1E4E8">(cls):</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> cls</span><span style="color:#E1E4E8">.species_count</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">    # Static method — takes neither self nor cls</span></span>
+<span class="line"><span style="color:#B392F0">    @</span><span style="color:#79B8FF">staticmethod</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> is_valid_name</span><span style="color:#E1E4E8">(name):</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> len</span><span style="color:#E1E4E8">(name) </span><span style="color:#F97583">></span><span style="color:#79B8FF"> 0</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">    # __repr__ — official string representation</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __repr__</span><span style="color:#E1E4E8">(self):</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#F97583"> f</span><span style="color:#9ECBFF">"Animal(name=</span><span style="color:#79B8FF">{self</span><span style="color:#E1E4E8">.name</span><span style="color:#F97583">!r</span><span style="color:#79B8FF">}</span><span style="color:#9ECBFF">)"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">    # __str__ — user-friendly string (falls back to __repr__)</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __str__</span><span style="color:#E1E4E8">(self):</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#F97583"> f</span><span style="color:#9ECBFF">"Animal: </span><span style="color:#79B8FF">{self</span><span style="color:#E1E4E8">.name</span><span style="color:#79B8FF">}</span><span style="color:#9ECBFF">"</span></span></code></pre>
+<h3 id="new-vs-init"><strong>new</strong> vs <strong>init</strong></h3>
+<p><code>__new__</code> creates the instance. <code>__init__</code> initializes it. You almost never need <code>__new__</code> except for:</p>
+<ul>
+<li>Immutable types (str, int, tuple) — you can’t modify them in <code>__init__</code></li>
+<li>Singleton pattern</li>
+<li>Metaclass customization</li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Singleton</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#E1E4E8">    _instance </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> None</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __new__</span><span style="color:#E1E4E8">(cls, </span><span style="color:#F97583">*</span><span style="color:#E1E4E8">args, </span><span style="color:#F97583">**</span><span style="color:#E1E4E8">kwargs):</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#79B8FF"> cls</span><span style="color:#E1E4E8">._instance </span><span style="color:#F97583">is</span><span style="color:#79B8FF"> None</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#79B8FF">            cls</span><span style="color:#E1E4E8">._instance </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> super</span><span style="color:#E1E4E8">().</span><span style="color:#79B8FF">__new__</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">cls</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> cls</span><span style="color:#E1E4E8">._instance</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">a </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Singleton()</span></span>
+<span class="line"><span style="color:#E1E4E8">b </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Singleton()</span></span>
+<span class="line"><span style="color:#E1E4E8">a </span><span style="color:#F97583">is</span><span style="color:#E1E4E8"> b  </span><span style="color:#6A737D"># True</span></span></code></pre>
+<h3 id="method-resolution-order-mro">Method Resolution Order (MRO)</h3>
+<p>Python uses C3 linearization for multiple inheritance. Check with <code>ClassName.__mro__</code> or <code>ClassName.mro()</code>.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> A</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> hello</span><span style="color:#E1E4E8">(self): </span><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"A"</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> B</span><span style="color:#E1E4E8">(</span><span style="color:#B392F0">A</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> hello</span><span style="color:#E1E4E8">(self): </span><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"B"</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> C</span><span style="color:#E1E4E8">(</span><span style="color:#B392F0">A</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> hello</span><span style="color:#E1E4E8">(self): </span><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"C"</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> D</span><span style="color:#E1E4E8">(</span><span style="color:#B392F0">B</span><span style="color:#E1E4E8">, </span><span style="color:#B392F0">C</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#F97583">    pass</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">D().hello()  </span><span style="color:#6A737D"># "B" — left-first depth-first</span></span>
+<span class="line"><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(D.</span><span style="color:#79B8FF">__mro__</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#6A737D"># (D, B, C, A, object)</span></span></code></pre>
+<h3 id="dunder-methods-cheat-sheet">Dunder Methods Cheat Sheet</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Purpose</th>
+<th>Example use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__</code></td>
+<td>Initialize instance</td>
+<td><code>obj = Class(args)</code></td>
+</tr>
+<tr>
+<td><code>__repr__</code></td>
+<td>Official representation</td>
+<td><code>repr(obj)</code>, debugging</td>
+</tr>
+<tr>
+<td><code>__str__</code></td>
+<td>String representation</td>
+<td><code>str(obj)</code>, <code>print(obj)</code></td>
+</tr>
+<tr>
+<td><code>__eq__</code></td>
+<td>Equality</td>
+<td><code>obj == other</code></td>
+</tr>
+<tr>
+<td><code>__hash__</code></td>
+<td>Hashing</td>
+<td><code>hash(obj)</code>, dict/set keys</td>
+</tr>
+<tr>
+<td><code>__lt__</code>, <code>__gt__</code></td>
+<td>Comparison</td>
+<td><code>sorted([obj1, obj2])</code></td>
+</tr>
+<tr>
+<td><code>__len__</code></td>
+<td>Length</td>
+<td><code>len(obj)</code></td>
+</tr>
+<tr>
+<td><code>__getitem__</code></td>
+<td>Index access</td>
+<td><code>obj[key]</code></td>
+</tr>
+<tr>
+<td><code>__setitem__</code></td>
+<td>Index assignment</td>
+<td><code>obj[key] = val</code></td>
+</tr>
+<tr>
+<td><code>__contains__</code></td>
+<td>Membership</td>
+<td><code>x in obj</code></td>
+</tr>
+<tr>
+<td><code>__iter__</code></td>
+<td>Iteration</td>
+<td><code>for x in obj</code></td>
+</tr>
+<tr>
+<td><code>__next__</code></td>
+<td>Next element</td>
+<td><code>next(obj)</code></td>
+</tr>
+<tr>
+<td><code>__call__</code></td>
+<td>Callable</td>
+<td><code>obj(args)</code></td>
+</tr>
+<tr>
+<td><code>__enter__</code>/<code>__exit__</code></td>
+<td>Context manager</td>
+<td><code>with obj as x:</code></td>
+</tr>
+<tr>
+<td><code>__add__</code></td>
+<td>Addition</td>
+<td><code>obj + other</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="common-python-interview-questions">Common Python Interview Questions</h2>
+<h3 id="q1-whats-the-difference-between-is-and-">Q1: What’s the difference between <code>is</code> and <code>==</code>?</h3>
+<p><code>is</code> compares identity (same object in memory). <code>==</code> compares value (calls <code>__eq__</code>). Use <code>is</code> for <code>None</code>, <code>True</code>, <code>False</code> comparisons. Use <code>==</code> for value comparisons.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">a </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#E1E4E8">b </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#E1E4E8">a </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> b   </span><span style="color:#6A737D"># True — same values</span></span>
+<span class="line"><span style="color:#E1E4E8">a </span><span style="color:#F97583">is</span><span style="color:#E1E4E8"> b   </span><span style="color:#6A737D"># False — different objects</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">a </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> None</span></span>
+<span class="line"><span style="color:#E1E4E8">a </span><span style="color:#F97583">is</span><span style="color:#79B8FF"> None</span><span style="color:#6A737D">  # True — always use `is` for None, never `== None`</span></span></code></pre>
+<h3 id="q2-whats-the-difference-between-deepcopy-and-copy">Q2: What’s the difference between <code>deepcopy</code> and <code>copy</code>?</h3>
+<p><code>copy.copy()</code> creates a shallow copy — new container, same element references. <code>copy.deepcopy()</code> recursively copies all elements.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> copy</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">original </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">], [</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">]]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">shallow </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> copy.copy(original)</span></span>
+<span class="line"><span style="color:#E1E4E8">shallow[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">][</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 99</span></span>
+<span class="line"><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(original)  </span><span style="color:#6A737D"># [[99, 2], [3, 4]] — inner list is shared!</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">deep </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> copy.deepcopy(original)</span></span>
+<span class="line"><span style="color:#E1E4E8">deep[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">][</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span></span>
+<span class="line"><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(original)  </span><span style="color:#6A737D"># [[99, 2], [3, 4]] — fully independent</span></span></code></pre>
+<h3 id="q3-explain-args-and-kwargs">Q3: Explain <code>*args</code> and <code>**kwargs</code></h3>
+<p><code>*args</code> collects extra positional arguments as a tuple. <code>**kwargs</code> collects extra keyword arguments as a dict. They allow flexible function signatures.</p>
+<h3 id="q4-what-are-decorators-and-how-do-they-work">Q4: What are decorators and how do they work?</h3>
+<p>A decorator is a function that takes another function and extends its behavior without modifying it. <code>@decorator</code> above a function definition is sugar for <code>func = decorator(func)</code>. Decorators can take arguments using nested functions.</p>
+<h3 id="q5-how-does-pythons-garbage-collection-work">Q5: How does Python’s garbage collection work?</h3>
+<p>Primary mechanism is reference counting — each object has a refcount, and when it reaches zero, the object is immediately freed. This misses reference cycles, so a supplemental cyclic garbage collector scans generations (0, 1, 2) periodically to detect and collect cycles.</p>
+<h3 id="q6-whats-the-gil-and-why-does-it-matter">Q6: What’s the GIL and why does it matter?</h3>
+<p>The Global Interpreter Lock ensures only one thread executes Python bytecode at a time. It exists because CPython’s reference counting isn’t thread-safe. It means threading doesn’t speed up CPU-bound work (use multiprocessing instead), but works fine for I/O-bound work.</p>
+<h3 id="q7-whats-the-difference-between-a-list-and-a-tuple">Q7: What’s the difference between a list and a tuple?</h3>
+<p>Lists are mutable, tuples are immutable. Lists have append/extend/remove methods. Tuples are smaller in memory (no over-allocation) and can be used as dict keys (if contents are hashable). Tuples are slightly faster to create and access.</p>
+<h3 id="q8-how-do-staticmethod-and-classmethod-differ">Q8: How do <code>@staticmethod</code> and <code>@classmethod</code> differ?</h3>
+<p><code>@staticmethod</code> doesn’t receive self or cls — it’s just a function that happens to be in a class namespace. <code>@classmethod</code> receives the class as the first argument, allowing it to be used as alternative constructors.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Pizza</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __init__</span><span style="color:#E1E4E8">(self, radius):</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.radius </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> radius</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#B392F0">    @</span><span style="color:#79B8FF">classmethod</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> large</span><span style="color:#E1E4E8">(cls):</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> cls</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">16</span><span style="color:#E1E4E8">)  </span><span style="color:#6A737D"># Alternative constructor</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#B392F0">    @</span><span style="color:#79B8FF">staticmethod</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> area</span><span style="color:#E1E4E8">(radius):</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> 3.14159</span><span style="color:#F97583"> *</span><span style="color:#E1E4E8"> radius </span><span style="color:#F97583">**</span><span style="color:#79B8FF"> 2</span></span></code></pre>
+<hr>
+<h2 id="python-specific-leetcode-tricks">Python-Specific LeetCode Tricks</h2>
+<h3 id="1-one-liners-for-common-patterns">1. One-liners for Common Patterns</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># Transpose a matrix</span></span>
+<span class="line"><span style="color:#E1E4E8">transposed </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> list</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">zip</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">*</span><span style="color:#E1E4E8">matrix))</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Flatten a 2D list</span></span>
+<span class="line"><span style="color:#E1E4E8">flat </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [x </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> row </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> matrix </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> row]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Reverse a string</span></span>
+<span class="line"><span style="color:#E1E4E8">reversed_str </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> s[::</span><span style="color:#F97583">-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Every other element</span></span>
+<span class="line"><span style="color:#E1E4E8">every_other </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> arr[::</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Check all/any elements</span></span>
+<span class="line"><span style="color:#E1E4E8">all_positive </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> all</span><span style="color:#E1E4E8">(x </span><span style="color:#F97583">></span><span style="color:#79B8FF"> 0</span><span style="color:#F97583"> for</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> arr)</span></span>
+<span class="line"><span style="color:#E1E4E8">any_even </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> any</span><span style="color:#E1E4E8">(x </span><span style="color:#F97583">%</span><span style="color:#79B8FF"> 2</span><span style="color:#F97583"> ==</span><span style="color:#79B8FF"> 0</span><span style="color:#F97583"> for</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> arr)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Sum with condition</span></span>
+<span class="line"><span style="color:#E1E4E8">total </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> sum</span><span style="color:#E1E4E8">(x </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> arr </span><span style="color:#F97583">if</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">></span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Frequency dict in one line</span></span>
+<span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> collections </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> Counter</span></span>
+<span class="line"><span style="color:#E1E4E8">freq </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Counter(arr)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Sort by custom key</span></span>
+<span class="line"><span style="color:#E1E4E8">sorted_people </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> sorted</span><span style="color:#E1E4E8">(people, </span><span style="color:#FFAB70">key</span><span style="color:#F97583">=lambda</span><span style="color:#E1E4E8"> p: (</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">p.height, p.weight))</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Group by key</span></span>
+<span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> itertools </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> groupby</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> key, group </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> groupby(</span><span style="color:#79B8FF">sorted</span><span style="color:#E1E4E8">(arr, </span><span style="color:#FFAB70">key</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">key_func), </span><span style="color:#FFAB70">key</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">key_func):</span></span>
+<span class="line"><span style="color:#79B8FF">    print</span><span style="color:#E1E4E8">(key, </span><span style="color:#79B8FF">list</span><span style="color:#E1E4E8">(group))</span></span></code></pre>
+<h3 id="2-slicing--the-full-syntax">2. Slicing — The Full Syntax</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># arr[start:stop:step]  (stop is exclusive, start/step optional)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">arr </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">6</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">7</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">8</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">9</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">arr[</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">:</span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">]     </span><span style="color:#6A737D"># [2, 3, 4]      — indices 2, 3, 4</span></span>
+<span class="line"><span style="color:#E1E4E8">arr[:</span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">]      </span><span style="color:#6A737D"># [0, 1, 2, 3, 4] — start to 4</span></span>
+<span class="line"><span style="color:#E1E4E8">arr[</span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">:]      </span><span style="color:#6A737D"># [5, 6, 7, 8, 9] — 5 to end</span></span>
+<span class="line"><span style="color:#E1E4E8">arr[::</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">]     </span><span style="color:#6A737D"># [0, 2, 4, 6, 8] — every other</span></span>
+<span class="line"><span style="color:#E1E4E8">arr[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">::</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">]    </span><span style="color:#6A737D"># [1, 3, 5, 7, 9] — odd indices</span></span>
+<span class="line"><span style="color:#E1E4E8">arr[::</span><span style="color:#F97583">-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]   </span><span style="color:#6A737D"># [9, 8, 7, 6, 5, 4, 3, 2, 1, 0] — reversed</span></span>
+<span class="line"><span style="color:#E1E4E8">arr[</span><span style="color:#F97583">-</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">:]    </span><span style="color:#6A737D"># [7, 8, 9]        — last 3</span></span>
+<span class="line"><span style="color:#E1E4E8">arr[:</span><span style="color:#F97583">-</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">]    </span><span style="color:#6A737D"># [0, 1, 2, 3, 4, 5, 6] — all but last 3</span></span>
+<span class="line"><span style="color:#E1E4E8">arr[:: </span><span style="color:#F97583">-</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">]  </span><span style="color:#6A737D"># [9, 7, 5, 3, 1] — every other, reversed</span></span></code></pre>
+<h3 id="3-useful-standard-library-for-interviews">3. Useful Standard Library for Interviews</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>What it gives you</th>
+<th>Interview use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>collections.Counter</code></td>
+<td>Frequency counting</td>
+<td>Anagrams, top K frequent</td>
+</tr>
+<tr>
+<td><code>collections.defaultdict</code></td>
+<td>Auto-init dict</td>
+<td>Graph adjacency, grouping</td>
+</tr>
+<tr>
+<td><code>collections.deque</code></td>
+<td>O(1) queue</td>
+<td>BFS, sliding window</td>
+</tr>
+<tr>
+<td><code>collections.OrderedDict</code></td>
+<td>LRU-friendly dict</td>
+<td>LRU cache</td>
+</tr>
+<tr>
+<td><code>heapq</code></td>
+<td>Min-heap</td>
+<td>K-th largest, merge K sorted</td>
+</tr>
+<tr>
+<td><code>bisect</code></td>
+<td>Binary search on sorted list</td>
+<td>Insert sorted, find position</td>
+</tr>
+<tr>
+<td><code>itertools</code></td>
+<td>Permutations, combinations, product</td>
+<td>Backtracking shortcuts</td>
+</tr>
+<tr>
+<td><code>functools.lru_cache</code></td>
+<td>Auto-memoization</td>
+<td>DP without explicit cache</td>
+</tr>
+<tr>
+<td><code>math</code></td>
+<td>gcd, isqrt, log, inf</td>
+<td>Math problems</td>
+</tr>
+<tr>
+<td><code>enum</code></td>
+<td>Enumerations</td>
+<td>State machines</td>
+</tr>
+</tbody>
+</table>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># itertools power moves</span></span>
+<span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> itertools </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> permutations, combinations, product, chain</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#79B8FF">list</span><span style="color:#E1E4E8">(permutations([</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">]))      </span><span style="color:#6A737D"># All orderings</span></span>
+<span class="line"><span style="color:#79B8FF">list</span><span style="color:#E1E4E8">(combinations([</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">], </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">))   </span><span style="color:#6A737D"># All pairs</span></span>
+<span class="line"><span style="color:#79B8FF">list</span><span style="color:#E1E4E8">(product([</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">], </span><span style="color:#FFAB70">repeat</span><span style="color:#F97583">=</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">))    </span><span style="color:#6A737D"># All binary triples</span></span>
+<span class="line"><span style="color:#79B8FF">list</span><span style="color:#E1E4E8">(chain([</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">], [</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">], [</span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">]))   </span><span style="color:#6A737D"># Flatten iterables: [1,2,3,4,5]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># lru_cache for instant memoization</span></span>
+<span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> functools </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> lru_cache</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#B392F0">@lru_cache</span><span style="color:#E1E4E8">(</span><span style="color:#FFAB70">maxsize</span><span style="color:#F97583">=</span><span style="color:#79B8FF">None</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> fib</span><span style="color:#E1E4E8">(n):</span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">&#x3C;</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> n</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> fib(n </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> fib(n </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#6A737D"># One decorator = O(n) instead of O(2^n). No manual cache dict needed.</span></span></code></pre>
+<h3 id="4-sorting-with-complex-keys">4. Sorting with Complex Keys</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># Sort by multiple criteria with mixed directions</span></span>
+<span class="line"><span style="color:#E1E4E8">people </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [(</span><span style="color:#9ECBFF">"Alice"</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">30</span><span style="color:#E1E4E8">), (</span><span style="color:#9ECBFF">"Bob"</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">25</span><span style="color:#E1E4E8">), (</span><span style="color:#9ECBFF">"Charlie"</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">30</span><span style="color:#E1E4E8">), (</span><span style="color:#9ECBFF">"Alice"</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">25</span><span style="color:#E1E4E8">)]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Sort by name ascending, then age descending</span></span>
+<span class="line"><span style="color:#79B8FF">sorted</span><span style="color:#E1E4E8">(people, </span><span style="color:#FFAB70">key</span><span style="color:#F97583">=lambda</span><span style="color:#E1E4E8"> p: (p[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">], </span><span style="color:#F97583">-</span><span style="color:#E1E4E8">p[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]))</span></span>
+<span class="line"><span style="color:#6A737D"># [('Alice', 30), ('Alice', 25), ('Bob', 25), ('Charlie', 30)]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Sort by age ascending, then name descending</span></span>
+<span class="line"><span style="color:#79B8FF">sorted</span><span style="color:#E1E4E8">(people, </span><span style="color:#FFAB70">key</span><span style="color:#F97583">=lambda</span><span style="color:#E1E4E8"> p: (</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">p[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">], p[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]), </span><span style="color:#FFAB70">reverse</span><span style="color:#F97583">=</span><span style="color:#79B8FF">True</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#6A737D"># Careful with reverse — it flips everything</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Better: use tuple with negation for numbers</span></span>
+<span class="line"><span style="color:#79B8FF">sorted</span><span style="color:#E1E4E8">(people, </span><span style="color:#FFAB70">key</span><span style="color:#F97583">=lambda</span><span style="color:#E1E4E8"> p: (p[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">], [</span><span style="color:#F97583">-</span><span style="color:#79B8FF">ord</span><span style="color:#E1E4E8">(c) </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> p[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]]))</span></span>
+<span class="line"><span style="color:#6A737D"># This gets complex — for strings, use a wrapper class or cmp_to_key</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> functools </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> cmp_to_key</span></span>
+<span class="line"><span style="color:#79B8FF">sorted</span><span style="color:#E1E4E8">(people, </span><span style="color:#FFAB70">key</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">cmp_to_key(</span><span style="color:#F97583">lambda</span><span style="color:#E1E4E8"> a, b: </span><span style="color:#F97583">-</span><span style="color:#79B8FF">1</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> a[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">!=</span><span style="color:#E1E4E8"> b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">and</span><span style="color:#E1E4E8"> a[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">else</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">))</span></span></code></pre>
+<hr>
+<h2 id="python-vs-java--quick-reference-for-interviews">Python vs Java — Quick Reference for Interviews</h2>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>Java</th>
+<th>Python</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Integer caching</td>
+<td><code>Integer.valueOf(127) == Integer.valueOf(127)</code> → true (range -128 to 127)</td>
+<td><code>a = 100; b = 100; a is b</code> → true (range -5 to 256)</td>
+</tr>
+<tr>
+<td>String immutability</td>
+<td><code>String</code> immutable, <code>StringBuilder</code> for mutation</td>
+<td><code>str</code> immutable, <code>"".join()</code> for building</td>
+</tr>
+<tr>
+<td>Hash map</td>
+<td><code>HashMap&lt;K,V&gt;</code></td>
+<td><code>dict</code></td>
+</tr>
+<tr>
+<td>Set</td>
+<td><code>HashSet&lt;E&gt;</code></td>
+<td><code>set</code></td>
+</tr>
+<tr>
+<td>Priority queue</td>
+<td><code>PriorityQueue&lt;E&gt;</code> (min-heap)</td>
+<td><code>heapq</code> (min-heap, functions not class)</td>
+</tr>
+<tr>
+<td>Deque</td>
+<td><code>ArrayDeque&lt;E&gt;</code></td>
+<td><code>collections.deque</code></td>
+</tr>
+<tr>
+<td>Arrays</td>
+<td><code>int[] arr = new int[n]</code></td>
+<td><code>arr = [0] * n</code></td>
+</tr>
+<tr>
+<td>2D array</td>
+<td><code>int[][] grid = new int[r][c]</code></td>
+<td><code>grid = [[0] * c for _ in range(r)]</code></td>
+</tr>
+<tr>
+<td>Sorting</td>
+<td><code>Arrays.sort(arr)</code> / <code>Collections.sort(list)</code></td>
+<td><code>sorted(arr)</code> / <code>arr.sort()</code></td>
+</tr>
+<tr>
+<td>Generic type erasure</td>
+<td>Yes</td>
+<td>No generics (duck typing)</td>
+</tr>
+<tr>
+<td>Switch statement</td>
+<td><code>switch/case</code></td>
+<td><code>match/case</code> (Python 3.10+)</td>
+</tr>
+<tr>
+<td>Main method</td>
+<td><code>public static void main(String[] args)</code></td>
+<td><code>if __name__ == "__main__":</code></td>
+</tr>
+<tr>
+<td>Null</td>
+<td><code>null</code></td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td>Boolean</td>
+<td><code>true</code>/<code>false</code></td>
+<td><code>True</code>/<code>False</code></td>
+</tr>
+<tr>
+<td>Ternary</td>
+<td><code>cond ? a : b</code></td>
+<td><code>a if cond else b</code></td>
+</tr>
+<tr>
+<td>Integer division</td>
+<td><code>7 / 2 == 3</code> (int)</td>
+<td><code>7 // 2 == 3</code> (int), <code>7 / 2 == 3.5</code> (float)</td>
+</tr>
+<tr>
+<td>Bitwise ops</td>
+<td><code>&amp;</code>, <code>|</code>, <code>^</code>, <code>~</code>, <code>&lt;&lt;</code>, <code>&gt;&gt;</code></td>
+<td>Same operators</td>
+</tr>
+<tr>
+<td>Infinity</td>
+<td><code>Double.POSITIVE_INFINITY</code></td>
+<td><code>float('inf')</code>, <code>float('-inf')</code></td>
+</tr>
+<tr>
+<td>Max integer</td>
+<td><code>Integer.MAX_VALUE</code> (2^31 - 1)</td>
+<td><code>float('inf')</code> or <code>math.inf</code> (no max int)</td>
+</tr>
+<tr>
+<td>Length</td>
+<td><code>arr.length</code>, <code>str.length()</code>, <code>list.size()</code></td>
+<td><code>len(arr)</code>, <code>len(str)</code>, <code>len(list)</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="common-pitfalls-in-python-interviews">Common Pitfalls in Python Interviews</h2>
+<h3 id="1-integer-division-gotcha">1. Integer Division Gotcha</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># In Python 3, / always returns float</span></span>
+<span class="line"><span style="color:#79B8FF">7</span><span style="color:#F97583"> /</span><span style="color:#79B8FF"> 2</span><span style="color:#6A737D">    # 3.5 (float)</span></span>
+<span class="line"><span style="color:#79B8FF">7</span><span style="color:#F97583"> //</span><span style="color:#79B8FF"> 2</span><span style="color:#6A737D">   # 3 (int) — floor division</span></span>
+<span class="line"><span style="color:#F97583">-</span><span style="color:#79B8FF">7</span><span style="color:#F97583"> //</span><span style="color:#79B8FF"> 2</span><span style="color:#6A737D">  # -4 (floor division rounds DOWN, not toward zero!)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># For truncation toward zero (like Java/C):</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> math</span></span>
+<span class="line"><span style="color:#E1E4E8">math.trunc(</span><span style="color:#F97583">-</span><span style="color:#79B8FF">7</span><span style="color:#F97583"> /</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">)  </span><span style="color:#6A737D"># -3</span></span>
+<span class="line"><span style="color:#79B8FF">int</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">-</span><span style="color:#79B8FF">7</span><span style="color:#F97583"> /</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">)          </span><span style="color:#6A737D"># -3</span></span></code></pre>
+<h3 id="2-default-mutable-arguments">2. Default Mutable Arguments</h3>
+<p>Already covered above — but it’s worth repeating. This is the single most common Python interview trap:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># BAD</span></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> f</span><span style="color:#E1E4E8">(items</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">[]):</span></span>
+<span class="line"><span style="color:#E1E4E8">    items.append(</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> items  </span><span style="color:#6A737D"># Accumulates across calls!</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># GOOD</span></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> f</span><span style="color:#E1E4E8">(items</span><span style="color:#F97583">=</span><span style="color:#79B8FF">None</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> items </span><span style="color:#F97583">is</span><span style="color:#79B8FF"> None</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#E1E4E8">        items </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> []</span></span>
+<span class="line"><span style="color:#E1E4E8">    items.append(</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> items</span></span></code></pre>
+<h3 id="3-late-binding-in-closures">3. Late Binding in Closures</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># </span><span style="color:#F97583">BUG</span><span style="color:#6A737D"> — all lambdas capture the same variable</span></span>
+<span class="line"><span style="color:#E1E4E8">funcs </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [</span><span style="color:#F97583">lambda</span><span style="color:#E1E4E8">: i </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)]</span></span>
+<span class="line"><span style="color:#E1E4E8">[f() </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> f </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> funcs]  </span><span style="color:#6A737D"># [2, 2, 2] — not [0, 1, 2]!</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># FIX — use default argument to capture current value</span></span>
+<span class="line"><span style="color:#E1E4E8">funcs </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [</span><span style="color:#F97583">lambda</span><span style="color:#E1E4E8"> i</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">i: i </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)]</span></span>
+<span class="line"><span style="color:#E1E4E8">[f() </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> f </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> funcs]  </span><span style="color:#6A737D"># [0, 1, 2]</span></span></code></pre>
+<h3 id="4-is-vs--with-numbers">4. <code>is</code> vs <code>==</code> with Numbers</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">a </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 256</span></span>
+<span class="line"><span style="color:#E1E4E8">b </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 256</span></span>
+<span class="line"><span style="color:#E1E4E8">a </span><span style="color:#F97583">is</span><span style="color:#E1E4E8"> b   </span><span style="color:#6A737D"># True — cached integers</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">a </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 257</span></span>
+<span class="line"><span style="color:#E1E4E8">b </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 257</span></span>
+<span class="line"><span style="color:#E1E4E8">a </span><span style="color:#F97583">is</span><span style="color:#E1E4E8"> b   </span><span style="color:#6A737D"># False — outside cache range, different objects</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># ALWAYS use == for value comparison</span></span>
+<span class="line"><span style="color:#6A737D"># ALWAYS use `is` only for None, True, False</span></span></code></pre>
+<h3 id="5-shallow-copy-gotchas">5. Shallow Copy Gotchas</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># List multiplication creates shallow copies</span></span>
+<span class="line"><span style="color:#E1E4E8">grid </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 3</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 3</span><span style="color:#6A737D">  # DANGER: all rows are the SAME list object</span></span>
+<span class="line"><span style="color:#E1E4E8">grid[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">][</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span></span>
+<span class="line"><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(grid)  </span><span style="color:#6A737D"># [[1, 0, 0], [1, 0, 0], [1, 0, 0]] — all rows changed!</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># FIX: use comprehension</span></span>
+<span class="line"><span style="color:#E1E4E8">grid </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 3</span><span style="color:#F97583"> for</span><span style="color:#E1E4E8"> _ </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)]  </span><span style="color:#6A737D"># Each row is independent</span></span>
+<span class="line"><span style="color:#E1E4E8">grid[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">][</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span></span>
+<span class="line"><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(grid)  </span><span style="color:#6A737D"># [[1, 0, 0], [0, 0, 0], [0, 0, 0]]</span></span></code></pre>
+<h3 id="6-sorted-vs-sort">6. <code>sorted()</code> vs <code>.sort()</code></h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># sorted() returns a NEW sorted list — doesn't modify original</span></span>
+<span class="line"><span style="color:#E1E4E8">new </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> sorted</span><span style="color:#E1E4E8">(original)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># .sort() sorts IN PLACE — modifies original, returns None</span></span>
+<span class="line"><span style="color:#E1E4E8">original.sort()  </span><span style="color:#6A737D"># original is now sorted, return value is None</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Common bug: assigning .sort() result</span></span>
+<span class="line"><span style="color:#E1E4E8">arr </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#E1E4E8">arr </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> arr.sort()  </span><span style="color:#6A737D"># </span><span style="color:#F97583">BUG</span><span style="color:#6A737D">: arr is now None!</span></span>
+<span class="line"><span style="color:#E1E4E8">arr.sort()        </span><span style="color:#6A737D"># CORRECT: arr is sorted in place</span></span></code></pre>
+<h3 id="7-float-comparison">7. Float Comparison</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#79B8FF">0.1</span><span style="color:#F97583"> +</span><span style="color:#79B8FF"> 0.2</span><span style="color:#F97583"> ==</span><span style="color:#79B8FF"> 0.3</span><span style="color:#6A737D">  # False! Floating point precision</span></span>
+<span class="line"><span style="color:#6A737D"># Use math.isclose or epsilon comparison</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> math</span></span>
+<span class="line"><span style="color:#E1E4E8">math.isclose(</span><span style="color:#79B8FF">0.1</span><span style="color:#F97583"> +</span><span style="color:#79B8FF"> 0.2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">0.3</span><span style="color:#E1E4E8">)  </span><span style="color:#6A737D"># True</span></span></code></pre>
+<hr>
+<h2 id="interview-strategy-for-python">Interview Strategy for Python</h2>
+<h3 id="when-to-use-python-vs-java">When to Use Python vs Java</h3>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Better choice</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Quick coding round (30 min)</td>
+<td>Python</td>
+<td>Less boilerplate, faster to write</td>
+</tr>
+<tr>
+<td>System design / OOP</td>
+<td>Either</td>
+<td>Java has stronger typing for class design</td>
+</tr>
+<tr>
+<td>String/array problems</td>
+<td>Python</td>
+<td>Slicing, comprehensions, Counter</td>
+</tr>
+<tr>
+<td>Tree/graph traversal</td>
+<td>Python</td>
+<td>Less boilerplate for recursion</td>
+</tr>
+<tr>
+<td>DP with memoization</td>
+<td>Python</td>
+<td><code>@lru_cache</code> is a one-liner</td>
+</tr>
+<tr>
+<td>Bit manipulation</td>
+<td>Either</td>
+<td>Same operators, similar verbosity</td>
+</tr>
+<tr>
+<td>Object-oriented design</td>
+<td>Java</td>
+<td>Cleaner interfaces, generics, access modifiers</td>
+</tr>
+<tr>
+<td>Concurrent programming</td>
+<td>Java</td>
+<td>Real threads (Python has GIL)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="python-coding-interview-checklist">Python Coding Interview Checklist</h3>
+<p>Before submitting your solution, check:</p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> No mutable default arguments (<code>def f(x=[])</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled> Using <code>is None</code> instead of <code>== None</code></li>
+<li class="task-list-item"><input type="checkbox" disabled> Using <code>deque</code> for BFS (not <code>list.pop(0)</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled> Using <code>"".join()</code> instead of string concatenation in loops</li>
+<li class="task-list-item"><input type="checkbox" disabled> Using <code>collections.Counter</code> for frequency counting</li>
+<li class="task-list-item"><input type="checkbox" disabled> Using <code>heapq</code> for priority queue operations</li>
+<li class="task-list-item"><input type="checkbox" disabled> Using <code>//</code> for integer division (not <code>/</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled> List comprehension for creating 2D arrays (not <code>[[0]*n]*n</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled> <code>sorted()</code> vs <code>.sort()</code> used correctly</li>
+<li class="task-list-item"><input type="checkbox" disabled> Edge cases: empty input, single element, negative numbers</li>
+<li class="task-list-item"><input type="checkbox" disabled> Using <code>float('inf')</code> instead of <code>sys.maxsize</code> for infinity</li>
+</ul>
+<h3 id="time-complexity-of-python-operations">Time Complexity of Python Operations</h3>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Time</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>list.append(x)</code></td>
+<td>O(1) amortized</td>
+<td>May trigger reallocation</td>
+</tr>
+<tr>
+<td><code>list.pop()</code></td>
+<td>O(1)</td>
+<td>From end</td>
+</tr>
+<tr>
+<td><code>list.pop(0)</code></td>
+<td>O(n)</td>
+<td>Must shift all elements</td>
+</tr>
+<tr>
+<td><code>list.insert(0, x)</code></td>
+<td>O(n)</td>
+<td>Must shift all elements</td>
+</tr>
+<tr>
+<td><code>x in list</code></td>
+<td>O(n)</td>
+<td>Linear scan</td>
+</tr>
+<tr>
+<td><code>list.sort()</code></td>
+<td>O(n log n)</td>
+<td>Timsort</td>
+</tr>
+<tr>
+<td><code>dict[k] = v</code></td>
+<td>O(1) avg</td>
+<td>Hash table</td>
+</tr>
+<tr>
+<td><code>k in dict</code></td>
+<td>O(1) avg</td>
+<td>Hash table</td>
+</tr>
+<tr>
+<td><code>set.add(x)</code></td>
+<td>O(1) avg</td>
+<td>Hash table</td>
+</tr>
+<tr>
+<td><code>x in set</code></td>
+<td>O(1) avg</td>
+<td>Hash table</td>
+</tr>
+<tr>
+<td><code>deque.appendleft(x)</code></td>
+<td>O(1)</td>
+<td>Doubly linked list</td>
+</tr>
+<tr>
+<td><code>deque.popleft()</code></td>
+<td>O(1)</td>
+<td>Doubly linked list</td>
+</tr>
+<tr>
+<td><code>heapq.heappush(h, x)</code></td>
+<td>O(log n)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>heapq.heappop(h)</code></td>
+<td>O(log n)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>sorted(arr)</code></td>
+<td>O(n log n)</td>
+<td>Returns new list</td>
+</tr>
+<tr>
+<td><code>str[i]</code></td>
+<td>O(1)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>len(x)</code></td>
+<td>O(1)</td>
+<td>All built-in types</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="key-takeaways">Key Takeaways</h2>
+<ol>
+<li><strong>Everything is an object</strong> — no primitives, which means overhead but also flexibility. Small ints and short strings are cached.</li>
+<li><strong>Reference counting + cyclic GC</strong> — immediate cleanup for non-cyclic, periodic for cycles. Understand why <code>del</code> doesn’t always free memory.</li>
+<li><strong>The GIL</strong> — threading doesn’t speed up CPU-bound work. Use multiprocessing or C extensions that release the GIL.</li>
+<li><strong>Mutable default arguments</strong> — the #1 Python interview trap. Always use <code>None</code> as sentinel.</li>
+<li><strong><code>is</code> vs <code>==</code></strong> — identity vs equality. Use <code>is</code> only for <code>None</code>, <code>True</code>, <code>False</code>.</li>
+<li><strong>Dictionaries are ordered</strong> (3.7+) and use compact hash tables with open addressing.</li>
+<li><strong>Lists are arrays of pointers</strong> — amortized O(1) append, O(n) insert at front.</li>
+<li><strong>Generators are lazy</strong> — use them for streaming/large data to save memory.</li>
+<li><strong><code>collections</code> module</strong> — Counter, defaultdict, deque, OrderedDict are your interview power tools.</li>
+<li><strong><code>@lru_cache</code></strong> — one-decorator memoization for DP problems. Know it, love it.</li>
+<li><strong>List multiplication is shallow</strong> — <code>[[0]*n]*n</code> creates n references to the same row. Use comprehension instead.</li>
+<li><strong><code>//</code> is floor division</strong> — it rounds DOWN, not toward zero. <code>-7 // 2 == -4</code>, not <code>-3</code>.</li>
+</ol>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>dict = hash table with open addressing (Python 3.6+). list = dynamic array (amortized O(1) append). tuple = immutable list.</li>
+<li>GIL = Global Interpreter Lock, prevents multiple threads from executing Python bytecode simultaneously.</li>
+<li><code>is</code> checks identity (same object), <code>==</code> checks equality (same value). <code>//</code> is floor division (rounds down, not toward zero).</li>
+<li>Mutable default arguments are the #1 Python interview trap — always use <code>None</code> as sentinel.</li>
+<li><code>collections</code> module (Counter, defaultdict, deque, OrderedDict) and <code>@lru_cache</code> are your interview power tools.</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How does Python’s dict maintain insertion order?” — Python 3.7+ guarantees insertion order. Internally, it uses a sparse table of indices + a dense array of entries. The dense array preserves insertion order.</li>
+<li>“How do you bypass the GIL?” — Use multiprocessing (separate processes, separate GILs), C extensions that release the GIL, or async I/O (I/O-bound work doesn’t need the GIL).</li>
+</ul>
+<p><strong>Gotcha:</strong> Using <code>is</code> to compare strings/numbers. Due to interning, <code>is</code> may work for small strings/numbers but fail for larger ones. Always use <code>==</code> for value comparison. <code>is</code> is only for checking <code>is None</code> or <code>is True/False</code>.</p>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/coding-interview/python-internals/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Python%20Internals%20%26%20Interview%20Prep&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fcoding-interview%2Fpython-internals%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fcoding-interview%2Fpython-internals%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/coding-interview/python-internals" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/coding-interview/arrays-and-strings/" class="related-card"><div class="related-card-title">Arrays &amp; Strings — Interview Prep Guide</div><div class="related-card-meta">Coding Interview · 47 min</div></a><a href="/notes/coding-interview/backtracking/" class="related-card"><div class="related-card-title">Backtracking — Complete Interview Prep Guide</div><div class="related-card-meta">Coding Interview · 21 min</div></a><a href="/notes/coding-interview/big-o-and-pattern-recognition/" class="related-card"><div class="related-card-title">Big O Complexity &amp; Pattern Recognition</div><div class="related-card-meta">Coding Interview · 30 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/coding-interview/project-qanda-and-behavioral-stories" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Project Q&amp;A and Behavioral Stories</span></a><a href="/notes/coding-interview/sliding-window" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Sliding Window — Coding Interview Prep</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Python Internals &amp; Interview Prep" data-selector=".article-prose" data-article-slug="coding-interview/python-internals" data-article-title="Python Internals &amp; Interview Prep" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

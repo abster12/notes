@@ -1,0 +1,1067 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Circuit Breakers &amp; Bulkheads (Resilience4j, Hystrix patterns) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-why-resilience-patterns-matter-at-staff-level" class="toc-link" data-toc-link="1-why-resilience-patterns-matter-at-staff-level" data-astro-cid-p33bl5ka>1. Why Resilience Patterns Matter at Staff Level</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-the-circuit-breaker-state-machine" class="toc-link" data-toc-link="2-the-circuit-breaker-state-machine" data-astro-cid-p33bl5ka>2. The Circuit Breaker State Machine</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#21-closed-state-normal-operation" class="toc-link" data-toc-link="21-closed-state-normal-operation" data-astro-cid-p33bl5ka>2.1 CLOSED State (Normal Operation)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#22-open-state-fail-fast-rejection" class="toc-link" data-toc-link="22-open-state-fail-fast-rejection" data-astro-cid-p33bl5ka>2.2 OPEN State (Fail-Fast Rejection)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#23-half-open-state-probing" class="toc-link" data-toc-link="23-half-open-state-probing" data-astro-cid-p33bl5ka>2.3 HALF-OPEN State (Probing)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#24-resilience4j-configuration-example" class="toc-link" data-toc-link="24-resilience4j-configuration-example" data-astro-cid-p33bl5ka>2.4 Resilience4j Configuration Example</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-sliding-window-count-based-vs-time-based" class="toc-link" data-toc-link="3-sliding-window-count-based-vs-time-based" data-astro-cid-p33bl5ka>3. Sliding Window: Count-Based vs. Time-Based</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#31-the-count_based-pitfall" class="toc-link" data-toc-link="31-the-count_based-pitfall" data-astro-cid-p33bl5ka>3.1 The COUNT_BASED Pitfall</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#32-the-time_based-pitfall" class="toc-link" data-toc-link="32-the-time_based-pitfall" data-astro-cid-p33bl5ka>3.2 The TIME_BASED Pitfall</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#4-the-bulkhead-pattern" class="toc-link" data-toc-link="4-the-bulkhead-pattern" data-astro-cid-p33bl5ka>4. The Bulkhead Pattern</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#41-thread-pool-isolation-physical-bulkhead" class="toc-link" data-toc-link="41-thread-pool-isolation-physical-bulkhead" data-astro-cid-p33bl5ka>4.1 Thread Pool Isolation (Physical Bulkhead)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#42-semaphore-isolation-logical-bulkhead" class="toc-link" data-toc-link="42-semaphore-isolation-logical-bulkhead" data-astro-cid-p33bl5ka>4.2 Semaphore Isolation (Logical Bulkhead)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#43-when-to-use-which" class="toc-link" data-toc-link="43-when-to-use-which" data-astro-cid-p33bl5ka>4.3 When to Use Which</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#5-resilience4j-vs-hystrix-vs-alternatives" class="toc-link" data-toc-link="5-resilience4j-vs-hystrix-vs-alternatives" data-astro-cid-p33bl5ka>5. Resilience4j vs. Hystrix vs. Alternatives</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#51-when-hystrix-still-teaches-us-things" class="toc-link" data-toc-link="51-when-hystrix-still-teaches-us-things" data-astro-cid-p33bl5ka>5.1 When Hystrix Still Teaches Us Things</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#6-putting-it-all-together-the-resilience-stack" class="toc-link" data-toc-link="6-putting-it-all-together-the-resilience-stack" data-astro-cid-p33bl5ka>6. Putting It All Together: The Resilience Stack</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#61-order-matters" class="toc-link" data-toc-link="61-order-matters" data-astro-cid-p33bl5ka>6.1 Order Matters</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#7-monitoring--observability" class="toc-link" data-toc-link="7-monitoring--observability" data-astro-cid-p33bl5ka>7. Monitoring &amp; Observability</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#71-essential-circuit-breaker-metrics" class="toc-link" data-toc-link="71-essential-circuit-breaker-metrics" data-astro-cid-p33bl5ka>7.1 Essential Circuit Breaker Metrics</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#72-essential-bulkhead-metrics" class="toc-link" data-toc-link="72-essential-bulkhead-metrics" data-astro-cid-p33bl5ka>7.2 Essential Bulkhead Metrics</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#73-the-dashboard-that-matters" class="toc-link" data-toc-link="73-the-dashboard-that-matters" data-astro-cid-p33bl5ka>7.3 The Dashboard That Matters</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#8-interview-questions--model-answers" class="toc-link" data-toc-link="8-interview-questions--model-answers" data-astro-cid-p33bl5ka>8. Interview Questions &amp; Model Answers</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#-q1-your-payment-service-calls-fraud-detection-which-starts-timing-out-at-p99-within-60-seconds-your-entire-payment-pipeline-is-blocked-walk-me-through-what-happened-at-the-thread-pool-level-and-how-youd-fix-it" class="toc-link" data-toc-link="-q1-your-payment-service-calls-fraud-detection-which-starts-timing-out-at-p99-within-60-seconds-your-entire-payment-pipeline-is-blocked-walk-me-through-what-happened-at-the-thread-pool-level-and-how-youd-fix-it" data-astro-cid-p33bl5ka>⚡ Q1: “Your payment service calls fraud detection, which starts timing out at P99. Within 60 seconds, your entire payment pipeline is blocked. Walk me through what happened at the thread-pool level, and how you’d fix it.”</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#-q2-whats-the-difference-between-a-circuit-breaker-and-a-retry-when-would-you-use-only-one-and-when-both" class="toc-link" data-toc-link="-q2-whats-the-difference-between-a-circuit-breaker-and-a-retry-when-would-you-use-only-one-and-when-both" data-astro-cid-p33bl5ka>⚡ Q2: “What’s the difference between a circuit breaker and a retry? When would you use only one, and when both?”</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#-common-pitfall-the-circuit-breaker-opened-but-downstream-was-healthy--it-was-a-transient-blip" class="toc-link" data-toc-link="-common-pitfall-the-circuit-breaker-opened-but-downstream-was-healthy--it-was-a-transient-blip" data-astro-cid-p33bl5ka>❗ Common Pitfall: “The circuit breaker opened, but downstream was healthy — it was a transient blip”</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#9-architectural-decisions--trade-off-table" class="toc-link" data-toc-link="9-architectural-decisions--trade-off-table" data-astro-cid-p33bl5ka>9. Architectural Decisions — Trade-Off Table</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#10-real-world-patterns-beyond-the-basics" class="toc-link" data-toc-link="10-real-world-patterns-beyond-the-basics" data-astro-cid-p33bl5ka>10. Real-World Patterns Beyond the Basics</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#101-partial-circuit-breaking" class="toc-link" data-toc-link="101-partial-circuit-breaking" data-astro-cid-p33bl5ka>10.1 Partial Circuit Breaking</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#102-adaptive-thresholds" class="toc-link" data-toc-link="102-adaptive-thresholds" data-astro-cid-p33bl5ka>10.2 Adaptive Thresholds</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#103-chaos-circuit-breaker-testing-gap" class="toc-link" data-toc-link="103-chaos-circuit-breaker-testing-gap" data-astro-cid-p33bl5ka>10.3 Chaos: Circuit Breaker Testing Gap</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#11-key-takeaways" class="toc-link" data-toc-link="11-key-takeaways" data-astro-cid-p33bl5ka>11. Key Takeaways</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#related" class="toc-link" data-toc-link="related" data-astro-cid-p33bl5ka>Related</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Circuit Breakers &amp; Bulkheads (Resilience4j, Hystrix patterns)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-intermediate" data-astro-cid-sgg5joot>intermediate</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 19 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 27 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>platform</span><span class="tag" data-astro-cid-sgg5joot>circuit-breaker</span><span class="tag" data-astro-cid-sgg5joot>bulkhead</span><span class="tag" data-astro-cid-sgg5joot>resilience4j</span><span class="tag" data-astro-cid-sgg5joot>hystrix</span><span class="tag" data-astro-cid-sgg5joot>resilience</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="circuit-breakers--bulkheads-resilience4j-hystrix-patterns">Circuit Breakers &amp; Bulkheads (Resilience4j, Hystrix patterns)</h1>
+<blockquote>
+<p><strong>Staff-Engineer Focus:</strong> “Wrap every external call in a circuit breaker” is the mid-level answer. Understanding the state machine (CLOSED → OPEN → HALF-OPEN), knowing when to use count-based vs time-based sliding windows, and tuning thresholds from production data rather than gut feelings — that’s the senior answer. <strong>Knowing that circuit breakers don’t solve the problem — they <em>reveal</em> it. The circuit breaker is a canary, not a cure. Your real job is to diagnose WHY downstream is failing and fix the root cause, while the breaker prevents cascading failure in the meantime. The bulkhead pattern extends this thinking across <em>organizational boundaries</em>: isolating tenant workloads so that a noisy neighbor doesn’t drown everyone else. The staff engineer designs the resilience architecture so that individual team failures are contained, monitored, and recoverable without cross-team fire drills — that’s the staff engineer.</strong> The interview question isn’t “What are the three states of a circuit breaker?” It’s: “Your payment service calls 12 downstream services. One of them — the fraud detection service — starts timing out at P99. Within 60 seconds, your entire payment pipeline is blocked because connection pools are exhausted waiting for fraud detection responses. No circuit breaker is in place. Walk me through: (a) what just happened at the thread-pool level, (b) how you’d prevent it architecturally, (c) what metrics you’d need to detect it in production, and (d) why adding a circuit breaker to fraud detection alone isn’t enough.”</p>
+</blockquote>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>Resilience patterns that prevent cascading failures — circuit breakers stop calling failing services, bulkheads isolate resources so one failure doesn’t exhaust everything. A circuit breaker operates as a state machine (CLOSED → OPEN → HALF-OPEN) that trips when error rates or latency exceed thresholds, while bulkheads partition thread pools and connections per dependency.</p>
+<p><strong>How it’s asked:</strong> “Design the resilience layer for a microservices architecture with 50 services. How do you prevent one service’s failure from taking down the entire system?”</p>
+<hr>
+<h2 id="1-why-resilience-patterns-matter-at-staff-level">1. Why Resilience Patterns Matter at Staff Level</h2>
+<p>At the staff level, a service dependency isn’t just an API call — it’s a <strong>failure domain boundary</strong>. When that boundary fails, the failure mode matters more than the failure itself:</p>
+<ol>
+<li>
+<p><strong>Cascading failure is silent and fast.</strong> A downstream slowdown (not even a crash) can exhaust your connection pools, thread pools, or file descriptors in seconds. Your service looks healthy (CPU low, no errors) but can’t accept new work because every thread is blocked waiting.</p>
+</li>
+<li>
+<p><strong>Retry storms amplify the problem.</strong> The intuitive reaction to a timeout — “retry it” — doubles or triples load on an already-struggling downstream, turning a brownout into a full outage.</p>
+</li>
+<li>
+<p><strong>Noisy neighbor is a platform problem, not a tenant problem.</strong> In a multi-tenant system, one tenant’s traffic spike or slow query can consume shared resources (DB connections, cache capacity, thread pools) and degrade every other tenant.</p>
+</li>
+<li>
+<p><strong>Recovery is often worse than the failure.</strong> When a downstream comes back after being down, it faces a backlog of queued-up requests — the “thundering herd.” Without backpressure, it goes down again. This cycle repeats until you add a circuit breaker.</p>
+</li>
+</ol>
+<p><strong>The core insight:</strong> Resilience patterns aren’t about making failures impossible — they’re about <strong>changing the failure mode from catastrophic (system-wide outage) to graceful (degraded functionality)</strong>. A circuit breaker turns a 5-minute downstream outage into 5 seconds of rejected requests + 55 seconds of HALF-OPEN probing + 4 minutes of normal operation. The users see 5% degradation, not 100% outage.</p>
+<hr>
+<h2 id="2-the-circuit-breaker-state-machine">2. The Circuit Breaker State Machine</h2>
+<p>The circuit breaker is a finite state machine with three states:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  ┌──────────┐    failure threshold     ┌──────────┐</span></span>
+<span class="line"><span>  │  CLOSED  │ ────────────────────────→ │   OPEN   │</span></span>
+<span class="line"><span>  │ (normal) │                          │ (reject) │</span></span>
+<span class="line"><span>  └──────────┘                          └──────────┘</span></span>
+<span class="line"><span>       ↑                                      │</span></span>
+<span class="line"><span>       │      success threshold               │</span></span>
+<span class="line"><span>       │      (or time-based reset)            │</span></span>
+<span class="line"><span>       │                                      ↓</span></span>
+<span class="line"><span>       └───────────────────────────────── ┌─────────────┐</span></span>
+<span class="line"><span>                                          │  HALF-OPEN   │</span></span>
+<span class="line"><span>                                          │ (probing)    │</span></span>
+<span class="line"><span>                                          └─────────────┘</span></span></code></pre>
+<h3 id="21-closed-state-normal-operation">2.1 CLOSED State (Normal Operation)</h3>
+<ul>
+<li>Requests flow through normally</li>
+<li>Circuit breaker tracks success/failure counts or rates</li>
+<li>When failures exceed the threshold within the configured window, transition to OPEN</li>
+</ul>
+<p><strong>Tuning parameters:</strong></p>
+<ul>
+<li><code>failureRateThreshold</code> (e.g., 50%) — percentage of failures that trigger the breaker</li>
+<li><code>slidingWindowSize</code> (e.g., 100) — how many recent calls to evaluate</li>
+<li><code>slidingWindowType</code> — COUNT_BASED or TIME_BASED</li>
+<li><code>minimumNumberOfCalls</code> (e.g., 10) — don’t open before collecting this many samples (prevents flapping on low traffic)</li>
+</ul>
+<h3 id="22-open-state-fail-fast-rejection">2.2 OPEN State (Fail-Fast Rejection)</h3>
+<ul>
+<li>All requests are immediately rejected with a <code>CallNotPermittedException</code></li>
+<li>No requests reach the downstream — this is the critical protection</li>
+<li>After <code>waitDurationInOpenState</code> (e.g., 30s), transition to HALF-OPEN</li>
+</ul>
+<p><strong>Why fail-fast matters:</strong> Without immediate rejection, each request would wait for the full timeout (e.g., 5s) before failing. With 200 concurrent requests, that’s 200 threads blocked for 5 seconds = 1000 thread-seconds of wasted capacity. Fail-fast makes the failure cost near-zero.</p>
+<h3 id="23-half-open-state-probing">2.3 HALF-OPEN State (Probing)</h3>
+<ul>
+<li>A limited number of requests are allowed through (configured by <code>permittedNumberOfCallsInHalfOpenState</code>, typically 3-10)</li>
+<li>If these requests succeed, transition back to CLOSED</li>
+<li>If any fail, transition back to OPEN (reset the wait timer)</li>
+</ul>
+<p><strong>The HALF-OPEN trap:</strong> If <code>permittedNumberOfCallsInHalfOpenState</code> is too high, you can overwhelm a recovering downstream. If too low, you might never trigger enough successes to close. The sweet spot depends on downstream recovery characteristics — databases need fewer probes than stateless services.</p>
+<h3 id="24-resilience4j-configuration-example">2.4 Resilience4j Configuration Example</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="yaml"><code><span class="line"><span style="color:#85E89D">resilience4j</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#85E89D">  circuitbreaker</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#85E89D">    instances</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#85E89D">      fraudDetection</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#85E89D">        registerHealthIndicator</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">true</span></span>
+<span class="line"><span style="color:#85E89D">        slidingWindowSize</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">100</span></span>
+<span class="line"><span style="color:#85E89D">        slidingWindowType</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">COUNT_BASED</span></span>
+<span class="line"><span style="color:#85E89D">        minimumNumberOfCalls</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">10</span></span>
+<span class="line"><span style="color:#85E89D">        failureRateThreshold</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">50</span></span>
+<span class="line"><span style="color:#85E89D">        waitDurationInOpenState</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">30s</span></span>
+<span class="line"><span style="color:#85E89D">        permittedNumberOfCallsInHalfOpenState</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">5</span></span>
+<span class="line"><span style="color:#85E89D">        automaticTransitionFromOpenToHalfOpenEnabled</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">true</span></span>
+<span class="line"><span style="color:#85E89D">        recordExceptions</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#E1E4E8">          - </span><span style="color:#9ECBFF">java.net.SocketTimeoutException</span></span>
+<span class="line"><span style="color:#E1E4E8">          - </span><span style="color:#9ECBFF">java.net.ConnectException</span></span>
+<span class="line"><span style="color:#E1E4E8">          - </span><span style="color:#9ECBFF">org.springframework.web.client.HttpServerErrorException</span></span>
+<span class="line"><span style="color:#85E89D">        ignoreExceptions</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#E1E4E8">          - </span><span style="color:#9ECBFF">com.example.ValidationException</span><span style="color:#6A737D">  # Don't open breaker on client errors</span></span></code></pre>
+<hr>
+<h2 id="3-sliding-window-count-based-vs-time-based">3. Sliding Window: Count-Based vs. Time-Based</h2>
+<p>This is one of the most common interview traps. Both approaches implement the sliding window differently:</p>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>COUNT_BASED</th>
+<th>TIME_BASED</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Window measured in</strong></td>
+<td>Last N calls</td>
+<td>Last T seconds</td>
+</tr>
+<tr>
+<td><strong>Memory cost</strong></td>
+<td>Fixed (ring buffer of N)</td>
+<td>Variable (aggregates per bucket)</td>
+</tr>
+<tr>
+<td><strong>Reacts to traffic spikes</strong></td>
+<td>Quickly (can fill window in ms)</td>
+<td>Slowly (must wait for time to pass)</td>
+</tr>
+<tr>
+<td><strong>Reacts to traffic dips</strong></td>
+<td>Window ages slowly</td>
+<td>Window ages predictably</td>
+</tr>
+<tr>
+<td><strong>Good for</strong></td>
+<td>Stable traffic patterns</td>
+<td>Bursty traffic patterns</td>
+</tr>
+<tr>
+<td><strong>Example</strong></td>
+<td>“Open if 50 of last 100 calls fail”</td>
+<td>“Open if 50% of calls in last 60s fail”</td>
+</tr>
+</tbody>
+</table>
+<h3 id="31-the-count_based-pitfall">3.1 The COUNT_BASED Pitfall</h3>
+<p>If you set <code>slidingWindowSize=100</code> with <code>minimumNumberOfCalls=10</code>, and you get 10 failures in a row during a traffic spike, the breaker opens. But if those 10 failures happened in 50ms because of a network blip, you just blocked ALL traffic for 30 seconds based on a 50ms event.</p>
+<p><strong>Fix:</strong> Use <code>slowCallRateThreshold</code> alongside <code>failureRateThreshold</code>. A slow call (exceeds <code>slowCallDurationThreshold</code>, e.g., 3s) counts differently from a hard failure. This lets you trip on genuine degradation, not transient blips.</p>
+<h3 id="32-the-time_based-pitfall">3.2 The TIME_BASED Pitfall</h3>
+<p>If traffic is low (1 request/sec), and your window is 60s, you need at least 60 seconds of data before the window is meaningful. A burst of 3 failures out of 3 calls is 100% failure rate — but it’s only 3 calls. The <code>minimumNumberOfCalls</code> guard is essential here.</p>
+<p><strong>The staff-level answer:</strong> Measure your traffic patterns in production. If your service gets 1000 RPS, COUNT_BASED with window=100 fills in 100ms — fast reaction. If you get 10 RPS, TIME_BASED with window=60s gives you 600 samples — statistically meaningful. There’s no one-size-fits-all. <strong>Pick the window that gives you a statistically significant sample at your P50 traffic volume.</strong></p>
+<hr>
+<h2 id="4-the-bulkhead-pattern">4. The Bulkhead Pattern</h2>
+<blockquote>
+<p><strong>Bulkhead:</strong> A dividing wall or barrier between compartments in a ship, aircraft, or spacecraft. If one compartment is breached, the bulkhead prevents flooding from spreading.</p>
+</blockquote>
+<p>In software, a bulkhead <strong>isolates resource consumption</strong> so that a failure in one part of the system doesn’t starve other parts.</p>
+<h3 id="41-thread-pool-isolation-physical-bulkhead">4.1 Thread Pool Isolation (Physical Bulkhead)</h3>
+<p>Each downstream dependency gets its own thread pool:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌─────────────────────────────────────┐</span></span>
+<span class="line"><span>│         Incoming Requests            │</span></span>
+<span class="line"><span>└──────────────┬──────────────────────┘</span></span>
+<span class="line"><span>               │</span></span>
+<span class="line"><span>       ┌───────┴───────┐</span></span>
+<span class="line"><span>       │  Dispatcher    │</span></span>
+<span class="line"><span>       └───┬───┬───┬───┘</span></span>
+<span class="line"><span>           │   │   │</span></span>
+<span class="line"><span>    ┌──────┘   │   └──────┐</span></span>
+<span class="line"><span>    ▼          ▼          ▼</span></span>
+<span class="line"><span>┌────────┐ ┌────────┐ ┌────────┐</span></span>
+<span class="line"><span>│Payment │ │ Fraud  │ │ Email  │</span></span>
+<span class="line"><span>│ Pool   │ │ Pool   │ │ Pool   │</span></span>
+<span class="line"><span>│ 20 thr │ │ 10 thr │ │ 5 thr  │</span></span>
+<span class="line"><span>└───┬────┘ └───┬────┘ └───┬────┘</span></span>
+<span class="line"><span>    ▼          ▼          ▼</span></span>
+<span class="line"><span> Payment    Fraud      Email</span></span>
+<span class="line"><span> Service   Service     Service</span></span></code></pre>
+<p><strong>Pros:</strong></p>
+<ul>
+<li>Complete isolation — Fraud pool exhaustion can’t block Payment or Email calls</li>
+<li>Queue per dependency — backpressure is localized</li>
+<li>Easy to monitor — thread pool saturation is a clear signal</li>
+</ul>
+<p><strong>Cons:</strong></p>
+<ul>
+<li>Thread overhead — 20 + 10 + 5 = 35 threads per service instance. At 50 instances, that’s 1,750 threads just for outbound calls.</li>
+<li>Fixed limits — if Payment needs 25 threads during peak but pool is capped at 20, you queue or reject</li>
+<li>Context switching cost at high thread counts</li>
+</ul>
+<h3 id="42-semaphore-isolation-logical-bulkhead">4.2 Semaphore Isolation (Logical Bulkhead)</h3>
+<p>Instead of separate thread pools, use semaphores to limit concurrent calls:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Thread Pool (unified, e.g., 50 threads)</span></span>
+<span class="line"><span>    │</span></span>
+<span class="line"><span>    ├── Semaphore(Payment, permits=20)</span></span>
+<span class="line"><span>    ├── Semaphore(Fraud, permits=10)</span></span>
+<span class="line"><span>    └── Semaphore(Email, permits=5)</span></span></code></pre>
+<p><strong>Pros:</strong></p>
+<ul>
+<li>Lighter weight — one thread pool, no context switching penalty</li>
+<li>Dynamic — semaphore permits can be changed at runtime without restarting threads</li>
+</ul>
+<p><strong>Cons:</strong></p>
+<ul>
+<li>Leaky isolation — a thread in the unified pool can still be blocked by a slow downstream. Semaphore only limits CONCURRENCY, not thread blocking.</li>
+<li>Harder to monitor — thread dump shows “waiting on semaphore” but doesn’t say WHICH semaphore</li>
+</ul>
+<h3 id="43-when-to-use-which">4.3 When to Use Which</h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Isolation Type</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Critical payment path — 50ms P99 latency target</td>
+<td>Thread Pool</td>
+<td>Full isolation. Slow dependency can’t exhaust pool because thread is blocked, not pooled.</td>
+</tr>
+<tr>
+<td>30 downstream dependencies, 2-5ms P99</td>
+<td>Semaphore</td>
+<td>Thread pool per dep = 30 pools × 5 threads = 150 threads minimum. Too heavy.</td>
+</tr>
+<tr>
+<td>Mixed criticality (fraud is optional, payment is not)</td>
+<td>Thread Pool for critical, Semaphore for optional</td>
+<td>Critical paths get full isolation. Optional paths share a pool.</td>
+</tr>
+<tr>
+<td>Serverless / container with 0.25 vCPU</td>
+<td>Semaphore</td>
+<td>Thread creation is too expensive at these resource levels.</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="5-resilience4j-vs-hystrix-vs-alternatives">5. Resilience4j vs. Hystrix vs. Alternatives</h2>
+<p>Hystrix (Netflix) popularized circuit breakers but is now in maintenance mode. The ecosystem has evolved:</p>
+<table>
+<thead>
+<tr>
+<th>Library</th>
+<th>Status</th>
+<th style="text-align: center">Circuit Breaker</th>
+<th style="text-align: center">Bulkhead</th>
+<th style="text-align: center">Rate Limiter</th>
+<th style="text-align: center">Retry</th>
+<th style="text-align: center">Time Limiter</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Resilience4j</strong></td>
+<td>Active (2024+)</td>
+<td style="text-align: center">✅</td>
+<td style="text-align: center">✅ (both types)</td>
+<td style="text-align: center">✅</td>
+<td style="text-align: center">✅</td>
+<td style="text-align: center">✅</td>
+</tr>
+<tr>
+<td><strong>Hystrix</strong></td>
+<td>Archived (2018)</td>
+<td style="text-align: center">✅</td>
+<td style="text-align: center">✅ (thread pool only)</td>
+<td style="text-align: center">❌</td>
+<td style="text-align: center">✅ (basic)</td>
+<td style="text-align: center">✅</td>
+</tr>
+<tr>
+<td><strong>Sentinel</strong> (Alibaba)</td>
+<td>Active</td>
+<td style="text-align: center">✅</td>
+<td style="text-align: center">✅</td>
+<td style="text-align: center">✅</td>
+<td style="text-align: center">❌</td>
+<td style="text-align: center">❌</td>
+</tr>
+<tr>
+<td><strong>Failsafe</strong></td>
+<td>Active</td>
+<td style="text-align: center">✅</td>
+<td style="text-align: center">❌</td>
+<td style="text-align: center">❌</td>
+<td style="text-align: center">✅</td>
+<td style="text-align: center">✅</td>
+</tr>
+<tr>
+<td><strong>Spring Cloud Circuit Breaker</strong></td>
+<td>Active</td>
+<td style="text-align: center">✅ (abstracts impl)</td>
+<td style="text-align: center">❌</td>
+<td style="text-align: center">❌</td>
+<td style="text-align: center">❌</td>
+<td style="text-align: center">✅</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Why Resilience4j won:</strong></p>
+<ol>
+<li>
+<p><strong>Functional programming model.</strong> Decorators compose: <code>CircuitBreaker.decorateSupplier(Retry.decorateSupplier(TimeLimiter.decorateFuture(supplier, 3s), retryConfig), cbConfig)</code>. Hystrix required extending <code>HystrixCommand</code> — inheritance-based, hard to compose.</p>
+</li>
+<li>
+<p><strong>Modular.</strong> Each resilience pattern is a separate module. If you only need retry, you only include <code>resilience4j-retry</code>. Hystrix bundled everything.</p>
+</li>
+<li>
+<p><strong>Non-blocking.</strong> Resilience4j supports reactive streams (Project Reactor, RxJava). Hystrix’s thread-pool isolation blocked threads.</p>
+</li>
+<li>
+<p><strong>Lightweight.</strong> Zero external dependencies. Hystrix pulled in Archaius (config), servo (metrics), and Hystrix dashboard.</p>
+</li>
+<li>
+<p><strong>Operational control.</strong> Resilience4j exposes <code>/actuator/circuitbreakers</code> for runtime state transitions. You can force a breaker OPEN for testing or CLOSED for emergency override without redeploying.</p>
+</li>
+</ol>
+<h3 id="51-when-hystrix-still-teaches-us-things">5.1 When Hystrix Still Teaches Us Things</h3>
+<p>Even though Hystrix is dead, its design philosophy is still the gold standard for interview discussions:</p>
+<ul>
+<li><strong>Command pattern:</strong> Every external call is modeled as a <code>HystrixCommand</code>. This forces you to think about fallbacks (<code>getFallback()</code>), timeouts, and thread pool isolation for every dependency.</li>
+<li><strong>Request collapsing (request batching):</strong> Hystrix could merge N concurrent requests to the same dependency into a single batch call. Resilience4j doesn’t have this built-in — you’d need to implement it yourself or use GraphQL’s DataLoader pattern.</li>
+<li><strong>Dashboard:</strong> Hystrix Dashboard was revolutionary for its time — real-time circuit state visualization. Modern equivalents: Grafana + Micrometer metrics from Resilience4j.</li>
+</ul>
+<hr>
+<h2 id="6-putting-it-all-together-the-resilience-stack">6. Putting It All Together: The Resilience Stack</h2>
+<p>No single pattern is sufficient. The patterns compose into a resilience stack:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Request</span></span>
+<span class="line"><span>  │</span></span>
+<span class="line"><span>  ▼</span></span>
+<span class="line"><span>┌──────────────┐   Rejects if too many concurrent calls to THIS dependency</span></span>
+<span class="line"><span>│   Bulkhead   │   (Thread pool exhaustion or semaphore limit)</span></span>
+<span class="line"><span>└──────┬───────┘</span></span>
+<span class="line"><span>       │ (allowed through)</span></span>
+<span class="line"><span>       ▼</span></span>
+<span class="line"><span>┌──────────────┐   Fails fast if circuit is OPEN</span></span>
+<span class="line"><span>│   Circuit    │   Protects downstream from overload</span></span>
+<span class="line"><span>│   Breaker    │</span></span>
+<span class="line"><span>└──────┬───────┘</span></span>
+<span class="line"><span>       │ (call attempt)</span></span>
+<span class="line"><span>       ▼</span></span>
+<span class="line"><span>┌──────────────┐   Caps total call time (including retries)</span></span>
+<span class="line"><span>│ Time Limiter │   "If fraud detection doesn't respond in 3s, it failed"</span></span>
+<span class="line"><span>└──────┬───────┘</span></span>
+<span class="line"><span>       │</span></span>
+<span class="line"><span>       ▼</span></span>
+<span class="line"><span>┌──────────────┐   Retries on transient failures (with backoff)</span></span>
+<span class="line"><span>│   Retry      │   Exponential backoff: 100ms → 200ms → 400ms</span></span>
+<span class="line"><span>└──────┬───────┘</span></span>
+<span class="line"><span>       │</span></span>
+<span class="line"><span>       ▼</span></span>
+<span class="line"><span>┌──────────────┐   What to return when everything fails</span></span>
+<span class="line"><span>│  Fallback    │   Cached result, default value, or graceful degradation</span></span>
+<span class="line"><span>└──────────────┘</span></span></code></pre>
+<h3 id="61-order-matters">6.1 Order Matters</h3>
+<p>The ordering above is deliberate:</p>
+<ol>
+<li>
+<p><strong>Bulkhead first</strong> — if we’re out of capacity for this dependency, reject immediately. Don’t waste circuit breaker tracking capacity on calls that can’t even be attempted.</p>
+</li>
+<li>
+<p><strong>Circuit breaker second</strong> — if the downstream is known-broken, fail fast. Don’t let calls reach the retry layer (which would just amplify load).</p>
+</li>
+<li>
+<p><strong>Retry last</strong> (before the actual call) — only retry if the bulkhead allowed the call AND the circuit breaker permitted it AND the call actually failed (not rejected by earlier layers).</p>
+</li>
+</ol>
+<p><strong>Common anti-pattern:</strong> Retry wrapping circuit breaker. If the breaker is OPEN, the retry logic sees “rejected by circuit breaker” as a failure and retries → more rejected calls → more retries → effectively a retry storm against yourself.</p>
+<hr>
+<h2 id="7-monitoring--observability">7. Monitoring &amp; Observability</h2>
+<p>At the staff level, resilience is a monitoring discipline, not a code one.</p>
+<h3 id="71-essential-circuit-breaker-metrics">7.1 Essential Circuit Breaker Metrics</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Why</th>
+<th style="text-align: center">Alert?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>circuitbreaker.state</code> (0=CLOSED, 1=OPEN, 2=HALF_OPEN)</td>
+<td>State transitions are the canary</td>
+<td style="text-align: center">YES — page on OPEN</td>
+</tr>
+<tr>
+<td><code>circuitbreaker.call.count</code> (successful + failed)</td>
+<td>Traffic volume per breaker</td>
+<td style="text-align: center">No</td>
+</tr>
+<tr>
+<td><code>circuitbreaker.failure.rate</code></td>
+<td>Approaching threshold?</td>
+<td style="text-align: center">Warn at 40% (before 50% trip)</td>
+</tr>
+<tr>
+<td><code>circuitbreaker.slow.call.rate</code></td>
+<td>Degradation before hard failure</td>
+<td style="text-align: center">Warn at 20%</td>
+</tr>
+<tr>
+<td><code>circuitbreaker.buffered.calls</code></td>
+<td>Window fullness</td>
+<td style="text-align: center">No</td>
+</tr>
+<tr>
+<td><code>circuitbreaker.not.permitted.calls</code></td>
+<td>Requests rejected in OPEN state</td>
+<td style="text-align: center">Monitor trend</td>
+</tr>
+<tr>
+<td><code>circuitbreaker.half_open.successful.calls</code></td>
+<td>Is probing working?</td>
+<td style="text-align: center">Alert if 0 after 3 cycles</td>
+</tr>
+<tr>
+<td><code>circuitbreaker.half_open.failed.calls</code></td>
+<td>Recovery failing</td>
+<td style="text-align: center">Alert on ANY failure in HALF-OPEN</td>
+</tr>
+</tbody>
+</table>
+<h3 id="72-essential-bulkhead-metrics">7.2 Essential Bulkhead Metrics</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Why</th>
+<th style="text-align: center">Alert?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bulkhead.max.thread.pool.size</code></td>
+<td>Configured capacity</td>
+<td style="text-align: center">No</td>
+</tr>
+<tr>
+<td><code>bulkhead.current.thread.pool.size</code></td>
+<td>Current utilization</td>
+<td style="text-align: center">Warn at 70%</td>
+</tr>
+<tr>
+<td><code>bulkhead.available.queue.capacity</code></td>
+<td>Queue depth available</td>
+<td style="text-align: center">Warn at 0</td>
+</tr>
+<tr>
+<td><code>bulkhead.queue.wait.time.p99</code></td>
+<td>How long requests wait for a thread</td>
+<td style="text-align: center">Alert if &gt; SLA</td>
+</tr>
+<tr>
+<td><code>bulkhead.rejected.calls</code></td>
+<td>Calls denied due to full bulkhead</td>
+<td style="text-align: center">YES — page</td>
+</tr>
+</tbody>
+</table>
+<h3 id="73-the-dashboard-that-matters">7.3 The Dashboard That Matters</h3>
+<p>A staff engineer doesn’t look at individual breaker states — they look at the <strong>system-wide resilience dashboard</strong>:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌─────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│  RESILIENCE OVERVIEW                      2026-06-16     │</span></span>
+<span class="line"><span>├─────────────────────────────────────────────────────────┤</span></span>
+<span class="line"><span>│                                                         │</span></span>
+<span class="line"><span>│  ACTIVE OUTAGES:    ██ Fraud Detection (OPEN 45s)       │</span></span>
+<span class="line"><span>│                                                         │</span></span>
+<span class="line"><span>│  DEGRADED:          ▓▓ Notification (HALF-OPEN)         │</span></span>
+<span class="line"><span>│                     ▓▓ Inventory (slow calls 32%)        │</span></span>
+<span class="line"><span>│                                                         │</span></span>
+<span class="line"><span>│  HEALTHY:           12 services                          │</span></span>
+<span class="line"><span>│                                                         │</span></span>
+<span class="line"><span>│  BULKHEAD SAT:      Payment Pool:  14/20 (70%)          │</span></span>
+<span class="line"><span>│                     Email Pool:      3/5  (60%)          │</span></span>
+<span class="line"><span>│                     Fraud Pool:      0/10 (OPEN) ⚠       │</span></span>
+<span class="line"><span>│                                                         │</span></span>
+<span class="line"><span>│  REJECTED (last 5m):  1,247 calls to Fraud Detection     │</span></span>
+<span class="line"><span>│                        (all caught by circuit breaker)   │</span></span>
+<span class="line"><span>│                                                         │</span></span>
+<span class="line"><span>└─────────────────────────────────────────────────────────┘</span></span></code></pre>
+<p><strong>Key pattern:</strong> Circuit breakers are TRIPPED (OPEN state), not “alerted on.” The actual alert fires on the upstream symptom — payment success rate dropping below SLA, not “circuit breaker for fraud detection opened.” The circuit breaker state is diagnostic information, not the alert condition itself.</p>
+<hr>
+<h2 id="8-interview-questions--model-answers">8. Interview Questions &amp; Model Answers</h2>
+<h3 id="-q1-your-payment-service-calls-fraud-detection-which-starts-timing-out-at-p99-within-60-seconds-your-entire-payment-pipeline-is-blocked-walk-me-through-what-happened-at-the-thread-pool-level-and-how-youd-fix-it">⚡ Q1: “Your payment service calls fraud detection, which starts timing out at P99. Within 60 seconds, your entire payment pipeline is blocked. Walk me through what happened at the thread-pool level, and how you’d fix it.”</h3>
+<p><strong>Staff-level answer:</strong></p>
+<p>“At the thread-pool level, this is a <strong>connection pool exhaustion cascade</strong>:</p>
+<ol>
+<li>
+<p>Each incoming payment request acquires a thread from the application server’s thread pool (e.g., Tomcat’s 200 threads).</p>
+</li>
+<li>
+<p>That thread makes an HTTP call to fraud detection. The HTTP client has its own connection pool (e.g., 50 connections). Each connection is leased to a request for the duration of the call.</p>
+</li>
+<li>
+<p>Fraud detection’s P99 latency goes from 200ms to 5s (timing out). Each connection is now held for 5s instead of 200ms — a 25× increase in hold time.</p>
+</li>
+<li>
+<p>At 100 RPS, with 50 connections and 5s hold time, the connection pool saturates in: 50 connections / (100 calls/sec) = 0.5 seconds if all were instant. But with 5s hold: new requests queue up waiting for connections.</p>
+</li>
+<li>
+<p>The connection pool request queue fills up. Now every Tomcat thread making a payment call is blocked waiting for an HTTP connection to fraud detection.</p>
+</li>
+<li>
+<p>All 200 Tomcat threads are now blocked → no threads available for ANY request → health checks fail → load balancer marks instance as unhealthy → remaining instances get MORE traffic → cascade.</p>
+</li>
+</ol>
+<p><strong>The fix (resilience stack):</strong></p>
+<ol>
+<li>
+<p><strong>Time limiter</strong> on the HTTP client: cap fraud detection calls at 1.5s (below Tomcat’s own timeout). Failed calls return fast, threads are freed.</p>
+</li>
+<li>
+<p><strong>Circuit breaker</strong> on fraud detection: after 50% of calls fail (sliding window of 100), OPEN the circuit. New calls are rejected immediately — no thread blocking, no connection pool consumption.</p>
+</li>
+<li>
+<p><strong>Bulkhead</strong> (thread pool isolation): give fraud detection its own thread pool of 10 threads. Even if all 10 block, the other 190 Tomcat threads process non-fraud requests.</p>
+</li>
+<li>
+<p><strong>Fallback:</strong> return a <code>FraudCheckResult.ALLOW_WITH_FLAG</code> default — the payment goes through but is flagged for async review. Better to process payments without real-time fraud detection than to reject ALL payments.</p>
+</li>
+<li>
+<p><strong>Observability:</strong> Alert on P99 latency of fraud detection BEFORE the circuit breaker trips. If P99 crosses 500ms, wake someone up. The circuit breaker is the safety net, not the first line of defense.“</p>
+</li>
+</ol>
+<h3 id="-q2-whats-the-difference-between-a-circuit-breaker-and-a-retry-when-would-you-use-only-one-and-when-both">⚡ Q2: “What’s the difference between a circuit breaker and a retry? When would you use only one, and when both?”</h3>
+<p><strong>Staff-level answer:</strong></p>
+<p>“A circuit breaker prevents calls FROM being made. A retry repeats calls that HAVE been made. They solve opposite problems:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Circuit Breaker</th>
+<th>Retry</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>Protect downstream from overload</td>
+<td>Handle transient failures</td>
+</tr>
+<tr>
+<td><strong>Action</strong></td>
+<td>Rejects calls (fail-fast)</td>
+<td>Repeats calls</td>
+</tr>
+<tr>
+<td><strong>When</strong></td>
+<td>Downstream is known-broken</td>
+<td>Transient network blip, temporary unavailability</td>
+</tr>
+<tr>
+<td><strong>Risk</strong></td>
+<td>False positives (opens on transient error)</td>
+<td>Amplifies load (retry storm)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Use only retry</strong> when: downstream failures are transient, the operation is idempotent, and your retry budget (max attempts × base load) won’t overwhelm the downstream on recovery. Example: fetching a user profile from a cache — cache miss is normal, retry once if connection drops.</p>
+<p><strong>Use only circuit breaker</strong> when: downstream failures are correlated (if one call fails, all will fail for a while), and you have a meaningful fallback. Example: fraud detection during a Datadog outage — if the API key service is down, NO fraud check will work. Retrying just adds load.</p>
+<p><strong>Use both</strong> when: you want retry for transient blips AND circuit breaker for sustained failures. But ORDER MATTERS: retry INSIDE the circuit breaker, not outside. If the breaker is OPEN, retry sees “rejected by breaker” and retries → self-inflicted retry storm. The correct composition: circuit breaker wraps retry.“</p>
+<h3 id="-common-pitfall-the-circuit-breaker-opened-but-downstream-was-healthy--it-was-a-transient-blip">❗ Common Pitfall: “The circuit breaker opened, but downstream was healthy — it was a transient blip”</h3>
+<p><strong>The trap:</strong> You set <code>failureRateThreshold=20%</code>, <code>slidingWindowSize=20</code>, <code>minimumNumberOfCalls=5</code>. Under normal load (10 RPS), 4 out of the last 20 calls time out because of a GC pause in your own service. The breaker opens. For the next 30 seconds, ALL traffic is rejected — 300 requests fail-fast. The root cause was a 500ms GC pause in YOUR service, not a downstream outage.</p>
+<p><strong>Why this happens:</strong> The circuit breaker is <strong>caller-side</strong>. It observes failures from the caller’s perspective, which includes:</p>
+<ul>
+<li>Downstream failures (what you want to detect)</li>
+<li>Network failures between caller and downstream (partially want to detect)</li>
+<li>Caller-side problems (GC pauses, CPU starvation, thread exhaustion — NOT what you want to detect as “downstream failure”)</li>
+</ul>
+<p><strong>The fix:</strong></p>
+<ol>
+<li>
+<p><strong>Distinguish failure types.</strong> Don’t trip the breaker on <code>java.net.SocketTimeoutException</code> from your own HTTP client’s read timeout if the read timeout is shorter than the downstream’s actual processing time. Set timeouts deliberately — a read timeout of 2s when downstream P99 is 1.8s will trip falsely on normal P99 variation.</p>
+</li>
+<li>
+<p><strong>Use <code>slowCallRateThreshold</code> as the primary trip mechanism.</strong> A slow call means the downstream IS responding, just slowly. This filters out caller-side timeouts (where no response arrives at all due to caller issues). Set <code>slowCallDurationThreshold</code> to 2× downstream P50, not P99 — you want to detect degradation early.</p>
+</li>
+<li>
+<p><strong>Correlate breaker state with downstream health metrics.</strong> Don’t trust the breaker alone. If the breaker is OPEN but downstream metrics (from its own <code>/health</code> or Prometheus endpoint) show healthy, suppress the page and investigate caller-side issues.</p>
+</li>
+<li>
+<p><strong>Add a <code>minimumNumberOfCalls</code> that’s statistically meaningful.</strong> 5 calls out of 5 = 100% failure rate but zero statistical significance. At 10 RPS with 100ms latency, 5 calls complete in 500ms — a single GC pause kills all 5. Use <code>minimumNumberOfCalls</code> &gt;= 20, or use TIME_BASED window with 30s+ of data.</p>
+</li>
+</ol>
+<hr>
+<h2 id="9-architectural-decisions--trade-off-table">9. Architectural Decisions — Trade-Off Table</h2>
+<p>This is the table to have in your head during an interview. When the interviewer asks “why not just retry?” or “why thread pool instead of semaphore?”, you should be able to walk this table:</p>
+<table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>Option A</th>
+<th>Option B</th>
+<th>Why A Wins</th>
+<th>When B Wins</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Circuit breaker vs. Retry-only</strong></td>
+<td>Circuit Breaker</td>
+<td>Retry-only</td>
+<td>Prevents cascading failure in sustained outages</td>
+<td>Transient failures only, lightweight</td>
+</tr>
+<tr>
+<td><strong>Count-based vs. Time-based window</strong></td>
+<td>COUNT_BASED (last N calls)</td>
+<td>TIME_BASED (last T seconds)</td>
+<td>Fast reaction at high traffic; predictable memory</td>
+<td>Statistically meaningful at low traffic; predictable aging</td>
+</tr>
+<tr>
+<td><strong>Thread pool vs. Semaphore bulkhead</strong></td>
+<td>Thread Pool</td>
+<td>Semaphore</td>
+<td>Full isolation — slow dep can’t exhaust threads</td>
+<td>30+ dependencies; low resource overhead</td>
+</tr>
+<tr>
+<td><strong>Fail-fast vs. Fallback-first</strong></td>
+<td>Fail-fast (reject + fallback)</td>
+<td>Call fallback synchronously</td>
+<td>Avoids fallback latency on OPEN circuit</td>
+<td>Fallback is cheap (&lt; 5ms) and always available</td>
+</tr>
+<tr>
+<td><strong>Automatic vs. Manual HALF-OPEN → CLOSED</strong></td>
+<td>Automatic (after N successes)</td>
+<td>Manual (operator flips switch)</td>
+<td>Hands-off operations; faster recovery</td>
+<td>Systems where false recovery is catastrophic (payment ledgers)</td>
+</tr>
+<tr>
+<td><strong>Breaker per endpoint vs. Breaker per service</strong></td>
+<td>Per endpoint</td>
+<td>Per service</td>
+<td>Isolates failures; GET /health may work while POST /checkout fails</td>
+<td>Simpler configuration; fewer breakers to tune</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="10-real-world-patterns-beyond-the-basics">10. Real-World Patterns Beyond the Basics</h2>
+<h3 id="101-partial-circuit-breaking">10.1 Partial Circuit Breaking</h3>
+<p>Not all requests to a downstream are equal. You might want to:</p>
+<ul>
+<li><strong>OPEN</strong> the circuit for non-critical reads (GET /recommendations) while keeping it CLOSED for critical writes (POST /payment)</li>
+<li><strong>Route to a degraded endpoint:</strong> Pattern matching — if POST /fraud/advanced fails, fall back to POST /fraud/basic (simpler model, lower accuracy, but doesn’t block payments)</li>
+</ul>
+<h3 id="102-adaptive-thresholds">10.2 Adaptive Thresholds</h3>
+<p>Static thresholds (<code>failureRateThreshold=50</code>) are fragile. Adaptive approaches:</p>
+<ul>
+<li><strong>Percentile-based:</strong> Open when P99 latency exceeds 5× P50 latency for 3 consecutive windows</li>
+<li><strong>Consecutive-failure count:</strong> Open on 5 consecutive failures, regardless of rate. Simple, effective, no window math.</li>
+<li><strong>Increasing threshold on recovery:</strong> After reopening, start with a lower threshold (e.g., 10% failure rate trips back to OPEN) and gradually normalize to 50% as confidence builds.</li>
+</ul>
+<h3 id="103-chaos-circuit-breaker-testing-gap">10.3 Chaos: Circuit Breaker Testing Gap</h3>
+<p>The #1 un-tested resilience pattern: nobody tests that circuit breakers actually WORK. Common failures:</p>
+<ul>
+<li>Breaker configured but <code>ignoreExceptions</code> catches the real exception type</li>
+<li>Breaker scoped to the wrong bean/method (Spring AOP proxy issue)</li>
+<li>Retry exhausting its attempts before the breaker sees enough failures to open</li>
+<li>Two breakers on the same dependency with different thresholds creating inconsistent behavior</li>
+</ul>
+<p><strong>The staff answer:</strong> Run Game Days where you deliberately break downstream services and verify that (a) breakers open within the expected time, (b) fallbacks activate correctly, (c) recovery happens automatically, and (d) the on-call engineer can interpret the dashboard correctly.</p>
+<hr>
+<h2 id="11-key-takeaways">11. Key Takeaways</h2>
+<ol>
+<li>
+<p><strong>Circuit breakers reveal problems, they don’t solve them.</strong> The breaker stopping cascading failure is temporary — the permanent fix is diagnosing and resolving the downstream issue. Don’t let the breaker become a crutch.</p>
+</li>
+<li>
+<p><strong>Compose patterns in the right order:</strong> Bulkhead → Circuit Breaker → Time Limiter → Retry → Fallback. Wrong ordering creates self-inflicted failures.</p>
+</li>
+<li>
+<p><strong>Thread pool isolation is the nuclear option.</strong> Use it for critical paths where a blocked thread is unacceptable. For everything else, semaphores are lighter and sufficient.</p>
+</li>
+<li>
+<p><strong>Slow calls, not hard failures, are the real threat.</strong> A downstream that consistently returns 500s is obvious. A downstream whose P99 creeps from 200ms to 2s is invisible until every connection pool is exhausted. <code>slowCallRateThreshold</code> is your most important tuning parameter.</p>
+</li>
+<li>
+<p><strong>The circuit breaker is caller-side — it’s biased.</strong> It can’t distinguish between “downstream is slow” and “my own service had a GC pause.” Design your monitoring to correlate breaker state with downstream health metrics before paging.</p>
+</li>
+<li>
+<p><strong>HALF-OPEN is the hardest state to get right.</strong> Too many probes overwhelms recovery. Too few probes never closes. Test your recovery behavior under load, not in isolation.</p>
+</li>
+<li>
+<p><strong>Staff-level reframe:</strong> Don’t ask “should I use a circuit breaker or a retry?” Ask “<strong>what is the failure mode I’m designing for, what is the blast radius of that failure, and what combination of patterns limits the blast radius to an acceptable level while preserving the user experience?</strong>” The patterns are tools; the resilience architecture is the answer.</p>
+</li>
+</ol>
+<hr>
+<h2 id="related">Related</h2>
+<ul>
+<li>[[topic-queue]]</li>
+<li>[[Rate Limiter]]</li>
+<li>[[Rate Limiting Algorithms Deep Dive]]</li>
+<li>[[Chaos Engineering (Failure Injection, Game Days)]]</li>
+<li>[[Service Mesh (Istio-Linkerd)]]</li>
+<li>[[API Gateway &amp; Load Balancer]]</li>
+<li>[[Weakness Vault/Day-43-Circuit-Breakers-Bulkheads]]</li>
+</ul>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Circuit breakers have three states — CLOSED (normal), OPEN (fail-fast), HALF-OPEN (probing). The breaker is a canary that reveals problems, not a cure.</li>
+<li>Order your resilience stack correctly: Bulkhead → Circuit Breaker → Time Limiter → Retry → Fallback. Putting retry outside the breaker causes self-inflicted retry storms.</li>
+<li>Slow calls (latency degradation) are the real threat, not hard failures. Use <code>slowCallRateThreshold</code> as your primary trip — a downstream whose P99 creeps from 200ms to 2s is invisible until every connection pool is exhausted.</li>
+<li>The circuit breaker is caller-side and biased — it can’t distinguish “downstream is slow” from “my own service had a GC pause.” Correlate breaker state with downstream health metrics before paging.</li>
+<li>Thread pool isolation gives full isolation (a blocked thread can’t starve other deps); semaphores are lighter but leaky. Use thread pools for critical paths, semaphores when you have 30+ dependencies.</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li><em>What’s the difference between a circuit breaker and a retry?</em> — A breaker prevents calls from being made (fail-fast); a retry repeats calls that were made. Use retry for transient blips, breaker for sustained failures, and both together with retry <em>inside</em> the breaker.</li>
+<li><em>How do you tune the sliding window?</em> — Choose the window that gives a statistically significant sample at your P50 traffic volume: COUNT_BASED for high RPS, TIME_BASED for low/bursty RPS. Always set <code>minimumNumberOfCalls</code> high enough to avoid flapping on GC pauses.</li>
+<li><em>When thread pool vs semaphore bulkhead?</em> — Thread pool for critical paths where a blocked thread is unacceptable; semaphore for many dependencies or constrained resources (serverless) where thread overhead matters.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>People assume the circuit breaker detects <em>downstream</em> failures, but it’s caller-side and also trips on your own GC pauses, CPU starvation, or misconfigured timeouts. A read timeout shorter than the downstream’s P99 will open the breaker on perfectly healthy traffic.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/circuit-breakers-and-bulkheads/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Circuit%20Breakers%20%26%20Bulkheads%20(Resilience4j%2C%20Hystrix%20patterns)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fcircuit-breakers-and-bulkheads%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fcircuit-breakers-and-bulkheads%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/circuit-breakers-and-bulkheads" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/chat-system-websocket-webrtc" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Chat System (WebSocket, WebRTC)</span></a><a href="/notes/system-design/cloud-cost-optimization-at-scale" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Cloud Cost Optimization at Scale (FinOps, Spot, Right-sizing)</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Circuit Breakers &amp; Bulkheads (Resilience4j, Hystrix patterns)" data-selector=".article-prose" data-article-slug="system-design/circuit-breakers-and-bulkheads" data-article-title="Circuit Breakers &amp; Bulkheads (Resilience4j, Hystrix patterns)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

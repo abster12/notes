@@ -1,0 +1,1280 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Heaps &amp; Priority Queues — Interview Prep · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link active" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-heap-basics" class="toc-link" data-toc-link="1-heap-basics" data-astro-cid-p33bl5ka>1. Heap Basics</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#11-ascii-min-heap-structure" class="toc-link" data-toc-link="11-ascii-min-heap-structure" data-astro-cid-p33bl5ka>1.1 ASCII: Min-heap structure</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#12-core-operations" class="toc-link" data-toc-link="12-core-operations" data-astro-cid-p33bl5ka>1.2 Core operations</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#13-heapify-up-insert" class="toc-link" data-toc-link="13-heapify-up-insert" data-astro-cid-p33bl5ka>1.3 Heapify Up (insert)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#14-heapify-down-extract" class="toc-link" data-toc-link="14-heapify-down-extract" data-astro-cid-p33bl5ka>1.4 Heapify Down (extract)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-priorityqueue-in-java" class="toc-link" data-toc-link="2-priorityqueue-in-java" data-astro-cid-p33bl5ka>2. PriorityQueue in Java</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#api-cheat-sheet" class="toc-link" data-toc-link="api-cheat-sheet" data-astro-cid-p33bl5ka>API cheat sheet</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#custom-objects" class="toc-link" data-toc-link="custom-objects" data-astro-cid-p33bl5ka>Custom objects</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#gotchas" class="toc-link" data-toc-link="gotchas" data-astro-cid-p33bl5ka>Gotchas</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-the-unifying-insight" class="toc-link" data-toc-link="3-the-unifying-insight" data-astro-cid-p33bl5ka>3. The Unifying Insight</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#4-approach-comparison-heap-vs-sorting-vs-quickselect" class="toc-link" data-toc-link="4-approach-comparison-heap-vs-sorting-vs-quickselect" data-astro-cid-p33bl5ka>4. Approach Comparison: Heap vs Sorting vs Quickselect</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#5-solution-1--kth-largest-element-in-an-array" class="toc-link" data-toc-link="5-solution-1--kth-largest-element-in-an-array" data-astro-cid-p33bl5ka>5. Solution 1 — Kth Largest Element in an Array</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approaches" class="toc-link" data-toc-link="approaches" data-astro-cid-p33bl5ka>Approaches</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#intuition" class="toc-link" data-toc-link="intuition" data-astro-cid-p33bl5ka>Intuition</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-min-heap" class="toc-link" data-toc-link="java-solution-min-heap" data-astro-cid-p33bl5ka>Java solution (min-heap)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#6-solution-2--merge-k-sorted-lists" class="toc-link" data-toc-link="6-solution-2--merge-k-sorted-lists" data-astro-cid-p33bl5ka>6. Solution 2 — Merge K Sorted Lists</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#intuition-1" class="toc-link" data-toc-link="intuition-1" data-astro-cid-p33bl5ka>Intuition</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution" class="toc-link" data-toc-link="java-solution" data-astro-cid-p33bl5ka>Java solution</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#why-store-value-listindex-instead-of-listnode-directly" class="toc-link" data-toc-link="why-store-value-listindex-instead-of-listnode-directly" data-astro-cid-p33bl5ka>Why store [value, listIndex] instead of ListNode directly?</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#alternative-divide-and-conquer-merge" class="toc-link" data-toc-link="alternative-divide-and-conquer-merge" data-astro-cid-p33bl5ka>Alternative: divide-and-conquer merge</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#7-solution-3--top-k-frequent-elements" class="toc-link" data-toc-link="7-solution-3--top-k-frequent-elements" data-astro-cid-p33bl5ka>7. Solution 3 — Top K Frequent Elements</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#intuition-2" class="toc-link" data-toc-link="intuition-2" data-astro-cid-p33bl5ka>Intuition</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-min-heap-1" class="toc-link" data-toc-link="java-solution-min-heap-1" data-astro-cid-p33bl5ka>Java solution (min-heap)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#8-solution-4--find-median-from-data-stream" class="toc-link" data-toc-link="8-solution-4--find-median-from-data-stream" data-astro-cid-p33bl5ka>8. Solution 4 — Find Median from Data Stream</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-two-heap-idea" class="toc-link" data-toc-link="the-two-heap-idea" data-astro-cid-p33bl5ka>The two-heap idea</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ascii-two-heap-median-finder" class="toc-link" data-toc-link="ascii-two-heap-median-finder" data-astro-cid-p33bl5ka>ASCII: Two-heap median finder</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#why-max-heap-for-the-left-half" class="toc-link" data-toc-link="why-max-heap-for-the-left-half" data-astro-cid-p33bl5ka>Why max-heap for the left half?</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#extension--sliding-window-median-leetcode-480" class="toc-link" data-toc-link="extension--sliding-window-median-leetcode-480" data-astro-cid-p33bl5ka>Extension — Sliding Window Median (LeetCode 480)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#9-solution-5--k-closest-points-to-origin" class="toc-link" data-toc-link="9-solution-5--k-closest-points-to-origin" data-astro-cid-p33bl5ka>9. Solution 5 — K Closest Points to Origin</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#intuition-3" class="toc-link" data-toc-link="intuition-3" data-astro-cid-p33bl5ka>Intuition</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-1" class="toc-link" data-toc-link="java-solution-1" data-astro-cid-p33bl5ka>Java solution</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#variants-and-notes" class="toc-link" data-toc-link="variants-and-notes" data-astro-cid-p33bl5ka>Variants and notes</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#10-solution-6--task-scheduler" class="toc-link" data-toc-link="10-solution-6--task-scheduler" data-astro-cid-p33bl5ka>10. Solution 6 — Task Scheduler</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#intuition-greedy--max-heap--cooldown-queue" class="toc-link" data-toc-link="intuition-greedy--max-heap--cooldown-queue" data-astro-cid-p33bl5ka>Intuition (greedy + max-heap + cooldown queue)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-simulation" class="toc-link" data-toc-link="java-solution-simulation" data-astro-cid-p33bl5ka>Java solution (simulation)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-closed-form-formula-interviewers-love-this" class="toc-link" data-toc-link="the-closed-form-formula-interviewers-love-this" data-astro-cid-p33bl5ka>The closed-form formula (interviewers love this)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#11-related-patterns-short-notes" class="toc-link" data-toc-link="11-related-patterns-short-notes" data-astro-cid-p33bl5ka>11. Related Patterns (short notes)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#111-last-stone-weight-leetcode-1046" class="toc-link" data-toc-link="111-last-stone-weight-leetcode-1046" data-astro-cid-p33bl5ka>11.1 Last Stone Weight (LeetCode 1046)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#112-design-twitter-leetcode-355" class="toc-link" data-toc-link="112-design-twitter-leetcode-355" data-astro-cid-p33bl5ka>11.2 Design Twitter (LeetCode 355)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#113-sliding-window-median-leetcode-480" class="toc-link" data-toc-link="113-sliding-window-median-leetcode-480" data-astro-cid-p33bl5ka>11.3 Sliding Window Median (LeetCode 480)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#12-comparison-summary-table" class="toc-link" data-toc-link="12-comparison-summary-table" data-astro-cid-p33bl5ka>12. Comparison Summary Table</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#13-pattern-cheat-sheet-when-you-see-this-do-this" class="toc-link" data-toc-link="13-pattern-cheat-sheet-when-you-see-this-do-this" data-astro-cid-p33bl5ka>13. Pattern Cheat Sheet (when you see this, do this)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#universal-skeleton-memorize-this" class="toc-link" data-toc-link="universal-skeleton-memorize-this" data-astro-cid-p33bl5ka>Universal skeleton (memorize this)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#14-common-mistakes-and-edge-cases" class="toc-link" data-toc-link="14-common-mistakes-and-edge-cases" data-astro-cid-p33bl5ka>14. Common Mistakes and Edge Cases</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#15-complexity-reference--final-checklist" class="toc-link" data-toc-link="15-complexity-reference--final-checklist" data-astro-cid-p33bl5ka>15. Complexity Reference &amp; Final Checklist</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/coding-interview/" class="article-category" data-astro-cid-sgg5joot>Coding Interview</a><h1 class="article-title" data-astro-cid-sgg5joot>Heaps &amp; Priority Queues — Interview Prep</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-medium-to-hard" data-astro-cid-sgg5joot>medium-to-hard</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 23 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 32 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>heap</span><span class="tag" data-astro-cid-sgg5joot>priority-queue</span><span class="tag" data-astro-cid-sgg5joot>java</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>top-k</span><span class="tag" data-astro-cid-sgg5joot>median</span><span class="tag" data-astro-cid-sgg5joot>two-heaps</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="heaps--priority-queues">Heaps &amp; Priority Queues</h1>
+<p>Heaps are the backbone of “top k”, “k-th largest”, “merge sorted streams”, “running median”, “scheduling”, and “closest points” problems. Once you internalize the heap-as-sorted-buffer trick, most collapse into one skeleton: push elements in, pop what you do not want, keep what remains.</p>
+<p>This article covers heap fundamentals, the Java <code>PriorityQueue</code> API, canonical patterns, and six fully-worked Java solutions with complexity analysis.</p>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A complete binary tree where each node is ≤/≥ its children, supporting O(log n) insert and O(1) min/max access — Java’s PriorityQueue.</p>
+<p><strong>How it’s asked:</strong> “Kth largest element, top K frequent, merge K sorted lists, median of data stream, find median from data stream — ‘top K’ or ‘running median’ problems.”</p>
+<hr>
+<h2 id="1-heap-basics">1. Heap Basics</h2>
+<p>A <strong>binary heap</strong> is a complete binary tree stored in an array that satisfies the <strong>heap property</strong>:</p>
+<ul>
+<li><strong>Min-heap</strong>: every node is ≤ its children. The minimum lives at the root.</li>
+<li><strong>Max-heap</strong>: every node is ≥ its children. The maximum lives at the root.</li>
+</ul>
+<p>Because the tree is <em>complete</em> (every level filled except possibly the last, filled left-to-right), it packs perfectly into an array with O(1) parent/child arithmetic:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>For a node at index i (0-based):</span></span>
+<span class="line"><span>  parent(i)      = (i - 1) / 2</span></span>
+<span class="line"><span>  leftChild(i)   = 2 * i + 1</span></span>
+<span class="line"><span>  rightChild(i)  = 2 * i + 2</span></span></code></pre>
+<h3 id="11-ascii-min-heap-structure">1.1 ASCII: Min-heap structure</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>           1</span></span>
+<span class="line"><span>         /   \</span></span>
+<span class="line"><span>        3     6</span></span>
+<span class="line"><span>       / \   / \</span></span>
+<span class="line"><span>      5  9  7   8</span></span>
+<span class="line"><span>     / \</span></span>
+<span class="line"><span>    10 12</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Array (0-based): [1, 3, 6, 5, 9, 7, 8, 10, 12]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Index:           0  1  2  3  4  5  6   7   8</span></span></code></pre>
+<p>Notice each parent is ≤ both children, yet the array is <strong>not</strong> fully sorted — only the heap invariant holds. A heap is weaker and cheaper to maintain than a sorted sequence.</p>
+<h3 id="12-core-operations">1.2 Core operations</h3>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Description</th>
+<th>Complexity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>insert</code></td>
+<td>Add at end, bubble up (sift up)</td>
+<td>O(log n)</td>
+</tr>
+<tr>
+<td><code>extractMin</code></td>
+<td>Remove root, move last up, sift down</td>
+<td>O(log n)</td>
+</tr>
+<tr>
+<td><code>peek</code></td>
+<td>Read root (index 0)</td>
+<td>O(1)</td>
+</tr>
+<tr>
+<td><code>heapify</code></td>
+<td>Build heap from arbitrary array</td>
+<td>O(n) amortized</td>
+</tr>
+<tr>
+<td><code>replace</code></td>
+<td>Pop root then insert in one step</td>
+<td>O(log n)</td>
+</tr>
+</tbody>
+</table>
+<p>The O(n) build-heap cost (not O(n log n)) is a classic result: most nodes sit near the leaves where sift-down is cheap, so the total work sums to a linear bound.</p>
+<h3 id="13-heapify-up-insert">1.3 Heapify Up (insert)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Insert 2 into min-heap below, start at the new leaf.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 0: append at end</span></span>
+<span class="line"><span>           1</span></span>
+<span class="line"><span>         /   \</span></span>
+<span class="line"><span>        3     6</span></span>
+<span class="line"><span>       / \</span></span>
+<span class="line"><span>      5   2          &#x3C;-- 2 added here (violates heap: 2 &#x3C; 3)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 1: compare 2 with parent 3 -> swap</span></span>
+<span class="line"><span>           1</span></span>
+<span class="line"><span>         /   \</span></span>
+<span class="line"><span>        2     6</span></span>
+<span class="line"><span>       / \</span></span>
+<span class="line"><span>      5   3</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 2: compare 2 with parent 1 -> stop (2 >= 1). Done.</span></span></code></pre>
+<h3 id="14-heapify-down-extract">1.4 Heapify Down (extract)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>ExtractMin removes root 1. Move last element (3) to root, shrink, sift down.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 0: replace root with last element</span></span>
+<span class="line"><span>           3</span></span>
+<span class="line"><span>         /   \</span></span>
+<span class="line"><span>        2     6</span></span>
+<span class="line"><span>       / \</span></span>
+<span class="line"><span>      5   (gone)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 1: 3 > left child 2 -> swap with smaller child</span></span>
+<span class="line"><span>           2</span></span>
+<span class="line"><span>         /   \</span></span>
+<span class="line"><span>        3     6</span></span>
+<span class="line"><span>       /</span></span>
+<span class="line"><span>      5</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 2: 3 &#x3C;= child 5 -> stop. Heap valid.</span></span></code></pre>
+<blockquote>
+<p><strong>Min-heap vs max-heap for k-th largest</strong>: To find the k-th largest element you keep a <strong>min-heap of size k</strong>. After pushing every element, the heap root <em>is</em> the k-th largest (the smallest among the top-k seen so far). Dually, k-th smallest uses a max-heap of size k. Using the “wrong” type of heap and keeping it size-bounded is the #1 trick in this whole category.</p>
+</blockquote>
+<hr>
+<h2 id="2-priorityqueue-in-java">2. PriorityQueue in Java</h2>
+<p>Java’s <code>java.util.PriorityQueue</code> is a <strong>min-heap by default</strong>. It implements <code>Queue</code>, so you use <code>add</code>/<code>offer</code> (insert), <code>poll</code> (extract min), and <code>peek</code> (read min). To get a max-heap, pass a <code>Comparator.reverseOrder()</code> (or a custom lambda).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> java.util.PriorityQueue;</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> java.util.Collections;</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> java.util.Comparator;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">// Min-heap (default): smallest first</span></span>
+<span class="line"><span style="color:#E1E4E8">PriorityQueue&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> minHeap </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> PriorityQueue&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">minHeap.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">); minHeap.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">); minHeap.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">minHeap.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">();   </span><span style="color:#6A737D">// 1</span></span>
+<span class="line"><span style="color:#E1E4E8">minHeap.</span><span style="color:#B392F0">poll</span><span style="color:#E1E4E8">();   </span><span style="color:#6A737D">// 1 -> heap now [3, 5]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">// Max-heap: largest first</span></span>
+<span class="line"><span style="color:#E1E4E8">PriorityQueue&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> maxHeap </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> PriorityQueue&#x3C;>(Collections.</span><span style="color:#B392F0">reverseOrder</span><span style="color:#E1E4E8">());</span></span>
+<span class="line"><span style="color:#6A737D">// or equivalently:</span></span>
+<span class="line"><span style="color:#E1E4E8">PriorityQueue&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> maxHeap2 </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> PriorityQueue&#x3C;>(Comparator.</span><span style="color:#B392F0">reverseOrder</span><span style="color:#E1E4E8">());</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">// Heap of int[] ranked by first element (e.g. distance), ties broken by index</span></span>
+<span class="line"><span style="color:#E1E4E8">PriorityQueue&#x3C;</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[]> pq </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> PriorityQueue&#x3C;>(</span></span>
+<span class="line"><span style="color:#E1E4E8">    (a, b) </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> a[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">!=</span><span style="color:#E1E4E8"> b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">?</span><span style="color:#E1E4E8"> Integer.</span><span style="color:#B392F0">compare</span><span style="color:#E1E4E8">(a[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">], b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]) </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> Integer.</span><span style="color:#B392F0">compare</span><span style="color:#E1E4E8">(a[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">], b[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">])</span></span>
+<span class="line"><span style="color:#E1E4E8">);</span></span></code></pre>
+<h3 id="api-cheat-sheet">API cheat sheet</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Action</th>
+<th>Throws on empty?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>offer</code></td>
+<td>Insert (sift up)</td>
+<td>No (returns false)</td>
+</tr>
+<tr>
+<td><code>add</code></td>
+<td>Insert (sift up)</td>
+<td>Yes (capacity*)</td>
+</tr>
+<tr>
+<td><code>poll</code></td>
+<td>Remove and return head (sift down)</td>
+<td>No (returns null)</td>
+</tr>
+<tr>
+<td><code>remove</code></td>
+<td>Remove and return head</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>peek</code></td>
+<td>Return head without removing</td>
+<td>No (returns null)</td>
+</tr>
+<tr>
+<td><code>element</code></td>
+<td>Return head without removing</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>size</code></td>
+<td>Element count</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>*<code>PriorityQueue</code> is unbounded by default, so <code>add</code> effectively never throws.</p>
+<h3 id="custom-objects">Custom objects</h3>
+<p>For non-natural-order objects, supply a <code>Comparator</code> rather than making the class implement <code>Comparable</code> — it keeps ordering logic local to the heap usage and avoids polluting the domain class.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#6A737D">// Max-heap of points by distance^2 to origin</span></span>
+<span class="line"><span style="color:#E1E4E8">PriorityQueue&#x3C;</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[]> closest </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> PriorityQueue&#x3C;>(</span></span>
+<span class="line"><span style="color:#E1E4E8">    (a, b) </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> Integer.</span><span style="color:#B392F0">compare</span><span style="color:#E1E4E8">(b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]</span><span style="color:#F97583">*</span><span style="color:#E1E4E8">b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]</span><span style="color:#F97583">+</span><span style="color:#E1E4E8">b[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]</span><span style="color:#F97583">*</span><span style="color:#E1E4E8">b[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">], a[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]</span><span style="color:#F97583">*</span><span style="color:#E1E4E8">a[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]</span><span style="color:#F97583">+</span><span style="color:#E1E4E8">a[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]</span><span style="color:#F97583">*</span><span style="color:#E1E4E8">a[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">])</span></span>
+<span class="line"><span style="color:#E1E4E8">);</span></span></code></pre>
+<h3 id="gotchas">Gotchas</h3>
+<ul>
+<li><strong>No random access / efficient search</strong>: <code>pq.contains(x)</code> is O(n). Keep a parallel <code>Set</code>/<code>Map</code> if you need membership checks.</li>
+<li><strong>Iteration order is NOT sorted</strong>: drain via <code>poll()</code> to process in priority order.</li>
+<li><strong>Not thread-safe</strong>: use <code>PriorityBlockingQueue</code> for concurrent producers/consumers.</li>
+<li><strong>No decrease-key</strong>: remove-and-reinsert (O(n)) or push a fresh entry and lazily skip stale ones (the “lazy deletion” pattern from Dijkstra).</li>
+</ul>
+<hr>
+<h2 id="3-the-unifying-insight">3. The Unifying Insight</h2>
+<p><strong>A heap is a sorted buffer of bounded size.</strong> You let it absorb a stream and it discards the irrelevant tail automatically, so the answer is always at the root in O(1). Most heap problems reduce to: push elements in, pop the element you do not want, whatever remains is your answer. The full signal-to-pattern mapping is in the Pattern Cheat Sheet (Section 12).</p>
+<hr>
+<h2 id="4-approach-comparison-heap-vs-sorting-vs-quickselect">4. Approach Comparison: Heap vs Sorting vs Quickselect</h2>
+<table>
+<thead>
+<tr>
+<th>Criterion</th>
+<th>Sorting (Arrays.sort)</th>
+<th>Quickselect (Hoare)</th>
+<th>Heap (size-k PQ)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Best for</td>
+<td>Need full order, small n</td>
+<td>One-shot k-th, n fits in memory</td>
+<td>Streaming / top-k / k &lt;&lt; n</td>
+</tr>
+<tr>
+<td>Time (k-th largest)</td>
+<td>O(n log n)</td>
+<td>O(n) avg, O(n^2) worst</td>
+<td>O(n log k)</td>
+</tr>
+<tr>
+<td>Time (top-k)</td>
+<td>O(n log n)</td>
+<td>O(n) + O(k log k) to sort top</td>
+<td>O(n log k)</td>
+</tr>
+<tr>
+<td>Space</td>
+<td>O(log n) stack / O(n) copy</td>
+<td>O(log n) recursion</td>
+<td>O(k)</td>
+</tr>
+<tr>
+<td>Streaming friendly?</td>
+<td>No — needs all data first</td>
+<td>No — needs random access</td>
+<td>Yes — push/pop per element</td>
+</tr>
+<tr>
+<td>Stable / deterministic</td>
+<td>Deterministic (TimSort)</td>
+<td>Non-deterministic (pivot)</td>
+<td>Deterministic</td>
+</tr>
+<tr>
+<td>Handles duplicates</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Online (per-element)</td>
+<td>No</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Implementation cost</td>
+<td>Trivial (1 line)</td>
+<td>Moderate (partition + recurse)</td>
+<td>Low (PQ API)</td>
+</tr>
+<tr>
+<td>Worst-case guarantee</td>
+<td>O(n log n)</td>
+<td>O(n^2) unless randomized</td>
+<td>O(n log k)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Rules of thumb</strong>: k tiny + streaming data → <strong>heap</strong>. One-shot k-th + n in memory → <strong>quickselect</strong>. Need full order → <strong>sort</strong>. Keywords like “running”, “streaming”, “online”, “so far”, “at any time” → <strong>heap</strong> almost certainly.</p>
+<hr>
+<h2 id="5-solution-1--kth-largest-element-in-an-array">5. Solution 1 — Kth Largest Element in an Array</h2>
+<p><strong>LeetCode 215.</strong> Given an integer array and an integer k, return the k-th largest element (1-indexed). Do not sort the whole array in the optimal solution.</p>
+<h3 id="approaches">Approaches</h3>
+<ol>
+<li><strong>Sort</strong> descending, return index k-1 — O(n log n). Acceptable but not optimal.</li>
+<li><strong>Min-heap of size k</strong> — O(n log k), O(k). The classic; generalizes to streaming.</li>
+<li><strong>Quickselect</strong> — O(n) avg, O(n^2) worst. Fastest on average but randomized.</li>
+</ol>
+<p>We implement the min-heap approach.</p>
+<h3 id="intuition">Intuition</h3>
+<p>Maintain a min-heap holding the <strong>k largest elements seen so far</strong>. For each new element:</p>
+<ul>
+<li>If heap size &lt; k, push it.</li>
+<li>Else if the element is larger than the heap root, pop the root and push the new element (a “replace”).</li>
+</ul>
+<p>After processing all elements, the root of the size-k min-heap is the smallest among the top-k = the k-th largest.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Array: [3,2,1,5,6,4], k=2</span></span>
+<span class="line"><span>Process 3 -> [3]  2 -> [2,3] (size=2==k, root=2)</span></span>
+<span class="line"><span>1 -> skip(1&#x3C;2)  5 -> pop2,push5 -> [3,5]  6 -> pop3,push6 -> [5,6]</span></span>
+<span class="line"><span>4 -> skip(4&#x3C;5)</span></span>
+<span class="line"><span>Root=5. Answer: 5 (2nd largest).</span></span></code></pre>
+<h3 id="java-solution-min-heap">Java solution (min-heap)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> findKthLargest</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> k</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6A737D">        // Min-heap of size k holding the k largest seen so far.</span></span>
+<span class="line"><span style="color:#E1E4E8">        PriorityQueue&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> heap </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> PriorityQueue&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> nums) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            heap.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(x);</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (heap.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> k) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                heap.</span><span style="color:#B392F0">poll</span><span style="color:#E1E4E8">();        </span><span style="color:#6A737D">// evict the smallest of the k+1 largest</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> heap.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">();         </span><span style="color:#6A737D">// smallest among the top-k = k-th largest</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity</strong>: O(n log k) time, O(k) space. Each offer/poll is O(log k), and we do n of them but only k evictions matter.</p>
+<blockquote>
+<p><strong>Quickselect alternative</strong>: partition around a random pivot, recurse into the side containing the (n-k)-th index. O(n) average, O(n^2) worst (randomized pivot), O(1) space. Faster for one-shot but does not generalize to streaming.</p>
+</blockquote>
+<blockquote>
+<p><strong>Interview tip</strong>: Mention all three approaches, then implement the heap unless the interviewer pushes for quickselect. The heap solution generalizes immediately to streaming data and to “k-th largest in a data stream” variants.</p>
+</blockquote>
+<hr>
+<h2 id="6-solution-2--merge-k-sorted-lists">6. Solution 2 — Merge K Sorted Lists</h2>
+<p><strong>LeetCode 23.</strong> You are given an array of k sorted linked lists. Merge them into one sorted list and return its head.</p>
+<h3 id="intuition-1">Intuition</h3>
+<p>This is the canonical <strong>k-way merge</strong>. At every step, the next smallest overall node is the minimum among the k current list heads. A min-heap of size k gives that minimum in O(log k), so the total cost is O(N log k) where N is the total number of nodes.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Lists: 1->4->5, 1->3->4, 2->6</span></span>
+<span class="line"><span>Heap seeded with heads: [1(L0), 1(L1), 2(L2)]</span></span>
+<span class="line"><span>Pop 1->push 4  Pop 1->push 3  Pop 2->push 6  Pop 3->push 4</span></span>
+<span class="line"><span>Pop 4(L0)  Pop 4(L1)  Pop 6(L2)</span></span>
+<span class="line"><span>Output: 1->1->2->3->4->4->5->6</span></span></code></pre>
+<h3 id="java-solution">Java solution</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> java.util.PriorityQueue;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> ListNode</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    int</span><span style="color:#E1E4E8"> val;</span></span>
+<span class="line"><span style="color:#E1E4E8">    ListNode next;</span></span>
+<span class="line"><span style="color:#B392F0">    ListNode</span><span style="color:#E1E4E8">() {}</span></span>
+<span class="line"><span style="color:#B392F0">    ListNode</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> val</span><span style="color:#E1E4E8">) { </span><span style="color:#79B8FF">this</span><span style="color:#E1E4E8">.val </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> val; }</span></span>
+<span class="line"><span style="color:#B392F0">    ListNode</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> val</span><span style="color:#E1E4E8">, ListNode </span><span style="color:#FFAB70">next</span><span style="color:#E1E4E8">) { </span><span style="color:#79B8FF">this</span><span style="color:#E1E4E8">.val </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> val; </span><span style="color:#79B8FF">this</span><span style="color:#E1E4E8">.next </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> next; }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> ListNode </span><span style="color:#B392F0">mergeKLists</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">ListNode</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">lists</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (lists </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> null</span><span style="color:#F97583"> ||</span><span style="color:#E1E4E8"> lists.length </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // Min-heap ordered by node value; tie-break by list index to avoid</span></span>
+<span class="line"><span style="color:#6A737D">        // comparing ListNode objects directly (which have no natural order).</span></span>
+<span class="line"><span style="color:#E1E4E8">        PriorityQueue&#x3C;</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[]> pq </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> PriorityQueue&#x3C;>(</span></span>
+<span class="line"><span style="color:#E1E4E8">            (a, b) </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> a[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">!=</span><span style="color:#E1E4E8"> b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#F97583">                      ?</span><span style="color:#E1E4E8"> Integer.</span><span style="color:#B392F0">compare</span><span style="color:#E1E4E8">(a[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">], b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">])</span></span>
+<span class="line"><span style="color:#F97583">                      :</span><span style="color:#E1E4E8"> Integer.</span><span style="color:#B392F0">compare</span><span style="color:#E1E4E8">(a[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">], b[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">])</span></span>
+<span class="line"><span style="color:#E1E4E8">        );</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // Seed with each list's head: entry = [value, listIndex].</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> lists.length; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (lists[i] </span><span style="color:#F97583">!=</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                pq.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{lists[i].val, i});</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">        ListNode dummy </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> ListNode</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">        ListNode tail </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> dummy;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">pq.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8">[] top </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> pq.</span><span style="color:#B392F0">poll</span><span style="color:#E1E4E8">();          </span><span style="color:#6A737D">// smallest current head</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> idx </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> top[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#E1E4E8">            ListNode node </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> lists[idx];     </span><span style="color:#6A737D">// the actual node</span></span>
+<span class="line"><span style="color:#E1E4E8">            tail.next </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> node;               </span><span style="color:#6A737D">// append to output</span></span>
+<span class="line"><span style="color:#E1E4E8">            tail </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> tail.next;</span></span>
+<span class="line"><span style="color:#E1E4E8">            lists[idx] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> node.next;         </span><span style="color:#6A737D">// advance that list</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (lists[idx] </span><span style="color:#F97583">!=</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                pq.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{lists[idx].val, idx});</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">        tail.next </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> dummy.next;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity</strong>: O(N log k) time, O(k) space (heap) + O(1) output pointers (we reuse existing nodes). N = total nodes, k = number of lists.</p>
+<h3 id="why-store-value-listindex-instead-of-listnode-directly">Why store <code>[value, listIndex]</code> instead of <code>ListNode</code> directly?</h3>
+<p><code>ListNode</code> does not implement <code>Comparable</code>, and even if it did, ties on equal values would force a comparison on object identity which Java’s comparator contract forbids (can throw <code>IllegalArgumentException</code> on some JDKs). Storing the list index as a stable tie-breaker sidesteps this. Alternatively, wrap nodes in a small <code>class Holder implements Comparable&lt;Holder&gt;</code>.</p>
+<h3 id="alternative-divide-and-conquer-merge">Alternative: divide-and-conquer merge</h3>
+<p>Pairwise merge the lists in rounds (like merge sort’s combine phase): O(N log k) time, O(log k) recursion stack. Same asymptotics, but the heap version is shorter and handles streaming lists naturally.</p>
+<hr>
+<h2 id="7-solution-3--top-k-frequent-elements">7. Solution 3 — Top K Frequent Elements</h2>
+<p><strong>LeetCode 347.</strong> Given an integer array and an integer k, return the k most frequent elements. Any order is accepted.</p>
+<h3 id="intuition-2">Intuition</h3>
+<p>Two phases: <strong>count</strong> frequencies with a HashMap (O(n)), then <strong>select top k</strong>. For selection, use a min-heap of size k keyed by frequency (O(n log k)) — push each (freq, element), evict the least frequent when size &gt; k. Alternatively, bucket sort by frequency gives O(n) time since frequencies are bounded by n. We show the heap version.</p>
+<h3 id="java-solution-min-heap-1">Java solution (min-heap)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> java.util.</span><span style="color:#79B8FF">*</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[] </span><span style="color:#B392F0">topKFrequent</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> k</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6A737D">        // Phase 1: count frequencies.</span></span>
+<span class="line"><span style="color:#E1E4E8">        Map&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> freq </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> nums) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            freq.</span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(x, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, Integer</span><span style="color:#F97583">::</span><span style="color:#E1E4E8">sum);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // Phase 2: min-heap of size k keyed by frequency.</span></span>
+<span class="line"><span style="color:#6A737D">        // Heap entry = [frequency, element]. Comparator orders by frequency only.</span></span>
+<span class="line"><span style="color:#E1E4E8">        PriorityQueue&#x3C;</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[]> heap </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> PriorityQueue&#x3C;>(</span></span>
+<span class="line"><span style="color:#E1E4E8">            Comparator.</span><span style="color:#B392F0">comparingInt</span><span style="color:#E1E4E8">(a </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> a[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">])</span></span>
+<span class="line"><span style="color:#E1E4E8">        );</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (Map.Entry&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> e </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> freq.</span><span style="color:#B392F0">entrySet</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            heap.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{e.</span><span style="color:#B392F0">getValue</span><span style="color:#E1E4E8">(), e.</span><span style="color:#B392F0">getKey</span><span style="color:#E1E4E8">()});</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (heap.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> k) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                heap.</span><span style="color:#B392F0">poll</span><span style="color:#E1E4E8">();            </span><span style="color:#6A737D">// drop the least frequent of the k+1</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[] result </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[k];</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> k; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            result[i] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> heap.</span><span style="color:#B392F0">poll</span><span style="color:#E1E4E8">()[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity</strong>: O(n + u log k) where u = number of distinct elements (u ≤ n). So O(n log k) worst case, O(k) space for the heap.</p>
+<blockquote>
+<p><strong>Bucket sort alternative (O(n) time)</strong>: since frequencies are bounded by n, create n+1 buckets keyed by frequency and walk them high-to-low collecting k elements. Beats the heap when n is large and k is large, but cannot handle streaming because n is unknown ahead of time.</p>
+</blockquote>
+<hr>
+<h2 id="8-solution-4--find-median-from-data-stream">8. Solution 4 — Find Median from Data Stream</h2>
+<p><strong>LeetCode 295.</strong> Design a data structure that supports adding integers and returning the median of all elements seen so far in O(log n) per add.</p>
+<h3 id="the-two-heap-idea">The two-heap idea</h3>
+<p>Keep the <strong>lower half</strong> of numbers in a <strong>max-heap</strong> (<code>left</code>) and the <strong>upper half</strong> in a <strong>min-heap</strong> (<code>right</code>). Maintain two invariants:</p>
+<ol>
+<li><strong>Balanced sizes</strong>: <code>left.size()</code> is either equal to <code>right.size()</code> or one larger.</li>
+<li><strong>Ordering</strong>: every element in <code>left</code> ≤ every element in <code>right</code>, i.e. <code>left.peek() &lt;= right.peek()</code>.</li>
+</ol>
+<p>Then:</p>
+<ul>
+<li>If sizes are equal → median = <code>(left.max + right.min) / 2.0</code>.</li>
+<li>If <code>left</code> has one extra → median = <code>left.max</code>.</li>
+</ul>
+<h3 id="ascii-two-heap-median-finder">ASCII: Two-heap median finder</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   Numbers seen: [5, 2, 9, 1, 7, 12]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   LEFT (max-heap)       RIGHT (min-heap)</span></span>
+<span class="line"><span>   lower half             upper half</span></span>
+<span class="line"><span>   largest on top         smallest on top</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>     [ 5 ]                  [ 9 ]</span></span>
+<span class="line"><span>     [ 2 ]                  [ 7 ]</span></span>
+<span class="line"><span>     [ 1 ]                  [ 12 ]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   left.max=5  right.min=9  sizes equal -> median = (5+9)/2 = 7.0</span></span>
+<span class="line"><span>   Invariant: left.max &#x3C;= right.min  (5 &#x3C;= 9)  OK</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span></span></span>
+<span class="line"><span>### Insert algorithm</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>For a new number `num`:</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>1. Decide which side: if `left` is empty or `num &#x3C;= left.peek()`, push to `left`; else push to `right`.</span></span>
+<span class="line"><span>2. **Rebalance**: if `left.size() > right.size() + 1`, move `left` max into `right`; if `right.size() > left.size()`, move `right` min into `left`.</span></span>
+<span class="line"><span>3. The size invariant from step 2 also guarantees the ordering invariant is preserved, because we always move the extreme element across.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>### Java solution</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>```java</span></span>
+<span class="line"><span>import java.util.PriorityQueue;</span></span>
+<span class="line"><span>import java.util.Collections;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>class MedianFinder {</span></span>
+<span class="line"><span>    private final PriorityQueue&#x3C;Integer> left;   // max-heap, lower half</span></span>
+<span class="line"><span>    private final PriorityQueue&#x3C;Integer> right;  // min-heap, upper half</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    public MedianFinder() {</span></span>
+<span class="line"><span>        left  = new PriorityQueue&#x3C;>(Collections.reverseOrder());</span></span>
+<span class="line"><span>        right = new PriorityQueue&#x3C;>();</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    public void addNum(int num) {</span></span>
+<span class="line"><span>        // Step 1: route to the correct half.</span></span>
+<span class="line"><span>        if (left.isEmpty() || num &#x3C;= left.peek()) {</span></span>
+<span class="line"><span>            left.offer(num);</span></span>
+<span class="line"><span>        } else {</span></span>
+<span class="line"><span>            right.offer(num);</span></span>
+<span class="line"><span>        }</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        // Step 2: rebalance so |left.size - right.size| &#x3C;= 1 and left >= right by 0 or 1.</span></span>
+<span class="line"><span>        if (left.size() > right.size() + 1) {</span></span>
+<span class="line"><span>            right.offer(left.poll());</span></span>
+<span class="line"><span>        } else if (right.size() > left.size()) {</span></span>
+<span class="line"><span>            left.offer(right.poll());</span></span>
+<span class="line"><span>        }</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    public double findMedian() {</span></span>
+<span class="line"><span>        if (left.size() == right.size()) {</span></span>
+<span class="line"><span>            return (left.peek() + right.peek()) / 2.0;</span></span>
+<span class="line"><span>        }</span></span>
+<span class="line"><span>        // By our invariant, left is the larger one when sizes differ.</span></span>
+<span class="line"><span>        return left.peek();</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>}</span></span></code></pre>
+<p><strong>Complexity</strong>: <code>addNum</code> is O(log n) (one or two heap operations). <code>findMedian</code> is O(1). Space O(n).</p>
+<h3 id="why-max-heap-for-the-left-half">Why max-heap for the left half?</h3>
+<p>We need O(1) access to the <em>largest</em> of the lower half — that boundary value participates in the median. A max-heap gives that at the root. Dually, the right half needs O(1) access to its <em>smallest</em>, so it is a min-heap. Getting this backwards is the most common bug.</p>
+<h3 id="extension--sliding-window-median-leetcode-480">Extension — Sliding Window Median (LeetCode 480)</h3>
+<p>The same two-heap structure works, but with a <strong>sliding window</strong> you must <em>remove</em> the element leaving the window. <code>PriorityQueue</code> has no efficient remove-by-value (O(window size)), so you have two options:</p>
+<ol>
+<li><strong>Lazy deletion</strong>: keep a <code>HashMap&lt;value, countToRemove&gt;</code> of elements that should be ignored. When peeking, skip any root whose removal count &gt; 0, decrement, and pop. Add lazily-delayed rebalancing. O(n log k) amortized.</li>
+<li><strong>Two <code>TreeSet</code>/<code>TreeMap</code>-backed halves</strong> (or an indexed structure like a Fenwick tree over values): each add/remove is O(log k) with true random access by value. Cleaner to reason about but more code.</li>
+</ol>
+<p>The lazy-deletion two-heap approach is the interview-favored answer. Key extra steps:</p>
+<ul>
+<li>On <code>add</code>: do the normal two-heap insert.</li>
+<li>On <code>remove</code>: increment the lazy-removal count for that value, then “clean” the heads of both heaps (pop while the head value has a pending removal count, decrementing each time). Then rebalance using the <em>effective</em> sizes (size minus pending-removal count).</li>
+<li>Median is computed exactly as in the static case, after cleaning.</li>
+</ul>
+<hr>
+<h2 id="9-solution-5--k-closest-points-to-origin">9. Solution 5 — K Closest Points to Origin</h2>
+<p><strong>LeetCode 973.</strong> Given an array of points and an integer k, return the k points closest to the origin (0,0). Distance is Euclidean; you may return the squared distance to avoid sqrt.</p>
+<h3 id="intuition-3">Intuition</h3>
+<p>“Closest k of n” is the textbook <strong>size-k max-heap</strong> problem. Keep a max-heap of the k closest so far; for each new point, if it is closer than the farthest in the heap (the root of the max-heap), evict the root and push the new point.</p>
+<p>Why a max-heap and not a min-heap? We want to <em>evict the worst</em> of the surviving k, and the worst is the <strong>farthest</strong>, which sits at the root of a max-heap ordered by distance. A min-heap of all n would also work but uses O(n) space and O(n log n) time; the size-k max-heap uses O(k) and O(n log k).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Points (x,y) with d=x^2+y^2, k=2: (1,3)->10 (2,2)->8 (3,2)->13 (0,1)->1 (5,0)->25</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Max-heap (keep k=2 closest), root = farthest survivor:</span></span>
+<span class="line"><span>  Add (1,3): [10]  Add (2,2): [10,8] root=10</span></span>
+<span class="line"><span>  Add (3,2): 13>root 10 -> skip   Add (0,1): 1&#x3C;root 10 -> pop 10, push 1 -> [8,1]</span></span>
+<span class="line"><span>  Add (5,0): 25>root 8 -> skip</span></span>
+<span class="line"><span>Final: {8,1} -> points (2,2) and (0,1).</span></span></code></pre>
+<h3 id="java-solution-1">Java solution</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> java.util.PriorityQueue;</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> java.util.Comparator;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[][] </span><span style="color:#B392F0">kClosest</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">points</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> k</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6A737D">        // Max-heap of size k ordered by squared distance (descending).</span></span>
+<span class="line"><span style="color:#6A737D">        // Stores the point array; comparator computes distance on the fly.</span></span>
+<span class="line"><span style="color:#E1E4E8">        PriorityQueue&#x3C;</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[]> heap </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> PriorityQueue&#x3C;>(</span></span>
+<span class="line"><span style="color:#E1E4E8">            (a, b) </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> Integer.</span><span style="color:#B392F0">compare</span><span style="color:#E1E4E8">(</span></span>
+<span class="line"><span style="color:#E1E4E8">                b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> b[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> b[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">],</span></span>
+<span class="line"><span style="color:#E1E4E8">                a[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> a[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> a[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> a[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#E1E4E8">            )</span></span>
+<span class="line"><span style="color:#E1E4E8">        );</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] p </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> points) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            heap.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(p);</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (heap.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> k) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                heap.</span><span style="color:#B392F0">poll</span><span style="color:#E1E4E8">();          </span><span style="color:#6A737D">// evict the farthest of the k+1 closest</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[][] result </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[k][];</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> k; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            result[i] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> heap.</span><span style="color:#B392F0">poll</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity</strong>: O(n log k) time, O(k) space.</p>
+<h3 id="variants-and-notes">Variants and notes</h3>
+<ul>
+<li><strong>Avoid <code>sqrt</code></strong>: comparing squared distances gives identical ordering and keeps everything in integer math — no floating-point drift.</li>
+<li><strong>Quickselect</strong> (partition around the k-th smallest distance) gives O(n) average and O(1) extra space (in-place). Faster for one-shot, large n, small k. Same trade-off as in Section 4.</li>
+<li><strong>Ties</strong>: the canonical problem guarantees unique answer sets. If ties are possible and you must break them deterministically (e.g., lexicographically by x then y), add that tie-break into the comparator.</li>
+</ul>
+<hr>
+<h2 id="10-solution-6--task-scheduler">10. Solution 6 — Task Scheduler</h2>
+<p><strong>LeetCode 621.</strong> Given a char array of tasks and a cooldown <code>n</code> (same task must be separated by at least n idle slots), return the minimum number of intervals to finish all tasks.</p>
+<h3 id="intuition-greedy--max-heap--cooldown-queue">Intuition (greedy + max-heap + cooldown queue)</h3>
+<p>At each time step we want to run the <strong>most-remaining task that is not currently cooling down</strong>. Greedy: always pick the task with the highest remaining count that is available. After running a task, it becomes unavailable for <code>n</code> ticks, then becomes available again.</p>
+<p>Implementation:</p>
+<ul>
+<li>A <strong>max-heap of remaining counts</strong> for tasks that are currently available.</li>
+<li>A <strong>FIFO queue</strong> (cooldown) of <code>(count, readyTime)</code> for tasks that just ran and are waiting out their cooldown. When <code>time</code> reaches <code>readyTime</code>, move them back into the heap.</li>
+<li>Loop: pop the largest available count, decrement, if still &gt; 0 push <code>(count, time + n)</code> into the cooldown queue; tick the clock. If nothing is available, the CPU idles (still tick the clock).</li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>tasks = A A A B B B, n = 2  -> counts: A=3, B=3</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>t0: run A (A=2,B=3)  t1: run B (A=2,B=2)  t2: A frees, run A (A=1,B=2)</span></span>
+<span class="line"><span>t3: B frees, run B (A=1,B=1)  t4: A frees, run A (A=0,B=1)  t5: run B (done)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Sequence: A B _ A B _ A B  -> 8 intervals.</span></span></code></pre>
+<h3 id="java-solution-simulation">Java solution (simulation)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> java.util.</span><span style="color:#79B8FF">*</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> leastInterval</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">char</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">tasks</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> n</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6A737D">        // Count remaining work per task.</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[] counts </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[</span><span style="color:#79B8FF">26</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> tasks) counts[c </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'A'</span><span style="color:#E1E4E8">]</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // Max-heap of available remaining counts.</span></span>
+<span class="line"><span style="color:#E1E4E8">        PriorityQueue&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> available </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> PriorityQueue&#x3C;>(Collections.</span><span style="color:#B392F0">reverseOrder</span><span style="color:#E1E4E8">());</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> counts) </span><span style="color:#F97583">if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">></span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) available.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(c);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // Cooldown queue: entries [remainingCount, readyTime].</span></span>
+<span class="line"><span style="color:#6A737D">        // Using LinkedList as a deque keeps the head inspection cheap.</span></span>
+<span class="line"><span style="color:#E1E4E8">        Deque&#x3C;</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[]> cooling </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>();</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> time </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">available.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">||</span><span style="color:#F97583"> !</span><span style="color:#E1E4E8">cooling.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#6A737D">            // Release any tasks whose cooldown has elapsed.</span></span>
+<span class="line"><span style="color:#F97583">            while</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">cooling.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> cooling.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">()[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> time) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                available.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(cooling.</span><span style="color:#B392F0">poll</span><span style="color:#E1E4E8">()[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]);</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (available.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#6A737D">                // No task can run: CPU idles. Jump to next release time to avoid</span></span>
+<span class="line"><span style="color:#6A737D">                // looping tick-by-tick through long idle stretches.</span></span>
+<span class="line"><span style="color:#E1E4E8">                time </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> cooling.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">()[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#F97583">                continue</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> remaining </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> available.</span><span style="color:#B392F0">poll</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;   </span><span style="color:#6A737D">// run one instance of the task</span></span>
+<span class="line"><span style="color:#E1E4E8">            time</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (remaining </span><span style="color:#F97583">></span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                cooling.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{remaining, time </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> n});</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> time;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity</strong>: O(total intervals) in the worst case, which can be O(tasks + idleSlots). The “jump to next release” optimization avoids per-tick idle loops. Space O(26) = O(1).</p>
+<h3 id="the-closed-form-formula-interviewers-love-this">The closed-form formula (interviewers love this)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Let maxFreq = highest count among all tasks.</span></span>
+<span class="line"><span>Let numMax  = how many tasks share that maxFreq.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>answer = max( tasks.length, (maxFreq - 1) * (n + 1) + numMax )</span></span></code></pre>
+<p>The idea: lay down <code>(maxFreq - 1)</code> blocks of length <code>(n + 1)</code> (one run of the hottest task plus n cooldown slots), then append the final run of each task tying for max frequency. If other tasks fill idle slots completely, the answer is just <code>tasks.length</code>. O(n) time, O(1) space — much simpler, but the simulation is what demonstrates the heap-and-queue technique interviewers are testing. Know both.</p>
+<hr>
+<h2 id="11-related-patterns-short-notes">11. Related Patterns (short notes)</h2>
+<h3 id="111-last-stone-weight-leetcode-1046">11.1 Last Stone Weight (LeetCode 1046)</h3>
+<p>Smash the two heaviest stones each turn; if unequal, the remainder goes back. Pure <strong>max-heap</strong>: keep all weights in a max-heap, repeatedly pop two, push the difference if nonzero. O(n log n) time, O(n) space.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> lastStoneWeight</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">stones</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        PriorityQueue&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> pq </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> PriorityQueue&#x3C;>(Collections.</span><span style="color:#B392F0">reverseOrder</span><span style="color:#E1E4E8">());</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> s </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> stones) pq.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(s);</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (pq.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">></span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> y </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> pq.</span><span style="color:#B392F0">poll</span><span style="color:#E1E4E8">(), x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> pq.</span><span style="color:#B392F0">poll</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (y </span><span style="color:#F97583">!=</span><span style="color:#E1E4E8"> x) pq.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(y </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> x);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> pq.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">?</span><span style="color:#79B8FF"> 0</span><span style="color:#F97583"> :</span><span style="color:#E1E4E8"> pq.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="112-design-twitter-leetcode-355">11.2 Design Twitter (LeetCode 355)</h3>
+<p><code>getNewsFeed(userId)</code> returns the k most recent tweets from the user and their followees. Two designs:</p>
+<ul>
+<li><strong>Per-user feed merged on demand (heap)</strong>: store each user’s tweets newest-first. To get the feed, collect each followee’s (+ self) head tweet into a <strong>max-heap by timestamp</strong>, pop up to 10, pushing each user’s next-newest tweet after popping. This is <strong>k-way merge</strong> like Merge K Sorted Lists. O(F + 10 log F) per call, F = followees.</li>
+<li><strong>Fan-out on write</strong>: push each tweet into every follower’s bounded timeline. <code>getNewsFeed</code> is O(10) but write amplification is huge for users with millions of followers.</li>
+</ul>
+<p>The on-demand merge with a heap is the answer interviewers want because it mirrors Merge K Sorted Lists and avoids fan-out scaling problems.</p>
+<p>Compact skeleton (k-way merge of per-user tweet lists):</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Twitter</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> static</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8"> ts </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#E1E4E8"> Map&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, Deque&#x3C;</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[]>> tweets </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();   </span><span style="color:#6A737D">// userId -> [(ts, tweetId)]</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#E1E4E8"> Map&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, Set&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> following </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> postTweet</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> u</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> tid</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        tweets.</span><span style="color:#B392F0">computeIfAbsent</span><span style="color:#E1E4E8">(u, k </span><span style="color:#F97583">-></span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>())</span></span>
+<span class="line"><span style="color:#E1E4E8">              .</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{ts</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">, tid});</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> </span><span style="color:#B392F0">getNewsFeed</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> u</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        PriorityQueue&#x3C;</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[]> pq </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> PriorityQueue&#x3C;>((a,b) </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">a[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]); </span><span style="color:#6A737D">// max-heap by ts</span></span>
+<span class="line"><span style="color:#E1E4E8">        Map&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, Iterator&#x3C;</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[]>> it </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">        Set&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> src </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashSet&#x3C;>(following.</span><span style="color:#B392F0">getOrDefault</span><span style="color:#E1E4E8">(u, Set.</span><span style="color:#B392F0">of</span><span style="color:#E1E4E8">()));</span></span>
+<span class="line"><span style="color:#E1E4E8">        src.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(u);</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> s </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> src) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            Deque&#x3C;</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[]> dq </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> tweets.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(s);</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (dq </span><span style="color:#F97583">!=</span><span style="color:#79B8FF"> null</span><span style="color:#F97583"> &#x26;&#x26;</span><span style="color:#F97583"> !</span><span style="color:#E1E4E8">dq.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                it.</span><span style="color:#B392F0">put</span><span style="color:#E1E4E8">(s, dq.</span><span style="color:#B392F0">iterator</span><span style="color:#E1E4E8">());</span></span>
+<span class="line"><span style="color:#F97583">                int</span><span style="color:#E1E4E8">[] f </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> it.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(s).</span><span style="color:#B392F0">next</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">                pq.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{f[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">], f[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">], s});</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> feed </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (feed.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x3C;</span><span style="color:#79B8FF"> 10</span><span style="color:#F97583"> &#x26;&#x26;</span><span style="color:#F97583"> !</span><span style="color:#E1E4E8">pq.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8">[] top </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> pq.</span><span style="color:#B392F0">poll</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">            feed.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(top[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]);</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (it.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(top[</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">]).</span><span style="color:#B392F0">hasNext</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#F97583">                int</span><span style="color:#E1E4E8">[] n </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> it.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(top[</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">]).</span><span style="color:#B392F0">next</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">                pq.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{n[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">], n[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">], top[</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">]});</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> feed;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> follow</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> a</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> b</span><span style="color:#E1E4E8">) { following.</span><span style="color:#B392F0">computeIfAbsent</span><span style="color:#E1E4E8">(a, k </span><span style="color:#F97583">-></span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashSet&#x3C;>()).</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(b); }</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> unfollow</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> a</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> b</span><span style="color:#E1E4E8">) { Set&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> s </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> following.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(a); </span><span style="color:#F97583">if</span><span style="color:#E1E4E8"> (s </span><span style="color:#F97583">!=</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">) s.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">(b); }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><code>follow</code>/<code>unfollow</code> are O(1); <code>postTweet</code> is O(1); <code>getNewsFeed</code> is O(F + 10 log F) where F = followee count. The k-way-merge skeleton is identical to Merge K Sorted Lists — same pattern, different domain object.</p>
+<h3 id="113-sliding-window-median-leetcode-480">11.3 Sliding Window Median (LeetCode 480)</h3>
+<p>Discussed in Section 8’s extension. The key new piece versus Find Median from Data Stream is <strong>removal of the outgoing element</strong>, handled with lazy deletion (a removal-count map) plus head-cleaning, or by replacing the two heaps with two <code>TreeMap</code>s for true O(log k) removal.</p>
+<hr>
+<h2 id="12-comparison-summary-table">12. Comparison Summary Table</h2>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Heap type / size</th>
+<th>Time</th>
+<th>Space</th>
+<th>Key trick</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kth Largest in Array</td>
+<td>min-heap, size k</td>
+<td>O(n log k)</td>
+<td>O(k)</td>
+<td>size-k buffer; root is the answer</td>
+</tr>
+<tr>
+<td>Merge K Sorted Lists</td>
+<td>min-heap, size k</td>
+<td>O(N log k)</td>
+<td>O(k)</td>
+<td>k-way merge; seed with all heads</td>
+</tr>
+<tr>
+<td>Top K Frequent Elements</td>
+<td>min-heap, size k</td>
+<td>O(n log k)</td>
+<td>O(k)</td>
+<td>count then select; bucket sort is O(n)</td>
+</tr>
+<tr>
+<td>Find Median from Data Stream</td>
+<td>max-heap + min-heap</td>
+<td>O(log n) add</td>
+<td>O(n)</td>
+<td>two halves, balance sizes, ordering inv.</td>
+</tr>
+<tr>
+<td>Sliding Window Median</td>
+<td>two heaps + lazy del.</td>
+<td>O(n log k)</td>
+<td>O(k)</td>
+<td>lazy-removal map + head cleaning</td>
+</tr>
+<tr>
+<td>K Closest Points to Origin</td>
+<td>max-heap, size k</td>
+<td>O(n log k)</td>
+<td>O(k)</td>
+<td>keep k closest; evict farthest</td>
+</tr>
+<tr>
+<td>Last Stone Weight</td>
+<td>max-heap, size n</td>
+<td>O(n log n)</td>
+<td>O(n)</td>
+<td>pop two, push difference</td>
+</tr>
+<tr>
+<td>Task Scheduler (simulation)</td>
+<td>max-heap + cooldown deque</td>
+<td>O(intervals)</td>
+<td>O(1)*</td>
+<td>greedy + cooldown queue; *26 distinct</td>
+</tr>
+<tr>
+<td>Task Scheduler (formula)</td>
+<td>none</td>
+<td>O(n)</td>
+<td>O(1)</td>
+<td>(maxFreq-1)*(n+1) + numMax</td>
+</tr>
+<tr>
+<td>Design Twitter (getNewsFeed)</td>
+<td>max-heap, size F</td>
+<td>O(F + 10 log F)</td>
+<td>O(F)</td>
+<td>k-way merge over per-user tweet lists</td>
+</tr>
+</tbody>
+</table>
+<p>* Space for the counts array is O(alphabet size) = O(1) for uppercase letters.</p>
+<hr>
+<h2 id="13-pattern-cheat-sheet-when-you-see-this-do-this">13. Pattern Cheat Sheet (when you see this, do this)</h2>
+<table>
+<thead>
+<tr>
+<th>Signal in the problem statement</th>
+<th>Use this heap pattern</th>
+<th>Canonical problem(s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>“k-th largest” / “k-th smallest”</td>
+<td>Size-k min-heap (largest) or max-heap (smallest)</td>
+<td>Kth Largest, Kth Smallest</td>
+</tr>
+<tr>
+<td>“top k” / “most frequent k” / “k closest”</td>
+<td>Size-k heap of survivors; evict worst each step</td>
+<td>Top K Frequent, K Closest Points</td>
+</tr>
+<tr>
+<td>“merge k sorted …”</td>
+<td>Min-heap of current heads; pop &amp; advance</td>
+<td>Merge K Sorted Lists, Merge K Sorted Arrays</td>
+</tr>
+<tr>
+<td>“running median” / “median so far” / “balance two halves”</td>
+<td>Max-heap (left) + min-heap (right), rebalance</td>
+<td>Find Median from Data Stream</td>
+</tr>
+<tr>
+<td>“sliding window” + “median/order statistic”</td>
+<td>Two heaps + lazy deletion OR two TreeMaps</td>
+<td>Sliding Window Median</td>
+</tr>
+<tr>
+<td>“schedule with cooldown” / “spacing”</td>
+<td>Max-heap of counts + cooldown deque (or formula)</td>
+<td>Task Scheduler</td>
+</tr>
+<tr>
+<td>“news feed” / “top k from multiple sources”</td>
+<td>k-way merge with max-heap over source heads</td>
+<td>Design Twitter</td>
+</tr>
+<tr>
+<td>“stream of numbers” + “query k-th/median/top-k”</td>
+<td>Size-bounded heap that persists across calls</td>
+<td>Kth Largest in Data Stream (LC 703)</td>
+</tr>
+<tr>
+<td>“smallest range covering elements from k lists”</td>
+<td>Min-heap of k heads + track max seen so far</td>
+<td>Smallest Range Covering K Lists (LC 632)</td>
+</tr>
+<tr>
+<td>“reorganize string so no two adjacent equal”</td>
+<td>Max-heap of remaining counts, pop two per step</td>
+<td>Reorganize String (LC 767)</td>
+</tr>
+<tr>
+<td>“process jobs with profit/deadline”</td>
+<td>Min-heap of selected jobs by deadline (greedy)</td>
+<td>Course Schedule III / Job Sequencing</td>
+</tr>
+</tbody>
+</table>
+<h3 id="universal-skeleton-memorize-this">Universal skeleton (memorize this)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#E1E4E8">PriorityQueue&#x3C;</span><span style="color:#F97583">T</span><span style="color:#E1E4E8">> heap </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> PriorityQueue&#x3C;>(</span><span style="color:#6A737D">/* comparator: WORST survivor at root */</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> (T x </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> stream) { heap.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(x); </span><span style="color:#F97583">if</span><span style="color:#E1E4E8"> (heap.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> k) heap.</span><span style="color:#B392F0">poll</span><span style="color:#E1E4E8">(); }</span></span>
+<span class="line"><span style="color:#6A737D">// heap now holds the k best; root is the marginal (k-th best) element.</span></span></code></pre>
+<p>The comparator is the whole trick: it must rank the element you want to <em>throw away first</em> at the root. For “k largest” the throwaway is the smallest → min-heap. For “k closest” the throwaway is the farthest → max-heap by distance. Get that direction right and the rest is mechanical. For the median family, the rebalancing skeleton is exactly the <code>insert</code>/<code>median</code> pair shown in the Find Median solution (Section 8): route to the correct half, then rebalance so <code>|left.size - right.size| &lt;= 1</code> with <code>left</code> the larger side.</p>
+<hr>
+<h2 id="14-common-mistakes-and-edge-cases">14. Common Mistakes and Edge Cases</h2>
+<ul>
+<li><strong>Wrong heap direction</strong>: the survivor heap must surface the element you want to <em>discard</em>. For “k largest” the discard is the smallest → min-heap. For “k closest” the discard is the farthest → max-heap. Draw the heap before writing the comparator.</li>
+<li><strong>Forgetting to size-limit</strong>: pushing all n elements before popping turns O(n log k) into O(n log n). Always <code>poll</code> immediately when <code>size &gt; k</code>.</li>
+<li><strong>Comparator ties on non-Comparable payloads</strong>: <code>PriorityQueue&lt;int[]&gt;</code> with a comparator returning 0 for distinct entries can throw on some JDKs. Add a stable tie-breaker (e.g., index).</li>
+<li><strong>Median: flipping the larger half</strong>: fix a convention — we keep <code>left</code> (max-heap) one larger. Flip the rebalance condition and the median read together if you change it.</li>
+<li><strong>Integer math for distances</strong>: use squared Euclidean distance, not <code>Math.hypot</code>, to avoid precision issues and slow transcendentals.</li>
+<li><strong>Iterating a PriorityQueue</strong>: iteration yields array order, not priority order. Drain via <code>poll</code> to process in order.</li>
+<li><strong>Task Scheduler idle loops</strong>: when <code>n</code> is large and few tasks remain, jump the clock to the next cooldown release instead of ticking idle slots one by one.</li>
+<li><strong>Sliding Window Median stale entries</strong>: with lazy deletion, clean BOTH heap heads before computing the median, or you may read a value that has logically left the window.</li>
+</ul>
+<hr>
+<h2 id="15-complexity-reference--final-checklist">15. Complexity Reference &amp; Final Checklist</h2>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Binary heap</th>
+<th><code>PriorityQueue</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Build from n elements</td>
+<td>O(n) amortized</td>
+<td>O(n) (constructor)</td>
+</tr>
+<tr>
+<td>Insert (offer)</td>
+<td>O(log n)</td>
+<td>O(log n)</td>
+</tr>
+<tr>
+<td>Extract min/max (poll)</td>
+<td>O(log n)</td>
+<td>O(log n)</td>
+</tr>
+<tr>
+<td>Peek (root)</td>
+<td>O(1)</td>
+<td>O(1)</td>
+</tr>
+<tr>
+<td>Remove arbitrary element</td>
+<td>O(n) scan</td>
+<td>O(n)</td>
+</tr>
+<tr>
+<td>Contains / size</td>
+<td>O(n) / O(1)</td>
+<td>O(n) / O(1)</td>
+</tr>
+</tbody>
+</table>
+<p>For O(log n) arbitrary remove or decrease-key, use <code>TreeSet</code>/<code>TreeMap</code> (red-black tree) or an indexed priority queue.</p>
+<p><strong>Pre-coding checklist:</strong></p>
+<ol>
+<li>What am I keeping — the k <em>best</em> or k <em>worst</em>? This decides min-heap vs max-heap.</li>
+<li>Stream or fixed batch? Stream → size-bounded heap that persists. Batch → also consider sorting/quickselect.</li>
+<li>Need two halves (median/order-statistics)? Two heaps + rebalance.</li>
+<li>Need to <em>remove</em> specific elements later (window/scheduling)? Plan lazy deletion or a <code>TreeMap</code>.</li>
+<li>Is my comparator total and stable? Add tie-breakers for non-Comparable payloads.</li>
+<li>Am I calling <code>poll</code> as soon as <code>size &gt; k</code>? Keep the heap bounded every iteration.</li>
+</ol>
+<p>Master the size-k survivor heap and the two-heap rebalance and you cover roughly 80% of heap questions in interviews. The rest are variations where the <em>payload</em> changes (tweets, points, lists, tasks) but the <em>skeleton</em> does not.</p>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Heap = complete binary tree with heap property (min-heap: parent ≤ children).</li>
+<li>Java: PriorityQueue (min-heap by default, use Comparator.reverseOrder() for max-heap).</li>
+<li>Size-K survivor: keep heap of size K, push new element, pop smallest — O(n log K).</li>
+<li>Two-heap median: max-heap for lower half, min-heap for upper half, rebalance to keep sizes within 1.</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“Heap sort vs Arrays.sort?” — Arrays.sort uses TimSort (O(n log n), stable, optimized for partially sorted). Heap sort is O(n log n) but not stable and has worse cache behavior. Use Arrays.sort for actual sorting; use heaps for streaming top-K.</li>
+<li>“How do you implement a heap?” — Array where parent at index i has children at 2i+1 and 2i+2. Sift-up for insert, sift-down for extract.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Using a max-heap when you need the K smallest (or vice versa). For “Kth largest,” use a MIN-heap of size K — the root is the Kth largest. For “Kth smallest,” use a MAX-heap of size K. Getting this backwards is the most common heap interview mistake.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/coding-interview/heaps-and-priority-queues/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Heaps%20%26%20Priority%20Queues%20%E2%80%94%20Interview%20Prep&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fcoding-interview%2Fheaps-and-priority-queues%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fcoding-interview%2Fheaps-and-priority-queues%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/coding-interview/heaps-and-priority-queues" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/coding-interview/arrays-and-strings/" class="related-card"><div class="related-card-title">Arrays &amp; Strings — Interview Prep Guide</div><div class="related-card-meta">Coding Interview · 47 min</div></a><a href="/notes/coding-interview/backtracking/" class="related-card"><div class="related-card-title">Backtracking — Complete Interview Prep Guide</div><div class="related-card-meta">Coding Interview · 21 min</div></a><a href="/notes/coding-interview/big-o-and-pattern-recognition/" class="related-card"><div class="related-card-title">Big O Complexity &amp; Pattern Recognition</div><div class="related-card-meta">Coding Interview · 30 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/coding-interview/hash-tables" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Hash Tables — Interview Prep Guide</span></a><a href="/notes/coding-interview/intervals" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Intervals — Interview Prep</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Heaps &amp; Priority Queues — Interview Prep" data-selector=".article-prose" data-article-slug="coding-interview/heaps-and-priority-queues" data-article-title="Heaps &amp; Priority Queues — Interview Prep" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

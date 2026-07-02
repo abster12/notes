@@ -1,0 +1,920 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Two-Phase Commit &amp; Consensus (Raft/Paxos) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview" class="toc-link" data-toc-link="overview" data-astro-cid-p33bl5ka>Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#the-core-distinction" class="toc-link" data-toc-link="the-core-distinction" data-astro-cid-p33bl5ka>The Core Distinction</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#part-1-two-phase-commit-2pc" class="toc-link" data-toc-link="part-1-two-phase-commit-2pc" data-astro-cid-p33bl5ka>Part 1: Two-Phase Commit (2PC)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-protocol-in-detail" class="toc-link" data-toc-link="the-protocol-in-detail" data-astro-cid-p33bl5ka>The Protocol in Detail</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#2pc-phase-diagram" class="toc-link" data-toc-link="2pc-phase-diagram" data-astro-cid-p33bl5ka>2PC Phase Diagram</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-blocking-problem" class="toc-link" data-toc-link="the-blocking-problem" data-astro-cid-p33bl5ka>The Blocking Problem</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#coordinator-failure-and-recovery" class="toc-link" data-toc-link="coordinator-failure-and-recovery" data-astro-cid-p33bl5ka>Coordinator Failure and Recovery</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#when-2pc-is-actually-used" class="toc-link" data-toc-link="when-2pc-is-actually-used" data-astro-cid-p33bl5ka>When 2PC Is Actually Used</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#part-2-three-phase-commit-3pc" class="toc-link" data-toc-link="part-2-three-phase-commit-3pc" data-astro-cid-p33bl5ka>Part 2: Three-Phase Commit (3PC)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-idea" class="toc-link" data-toc-link="the-idea" data-astro-cid-p33bl5ka>The Idea</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#why-it-helps-and-why-it-doesnt-in-practice" class="toc-link" data-toc-link="why-it-helps-and-why-it-doesnt-in-practice" data-astro-cid-p33bl5ka>Why It Helps (and Why It Doesn’t in Practice)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#part-3-paxos" class="toc-link" data-toc-link="part-3-paxos" data-astro-cid-p33bl5ka>Part 3: Paxos</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-consensus-problem-paxos-solves" class="toc-link" data-toc-link="the-consensus-problem-paxos-solves" data-astro-cid-p33bl5ka>The Consensus Problem Paxos Solves</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#roles-proposer-acceptor-learner" class="toc-link" data-toc-link="roles-proposer-acceptor-learner" data-astro-cid-p33bl5ka>Roles: Proposer, Acceptor, Learner</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-two-phases-preparepromise-and-acceptaccepted" class="toc-link" data-toc-link="the-two-phases-preparepromise-and-acceptaccepted" data-astro-cid-p33bl5ka>The Two Phases: Prepare/Promise and Accept/Accepted</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#paxos-prepareaccept-round-diagram" class="toc-link" data-toc-link="paxos-prepareaccept-round-diagram" data-astro-cid-p33bl5ka>Paxos Prepare/Accept Round Diagram</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#multi-paxos" class="toc-link" data-toc-link="multi-paxos" data-astro-cid-p33bl5ka>Multi-Paxos</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#paxos-variants-worth-knowing" class="toc-link" data-toc-link="paxos-variants-worth-knowing" data-astro-cid-p33bl5ka>Paxos Variants Worth Knowing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#part-4-raft" class="toc-link" data-toc-link="part-4-raft" data-astro-cid-p33bl5ka>Part 4: Raft</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#design-philosophy" class="toc-link" data-toc-link="design-philosophy" data-astro-cid-p33bl5ka>Design Philosophy</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leader-election" class="toc-link" data-toc-link="leader-election" data-astro-cid-p33bl5ka>Leader Election</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#split-vote" class="toc-link" data-toc-link="split-vote" data-astro-cid-p33bl5ka>Split Vote</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#split-brain-scenario-diagram" class="toc-link" data-toc-link="split-brain-scenario-diagram" data-astro-cid-p33bl5ka>Split-Brain Scenario Diagram</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#log-replication" class="toc-link" data-toc-link="log-replication" data-astro-cid-p33bl5ka>Log Replication</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#raft-log-replication-flow-diagram" class="toc-link" data-toc-link="raft-log-replication-flow-diagram" data-astro-cid-p33bl5ka>Raft Log Replication Flow Diagram</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#safety-properties" class="toc-link" data-toc-link="safety-properties" data-astro-cid-p33bl5ka>Safety Properties</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#membership-changes-and-snapshots" class="toc-link" data-toc-link="membership-changes-and-snapshots" data-astro-cid-p33bl5ka>Membership Changes and Snapshots</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#part-5-consensus-in-practice" class="toc-link" data-toc-link="part-5-consensus-in-practice" data-astro-cid-p33bl5ka>Part 5: Consensus in Practice</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#zookeeper-zab" class="toc-link" data-toc-link="zookeeper-zab" data-astro-cid-p33bl5ka>ZooKeeper (ZAB)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#etcd-raft" class="toc-link" data-toc-link="etcd-raft" data-astro-cid-p33bl5ka>etcd (Raft)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#other-notable-systems" class="toc-link" data-toc-link="other-notable-systems" data-astro-cid-p33bl5ka>Other Notable Systems</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#part-6-cap-theorem-implications" class="toc-link" data-toc-link="part-6-cap-theorem-implications" data-astro-cid-p33bl5ka>Part 6: CAP Theorem Implications</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-cap-statement" class="toc-link" data-toc-link="the-cap-statement" data-astro-cid-p33bl5ka>The CAP Statement</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-nuances-interviewers-test" class="toc-link" data-toc-link="the-nuances-interviewers-test" data-astro-cid-p33bl5ka>The Nuances Interviewers Test</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#part-7-linearizability-vs-sequential-consistency" class="toc-link" data-toc-link="part-7-linearizability-vs-sequential-consistency" data-astro-cid-p33bl5ka>Part 7: Linearizability vs Sequential Consistency</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#consistency-model-comparison" class="toc-link" data-toc-link="consistency-model-comparison" data-astro-cid-p33bl5ka>Consistency Model Comparison</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#part-8-quorum-systems" class="toc-link" data-toc-link="part-8-quorum-systems" data-astro-cid-p33bl5ka>Part 8: Quorum Systems</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#part-9-failure-scenarios" class="toc-link" data-toc-link="part-9-failure-scenarios" data-astro-cid-p33bl5ka>Part 9: Failure Scenarios</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#part-10-capacity-planning" class="toc-link" data-toc-link="part-10-capacity-planning" data-astro-cid-p33bl5ka>Part 10: Capacity Planning</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#sharp-interview-question" class="toc-link" data-toc-link="sharp-interview-question" data-astro-cid-p33bl5ka>Sharp Interview Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#protocol-comparison-2pc-vs-3pc-vs-paxos-vs-raft" class="toc-link" data-toc-link="protocol-comparison-2pc-vs-3pc-vs-paxos-vs-raft" data-astro-cid-p33bl5ka>Protocol Comparison: 2PC vs 3PC vs Paxos vs Raft</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#extended-quick-reference-with-zab-and-bft" class="toc-link" data-toc-link="extended-quick-reference-with-zab-and-bft" data-astro-cid-p33bl5ka>Extended Quick Reference (with ZAB and BFT)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#further-reading" class="toc-link" data-toc-link="further-reading" data-astro-cid-p33bl5ka>Further Reading</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Two-Phase Commit &amp; Consensus (Raft/Paxos)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 35 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 49 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>advanced</span><span class="tag" data-astro-cid-sgg5joot>consensus</span><span class="tag" data-astro-cid-sgg5joot>2pc</span><span class="tag" data-astro-cid-sgg5joot>3pc</span><span class="tag" data-astro-cid-sgg5joot>raft</span><span class="tag" data-astro-cid-sgg5joot>paxos</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="two-phase-commit--consensus-raftpaxos">Two-Phase Commit &amp; Consensus (Raft/Paxos)</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>Algorithms for distributed agreement — 2PC coordinates atomic commits (blocking), Raft provides leader-based consensus (understandable), Paxos provides the same guarantees (proven but complex).</p>
+<p><strong>How it’s asked:</strong> “Design a consensus system for a 5-node cluster that survives 2 failures. Compare 2PC, Raft, and Paxos. Handle leader election, log replication, and the blocking problem in 2PC.”</p>
+<hr>
+<h2 id="overview">Overview</h2>
+<p>Distributed consensus is the problem of getting multiple independent nodes to agree on a single value—or, more powerfully, on an ordered sequence of values—despite process crashes, unreliable networks, and the absence of a global clock. It is the load-bearing wall underneath almost every reliable distributed system: replicated state machines, configuration management, leader election, distributed locks, and atomic transaction commit all reduce to some flavor of consensus. Two-Phase Commit (2PC) solves the narrowest version of this problem—atomicity of a transaction across participants—while Paxos and Raft solve the broader and more useful version: agreeing on a durable, totally-ordered log that survives failures and keeps serving. The conceptual leap worth memorizing is that 2PC optimizes for <em>safety under a trusted coordinator</em>, whereas Paxos/Raft optimize for <em>safety under an untrusted, failure-prone, leaderless (but eventually leaderful) ensemble</em>. 2PC is a <em>blocking</em> atomic-commit protocol; Raft and Paxos are <em>non-blocking</em> consensus protocols that can make progress as long as a majority of nodes are alive and reachable.</p>
+<h2 id="the-core-distinction">The Core Distinction</h2>
+<p>When interviewers probe this topic they are usually testing whether you understand that “commit” and “consensus” are different abstractions layered on top of the same fundamental impossibility result. Atomic commit answers a yes/no question—<em>did every participant durably prepare to commit this transaction?</em>—and a single NO vote forces a global abort. Consensus answers a broader question—<em>what value should the group decide, given that multiple proposers may propose different values?</em>—and guarantees that a quorum can decide even when some nodes are down or partitioned. The FLP impossibility result (Fischer, Lynch, Paterson, 1985) proves that no deterministic asynchronous protocol can guarantee both safety and liveness if even a single process may fail; practical systems escape this by leaning on timing assumptions (partial synchrony, as in Paxos/Raft’s leader leases and election timeouts) and randomization. 2PC sidesteps FLP only by sacrificing liveness whenever the coordinator or any participant fails in a bad window, which is precisely its Achilles heel.</p>
+<hr>
+<h2 id="part-1-two-phase-commit-2pc">Part 1: Two-Phase Commit (2PC)</h2>
+<h3 id="the-protocol-in-detail">The Protocol in Detail</h3>
+<p>2PC assumes a distinguished <em>coordinator</em> (often the node that initiated the transaction) and a set of <em>participants</em> holding resource managers for the touched data. The goal is all-or-nothing atomicity: either every participant commits, or every participant aborts. The protocol proceeds in two phases with a hard synchronization barrier between them.</p>
+<p>In the <strong>prepare phase</strong> (also called the voting phase), the coordinator sends a <code>PREPARE</code> (or <code>VOTE_REQUEST</code>) message to every participant. Each participant must decide, locally and durably, whether it <em>can</em> commit its piece of the transaction: it runs conflict checks, acquires any remaining locks, and writes a <em>prepare record</em> to its write-ahead log (WAL) so that a subsequent crash can be recovered. Crucially, once a participant votes YES, it has entered a <em>prepared</em> state in which it promises to be able to commit if asked and must hold all locks until it receives the final decision. If a participant cannot commit—say, a constraint would be violated, or a deadlock was detected—it votes NO and may unilaterally release its locks and abort. The coordinator collects votes; if even one vote is NO, or if any participant times out, the global decision is ABORT.</p>
+<p>In the <strong>commit phase</strong> (the decision phase), the coordinator writes a <em>global decision record</em> to its own log (this is the commit point of no return), then broadcasts <code>COMMIT</code> or <code>ABORT</code> to all participants. Each participant applies the decision durably, releases its locks, and replies <code>ACK</code>. Once the coordinator has received all ACKs it can garbage-collect the transaction’s metadata. The durable log entries are what make 2PC crash-recoverable: a restarting participant that finds a prepared-but-undecided record in its WAL must contact the coordinator (or a recovery coordinator) to learn the decision, and a restarting coordinator that finds a decision record must retransmit it to any participant that never ACKed.</p>
+<h3 id="2pc-phase-diagram">2PC Phase Diagram</h3>
+<p>The diagram below shows both phases of 2PC, including the durable log writes that make the protocol crash-recoverable and the blocking window that is its fatal weakness.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  COORDINATOR                              PARTICIPANTS</span></span>
+<span class="line"><span>  (writes decision log)                    (P1, P2, P3)</span></span>
+<span class="line"><span>  ============                             ============</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  ┌─────────────┐</span></span>
+<span class="line"><span>  │  TX start    │</span></span>
+<span class="line"><span>  └──────┬──────┘</span></span>
+<span class="line"><span>         │</span></span>
+<span class="line"><span>  ═══════╪═══════════════════════════════════════════════════</span></span>
+<span class="line"><span>  PHASE 1│: PREPARE / VOTE (voting phase)</span></span>
+<span class="line"><span>  ═══════╪═══════════════════════════════════════════════════</span></span>
+<span class="line"><span>         │  ──── PREPARE (can you commit?) ────────────────►  P1,P2,P3</span></span>
+<span class="line"><span>         │                                                  ┌──────┐</span></span>
+<span class="line"><span>         │                                                  │ lock │</span></span>
+<span class="line"><span>         │                                                  │ prep │ ← WAL write</span></span>
+<span class="line"><span>         │                                                  │ rec  │   (durable)</span></span>
+<span class="line"><span>         │                                                  └──────┘</span></span>
+<span class="line"><span>         │  ◄──── YES / NO votes ─────────────────────────  P1,P2,P3</span></span>
+<span class="line"><span>         │</span></span>
+<span class="line"><span>  ┌──────┴──────┐</span></span>
+<span class="line"><span>  │ ALL YES?     │─── no ──►  global decision = ABORT</span></span>
+<span class="line"><span>  └──────┬──────┘</span></span>
+<span class="line"><span>         │ yes</span></span>
+<span class="line"><span>         │</span></span>
+<span class="line"><span>  ═══════╪═══════════════════════════════════════════════════</span></span>
+<span class="line"><span>  PHASE 2│: COMMIT / ABORT (decision phase)</span></span>
+<span class="line"><span>  ═══════╪═══════════════════════════════════════════════════</span></span>
+<span class="line"><span>  ┌──────┴──────┐</span></span>
+<span class="line"><span>  │ write DECISION│ ← WAL write (commit point of no return)</span></span>
+<span class="line"><span>  │ record to log │</span></span>
+<span class="line"><span>  └──────┬──────┘</span></span>
+<span class="line"><span>         │  ──── COMMIT (or ABORT) ─────────────────────►  P1,P2,P3</span></span>
+<span class="line"><span>         │                                                  ┌──────┐</span></span>
+<span class="line"><span>         │                                                  │apply │</span></span>
+<span class="line"><span>         │                                                  │release│</span></span>
+<span class="line"><span>         │                                                  │locks │ ← WAL write</span></span>
+<span class="line"><span>         │                                                  └──────┘</span></span>
+<span class="line"><span>         │  ◄──── ACK ────────────────────────────────────  P1,P2,P3</span></span>
+<span class="line"><span>         │</span></span>
+<span class="line"><span>  ┌──────┴──────┐</span></span>
+<span class="line"><span>  │ all ACKs in? │─── yes ──►  GC transaction metadata</span></span>
+<span class="line"><span>  └─────────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  ⚠ BLOCKING WINDOW: if coordinator crashes AFTER participants</span></span>
+<span class="line"><span>    vote YES but BEFORE broadcasting COMMIT, every prepared</span></span>
+<span class="line"><span>    participant is locked indefinitely — cannot commit, cannot abort.</span></span></code></pre>
+<h3 id="the-blocking-problem">The Blocking Problem</h3>
+<p>The fatal weakness of 2PC is that it is a <em>blocking</em> protocol. The blocking arises from the prepared-state promise: a participant that voted YES has staked its locks and resources on a future decision it cannot make itself. If the coordinator crashes after some participants have voted YES but before broadcasting the decision, every prepared participant is <em>blocked</em>—it cannot commit (it does not know whether everyone else voted YES) and cannot abort (it promised to honor a possible COMMIT). Those participants hold their locks indefinitely, and any other transaction touching the same data is stalled behind them. This is not a transient hiccup; it is an indefinite liveness violation that persists until the coordinator is repaired or a recovery coordinator is elected and the decision log is consulted. The duration of the block is bounded only by human-mediated recovery, not by any protocol timeout, because the protocol cannot safely distinguish “coordinator crashed” from “coordinator is slow.” Even a <em>presumed abort</em> optimization (recording fewer log records on the abort path) does not solve the prepared-but-undecided window; it only makes the abort path cheaper.</p>
+<h3 id="coordinator-failure-and-recovery">Coordinator Failure and Recovery</h3>
+<p>Coordinator failure is the canonical failure scenario and the one interviewers will press on. The standard mitigation is to make the coordinator’s decision log itself replicated, so a <em>backup coordinator</em> can read the decision record and continue the protocol. But this just pushes the consensus problem one level down: how do you replicate the coordinator’s log safely? You need Paxos or Raft—which is why real systems rarely use a bare 2PC coordinator; instead, the coordinator’s role is itself implemented atop a consensus-replicated log (XA transaction managers integrated with a highly-available coordinator service, or, in cloud databases, a consensus group acting as the transaction manager). Another mitigation is a <em>coordinator recovery protocol</em>: a blocked participant can query other participants; if any voted NO, the decision must be ABORT; if the coordinator’s replicated log says COMMIT, the decision is COMMIT. But if <em>all</em> participants are prepared and the coordinator’s log is lost, no participant has enough information to decide, and the transaction stays blocked forever. This is the irreducible core of the 2PC blocking problem: <strong>the protocol preserves safety by sacrificing liveness during coordinator failure in the prepared window.</strong></p>
+<h3 id="when-2pc-is-actually-used">When 2PC Is Actually Used</h3>
+<p>Despite its weaknesses, 2PC remains the gold standard for <em>atomic commit across independent resource managers</em> where the participants are not part of a single replicated log—classic examples are XA transactions spanning a relational database and a message broker, or sharded databases (MySQL XA, PostgreSQL two-phase commit) where each shard is an independent database. The performance cost is real: 2PC adds at least two extra forced log writes per participant (the prepare record and the commit record) plus a global round-trip, roughly tripling commit latency versus a single-node transaction. Engineers tolerate this when the alternative—losing atomicity across heterogeneous systems—is worse. Inside a single consensus-replicated system (Spanner, CockroachDB, FoundationDB), the transaction commit protocol is integrated with the consensus layer so that the “coordinator” is a Paxos/Raft group, eliminating the single-coordinator blocking failure mode while preserving 2PC’s all-or-nothing semantics.</p>
+<hr>
+<h2 id="part-2-three-phase-commit-3pc">Part 2: Three-Phase Commit (3PC)</h2>
+<h3 id="the-idea">The Idea</h3>
+<p>Three-Phase Commit was proposed (Skeen, 1982) specifically to fix the blocking problem of 2PC by inserting an extra round that makes the protocol <em>non-blocking under fail-stop assumptions with synchronized clocks</em>. The key insight is that if every participant can determine, <em>without</em> contacting the coordinator, what state the protocol was in when the coordinator failed, then a blocked participant can make the safe decision locally. 3PC adds a <code>PRE_COMMIT</code> (or “prepare to commit”) phase between voting and the final commit: after the coordinator learns that everyone voted YES, it sends a <code>PRE_COMMIT</code> telling participants to get ready to commit, and only after receiving ACKs does it send the final <code>COMMIT</code>. The crucial property is that the pre-commit phase is reached only after every participant has already voted YES and is prepared, so once any participant has seen <code>PRE_COMMIT</code>, the transaction <em>must</em> commit—there is no path to abort anymore.</p>
+<h3 id="why-it-helps-and-why-it-doesnt-in-practice">Why It Helps (and Why It Doesn’t in Practice)</h3>
+<p>Under the assumptions of <em>synchronous</em> (bounded-delay) networks and <em>fail-stop</em> (crash, not Byzantine) failures with crash detection, 3PC is non-blocking: a participant that times out can look at its own local state. If it never voted YES, abort; if it voted YES but never saw <code>PRE_COMMIT</code>, it can safely abort because no participant could have committed yet; if it saw <code>PRE_COMMIT</code>, it can safely commit because the coordinator must have received all YES votes. The protocol achieves this by ensuring the decision is <em>predetermined</em> before it is <em>finalized</em>, giving every node enough local information to continue.</p>
+<p>The catch—why 3PC is rarely deployed—is that those assumptions are unrealistic on real networks. Real networks are asynchronous and can <em>partition</em>: a participant may be unable to distinguish “the coordinator crashed” from “the network partitioned me from the coordinator.” If the network partitions after some participants have received <code>PRE_COMMIT</code> but before others have, the partitioned groups can independently and incorrectly reach opposite decisions (one group commits, the other aborts), violating atomicity. This is a <em>safety</em> violation, far worse than 2PC’s mere liveness violation. Consequently 3PC is mostly of historical and pedagogical interest: it illustrates how to attack the blocking problem but is unsafe in the asynchronous model that real systems operate in. Modern non-blocking commit is achieved instead by implementing the coordinator’s decision log atop Paxos/Raft (so-called <em>Paxos commit</em>), which gets 3PC’s liveness benefit while preserving safety under partitions.</p>
+<hr>
+<h2 id="part-3-paxos">Part 3: Paxos</h2>
+<h3 id="the-consensus-problem-paxos-solves">The Consensus Problem Paxos Solves</h3>
+<p>Paxos, introduced by Leslie Lamport in 1989 (and made famous by the 1998 paper “The Part-Time Parliament”), solves <em>consensus</em>: a set of processes must agree on a single value out of a set of proposed values, satisfying three properties—<em>validity</em> (the decided value was actually proposed by someone), <em>agreement</em> (no two processes decide different values), and <em>termination</em> (every non-faulty process eventually decides, under partial synchrony). The protocol works in an asynchronous model with crash failures and a majority quorum, and it is provably safe under arbitrary message delays and reorderings. Paxos is famously hard to understand—a reputation Lamport himself leaned into with the parable framing—but the core is small once you separate the safety argument from the liveness argument.</p>
+<h3 id="roles-proposer-acceptor-learner">Roles: Proposer, Acceptor, Learner</h3>
+<p>Paxos separates concerns into three logical roles, which in practice may be collocated on the same nodes. The <strong>proposer</strong> initiates a round of consensus by suggesting a value; in a deployed system, proposers are the clients (or a leader acting on behalf of clients). The <strong>acceptor</strong> is the voting authority—acceptors act as a replicated, durable “memory” that records which proposals have been promised and accepted, and a value is chosen when a majority quorum of acceptors accept it. The <strong>learner</strong> is the passive observer that learns the chosen value once a majority has accepted it; learners do not participate in the decision but consume the result, and in practice the learner role is fused with the acceptor role so each node learns locally. The quorum requirement is what guarantees safety: because any two majorities overlap in at least one acceptor, no two different values can both be chosen by intersecting majorities.</p>
+<h3 id="the-two-phases-preparepromise-and-acceptaccepted">The Two Phases: Prepare/Promise and Accept/Accepted</h3>
+<p>Paxos runs in two phases per decided value. In <strong>Phase 1 (Prepare/Promise)</strong>, a proposer picks a unique, monotonically increasing <em>proposal number</em> <code>n</code> and sends <code>Prepare(n)</code> to a majority (or all) of acceptors. An acceptor responds with <code>Promise(n)</code> agreeing never to accept any proposal numbered less than <code>n</code> again; critically, if the acceptor has <em>already accepted</em> some value in a prior round, it includes the highest-numbered proposal it has accepted (with its value) in its promise. This “highest-accepted” piggybacking is the heart of the safety argument: it forces the proposer to adopt the value of the highest-numbered already-accepted proposal it sees, so that if a value was <em>almost</em> chosen in a prior round, the new round will carry that value forward rather than choosing a conflicting one. If the proposer hears from a majority, it has a <em>quorum</em> of promises and can proceed; otherwise it backs off and retries with a higher number.</p>
+<p>In <strong>Phase 2 (Accept/Accepted)</strong>, the proposer takes the value of the highest-numbered accepted proposal reported in the promises (or its own proposed value if no acceptor reported any prior acceptance) and sends <code>Accept(n, value)</code> to a majority of acceptors. An acceptor accepts (durable-logs the proposal and replies <code>Accepted</code>) as long as it has not promised a higher number since; if it has, it rejects and the proposer retries. A value is <em>chosen</em> the moment a majority of acceptors have accepted it, and learners are notified (directly by the proposer, or by acceptors, or via a distinguished learner that relays the decision) so they can record it.</p>
+<p>The protocol’s correctness rests on two invariants. First, <strong>only one value can be chosen</strong>: any two quorum majorities overlap in at least one acceptor, and that overlapping acceptor’s promise/accept history prevents two different values from both reaching majority acceptance. Second, <strong>a value is chosen only if it was proposed</strong>: the proposer’s adoption rule ensures the decided value traces back to some original proposal. Termination (liveness) requires partial synchrony—if proposers keep colliding and raising their numbers forever (livelock), nothing is chosen, so practical Paxos elects a single distinguished proposer (a leader) to avoid contention, which is exactly what Multi-Paxos does.</p>
+<h3 id="paxos-prepareaccept-round-diagram">Paxos Prepare/Accept Round Diagram</h3>
+<p>The diagram below illustrates a complete Paxos round showing both phases, the promise piggybacking of prior-accepted values, and the quorum intersection that guarantees safety.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  PROPOSER              ACCEPTORS (A1, A2, A3)          LEARNERS</span></span>
+<span class="line"><span>  ========              =====================          ========</span></span>
+<span class="line"><span>                            ┌──────────────┐</span></span>
+<span class="line"><span>                            │ A2 already    │</span></span>
+<span class="line"><span>                            │ accepted val X│</span></span>
+<span class="line"><span>                            │ in round n-2  │</span></span>
+<span class="line"><span>                            └──────────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  ═════════════════════════════════════════════════════════════</span></span>
+<span class="line"><span>  PHASE 1: PREPARE / PROMISE</span></span>
+<span class="line"><span>  ═════════════════════════════════════════════════════════════</span></span>
+<span class="line"><span>  pick proposal #n</span></span>
+<span class="line"><span>         │</span></span>
+<span class="line"><span>         │── Prepare(n) ─────────────────────► A1, A2, A3</span></span>
+<span class="line"><span>         │                                     │  A1: no prior</span></span>
+<span class="line"><span>         │                                     │      accept → Promise(n)</span></span>
+<span class="line"><span>         │                                     │  A2: Promise(n, n-2, X)</span></span>
+<span class="line"><span>         │                                     │      (piggyback highest</span></span>
+<span class="line"><span>         │                                     │       accepted: X)</span></span>
+<span class="line"><span>         │                                     │  A3: Promise(n)</span></span>
+<span class="line"><span>         │◄─────────────────────────────────── A1, A2, A3</span></span>
+<span class="line"><span>         │</span></span>
+<span class="line"><span>  majority of promises? ── no ──► retry with higher #</span></span>
+<span class="line"><span>         │ yes</span></span>
+<span class="line"><span>         │</span></span>
+<span class="line"><span>  ┌──────┴──────────────────────┐</span></span>
+<span class="line"><span>  │ pick value to propose:      │</span></span>
+<span class="line"><span>  │  if any promise carried an  │</span></span>
+<span class="line"><span>  │  accepted value, adopt the  │</span></span>
+<span class="line"><span>  │  HIGHEST-numbered one (X)   │</span></span>
+<span class="line"><span>  │  else use own proposed value│</span></span>
+<span class="line"><span>  └──────┬──────────────────────┘</span></span>
+<span class="line"><span>         │</span></span>
+<span class="line"><span>  ═════════════════════════════════════════════════════════════</span></span>
+<span class="line"><span>  PHASE 2: ACCEPT / ACCEPTED</span></span>
+<span class="line"><span>  ═════════════════════════════════════════════════════════════</span></span>
+<span class="line"><span>         │── Accept(n, X) ──────────────────► A1, A2, A3</span></span>
+<span class="line"><span>         │                                     │  A1: Accept(n,X) → log → Accepted</span></span>
+<span class="line"><span>         │                                     │  A2: Accept(n,X) → log → Accepted</span></span>
+<span class="line"><span>         │                                     │  A3: Accept(n,X) → log → Accepted</span></span>
+<span class="line"><span>         │◄────────────────────────────────── A1, A2, A3</span></span>
+<span class="line"><span>         │</span></span>
+<span class="line"><span>  ┌──────┴──────┐</span></span>
+<span class="line"><span>  │ majority     │</span></span>
+<span class="line"><span>  │ accepted?    │── yes ── VALUE CHOSEN = X</span></span>
+<span class="line"><span>  └──────┬──────┘</span></span>
+<span class="line"><span>         │</span></span>
+<span class="line"><span>         │── Chosen(X) ────────────────────────────────────► Learners</span></span>
+<span class="line"><span>         │                                                  record X</span></span>
+<span class="line"><span>         │</span></span>
+<span class="line"><span>  SAFETY: any two majorities overlap in ≥1 acceptor.</span></span>
+<span class="line"><span>          The overlapping acceptor's promise history ensures</span></span>
+<span class="line"><span>          no two different values can both be chosen.</span></span></code></pre>
+<h3 id="multi-paxos">Multi-Paxos</h3>
+<p>Plain Paxos decides a <em>single</em> value, which is almost useless on its own. <strong>Multi-Paxos</strong> generalizes it to decide an ordered sequence of values—a replicated log—by recognizing that if the same stable leader runs consecutive instances, Phase 1 can be amortized: the leader runs Prepare once to establish its leadership and learn any previously-chosen (but un-announced) values, then drives Phase 2 repeatedly for each log entry without repeating Phase 1. The leader batches Accept messages and pipelines them, so each log slot costs roughly one round trip. Each log entry is a separate Paxos instance keyed by its position (slot number), and the leader assigns incoming client commands to consecutive slots. Multi-Paxos is what powers most real Paxos deployments (Chubby, Spanner’s Paxos groups, PaxosStore), but Lamport’s original papers left the engineering details—the leader election, the log reconciliation on leader change, the snapshotting and log truncation, the membership change—largely unspecified, which is why every Multi-Paxos implementation is slightly different and why Raft was welcomed as a comprehensible alternative.</p>
+<h3 id="paxos-variants-worth-knowing">Paxos Variants Worth Knowing</h3>
+<p><em>Fast Paxos</em> reduces latency by letting proposers send Accept directly to acceptors (skipping the leader round) at the cost of larger quorums and more complex recovery. <em>Cheap Paxos</em> runs the protocol with a small active set and a large set of cold standby acceptors to reduce the number of machines that must be fast. <em>EPaxos</em> (Egalitarian Paxos) avoids the leader bottleneck entirely, allowing any replica to command-lead in one round trip when there is no conflict, trading more complex conflict tracking for much better multi-region throughput. <em>Mencius</em> and <em>Atlas</em> extend this egalitarian line. For interview purposes, you should at least know that Multi-Paxos is the practical form, that it relies on a stable leader for performance, and that leader changes are the expensive, error-prone part.</p>
+<hr>
+<h2 id="part-4-raft">Part 4: Raft</h2>
+<h3 id="design-philosophy">Design Philosophy</h3>
+<p>Raft (Ongaro and Ousterhout, 2014) was engineered explicitly for <em>understandability</em>. The authors observed that Paxos is correct but opaque, and that real systems built on Paxos (Chubby, Spanner) spend enormous engineering effort on the unspecified parts. Raft decomposes consensus into three clearly separated sub-problems—<strong>leader election</strong>, <strong>log replication</strong>, and <strong>safety</strong>—each with a simple, teachable mechanism. It shares Paxos’s formal guarantees (safety under arbitrary failures, termination under partial synchrony, majority quorums) but is structured so that a single leader handles all client writes, the leader’s log is the source of truth, and followers replicate it. This leader-strong design is what makes Raft easy to reason about and easy to implement correctly, and it is why etcd, Consul, CockroachDB, TiKV, and dozens of other systems adopted it.</p>
+<h3 id="leader-election">Leader Election</h3>
+<p>Raft clusters have a fixed membership of servers, each in one of three states: <em>follower</em>, <em>candidate</em>, or <em>leader</em>. Time is divided into <em>terms</em>, monotonically increasing integers that act as logical clock epochs; every term has at most one leader. A follower stays passive as long as it receives valid heartbeats (AppendEntries RPCs carrying no log entries) from a leader; if a follower’s <em>election timeout</em> (randomized, typically 150–300ms) elapses without a heartbeat, it suspects the leader is dead, increments the term, transitions to candidate, votes for itself, and sends <code>RequestVote</code> RPCs to the rest of the cluster. A candidate that wins a <em>majority</em> of votes for its term becomes leader and immediately begins sending heartbeats to establish authority and suppress further elections.</p>
+<p>The randomized election timeout is the key anti-livelock mechanism: by spreading timeouts across a window, Raft makes it overwhelmingly likely that exactly one candidate times out first, collects votes, and wins before others wake up. The voting rules enforce a critical safety property: a server grants its vote to at most one candidate per term, and it only votes for a candidate whose log is <em>at least as up to date</em> as its own (compared first by last log term, then by log length). This guarantees that any elected leader already contains all previously committed entries, so a new leader never has to backfill its log from followers—leadership and log completeness are coupled at election time.</p>
+<h3 id="split-vote">Split Vote</h3>
+<p>A <strong>split vote</strong> occurs when two or more candidates become candidates in the same term and each wins a partial set of votes such that no candidate reaches a majority. This is most likely in even-sized clusters (e.g., a 4-node cluster can deadlock 2-2) or when timeouts happen to align. Raft handles split votes simply and safely: because no candidate wins a majority, no leader is elected for that term, the candidates wait out their next randomized election timeout, and one of them times out first in the next term and (usually) wins cleanly. The system is briefly unavailable (no leader to serve writes) for one extra election timeout, but safety is never violated—no conflicting leader is ever elected. The randomized timeout makes repeat split votes exponentially unlikely. This is the canonical Raft failure mode and the answer to “what happens when two nodes both try to become leader.”</p>
+<h3 id="split-brain-scenario-diagram">Split-Brain Scenario Diagram</h3>
+<p>The diagram below illustrates why split-brain (two leaders in the same term) cannot happen in Raft, and what instead happens in the related failure modes: a network partition and a split vote.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  ───────────────────────────────────────────────────────────────</span></span>
+<span class="line"><span>  SCENARIO A: NETWORK PARTITION in a 5-node Raft cluster</span></span>
+<span class="line"><span>  ───────────────────────────────────────────────────────────────</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>     [MAJORITY SIDE: 3 nodes]          [MINORITY SIDE: 2 nodes]</span></span>
+<span class="line"><span>     N1(leader)  N2  N3                 N4  N5</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>     N1 stays leader (has majority      N4's election timer fires</span></span>
+<span class="line"><span>     quorum = 3 of 5)                   → becomes candidate, term+1</span></span>
+<span class="line"><span>                                         → sends RequestVote</span></span>
+<span class="line"><span>     N1 keeps serving writes            → needs 3 votes, only 2</span></span>
+<span class="line"><span>     N2, N3 ack AppendEntries            nodes available → STUCK</span></span>
+<span class="line"><span>                                          → no leader elected</span></span>
+<span class="line"><span>     ✅ Writes succeed                   ❌ Writes blocked (CP)</span></span>
+<span class="line"><span>                                              │</span></span>
+<span class="line"><span>     When partition heals ◄──────────────┘</span></span>
+<span class="line"><span>     N4, N5 receive AppendEntries from N1</span></span>
+<span class="line"><span>     → consistency check reconciles logs</span></span>
+<span class="line"><span>     → uncommitted entries overwritten</span></span>
+<span class="line"><span>     → N4, N5 rejoin as followers</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  ───────────────────────────────────────────────────────────────</span></span>
+<span class="line"><span>  SCENARIO B: SPLIT VOTE (even-sized cluster, 4 nodes)</span></span>
+<span class="line"><span>  ───────────────────────────────────────────────────────────────</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>     Term T:  N1 and N3 both time out simultaneously</span></span>
+<span class="line"><span>              N1 votes for self → sends RequestVote</span></span>
+<span class="line"><span>              N3 votes for self → sends RequestVote</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>         N1 ←─── 1 vote (self)         N3 ←─── 1 vote (self)</span></span>
+<span class="line"><span>         N2 → votes for N1             N4 → votes for N3</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>         Result: N1 has 2 votes, N3 has 2 votes</span></span>
+<span class="line"><span>                 Majority = 3 of 4 → NO ONE WINS</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>     ⏳ All candidates wait randomized election timeout</span></span>
+<span class="line"><span>     ⏳ One times out first in Term T+1</span></span>
+<span class="line"><span>     ⏳ Wins majority cleanly → becomes leader</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>     ✅ Safety preserved: no conflicting leader ever elected</span></span>
+<span class="line"><span>     ⚠ Brief unavailability: ~1 extra election timeout</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  KEY INSIGHT: Raft PREVENTS split-brain by coupling the</span></span>
+<span class="line"><span>  majority-vote requirement with the term-based epoch system.</span></span>
+<span class="line"><span>  Two leaders in the SAME term is impossible because no single</span></span>
+<span class="line"><span>  candidate can get a majority without overlapping votes.</span></span>
+<span class="line"><span>  Two leaders in DIFFERENT terms: the higher-term leader's</span></span>
+<span class="line"><span>  election is valid, but the lower-term leader is deposed</span></span>
+<span class="line"><span>  the moment it contacts the majority.</span></span></code></pre>
+<h3 id="log-replication">Log Replication</h3>
+<p>Once a leader is established, all client requests flow through it. The leader appends the client’s command to its own log as a new entry, then sends <code>AppendEntries</code> RPCs to followers containing the entry along with the <em>prevLogIndex</em> and <em>prevLogTerm</em> of the entry immediately before it. A follower accepts the append only if its log contains an entry at prevLogIndex with the matching prevLogTerm; this consistency check is what guarantees that follower logs are <em>prefix-compatible</em> with the leader’s log and with each other. If the check fails, the leader decrements nextIndex for that follower and retries, walking the log backward until it finds the point of agreement, after which it overwrites any conflicting follower entries and backfills the rest. In steady state this is a single fast round trip; on a lagging or recently-restarted follower it may take several decrements, but Raft can be optimized to send snapshots instead of replaying thousands of entries.</p>
+<p>An entry is <em>committed</em> once the leader has replicated it to a majority of servers <em>and</em> all entries before it are also committed. The leader applies committed entries to its state machine and replies to the client. Followers learn of commits via the <code>leaderCommit</code> field piggybacked on subsequent AppendEntries, so commit propagation is piggybacked rather than explicitly acked. The leader’s commit rule is the linchpin of Raft safety: a leader never commits an entry from a previous term by counting replicas alone; instead it only commits prior-term entries <em>indirectly</em> by committing a new entry from its own term that is replicated to a majority. This subtle rule (the “no-op on election” pattern in some implementations) closes the gap that could otherwise allow a committed entry to be overwritten.</p>
+<h3 id="raft-log-replication-flow-diagram">Raft Log Replication Flow Diagram</h3>
+<p>The diagram below shows the full lifecycle of a single client write through Raft log replication, from leader append through quorum replication, commit, and state machine application.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  CLIENT            LEADER (L)              FOLLOWERS (F1, F2, F3, F4)</span></span>
+<span class="line"><span>  ======            ===========              =========================</span></span>
+<span class="line"><span>                     ┌──────────────────────────────────────────┐</span></span>
+<span class="line"><span>                     │  Log:  [1] [2] [3]   ← committed (idx 3) │</span></span>
+<span class="line"><span>                     │                       next entry: idx 4  │</span></span>
+<span class="line"><span>                     └──────────────────────────────────────────┘</span></span>
+<span class="line"><span>  ── cmd=X ──►</span></span>
+<span class="line"><span>                     │</span></span>
+<span class="line"><span>               ┌─────┴─────┐</span></span>
+<span class="line"><span>               │ append X   │ ← entry idx=4, term=T</span></span>
+<span class="line"><span>               │ to own log │ ← fsync WAL (dominant cost)</span></span>
+<span class="line"><span>               └─────┬─────┘</span></span>
+<span class="line"><span>                     │</span></span>
+<span class="line"><span>                     │── AppendEntries(idx=4, T, X,             F1, F2, F3, F4</span></span>
+<span class="line"><span>                     │    prevLogIdx=3, prevLogTerm=T-1) ──────► (parallel)</span></span>
+<span class="line"><span>                     │</span></span>
+<span class="line"><span>                     │                    ┌─────────────────────────┐</span></span>
+<span class="line"><span>                     │                    │ prevLogIdx/Term match?  │</span></span>
+<span class="line"><span>                     │                    │  YES → append, fsync    │</span></span>
+<span class="line"><span>                     │                    │  NO  → reject           │</span></span>
+<span class="line"><span>                     │                    └─────────────────────────┘</span></span>
+<span class="line"><span>                     │◄── ACK (idx=4) ──────────────────────────── F1 ✅</span></span>
+<span class="line"><span>                     │◄── ACK (idx=4) ──────────────────────────── F2 ✅</span></span>
+<span class="line"><span>                     │◄── ACK (idx=4) ──────────────────────────── F3 ✅</span></span>
+<span class="line"><span>                     │                  (F4 slow / rejected → retry later)</span></span>
+<span class="line"><span>                     │</span></span>
+<span class="line"><span>               ┌─────┴──────────┐</span></span>
+<span class="line"><span>               │ majority ack?  │  3 of 5 (leader+F1+F2+F3) = ✅</span></span>
+<span class="line"><span>               │ → COMMIT idx=4 │  (all prior entries also commit)</span></span>
+<span class="line"><span>               └─────┬──────────┘</span></span>
+<span class="line"><span>                     │</span></span>
+<span class="line"><span>               ┌─────┴──────────┐</span></span>
+<span class="line"><span>               │ apply idx=4 to │ ← state machine</span></span>
+<span class="line"><span>               │ state machine  │</span></span>
+<span class="line"><span>               └─────┬──────────┘</span></span>
+<span class="line"><span>                     │</span></span>
+<span class="line"><span>  ◄── "committed" ──│</span></span>
+<span class="line"><span>                     │</span></span>
+<span class="line"><span>                     │── next AppendEntries(leaderCommit=4) ───► F1..F4</span></span>
+<span class="line"><span>                     │    (commit index piggybacked on</span></span>
+<span class="line"><span>                     │     subsequent RPCs — no explicit ack)</span></span>
+<span class="line"><span>                     │                                              │</span></span>
+<span class="line"><span>                     │                    ┌─────────────────────────┐</span></span>
+<span class="line"><span>                     │                    │ F1..F4 apply idx=4      │</span></span>
+<span class="line"><span>                     │                    │ to state machines       │</span></span>
+<span class="line"><span>                     │                    └─────────────────────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  LATENCY ≈ max(local_fsync, RTT_to_majority + remote_fsync)</span></span>
+<span class="line"><span>  SAFETY:  entry committed ⟺ replicated to majority</span></span>
+<span class="line"><span>           + all prior entries committed</span></span></code></pre>
+<h3 id="safety-properties">Safety Properties</h3>
+<p>Raft guarantees four safety properties that together imply the replicated state machine abstraction. <em>Leader Completeness</em>: if a log entry is committed in a given term, it is present in the logs of the leaders of all higher-numbered terms—this follows from the election voting rule (voters only elect leaders whose log is at least as up to date). <em>State Machine Safety</em>: if a server has applied a log entry at index i, no other server will ever apply a different entry at the same index. <em>Election Safety</em>: at most one leader per term. <em>Log Matching</em>: if two logs contain an entry with the same index and term, the logs are identical in all entries up to that index. These compose to give the strong guarantee clients care about: once a client is told its write committed, that write will be present in every future leader’s log and will never be rolled back. The practical consequence is that Raft can serve linearizable reads from the leader (with a read-index or lease-based optimization) and offers exactly-once semantics when clients attach unique request IDs.</p>
+<h3 id="membership-changes-and-snapshots">Membership Changes and Snapshots</h3>
+<p>Real Raft systems must change cluster membership without shutting down and must compact logs that would otherwise grow unboundedly. <em>Joint consensus</em> handles membership reconfiguration in two phases: the leader proposes a joint configuration (old + new members), entries are committed under majority-of-old <em>and</em> majority-of-new quorums, and once committed the leader proposes the new-only configuration. Single-server additions/removals are simpler and can be done in one step because majorities of the old and new configurations always overlap. <em>Log compaction</em> via snapshots periodically captures the state machine state, discards the log up to the snapshot point, and lets the leader transfer the snapshot to lagging followers via <code>InstallSnapshot</code> rather than replaying millions of entries. These mechanisms are engineering essentials and frequent interview follow-ups—“what happens when a follower has been down for an hour and rejoins?” leads directly to snapshot transfer.</p>
+<hr>
+<h2 id="part-5-consensus-in-practice">Part 5: Consensus in Practice</h2>
+<h3 id="zookeeper-zab">ZooKeeper (ZAB)</h3>
+<p>Apache ZooKeeper is a coordination service providing a hierarchical, wait-free data tree with watches, used for configuration, naming, distributed locks, and leader election by higher-level systems (Kafka, HBase, Solr). ZooKeeper does <em>not</em> run Paxos or Raft directly; it runs <strong>ZAB (ZooKeeper Atomic Broadcast)</strong>, a protocol designed by Flavio Junqueira and colleagues that shares Paxos’s quorum-based flavor but is tailored to the primary-backup log model. ZAB has a <em>discovery/synchronization</em> phase (electing a leader and synchronizing followers’ logs to match the leader’s) followed by a <em>broadcast</em> phase (the leader broadcasts proposals in order, followers ack, the leader commits on majority ack). ZAB differs from Multi-Paxos in that the leader is elected on the <em>zxid</em> (a 64-bit counter of epoch and transaction counter) so the elected leader is guaranteed to have the latest committed state, eliminating the Phase-1-prepare round of Multi-Paxos on each leadership change. ZooKeeper offers <em>sequential consistency</em> (reads see a prefix of the leader’s writes, but a read served by a follower may be stale) unless you call <code>sync()</code> before a read or only read from the leader. This nuance—<em>ZooKeeper by default is not linearizable for reads</em>—is a classic interview trap.</p>
+<h3 id="etcd-raft">etcd (Raft)</h3>
+<p>etcd is the canonical Raft deployment: a small (typically 3 or 5 member) strongly-consistent key-value store backing Kubernetes, Rook, and many cloud-native systems. Every write is proposed to the Raft leader, replicated to a quorum, committed, and applied to a boltdb-backed MVCC store; reads default to linearizable by routing through the leader with a ReadIndex (a quorum-confirmed lease check) but can be downgraded to serializable for higher throughput at the cost of freshness. etcd’s operational characteristics—recommended cluster size of 3 or 5, maximum practical cluster size around 7, request size limits of 1.5MB, advice to keep total data under 8GB—derive directly from Raft’s quorum and log-replication costs. The etcd team publishes careful guidance: 3 nodes tolerate 1 failure, 5 nodes tolerate 2, and you should never run an even number because a 2-node cluster tolerates zero failures while a 4-node cluster tolerates only one (the same as 3) at higher cost.</p>
+<h3 id="other-notable-systems">Other Notable Systems</h3>
+<p><em>Consul</em> (HashiCorp) uses Raft under the hood for its own state and layers a gossip protocol (Serf/SWIM) for membership and failure detection. <em>CockroachDB</em> and <em>TiKV</em> use Raft at the <em>per-range</em> level—each range (a contiguous key span) has its own Raft group, so a single cluster runs tens of thousands of Raft groups, with leaders balanced across nodes for throughput. <em>Spanner</em> uses Paxos per shard and layers TrueTime (atomic-clock-bounded clock uncertainty) on top for externally-consistent transactions. <em>FoundationDB</em> uses a different approach—optimistic concurrency with a sequencer/locker layer—illustrating that not every strongly-consistent system uses a Raft/Paxos core. The general pattern: a small consensus group (3–7 nodes) provides the <em>control plane</em> (metadata, leadership, configuration) while the <em>data plane</em> uses partitioning and per-partition consensus to scale horizontally.</p>
+<hr>
+<h2 id="part-6-cap-theorem-implications">Part 6: CAP Theorem Implications</h2>
+<h3 id="the-cap-statement">The CAP Statement</h3>
+<p>Brewer’s CAP theorem, formalized by Gilbert and Lynch (2002), states that a distributed system experiencing partitions cannot simultaneously provide <em>consistency</em> (here meaning linearizability—every read sees the latest write) and <em>availability</em> (every request to a non-failed node eventually returns). Because real networks <em>do</em> partition, the practical takeaway is that during a partition a system must choose between C and A; systems are therefore classified as CP (preserve consistency, reject or block requests on the minority side of a partition) or AP (preserve availability, accept writes on both sides and reconcile later, possibly with divergence). Raft, Paxos, ZooKeeper, and etcd are all CP: they require a majority quorum to make progress, so a partition that splits a 5-node cluster 2-3 leaves the 2-node side unable to serve writes (and, for etcd’s default linearizable reads, unable to serve reads either). Dynamo, Cassandra (at default settings), and Riak are AP: they accept writes on both sides and reconcile via vector clocks or last-writer-wins, exposing the possibility of conflicting writes that must be merged.</p>
+<h3 id="the-nuances-interviewers-test">The Nuances Interviewers Test</h3>
+<p>CAP is widely misquoted as “pick two of three always,” which is wrong: the theorem only forces a choice <em>during a partition</em>. When the network is healthy, a well-designed system can provide both C and A. Moreover, “consistency” in CAP is specifically <em>linearizability</em>, not the much weaker database notion of ACID consistency, and “availability” is the formal notion that <em>every</em> request to a <em>non-failed</em> node returns, not the practical notion of “high uptime.” PACELC (Abadi, 2010) generalizes this: if there is a Partition (P), the system chooses between A and C; Else (E, no partition), it chooses between L (latency) and C. This captures the real engineering tradeoff that even without partitions, strongly-consistent systems pay a latency cost for quorum round trips. Spanner is EL+AC (waits for TrueTime during commits but is available); Dynamo is PA+EL. Knowing PACELC lets you say something sharper than “CAP” in an interview.</p>
+<hr>
+<h2 id="part-7-linearizability-vs-sequential-consistency">Part 7: Linearizability vs Sequential Consistency</h2>
+<p>These two consistency models are routinely conflated but differ in a way that matters for correctness. <strong>Linearizability</strong> is the strongest single-object model: every operation appears to take effect atomically at some point <em>between its invocation and response</em>, and that point respects the real-time ordering of operations across clients. If client A completes a write before client B begins a read, B’s read must see that write (or a later one). Linearizability gives the illusion of a single copy of the data and is what most people intuitively mean by “strong consistency”; Raft and etcd’s default reads provide it, at the cost of a quorum round-trip or a leader lease.</p>
+<p><strong>Sequential consistency</strong> is weaker: operations must appear to execute in some total order that respects each <em>client’s</em> program order, but that order need not respect real-time ordering across different clients. So client B could read a stale value even though A’s write completed in real time before B’s read started, as long as there exists a global serialization consistent with each client’s local order. Sequential consistency is what ZooKeeper offers by default (a follower serving a read may lag the leader) and what a CPU memory model’s “sequential consistency” (Lamport, 1979) refers to. The two-line summary: <strong>linearizability = sequential consistency + real-time ordering across clients.</strong> Dropping real-time ordering lets the system serve reads from stale replicas cheaply, which is why ZooKeeper’s default reads are fast-but-possibly-stale and why etcd distinguishes “linearizable” from “serializable” reads as a tunable.</p>
+<p>For completeness, <em>causal consistency</em> preserves only causally-related order (writes that are causally linked must be seen in order, but concurrent writes can be ordered differently at different replicas), and <em>eventual consistency</em> guarantees only that replicas converge <em>eventually</em> with no bound on the staleness window. The hierarchy—linearizable ⊃ sequential ⊃ causal ⊃ eventual—gives you a vocabulary for reasoning about the consistency/latency tradeoff that the PACELC framing makes explicit.</p>
+<h3 id="consistency-model-comparison">Consistency Model Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th style="text-align: center">Real-Time Ordering?</th>
+<th>Guarantees</th>
+<th>Cost / Latency</th>
+<th>Example Systems</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linearizability</td>
+<td style="text-align: center">✅ Yes</td>
+<td>Every read sees latest write or a newer one; single-copy illusion. Strongest single-object model.</td>
+<td>High: quorum round-trip or leader lease required.</td>
+<td>Raft (leader reads), etcd (default), Spanner (TrueTime)</td>
+</tr>
+<tr>
+<td>Sequential Consistency</td>
+<td style="text-align: center">❌ No</td>
+<td>Total order respecting each client’s program order, but not cross-client real-time order. Stale reads allowed.</td>
+<td>Medium: can read from stale replicas.</td>
+<td>ZooKeeper (default follower reads), CPU seq consistency</td>
+</tr>
+<tr>
+<td>Causal Consistency</td>
+<td style="text-align: center">❌ No</td>
+<td>Causally-related writes seen in order; concurrent writes may differ across replicas.</td>
+<td>Medium-low: track causal dependencies (vector clocks).</td>
+<td>Dynamo-style with causal tracking, COPS</td>
+</tr>
+<tr>
+<td>Eventual Consistency</td>
+<td style="text-align: center">❌ No</td>
+<td>Replicas converge eventually; no bound on staleness window. Conflicts possible during convergence.</td>
+<td>Low: no coordination needed for reads/writes.</td>
+<td>Dynamo, Cassandra (CL=ONE), Riak, DNS</td>
+</tr>
+</tbody>
+</table>
+<p>The hierarchy is strict: <strong>linearizable ⊃ sequential ⊃ causal ⊃ eventual</strong> — each weaker model permits everything the stronger one permits, plus additional interleavings.</p>
+<hr>
+<h2 id="part-8-quorum-systems">Part 8: Quorum Systems</h2>
+<p>A <em>quorum system</em> is a collection of subsets (quorums) of a universe of nodes such that every two quorums intersect; any two quorums share at least one node, and that intersection is the basis for safety. The simplest and most common is the <strong>majority quorum</strong>: with N nodes, every quorum has strictly more than N/2 members, so any two majorities of an N-set overlap in at least one node (for odd N this is <code>(N+1)/2</code>; for even N it is <code>N/2 + 1</code>, which is why even-sized clusters are wasteful—an extra node buys you nothing in failure tolerance versus odd N−1). Paxos, Raft, ZAB, and most strongly-consistent systems use majority quorums because they offer the best tradeoff of failure tolerance and operation cost: a cluster of size 2F+1 tolerates F failures and requires F+1 nodes to make progress.</p>
+<p>Quorum systems are more general than majorities, and the general theory lets you reason about read/write quorums separately. In a system with N replicas, if every write goes to a write quorum of size W and every read to a read quorum of size R, then reads see the latest write as long as <strong>W + R &gt; N</strong>. Dynamo-style systems let you tune W and R to dial the consistency/latency/availability tradeoff per workload. <em>Weighted quorums</em> and <em>crumbling walls</em> are exotic variants for heterogeneous clusters where some nodes are more reliable than others.</p>
+<p>Key quorum rules and facts:</p>
+<ul>
+<li><strong>Majority quorum</strong>: any quorum must contain strictly more than N/2 members. Any two majorities overlap in at least one node — this intersection is the basis for safety.</li>
+<li><strong>Cluster size vs. fault tolerance</strong>: a cluster of size <code>2F+1</code> tolerates <code>F</code> failures and requires <code>F+1</code> nodes to make progress.
+<ul>
+<li>3 nodes → tolerates 1 failure, quorum = 2</li>
+<li>5 nodes → tolerates 2 failures, quorum = 3</li>
+<li>7 nodes → tolerates 3 failures, quorum = 4</li>
+</ul>
+</li>
+<li><strong>Even-sized clusters are wasteful</strong>: a 4-node cluster tolerates only 1 failure (same as 3 nodes) at higher cost; a 2-node cluster tolerates 0 failures. Always prefer odd sizes.</li>
+<li><strong>Read/write quorum rule</strong>: reads see the latest write as long as <strong>W + R &gt; N</strong> (W = write quorum size, R = read quorum size, N = total replicas).
+<ul>
+<li><code>W = R = (N+1)/2</code> → majority system (strong consistency, balanced cost)</li>
+<li><code>W = N, R = 1</code> → write-all/read-one (maximum consistency, but one slow/failed node blocks writes)</li>
+<li><code>W = 1, R = N</code> (with last-writer-wins) → AP system (writes never block, but reads must touch every node to find the latest)</li>
+</ul>
+</li>
+<li><strong>Quorum size determines both fault tolerance AND latency</strong>: more replicas contacted = more round trips = higher latency but more availability.</li>
+<li><strong>Byzantine quorums</strong>: BFT protocols require quorums of <code>2F+1</code> out of <code>3F+1</code> nodes to tolerate <code>F</code> Byzantine (arbitrary/malicious) faults — roughly 3x the nodes and 2x the round trips of crash-fault consensus.</li>
+</ul>
+<hr>
+<h2 id="part-9-failure-scenarios">Part 9: Failure Scenarios</h2>
+<p>Consensus protocols are only interesting when things break; interviewers will probe specific failure modes. The taxonomy worth rehearsing:</p>
+<p><strong>Leader crash mid-replication.</strong> A Raft leader crashes after replicating an entry to some followers but before it is committed. Those followers hold an uncommitted entry; the new leader elected after the crash may or may not have that entry. If the new leader’s log does not contain it, the entry is discarded (it was never committed, so discarding it violates nothing); if the new leader’s log does contain it, the entry will eventually be committed once a new entry from the new leader’s term is replicated. The no-op-on-election pattern forces a quick commit decision. Client requests that were in flight get a timeout and must be retried with the same request ID for exactly-once semantics.</p>
+<p><strong>Network partition, minority side.</strong> A 5-node Raft cluster partitions 3-2. The 3-node majority side elects (or keeps) a leader and continues serving writes; the 2-node minority side cannot reach a majority, so it cannot elect a leader and cannot commit. If the minority side had a leader before the partition, that (now-deposed) leader may still accept writes from clients that can reach it, but it cannot commit them and will return errors or hold them; the safety guarantee is that the majority side will reject those writes’ potential commits. When the partition heals, the minority side’s log is reconciled to the majority’s by the AppendEntries consistency check, and any uncommitted entries are overwritten. This is the textbook CP behavior.</p>
+<p><strong>Network partition, then heal, with divergent client writes.</strong> In an AP system (Dynamo, Cassandra at CL=ONE), both sides accept writes; on heal, conflicting versions must be resolved by application logic (vector clocks reveal the conflict) or by last-writer-wins (which can silently lose data when clocks are skewed). In a CP system this cannot happen—writes are blocked on the minority side, so there is nothing to reconcile.</p>
+<p><strong>Slow disk / fsync stalls.</strong> A node whose disk fsync calls take seconds will stall log writes; in Raft this manifests as the leader being unable to commit (because the slow node never acks) and followers timing out, potentially causing repeated leader churn. Mitigations: separate the WAL onto its own fast disk (NVMe), batch and group-commit, monitor fsync latency as a first-class metric, and treat persistent fsync stalls as a node-level failure that the operator should remove from the cluster.</p>
+<p><strong>Quorum loss.</strong> In a 3-node cluster, losing 2 nodes (only 1 alive) means no quorum, so the system becomes read-only (or fully unavailable for writes). This is why production deployments prefer 5-node clusters for important consensus groups: 5 tolerates 2 failures, giving you time to repair one failure before a second takes you down. Planned maintenance (replacing a node) should always be done on a cluster with at least 2 nodes of headroom.</p>
+<p><strong>Byzantine failures.</strong> Raft and Paxos assume crash-stop (or crash-recovery) failures, not Byzantine (arbitrary, malicious) failures. If nodes can lie, forge messages, or collude, you need a Byzantine-fault-tolerant consensus protocol such as PBFT, Tendermint, or HotStuff, which typically require quorums of 2F+1 out of 3F+1 nodes to tolerate F Byzantine faults. The cost is roughly 3x the nodes and 2x the round trips of crash-fault consensus, which is why BFT is reserved for adversarial settings (blockchains, cross-organization trust) and not used for in-datacenter coordination.</p>
+<hr>
+<h2 id="part-10-capacity-planning">Part 10: Capacity Planning</h2>
+<p>Strongly-consistent consensus groups do not scale out by adding nodes—in fact, adding nodes <em>hurts</em> latency and throughput because every write must round-trip to a quorum, and larger quorums mean more nodes to wait on. The right mental model is: keep the consensus group <em>small and fixed</em> (3 or 5 nodes, geographically placed for the latency you can tolerate), and scale <em>horizontally by partitioning</em> so that each partition (shard, range, tablet) has its own independent consensus group with its own leader. CockroachDB and TiKV run tens of thousands of Raft groups across a cluster of hundreds of nodes, balancing leaders so no single node is leader for too many hot ranges.</p>
+<p>The practical numbers to internalize: a 3-node etcd cluster in one datacenter can sustain tens of thousands of writes per second with single-digit-millisecond latencies, but cross-region latency dominates everything—a 5-node cluster with nodes in three regions pays the round-trip to the majority region on every write, so write latency is bounded below by inter-region RTT (50–150ms). If you need multi-region writes, you either accept that latency, use leader-placement heuristics to keep the leader near the writers, or move to an AP or leaderless model (Dynamo, Cassandra) for the hot path and accept weaker consistency. Request size matters too: etcd caps values at 1.5MB and recommends keeping total store size under 8GB because Raft snapshots and replay costs scale with state size. A consensus group is the wrong place to store your application data; it is the right place to store the <em>metadata</em> that lets the rest of the system scale.</p>
+<p>Latency budgeting for a single Raft write: leader appends to local WAL and fsyncs (one disk sync, the dominant cost on NVMe, ~0.1–1ms), leader sends AppendEntries to followers in parallel, followers fsync and ack (parallel round trip, bounded by the slowest follower plus network RTT), leader commits on majority ack, applies to state machine, replies to client. So write latency ≈ max(local fsync, network RTT to majority + remote fsync). With a local majority this is one fsync plus one local RTT; with a remote majority it is one fsync plus one WAN RTT. Election-time unavailability is bounded by the election timeout plus one round trip (a few hundred ms), but if elections thrash—because of network flapping or overloaded disks—the cluster can be write-unavailable for seconds, which is why tuning election timeouts to be safely above expected RTT variance is critical.</p>
+<hr>
+<h2 id="sharp-interview-question">Sharp Interview Question</h2>
+<p><strong>Question:</strong> You run a 5-node Raft cluster. The leader receives a client write, replicates the entry to two followers (so three nodes total have it—a majority), commits it, and replies “committed” to the client. Immediately after, before the leader sends the next heartbeat, it crashes. Two of the three nodes that had the entry are in a network partition with the leader’s corpse and cannot reach the other two nodes; the other two nodes can form a majority-of-three with one of the entry-holders. Explain whether the committed entry can ever be lost, and why Raft’s election rule is what makes this safe.</p>
+<p><strong>Model Answer:</strong> The entry can never be lost, and the reason is leader-completeness, which flows from the election voting rule. The entry was committed, which by Raft’s commit rule means it was replicated to a majority (three of five) and all prior entries were committed. Any new leader must be elected by a majority of votes, and a server only votes for a candidate whose log is at least as up to date as its own (compared by last-log-term then by log length). The two nodes that did <em>not</em> receive the entry have logs that are shorter or lower-term at that index, so they cannot be elected over any of the three entry-holders without the entry-holders’ votes—and any entry-holder that votes does so only for a candidate whose log contains the committed entry. Therefore the next leader is guaranteed to have the committed entry in its log, will preserve it, and will eventually re-replicate it to the lagging nodes. The client’s “committed” reply was truthful and durable. The subtle point that often gets missed is Raft’s <em>prior-term commit rule</em>: a leader commits entries from its own term by counting replicas, but it only commits prior-term entries <em>indirectly</em> by committing a later entry from its own term. If our crashed leader had committed the entry purely by counting replicas from a prior term, there would be an edge case; the rule that the leader must have a current-term entry replicated to a majority before declaring prior entries committed is exactly what closes that hole.</p>
+<p><strong>Common Pitfall:</strong> Candidates frequently answer “the entry could be lost because the other two nodes can form a majority without it”—this is wrong because it conflates <em>any</em> three nodes with <em>any</em> majority, ignoring that the election vote is gated on log completeness. The deeper pitfall is assuming majority replication alone guarantees durability; it does only because the <em>election rule</em> couples majority-vote with log-up-to-dateness. If you implemented Raft’s log replication faithfully but allowed votes without the log check (a common bug in naive implementations), you would reintroduce exactly the bug the question is probing: a leader without the committed entry could be elected and overwrite it, silently losing a client-acknowledged write. The lesson: in Raft, safety lives in the election rule, not the replication rule.</p>
+<hr>
+<h2 id="protocol-comparison-2pc-vs-3pc-vs-paxos-vs-raft">Protocol Comparison: 2PC vs 3PC vs Paxos vs Raft</h2>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>2PC</th>
+<th>3PC</th>
+<th>Paxos / Multi-Paxos</th>
+<th>Raft</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Problem solved</strong></td>
+<td>Atomic commit across participants</td>
+<td>Atomic commit (non-blocking)</td>
+<td>Consensus on a value / log</td>
+<td>Consensus on a log</td>
+</tr>
+<tr>
+<td><strong>Blocking?</strong></td>
+<td>Yes — coordinator failure in prepared window</td>
+<td>No (under sync + fail-stop)</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>Quorum requirement</strong></td>
+<td>All participants must vote</td>
+<td>Majority</td>
+<td>Majority</td>
+<td>Majority</td>
+</tr>
+<tr>
+<td><strong>Failure tolerance</strong></td>
+<td>0 (any failure can block)</td>
+<td>F of 2F+1 (unsafe under partition)</td>
+<td>F of 2F+1</td>
+<td>F of 2F+1</td>
+</tr>
+<tr>
+<td><strong>Safety under partition</strong></td>
+<td>✅ Safe (blocks)</td>
+<td>❌ Unsafe (can violate atomicity)</td>
+<td>✅ Safe (blocks minority)</td>
+<td>✅ Safe (blocks minority)</td>
+</tr>
+<tr>
+<td><strong>Network model</strong></td>
+<td>Synchronous assumption</td>
+<td>Synchronous (bounded delay)</td>
+<td>Asynchronous (partial synchrony)</td>
+<td>Asynchronous (partial synchrony)</td>
+</tr>
+<tr>
+<td><strong>Leader model</strong></td>
+<td>Coordinator (single, not elected)</td>
+<td>Coordinator (single, not elected)</td>
+<td>Stable leader (Multi-Paxos)</td>
+<td>Elected leader (term-based)</td>
+</tr>
+<tr>
+<td><strong>Phases per decision</strong></td>
+<td>2 (prepare, commit)</td>
+<td>3 (vote, pre-commit, commit)</td>
+<td>2 (prepare/promise, accept/accepted); 1 with stable leader</td>
+<td>1 round trip (AppendEntries)</td>
+</tr>
+<tr>
+<td><strong>Crash recovery</strong></td>
+<td>Replay WAL, contact recovery coordinator</td>
+<td>Local state determines decision</td>
+<td>Re-run prepare on leader change</td>
+<td>Log consistency check + backfill</td>
+</tr>
+<tr>
+<td><strong>Latency overhead</strong></td>
+<td>~3x single-node commit</td>
+<td>Higher than 2PC (extra round)</td>
+<td>~1 RTT per entry (stable leader)</td>
+<td>~1 RTT per entry (stable leader)</td>
+</tr>
+<tr>
+<td><strong>Understandability</strong></td>
+<td>Simple</td>
+<td>Moderate</td>
+<td>Notoriously difficult</td>
+<td>Designed for understandability</td>
+</tr>
+<tr>
+<td><strong>Real-world systems</strong></td>
+<td>XA, MySQL/PostgreSQL XA, sharded DBs</td>
+<td>Mostly academic</td>
+<td>Chubby, Spanner, PaxosStore</td>
+<td>etcd, Consul, CockroachDB, TiKV</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extended-quick-reference-with-zab-and-bft">Extended Quick Reference (with ZAB and BFT)</h3>
+<table>
+<thead>
+<tr>
+<th>Protocol</th>
+<th>Problem Solved</th>
+<th>Blocking?</th>
+<th>Quorum</th>
+<th>Failure Tolerance</th>
+<th>Real Systems</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2PC</td>
+<td>Atomic commit across participants</td>
+<td>Yes (coordinator failure in prepared window)</td>
+<td>All participants must vote</td>
+<td>0 (any failure can block)</td>
+<td>XA, MySQL/PostgreSQL XA, sharded DBs</td>
+</tr>
+<tr>
+<td>3PC</td>
+<td>Atomic commit, non-blocking</td>
+<td>No (under sync + fail-stop)</td>
+<td>Majority</td>
+<td>F of 2F+1 (unsafe under partition)</td>
+<td>Mostly academic</td>
+</tr>
+<tr>
+<td>Paxos / Multi-Paxos</td>
+<td>Consensus on a value / log</td>
+<td>No</td>
+<td>Majority</td>
+<td>F of 2F+1</td>
+<td>Chubby, Spanner, PaxosStore</td>
+</tr>
+<tr>
+<td>Raft</td>
+<td>Consensus on a log</td>
+<td>No</td>
+<td>Majority</td>
+<td>F of 2F+1</td>
+<td>etcd, Consul, CockroachDB, TiKV</td>
+</tr>
+<tr>
+<td>ZAB</td>
+<td>Atomic broadcast (log)</td>
+<td>No</td>
+<td>Majority</td>
+<td>F of 2F+1</td>
+<td>ZooKeeper</td>
+</tr>
+<tr>
+<td>PBFT / HotStuff</td>
+<td>Byzantine consensus</td>
+<td>No</td>
+<td>2F+1 of 3F+1</td>
+<td>F Byzantine of 3F+1</td>
+<td>Blockchains, Tendermint</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="further-reading">Further Reading</h2>
+<ul>
+<li>Lamport, “The Part-Time Parliament” (1998) and “Paxos Made Simple” (2001).</li>
+<li>Ongaro &amp; Ousterhout, “In Search of an Understandable Consensus Algorithm” (USENIX ATC 2014)—the Raft paper.</li>
+<li>Junqueira, Reed, Serafini, “Zab: High-performance broadcast for primary-backup systems” (DSN 2011).</li>
+<li>Gilbert &amp; Lynch, “Brewer’s Conjecture and the Feasibility of Consistent, Available, Partition-Tolerant Web Services” (2002)—the CAP formalization.</li>
+<li>Abadi, “Consistency Tradeoffs in Modern Distributed Database System Design” (2010)—PACELC.</li>
+<li>Fischer, Lynch, Paterson, “Impossibility of Distributed Consensus with One Faulty Process” (1985)—FLP.</li>
+<li>van Renesse &amp; Altinbuken, “Paxos Made Moderately Complex” (2015)—the clearest engineering treatment of Multi-Paxos.</li>
+<li>Howard et al., “RAFT Refloated: Do We Have a Consensus?” (2014)—a critical re-examination of Raft’s edge cases.</li>
+</ul>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>2PC: coordinator asks all nodes to prepare, then commit or abort. Blocking — if coordinator dies, nodes are stuck</li>
+<li>Raft: leader-based, majority quorum, heartbeats. Understandable and widely adopted (etcd, Consul, CockroachDB)</li>
+<li>Paxos: proven correct but notoriously hard to understand. Used in Chubby, ZooKeeper (via ZAB)</li>
+<li>Quorum = floor(N/2) + 1. With 5 nodes, tolerate 2 failures. With 3 nodes, tolerate 1.</li>
+<li>Log replication: leader appends, replicates to followers, commits when majority ack</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“What’s the 2PC coordinator failure problem?” — If the coordinator crashes after prepare but before commit/abort, participants hold locks and can’t proceed (blocking). 3PC solves this but adds message overhead.</li>
+<li>“Raft vs Paxos — why did Raft win?” — Raft was designed for understandability (same guarantees as Paxos but clearer separation of concerns). Paxos is correct but practitioners find it hard to implement correctly.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>2PC is NOT a consensus algorithm — it’s a atomic commit protocol. The difference: 2PC can block if the coordinator fails, while consensus algorithms (Raft, Paxos) guarantee progress as long as a majority of nodes are alive. Don’t conflate the two in an interview.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/two-phase-commit-and-consensus-raft-paxos/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Two-Phase%20Commit%20%26%20Consensus%20(Raft%2FPaxos)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Ftwo-phase-commit-and-consensus-raft-paxos%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Ftwo-phase-commit-and-consensus-raft-paxos%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/two-phase-commit-and-consensus-raft-paxos" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/twitter-feed-system-fan-out" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Twitter / Feed System (Fan-out)</span></a><a href="/notes/system-design/uber-dispatch-system" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Uber&#39;s Dispatch System</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Two-Phase Commit &amp; Consensus (Raft/Paxos)" data-selector=".article-prose" data-article-slug="system-design/two-phase-commit-and-consensus-raft-paxos" data-article-title="Two-Phase Commit &amp; Consensus (Raft/Paxos)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

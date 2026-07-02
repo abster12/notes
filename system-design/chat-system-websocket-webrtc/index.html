@@ -1,0 +1,847 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Chat System (WebSocket, WebRTC) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview" class="toc-link" data-toc-link="overview" data-astro-cid-p33bl5ka>Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#real-time-transport-websocket-vs-sse-vs-long-polling" class="toc-link" data-toc-link="real-time-transport-websocket-vs-sse-vs-long-polling" data-astro-cid-p33bl5ka>Real-Time Transport: WebSocket vs SSE vs Long Polling</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#connection-management-at-100-million-concurrent" class="toc-link" data-toc-link="connection-management-at-100-million-concurrent" data-astro-cid-p33bl5ka>Connection Management at 100 Million Concurrent</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#message-delivery-guarantees" class="toc-link" data-toc-link="message-delivery-guarantees" data-astro-cid-p33bl5ka>Message Delivery Guarantees</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#message-ordering" class="toc-link" data-toc-link="message-ordering" data-astro-cid-p33bl5ka>Message Ordering</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#group-chat-fan-out" class="toc-link" data-toc-link="group-chat-fan-out" data-astro-cid-p33bl5ka>Group Chat Fan-Out</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#presence-system" class="toc-link" data-toc-link="presence-system" data-astro-cid-p33bl5ka>Presence System</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#typing-indicators-and-read-receipts" class="toc-link" data-toc-link="typing-indicators-and-read-receipts" data-astro-cid-p33bl5ka>Typing Indicators and Read Receipts</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#message-storage-with-cassandra" class="toc-link" data-toc-link="message-storage-with-cassandra" data-astro-cid-p33bl5ka>Message Storage with Cassandra</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#end-to-end-encryption" class="toc-link" data-toc-link="end-to-end-encryption" data-astro-cid-p33bl5ka>End-to-End Encryption</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#media-sharing" class="toc-link" data-toc-link="media-sharing" data-astro-cid-p33bl5ka>Media Sharing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#push-notifications-for-offline-users" class="toc-link" data-toc-link="push-notifications-for-offline-users" data-astro-cid-p33bl5ka>Push Notifications for Offline Users</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-estimation" class="toc-link" data-toc-link="capacity-estimation" data-astro-cid-p33bl5ka>Capacity Estimation</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-question-model-answer-and-common-pitfall" class="toc-link" data-toc-link="interview-question-model-answer-and-common-pitfall" data-astro-cid-p33bl5ka>Interview Question, Model Answer, and Common Pitfall</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#related" class="toc-link" data-toc-link="related" data-astro-cid-p33bl5ka>Related</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Chat System (WebSocket, WebRTC)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 27 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 38 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>advanced</span><span class="tag" data-astro-cid-sgg5joot>chat</span><span class="tag" data-astro-cid-sgg5joot>websocket</span><span class="tag" data-astro-cid-sgg5joot>webrtc</span><span class="tag" data-astro-cid-sgg5joot>cassandra</span><span class="tag" data-astro-cid-sgg5joot>e2ee</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="chat-system-websocket-webrtc">Chat System (WebSocket, WebRTC)</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A real-time messaging system using WebSockets for persistent connections, handling message delivery, presence, and sync across devices. It decomposes into a connection plane (WebSocket gateways), routing plane (message bus + processors), storage plane (durable message store), and push/notification plane.</p>
+<p><strong>How it’s asked:</strong> “Design a chat application like WhatsApp supporting 100M concurrent users, group chats, message ordering, delivery receipts, and offline message delivery.”</p>
+<hr>
+<h2 id="overview">Overview</h2>
+<p>A real-time messaging system is one of the hardest distributed systems to build because it combines two notoriously difficult problems: maintaining millions of long-lived stateful connections, and delivering ordered, durable messages between arbitrary pairs or groups of users with sub-second latency. Unlike a stateless API where each request is independent, a chat server must remember which socket belongs to which user, survive node failures without losing in-flight messages, and keep conversation state consistent across datacenters. The reference scale here is WhatsApp-class — roughly 100 billion messages per day and tens of millions of concurrent connections — but the design principles apply from a ten-person startup chat to a global messenger.</p>
+<p>The architecture decomposes into four planes that can be reasoned about and scaled independently:</p>
+<ul>
+<li><strong>Connection plane</strong> — the fleet of WebSocket gateway servers that hold open sockets to connected clients and translate between the wire protocol and the internal message bus.</li>
+<li><strong>Routing plane</strong> — the Kafka (or equivalent) backbone plus message processors that persist messages, resolve recipient locations, and fan out delivery.</li>
+<li><strong>Storage plane</strong> — Cassandra for the append-only message log, PostgreSQL for relational metadata, and S3 for media.</li>
+<li><strong>Control plane</strong> — presence, typing indicators, read receipts, and push notification fan-out — the ephemeral signals that make chat feel “live” even though they carry no durable content.</li>
+</ul>
+<p>Each plane has different consistency, latency, and availability requirements, and conflating them is one of the most common design mistakes.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   CLIENTS (100M concurrent)</span></span>
+<span class="line"><span>   ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐</span></span>
+<span class="line"><span>   │ C1  │ │ C2  │ │ C3  │ │ Cn  │</span></span>
+<span class="line"><span>   └──┬──┘ └──┬──┘ └──┬──┘ └──┬──┘</span></span>
+<span class="line"><span>      └───────┴────┬───┴───────┘</span></span>
+<span class="line"><span>                   │ WebSocket over TLS (one socket per user)</span></span>
+<span class="line"><span>                   ▼</span></span>
+<span class="line"><span>        ┌──────────────────────────────┐</span></span>
+<span class="line"><span>        │   L4 Load Balancer           │</span></span>
+<span class="line"><span>        │   (HAProxy / NLB / Maglev)   │   distributes across many</span></span>
+<span class="line"><span>        │                             │   gateway IPs to beat the</span></span>
+<span class="line"><span>        └─────────────┬───────────────┘   65,500-tuple limit</span></span>
+<span class="line"><span>                      │ sticky / L4 passthrough</span></span>
+<span class="line"><span>       ┌──────────────┼──────────────┐</span></span>
+<span class="line"><span>       ▼              ▼              ▼</span></span>
+<span class="line"><span>   ┌────────┐     ┌────────┐     ┌────────┐</span></span>
+<span class="line"><span>   │  GW1   │     │  GW2   │     │  GWn   │   CONNECTION PLANE</span></span>
+<span class="line"><span>   │ ~100K  │     │ ~100K  │     │ ~100K  │   (1k–2k gateways)</span></span>
+<span class="line"><span>   │ conns  │     │ conns  │     │ conns  │</span></span>
+<span class="line"><span>   │uid↔sock│     │uid↔sock│     │uid↔sock│</span></span>
+<span class="line"><span>   └───┬────┘     └───┬────┘     └───┬────┘</span></span>
+<span class="line"><span>       └──────────────┼──────────────┘</span></span>
+<span class="line"><span>                      │ publish / consume</span></span>
+<span class="line"><span>                      ▼</span></span>
+<span class="line"><span>        ┌──────────────────────────────┐</span></span>
+<span class="line"><span>        │   Kafka                      │  ROUTING PLANE</span></span>
+<span class="line"><span>        │   (partitioned by            │</span></span>
+<span class="line"><span>        │    conversation_id)          │</span></span>
+<span class="line"><span>        └──────────────┬───────────────┘</span></span>
+<span class="line"><span>                       ▼</span></span>
+<span class="line"><span>        ┌──────────────────────────────┐</span></span>
+<span class="line"><span>        │   Message Processor          │</span></span>
+<span class="line"><span>        └──┬───────────┬───────────┬───┘</span></span>
+<span class="line"><span>           ▼           ▼           ▼</span></span>
+<span class="line"><span>       ┌──────┐   ┌────────┐   ┌──────┐</span></span>
+<span class="line"><span>       │Cassan│   │ Redis  │   │  S3  │   STORAGE PLANE</span></span>
+<span class="line"><span>       │dra   │   │ pub/sub│   │ media│</span></span>
+<span class="line"><span>       │msgs  │   │ +pres. │   │      │</span></span>
+<span class="line"><span>       └──────┘   └────┬───┘   └──────┘</span></span>
+<span class="line"><span>                       │</span></span>
+<span class="line"><span>                       ▼</span></span>
+<span class="line"><span>        ┌──────────────────────────────┐</span></span>
+<span class="line"><span>        │   CONTROL PLANE              │</span></span>
+<span class="line"><span>        │   presence · typing ·        │</span></span>
+<span class="line"><span>        │   read receipts · push fanout│</span></span>
+<span class="line"><span>        └──────────────────────────────┘</span></span></code></pre>
+<h2 id="real-time-transport-websocket-vs-sse-vs-long-polling">Real-Time Transport: WebSocket vs SSE vs Long Polling</h2>
+<p>The choice of client-to-server transport is foundational because it determines connection semantics, overhead, and how bidirectional features like typing indicators are implemented.</p>
+<p><strong>HTTP long polling</strong> is the legacy fallback: the client issues an HTTP request that the server holds open until either data is available or a timeout (typically 30–60 seconds) expires, at which point the response is sent and the client immediately re-issues a new request. It works through any proxy and requires no special protocol upgrade, but every “message” carries full HTTP header overhead (hundreds of bytes), each poll cycle incurs a new TCP or TLS handshake unless keep-alive is maintained, and the gap between a poll expiring and the next one starting creates a delivery latency floor. Long polling also doubles request volume because the server must respond to the hanging poll <em>and</em> the client must re-poll, and it makes the “client wants to send” path awkward — that requires a separate POST, so sending and receiving happen on different connections with no shared ordering.</p>
+<p><strong>Server-Sent Events (SSE)</strong> improve on long polling by using a single persistent HTTP response stream with a defined <code>text/event-stream</code> content type and automatic reconnection built into the browser EventSource API. The server pushes events down the stream with minimal framing (a few bytes per event), and the browser handles reconnect with the <code>Last-Event-ID</code> header so the server can resume without gaps. SSE is excellent for one-way push — notifications, live scores, presence feeds — because it is simple, uses standard HTTP/2 multiplexing, and has near-zero framing overhead. Its fundamental limitation is that it is server-to-client only. The client still needs a separate HTTP POST to send a message, which means two connections per user, no shared backpressure, and no way to push a message down the same stream the client is typing into. For a chat product that needs typing indicators, delivery acknowledgements, and call signaling on the same channel, SSE forces a hybrid design that is harder to reason about than a single full-duplex channel.</p>
+<p><strong>WebSocket</strong> is the right default for chat because it provides a single full-duplex, framed, persistent connection over one TCP (and typically one TLS) session. After an HTTP Upgrade handshake, the protocol switches to a binary framing layer with 2–10 bytes of overhead per frame, and both directions share the same connection with a single ordering context. This matters operationally: one socket per user instead of two, one TLS handshake amortized over the session, heartbeats that work in both directions, and a natural channel for signaling, typing, receipts, and acks. The cost is that WebSockets are stateful — a load balancer must use sticky or L4 passthrough routing, the gateway must hold per-connection state in memory, and a gateway failure drops every connection on that node. Mobile networks add friction because carrier NATs and proxies can idle-kill sockets, so robust ping/pong heartbeats and client-side reconnect with backoff are mandatory.</p>
+<p>In practice, production chat systems use WebSocket as the primary transport, fall back to long polling for hostile corporate proxies that block upgrades, and reserve SSE for narrow one-way push surfaces (a notification-only widget, for example) rather than the core chat channel.</p>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Long Polling</th>
+<th>SSE</th>
+<th>WebSocket</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Direction</td>
+<td>Half-duplex (request/response)</td>
+<td>Server→client only</td>
+<td>Full-duplex</td>
+</tr>
+<tr>
+<td>Connections per user</td>
+<td>2 (recv poll + send POST)</td>
+<td>2 (stream + send POST)</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Framing overhead</td>
+<td>Full HTTP headers per poll (~hundreds of bytes)</td>
+<td>A few bytes per event</td>
+<td>2–10 bytes per frame</td>
+</tr>
+<tr>
+<td>Handshake cost</td>
+<td>New TCP/TLS each poll (unless keep-alive)</td>
+<td>One per stream</td>
+<td>One HTTP Upgrade per session</td>
+</tr>
+<tr>
+<td>Reconnect</td>
+<td>Client-driven re-poll</td>
+<td>Built into EventSource via <code>Last-Event-ID</code></td>
+<td>Client-side backoff</td>
+</tr>
+<tr>
+<td>Typing / signaling on same channel</td>
+<td>No (separate POST)</td>
+<td>No (separate POST)</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Latency floor</td>
+<td>Re-poll gap</td>
+<td>Low (persistent stream)</td>
+<td>Lowest</td>
+</tr>
+<tr>
+<td>Request amplification</td>
+<td>~2× (hanging poll + re-poll)</td>
+<td>1×</td>
+<td>1×</td>
+</tr>
+<tr>
+<td>Proxy compatibility</td>
+<td>Excellent (plain HTTP)</td>
+<td>Good (HTTP)</td>
+<td>Good, but blocked by some corporate proxies</td>
+</tr>
+<tr>
+<td>Backpressure</td>
+<td>None shared</td>
+<td>None shared</td>
+<td>Shared on one socket</td>
+</tr>
+<tr>
+<td>Best fit</td>
+<td>Legacy fallback through hostile proxies</td>
+<td>One-way push (notifications, scores, presence feeds)</td>
+<td>Chat core</td>
+</tr>
+</tbody>
+</table>
+<h2 id="connection-management-at-100-million-concurrent">Connection Management at 100 Million Concurrent</h2>
+<p>Holding 100 million concurrent WebSocket connections is a textbook exercise in eliminating per-connection cost. A single Linux gateway node is typically tuned to carry 50,000–200,000 connections, which means 100M connections require roughly 500–2,000 gateway instances — a fleet, not a machine.</p>
+<p>The first hard limit is the <strong>ephemeral port range</strong>: a client TCP connection is identified by the 4-tuple (source IP, source port, dest IP, dest port), so a single source IP can only open about 65,500 connections to a single destination IP:port. To exceed that, gateways either:</p>
+<ul>
+<li>Bind multiple listening ports</li>
+<li>Use multiple IPs per node</li>
+<li>Or — the common production pattern — sit behind an L4 load balancer (HAProxy, AWS NLB, Maglev, Envoy’s TCP proxy) that distributes inbound connections across many gateway IPs so each <code>(client IP, gateway IP)</code> pair stays under the tuple limit</li>
+</ul>
+<p>The kernel must also be tuned:</p>
+<ul>
+<li><code>ulimit -n</code> raised to a few hundred thousand</li>
+<li><code>net.core.somaxconn</code> and <code>net.ipv4.tcp_max_syn_backlog</code> increased</li>
+<li><code>ip_local_port_range</code> widened</li>
+<li><code>fs.file-max</code> raised globally</li>
+</ul>
+<p>Memory is the binding constraint, not CPU, because idle WebSockets cost RAM but almost no CPU. A typical Go or Erlang gateway uses 10–40 KB of state per connection (read/write buffers, goroutine/process stack, per-user routing entry), so 100K connections consume roughly 1–4 GB and a 200K-connection node needs a memory headroom budget accordingly. This is why production gateways are written in connection-efficient runtimes:</p>
+<ul>
+<li><strong>Erlang/OTP</strong> (WhatsApp, ejabberd) — each connection is a cheap process with a small heap</li>
+<li><strong>Go</strong> (Discord) — goroutines</li>
+<li><strong>Hand-tuned C++/Rust</strong> with epoll/kqueue and io_uring for event-driven I/O</li>
+<li><strong>Node.js</strong> works but per-connection memory is higher and its single-threaded model caps throughput per core, so it is usually sharded horizontally</li>
+</ul>
+<p>The gateway’s in-memory map — <code>user_id → connection object</code> — is the single piece of stateful routing data, and it must be rebuilt on reconnect and never trusted as durable.</p>
+<p><strong>Gateway failover</strong> is the operational nemesis of this design. When a gateway holding 100K connections dies, 100K clients reconnect within seconds, creating a thundering herd that can overload the load balancer, the presence service, and adjacent gateways. The standard mitigations are:</p>
+<ul>
+<li>Client-side exponential backoff with full jitter (a random spread across a 1–30 second window)</li>
+<li>Per-client reconnect deadline staggering</li>
+<li>A “connection drain” mode where a node about to be terminated stops accepting new sockets and lets existing ones migrate on natural heartbeat failure</li>
+<li>Some systems add a <strong>connection registry</strong> — a Redis or etcd cluster mapping <code>user_id → gateway_id</code> — so that on reconnect a client can be routed back to a node that still holds its session, though at 100M scale this registry itself becomes a hot path and is usually sharded by user_id</li>
+</ul>
+<p>Heartbeats run every 15–30 seconds with a server-side timeout of 45–60 seconds: shorter intervals burn mobile battery, longer intervals delay dead-connection detection. The heartbeat is also the carrier for presence updates, so one packet does double duty.</p>
+<h2 id="message-delivery-guarantees">Message Delivery Guarantees</h2>
+<p>Chat does not need exactly-once delivery — that is impossible across an unreliable network with retries — but it does need <strong>at-least-once with client-side deduplication</strong>, plus durable persistence so a message survives even if the recipient is offline and the sender’s gateway crashes mid-send. The write path is the canonical place to enforce durability.</p>
+<p>When the sender’s gateway receives a message, it does not deliver it to the recipient until it has been durably written to the message store and acknowledged. Specifically:</p>
+<ol>
+<li>The gateway publishes the message to a Kafka topic partitioned by <code>conversation_id</code></li>
+<li>The message processor consumes it</li>
+<li>It writes to Cassandra with a quorum acknowledgement</li>
+<li>Only then does it fan out to the recipient’s gateway via Redis pub/sub</li>
+</ol>
+<p>The sender sees the following UI states:</p>
+<ul>
+<li><strong>“sent” (single check)</strong> — when the message is durably persisted</li>
+<li><strong>“delivered” (double check)</strong> — when the recipient’s gateway acknowledges receipt</li>
+<li><strong>“read” (blue ticks)</strong> — when the client reports a read receipt</li>
+</ul>
+<p>This ordering of acknowledgements is the mechanism by which the UI communicates guarantee level to the user.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>SENDER    SENDER GW    KAFKA      PROCESSOR   CASSANDRA   REDIS        RECV GW    RECIPIENT</span></span>
+<span class="line"><span>  │          │           │           │           │        PUB/SUB         │          │</span></span>
+<span class="line"><span>  │── msg ─▶│           │           │           │          │             │          │</span></span>
+<span class="line"><span>  │          │── pub ──▶│(conv_id)  │           │          │             │          │</span></span>
+<span class="line"><span>  │          │           │── consume▶│          │          │             │          │</span></span>
+<span class="line"><span>  │          │           │           │── write ▶│          │             │          │</span></span>
+<span class="line"><span>  │          │           │           │          │LOCAL_Q   │             │          │</span></span>
+<span class="line"><span>  │          │           │           │◀─ ack ───│          │             │          │</span></span>
+<span class="line"><span>  │          │◀─"sent"───│           │          │          │             │          │</span></span>
+<span class="line"><span>  │◀─ ✓ ─────│           │           │          │          │             │          │</span></span>
+<span class="line"><span>  │          │           │           │── fanout ─────────▶│             │          │</span></span>
+<span class="line"><span>  │          │           │           │          │          │── deliver ▶│          │</span></span>
+<span class="line"><span>  │          │           │           │          │          │             │── push ▶│</span></span>
+<span class="line"><span>  │          │           │           │          │          │             │◀─ ack ──│</span></span>
+<span class="line"><span>  │          │           │           │◀─delivered│         │             │          │</span></span>
+<span class="line"><span>  │◀─ ✓✓ ────│           │           │          │          │             │          │</span></span>
+<span class="line"><span>  │          │           │           │          │          │             │◀─"read"─│</span></span>
+<span class="line"><span>  │◀─ blue ──│           │           │          │          │             │          │</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   real-time path (online recipient): &#x3C;100 ms end-to-end</span></span>
+<span class="line"><span>   offline path (recipient offline): gateway→Kafka→processor→persist→enqueue push</span></span>
+<span class="line"><span>                                      →notification service→APNs/FCM→device wake</span></span>
+<span class="line"><span>                                      →app connects→client pulls from store by cursor</span></span></code></pre>
+<p>At-least-once means a message can arrive twice. The cause is retry: if the recipient’s gateway delivers the message but the network drops the ack, the message processor retries, and the recipient sees the message again. The defense is a <strong>client-side deduplication set</strong> keyed by <code>message_id</code> (a server-assigned Snowflake or UUIDv7) — the client tracks the last few hundred message IDs per conversation and silently drops duplicates. Idempotency also applies to the persist step: Cassandra writes are naturally idempotent on the same primary key, so retrying a write with the same <code>message_id</code> is safe. For the rare case where a message is persisted but never delivered (gateway crash after persist, before fan-out), the recipient pulls undelivered messages from the message store on reconnect — this is why the “real-time vs offline” distinction matters and why the store must be the source of truth, not the in-flight pub/sub channel.</p>
+<p>A subtler guarantee is <strong>delivery confirmation semantics for group chats</strong>. In a 50-person group, “delivered” can mean “delivered to one recipient” or “delivered to all,” and different products choose differently. WhatsApp shows single/double ticks at the conversation level (delivered to all, read by all) whereas some enterprise tools show per-recipient state. The implementation collects per-recipient acks at the message processor and only flips the aggregate status when a quorum or all recipients have acked — a design choice that trades UI simplicity for fan-out ack traffic, which can itself be a bottleneck in large groups and is often throttled or aggregated.</p>
+<h2 id="message-ordering">Message Ordering</h2>
+<p>Ordering within a conversation must be causal and monotonic from each user’s perspective, but global ordering across conversations is irrelevant. The mechanism is <strong>Kafka partition affinity</strong>: all messages for a given <code>conversation_id</code> hash to the same partition, and Kafka preserves offset order within a partition, so a single message processor instance consuming that partition sees messages in send order. The processor assigns a monotonically increasing sequence (either derived from the Kafka offset or a per-conversation counter in Cassandra) and writes to the store with that sequence as the clustering key, so reads back from Cassandra are ordered without a sort step.</p>
+<p>The hard part is the <strong>distributed send race</strong>: if user A and user B send messages nearly simultaneously from different gateways, both publish to the same partition, and Kafka’s ordering reflects publish time, not the user’s perceived send time. For most products this is acceptable because the difference is milliseconds and the displayed timestamp reconciles it. For stricter ordering, the system can use a <strong>logical clock per conversation</strong> — a Lamport-style counter where each client tags its message with <code>max(its last seen counter) + 1</code> and the server breaks ties by sender_id — but this adds a round trip and is rarely worth it.</p>
+<p>A more practical concern is <strong>reconnection ordering</strong>: when a client reconnects, it must receive offline messages first (pulled from the store by sequence) and then transition to the live pub/sub stream without gaps or duplicates. The gateway handles this by:</p>
+<ol>
+<li>Fetching the offline backlog with a <code>last_message_id</code> cursor</li>
+<li>Simultaneously subscribing to the live channel</li>
+<li>Deduplicating any message that appears in both</li>
+</ol>
+<p>Group chats add the wrinkle that different recipients may see messages arrive in slightly different orders if their gateways process pub/sub events at different speeds, but because each message carries its server-assigned sequence, the client renders by sequence, not by arrival order, so the final display is consistent. The store is the invariant: reads are always ordered by <code>(conversation_id, message_id)</code>, and any in-memory reordering on the client is a presentation concern, not a correctness one.</p>
+<h2 id="group-chat-fan-out">Group Chat Fan-Out</h2>
+<p>Direct messages are easy: one persist, one pub/sub push. Groups are where the architecture strains. A message to a 256-person group requires one persist and 256 delivery attempts, each of which may hit an online gateway (fast, cheap pub/sub) or an offline user (trigger a push notification, queue for later). The naive approach — loop over participants and push to each — falls over for two reasons:</p>
+<ul>
+<li>It turns one Kafka message into 256 pub/sub publishes on the hot path, multiplying gateway load</li>
+<li>For very large groups (channels with 10K–100K members) it becomes a write-amplification disaster: one send becomes 100K deliveries</li>
+</ul>
+<p>The production pattern separates <strong>fan-out-on-write</strong> from <strong>fan-out-on-read</strong>:</p>
+<ul>
+<li><strong>Fan-out-on-write (small groups, up to a few hundred members)</strong> — the message processor expands the recipient list at write time, publishes to each user’s per-user Redis channel, and writes a per-recipient inbox row (or a pointer) so offline users can pull their undelivered messages on reconnect. This is what WhatsApp, Signal, and most group messengers use.</li>
+<li><strong>Fan-out-on-read (large broadcast channels)</strong> — the message is written once to the channel’s timeline, and each recipient pulls from that timeline with a per-user read cursor, identical to a Twitter-style feed. This caps write amplification at 1 regardless of channel size, at the cost of N reads instead of 1 read per message — the right trade-off when members far outnumber messages per member.</li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>             ONE MESSAGE to a 256-person group</span></span>
+<span class="line"><span>                      │</span></span>
+<span class="line"><span>                      ▼</span></span>
+<span class="line"><span>              ┌───────────────┐</span></span>
+<span class="line"><span>              │  Processor    │</span></span>
+<span class="line"><span>              └───────┬───────┘</span></span>
+<span class="line"><span>                      │ single persist (1 write)</span></span>
+<span class="line"><span>                      ▼</span></span>
+<span class="line"><span>                 ┌─────────┐</span></span>
+<span class="line"><span>                 │Cassandra│</span></span>
+<span class="line"><span>                 └─────────┘</span></span>
+<span class="line"><span>                      │</span></span>
+<span class="line"><span>              ┌───────┴────────┐</span></span>
+<span class="line"><span>              │ recipient list │</span></span>
+<span class="line"><span>              └───────┬────────┘</span></span>
+<span class="line"><span>                      │</span></span>
+<span class="line"><span>        ┌─────────────┼──────────────┐</span></span>
+<span class="line"><span>        ▼             ▼              ▼</span></span>
+<span class="line"><span>   ONLINE         ONLINE        OFFLINE</span></span>
+<span class="line"><span>   members        members       members</span></span>
+<span class="line"><span>        │             │              │</span></span>
+<span class="line"><span>        ▼             ▼              ▼</span></span>
+<span class="line"><span>   ┌─────────┐   ┌─────────┐   ┌──────────────┐</span></span>
+<span class="line"><span>   │  Redis  │   │  Redis  │   │ inbox pointer│</span></span>
+<span class="line"><span>   │ pub/sub │   │ pub/sub │   │  (Cassandra) │</span></span>
+<span class="line"><span>   └────┬────┘   └────┬────┘   └──────┬───────┘</span></span>
+<span class="line"><span>        │             │               │</span></span>
+<span class="line"><span>        ▼             ▼               ▼</span></span>
+<span class="line"><span>   gateway       gateway         push notification</span></span>
+<span class="line"><span>   push (fast)   push (fast)     (coalesced, drained</span></span>
+<span class="line"><span>                                   on reconnect)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  ── fan-out-on-WRITE: small groups (≤ few hundred members) ──</span></span>
+<span class="line"><span>      write amplification = N members; one push each</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  ── fan-out-on-READ: large channels (10K – 1M members) ──</span></span>
+<span class="line"><span>      write amplification = 1; message written once to</span></span>
+<span class="line"><span>      channel timeline; each member pulls with per-user cursor</span></span>
+<span class="line"><span>      (Twitter-feed style). The honest framing for a</span></span>
+<span class="line"><span>      1M-member channel is "broadcast with a chat UI".</span></span></code></pre>
+<p>A middle ground for medium groups is a <strong>hybrid tiered fan-out</strong>:</p>
+<ul>
+<li>Online members get immediate pub/sub delivery</li>
+<li>Offline members get a lightweight inbox pointer written to Cassandra (one row per offline recipient) and a push notification</li>
+<li>The inbox pointer is cheap because it is a single wide-row write per conversation per batch, and it drains on reconnect</li>
+</ul>
+<p>Delivery acknowledgements for groups are aggregated: the processor collects acks and updates a per-message delivery bitmap, only flipping the conversation-level “delivered” status when enough recipients have acked, and throttling ack traffic for large groups to avoid a feedback storm. For groups above a threshold (often 1000+), read receipts are dropped or sampled entirely because the ack volume scales with group size and provides little value to the sender.</p>
+<h2 id="presence-system">Presence System</h2>
+<p>Presence is the system’s knowledge of who is online, where they are connected, and what their last-seen time is. It is an eventually consistent, high-write, high-read subsystem and is almost always backed by Redis. The core data structure is a per-user hash: <code>presence:{user_id} → {status, gateway_id, last_heartbeat}</code>, with a TTL of roughly three heartbeat intervals (e.g., 45 seconds for 15-second heartbeats). If heartbeats stop, the key expires and the user is considered offline — no explicit logout is required, which gracefully handles dropped connections and phone crashes.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  CLIENT             GATEWAY              REDIS (presence)              CONTACTS</span></span>
+<span class="line"><span>   │                   │                      │                           │</span></span>
+<span class="line"><span>   │── heartbeat ────▶│  (every 15–30s)      │                           │</span></span>
+<span class="line"><span>   │                   │── HSET presence:{uid}│                           │</span></span>
+<span class="line"><span>   │                   │   {status,gw,last_hb}│                           │</span></span>
+<span class="line"><span>   │                   │   + EXPIRE ~45s      │                           │</span></span>
+<span class="line"><span>   │                   │◀─────────────────────│                           │</span></span>
+<span class="line"><span>   │                   │                      │                           │</span></span>
+<span class="line"><span>   │                   │   (no heartbeat →   │                           │</span></span>
+<span class="line"><span>   │                   │    key expires →    │                           │</span></span>
+<span class="line"><span>   │                   │    user "offline")  │                           │</span></span>
+<span class="line"><span>   │                   │                      │                           │</span></span>
+<span class="line"><span>   │── open chat list▶│                      │                           │</span></span>
+<span class="line"><span>   │                   │── MGET presence:    │                           │</span></span>
+<span class="line"><span>   │                   │   {contact1..N} ───▶│                           │</span></span>
+<span class="line"><span>   │                   │◀── statuses ────────│                           │</span></span>
+<span class="line"><span>   │◀── contact status│                      │                           │</span></span>
+<span class="line"><span>   │                   │                      │                           │</span></span>
+<span class="line"><span>   │                   │   status change ───▶│ PUBLISH presence:{uid}    │</span></span>
+<span class="line"><span>   │                   │                      │   "online"                │</span></span>
+<span class="line"><span>   │                   │                      │───────┬───────────────────┤</span></span>
+<span class="line"><span>   │                   │                      │       ▼                   │</span></span>
+<span class="line"><span>   │                   │◀── notify ───────────│  subscribers              │</span></span>
+<span class="line"><span>   │◀── "Alice online"│                      │  (buddy list / pub-sub)   │</span></span></code></pre>
+<p>The gateway writes a heartbeat to Redis every interval for every connected user, which at 100M concurrent is 100M writes per 15 seconds, or about 6.7M writes/sec — well within a sharded Redis cluster’s capacity but a meaningful load that must be budgeted.</p>
+<p>Presence is read-heavy in a different way: a user opening their chat list wants the online status of all their contacts, which can be hundreds or thousands of people. A naive <code>MGET</code> per contact is fine for small lists but a single user’s contact-status query can fan into thousands of Redis gets. The optimization is a <strong>presence aggregation cache</strong>: each user’s status is also published to a sorted set or a denormalized “buddy list” structure that the client can fetch in one round trip, refreshed on a longer interval (30–60 seconds) rather than on every list open.</p>
+<p>Presence <em>changes</em> are the interesting real-time event: when a user goes online or offline, their contacts who care must be notified. This is done by having each user subscribe to a Redis pub/sub channel for their contact list, or by batching change events and pushing them down the WebSocket on a slow tick. The cardinality problem is real — a user with 5,000 contacts generates 5,000 presence notifications per status change — so production systems:</p>
+<ul>
+<li>Throttle and batch (notify at most once per 30 seconds per user)</li>
+<li>Allow users to opt out of broadcasting their presence (the “last seen” privacy setting)</li>
+</ul>
+<p>Last-seen timestamps are stored separately and durably (Cassandra or Redis with a longer TTL) because they must survive a full disconnect and be queryable days later. The “typing” indicator is the most ephemeral presence signal: it has a TTL of 3–5 seconds, is never persisted, and is fanned out only to the active conversation’s participants, not to the contact list. Typing events are high-frequency and bursty, so they are typically throttled at the gateway (the client sends a typing-start at most once per 2 seconds) and dropped rather than retried — losing a typing indicator is harmless, whereas losing a message is not.</p>
+<h2 id="typing-indicators-and-read-receipts">Typing Indicators and Read Receipts</h2>
+<p>Typing indicators and read receipts are the two ephemeral signals that distinguish a chat product from an email system, and they share a design property: they are <strong>loss-tolerant, high-frequency, and never persisted to the durable store</strong>.</p>
+<p><strong>Typing indicators</strong> flow over the same WebSocket and pub/sub path as messages but bypass the Kafka/Cassandra write entirely — the sender’s gateway receives a typing event, looks up the conversation’s other participants’ gateways via presence, and pushes a typing-start or typing-stop event to each, with a short TTL so that a missed typing-stop self-heals within a few seconds. There is no acknowledgement, no retry, and no ordering concern; if a typing indicator is lost, the worst case is the recipient briefly does not see “typing…” which is cosmetically irrelevant. This makes them cheap to implement but also a potential noise source, so gateways coalesce multiple typing events from the same user within a short window into a single downstream push.</p>
+<p><strong>Read receipts</strong> are more constrained because they are semantically meaningful (they tell the sender the recipient actually saw the message) but still ephemeral in transit. The client sends a read receipt when a message is rendered in the viewport, tagged with the <code>message_id</code> up to which the user has read. The flow is:</p>
+<ol>
+<li>Client sends <code>read_up_to = message_id</code> when a message is rendered in the viewport</li>
+<li>The gateway forwards this to the message processor</li>
+<li>The processor updates a per-conversation per-recipient read cursor (stored in Cassandra or Redis)</li>
+<li>It notifies the sender’s gateway, which flips the UI to “read”</li>
+</ol>
+<p>The read cursor is durable because on reconnect the client needs to know where it left off, but the in-transit read event itself is fire-and-forget — if it is lost, the next read event for a later message will supersede it, and the cursor is the source of truth. A common optimization is to batch read receipts: instead of one event per message read, the client sends <code>read_up_to = message_id</code> which covers all earlier messages in one update, dramatically reducing ack traffic in fast-scroll scenarios.</p>
+<p>The <strong>privacy dimension</strong> matters here too. Read receipts and last-seen are user-controlled: a user can disable read receipts globally, in which case the system simply does not generate them, and can hide last-seen, in which case the presence service returns a coarse value (“recently”) or nothing. This is enforced at the gateway and presence layer, not at the client, because a malicious client could otherwise forge receipts. The enforcement cost is a per-user privacy preference lookup on every receipt path, which is cached aggressively in Redis.</p>
+<h2 id="message-storage-with-cassandra">Message Storage with Cassandra</h2>
+<p>Cassandra is the canonical choice for the message store because the access pattern is a perfect fit: writes are append-only and time-ordered, reads are almost always “fetch the last N messages in a conversation” (a range scan on a partition), and the workload is write-heavy with predictable hot partitions (active conversations). The schema is:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>messages(conversation_id, message_id, sender_id, content, type, created_at, …)</span></span>
+<span class="line"><span>        └─partition key─┘  └─clustering key (DESC)─┘</span></span></code></pre>
+<p>This makes “load recent messages” a single-partition, single-range read — the fastest path Cassandra has. A partition holds one conversation’s messages; for very long-lived conversations with millions of messages, the partition is bounded by a time-bucketing strategy (e.g., partition by <code>conversation_id + month</code>) to avoid unbounded partition growth, which degrades read latency.</p>
+<p>The consistency level is a deliberate trade-off:</p>
+<ul>
+<li><strong>Writes</strong> use <code>LOCAL_QUORUM</code> so a message is durable in the local datacenter before the sender sees “sent,” protecting against a single node loss without paying cross-region latency.</li>
+<li><strong>Reads</strong> for recent messages use <code>LOCAL_QUORUM</code> as well, but because the client almost always reads messages it just received over pub/sub, the hot path is served from the in-memory cache (Redis list per conversation, 24-hour TTL) and the Cassandra read is only for scroll-back or reconnect.</li>
+</ul>
+<p>This makes Cassandra a durability and history store, not the real-time delivery path — a separation that is essential for latency. Compaction is tuned with <code>SizeTieredCompactionStrategy</code> for the append-heavy workload, and TTL-based expiring messages (Snapchat-style) are supported natively by Cassandra’s cell TTL without a delete.</p>
+<p>The failure modes to design for are:</p>
+<ul>
+<li><strong>Hot partitions</strong> — a viral group chat where one <code>conversation_id</code> receives thousands of writes/sec. Mitigated by the time-bucketing above and by detecting and migrating truly viral conversations to a broadcast/fan-out-on-read model.</li>
+<li><strong>Wide partitions</strong> — a years-old conversation with millions of rows. Mitigated by bucketing and by capping the scroll-back query to a window (e.g., last 1000 messages) with pagination.</li>
+<li><strong>Tombstone accumulation</strong> — if messages are deleted (the “delete for everyone” feature), Cassandra tombstones must be read and skipped, and if a conversation accumulates many, read latency degrades. Mitigated by bounded tombstone lifetimes, targeted compaction, and in extreme cases a tombstone-compaction sub-step.</li>
+</ul>
+<p>PostgreSQL holds the relational metadata (users, conversation membership, settings) where transactions and secondary indexes are needed; it is not in the message hot path.</p>
+<h2 id="end-to-end-encryption">End-to-End Encryption</h2>
+<p>End-to-end encryption (E2EE) changes the architecture profoundly because the server becomes a blind relay: it can route and store messages but cannot read their content, which means search, server-side moderation, and intelligent features must move to the client or be abandoned.</p>
+<p>The <strong>Signal Protocol</strong> is the industry standard and uses:</p>
+<ul>
+<li><strong>X3DH key agreement</strong> for initial session setup — one-time pre-keys fetched from the server, combined with the recipient’s identity key to derive a shared secret</li>
+<li><strong>The Double Ratchet</strong> for every subsequent message — each message uses a new message key derived from a chain that ratchets forward on every send and every receive, providing <strong>forward secrecy</strong> (past keys cannot be recovered from current keys) and <strong>post-compromise security</strong> (a single key compromise heals after a few messages because the ratchet advances)</li>
+</ul>
+<p>Operationally, E2EE means the server stores only ciphertext, indexed by <code>conversation_id</code> and <code>message_id</code>, and the client decrypts on receipt. The server still does routing, presence, delivery acks, and push notification — but push notifications become a challenge because the server cannot read the message to put a preview in the notification payload. Solutions include:</p>
+<ul>
+<li>A separate “notification key” shared with the push service</li>
+<li>A short-lived preview encrypted with an APNs/FCM-retrievable key</li>
+<li>Or simply notifying “You have a new message” with no content</li>
+</ul>
+<p>Media sharing under E2EE encrypts the blob on the client, uploads the ciphertext to S3, and sends the media reference plus the decryption key through the same encrypted message channel — the server never sees the cleartext image. Group E2EE uses a sender-keys variant where each sender has one ratchet per group rather than pairwise ratchet between every pair of members, scaling the key material to O(members) instead of O(members²).</p>
+<p>The hardest E2EE problems are:</p>
+<ul>
+<li><strong>Key verification</strong> (safety numbers, QR scanning)</li>
+<li><strong>Multi-device support</strong> — each device has its own key, messages are sent to all devices of a recipient, requiring per-device encryption</li>
+<li><strong>Key rotation across device loss</strong></li>
+</ul>
+<p>Multi-device means a message to a user is actually fanned out and encrypted separately for each of their devices, which multiplies fan-out and storage. The server cannot help reconcile devices because it cannot read the messages, so the client must handle device-list management and detect added devices (a security-critical event the user must be warned about). These constraints are why E2EE is an architectural decision made early, not bolted on later — retrofitting E2EE onto a server-readable store requires re-encrypting all history and rebuilding the client, which is what most products that added E2EE late effectively did.</p>
+<h2 id="media-sharing">Media Sharing</h2>
+<p>Media (images, video, files) must not flow over the WebSocket channel because a large blob blocks the framing layer, head-of-line blocks small messages behind it, and consumes gateway memory buffering bytes that belong in object storage. The standard pattern is <strong>out-of-band upload</strong>:</p>
+<ol>
+<li>The client requests an upload URL (a presigned S3 PUT, or a token to a media service)</li>
+<li>It uploads the blob directly to S3 over HTTP</li>
+<li>It receives a media reference (bucket + key + optionally a thumbnail key)</li>
+<li>It then sends a normal chat message of type <code>image</code> or <code>file</code> whose content is the media reference, not the bytes</li>
+<li>The recipient’s client fetches the media from S3 (or a CDN edge) using a signed URL or a token, decrypts if E2EE is in use, and renders it</li>
+</ol>
+<p>This keeps the WebSocket path small and fast, lets the media path use HTTP/2 or HTTP/3 with its own connection pooling and resume, and lets the media be cached at CDN edges for viral content.</p>
+<p>Media processing — thumbnail generation, transcoding, virus scanning — happens asynchronously after upload, typically via a queue-driven worker pool that reads from S3, processes, and writes derived artifacts (a 256px thumbnail, a transcoded H.264 video) back to S3, updating the media metadata. The chat message can be sent before processing completes, with the client showing a placeholder and fetching the thumbnail when ready. For E2EE systems, processing is limited to what the client can do (client-side thumbnail generation before upload) because the server cannot decrypt to transcode. Capacity for media is substantial: at WhatsApp scale, media is the dominant storage and bandwidth cost, often 10–100× the text-message volume, and the S3/CDN budget dwarfs the Cassandra budget. Deduplication (content-addressable storage keyed by a hash of the ciphertext) saves storage for viral media forwarded to many users, since the same encrypted blob is stored once and referenced many times.</p>
+<h2 id="push-notifications-for-offline-users">Push Notifications for Offline Users</h2>
+<p>When a recipient is offline, the message cannot be delivered over WebSocket, so the system must notify the user through the platform push channel — APNs for iOS, FCM for Android, and Web Push for browsers. This is a fundamentally different delivery path with different latency (seconds, not milliseconds), different payload limits (4 KB for APNs, 2 KB for FCM v1), and different reliability (best-effort, no ack).</p>
+<p>The flow is:</p>
+<ol>
+<li>The message processor, upon discovering the recipient is offline (presence lookup returns no active gateway), enqueues a push task</li>
+<li>A dedicated <strong>notification service</strong> consumes these tasks</li>
+<li>It formats a platform-specific payload (title, body preview, conversation ID, deep link)</li>
+<li>It sends to APNs/FCM, which deliver to the device</li>
+<li>The device OS wakes the app, which connects over WebSocket and pulls the actual message from the message store</li>
+</ol>
+<p>The push notification is a trigger, not the delivery channel, because push payloads are small, unreliable, and (for E2EE systems) cannot contain readable content.</p>
+<p>A critical design decision is <strong>push coalescing</strong>: if a user is offline and receives 50 messages in a group chat, sending 50 push notifications is spammy, battery-draining, and rate-limited by the OS. The notification service:</p>
+<ul>
+<li>Batches messages per conversation and per user within a short window (e.g., 30 seconds), sending one notification like “Alice: 5 new messages” rather than five separate pings</li>
+<li>Respects do-not-disturb settings, per-conversation mute, and server-side rate limits per device token</li>
+<li>Handles token invalidation (a user uninstalls the app, the token becomes invalid, APNs returns an error) and updates the user’s device-token registry, pruning dead tokens to avoid wasted sends</li>
+</ul>
+<p>Push delivery is tracked for analytics but not for delivery guarantees — if APNs drops a notification, the user simply does not see it, and the actual message is still in the store waiting for the next app open.</p>
+<p>The <strong>real-time vs offline message</strong> boundary is thus cleanly drawn by presence:</p>
+<ul>
+<li><strong>Online path</strong> — gateway → Kafka → processor → persist → pub/sub → recipient gateway → recipient client, all in under 100ms</li>
+<li><strong>Offline path</strong> — gateway → Kafka → processor → persist → enqueue push → notification service → APNs/FCM → device wake → app connects → client pulls from store by <code>last_message_id</code> cursor</li>
+</ul>
+<p>The store is the durable bridge between these two worlds: the real-time path is an optimization on top of the durable store, and the offline path falls back to the store directly. On reconnect, the client always pulls any messages with <code>message_id &gt; last_seen_id</code> from the store, deduplicating against anything that arrived over pub/sub in the overlap — this guarantees no message is lost regardless of which path was active.</p>
+<h2 id="capacity-estimation">Capacity Estimation</h2>
+<p>Assume WhatsApp-class scale: 1 billion registered users, 500M daily active, 100M concurrent connections at peak.</p>
+<p><strong>Message volume:</strong></p>
+<ul>
+<li>100B messages/day</li>
+<li>~200 bytes average message size (text + metadata)</li>
+<li>~20 TB/day uncompressed text volume</li>
+<li>~7 PB/year raw before replication</li>
+<li>With Cassandra RF=3 + LZ4/Snappy compression (2–4× on chat text): ~7 PB/year effective storage</li>
+</ul>
+<p><strong>Media (dominant cost):</strong></p>
+<ul>
+<li>~20% of messages include media, averaging 500 KB</li>
+<li>20B media objects/day × 500 KB = ~10 PB/day raw</li>
+<li>~3.6 EB/year before dedup</li>
+<li>Requires aggressive deduplication, CDN offload, and tiered storage (hot on S3 Standard, cold on Glacier)</li>
+</ul>
+<p><strong>Message throughput:</strong></p>
+<ul>
+<li>Peak: ~100B messages over a 4-hour active window ≈ 7M msgs/sec sustained peak</li>
+<li>Bursts to 10M+/sec</li>
+<li>Kafka partitions sized so per-partition throughput (a few thousand msgs/sec) × partition count comfortably exceeds this → 2,000–4,000 partitions across the message topic</li>
+</ul>
+<p><strong>Gateway fleet:</strong></p>
+<ul>
+<li>At 100K connections/node and 100M concurrent → 1,000 gateway instances</li>
+<li>At 50K connections/node (conservative) → 2,000 instances</li>
+<li>Per node at 100K connections × 20 KB/connection ≈ 2 GB connection state + overhead → 8–16 GB VM is comfortable</li>
+<li>CPU light at idle, spikes on message bursts → overprovision cores or auto-scale on pub/sub throughput</li>
+</ul>
+<p><strong>Redis (presence):</strong></p>
+<ul>
+<li>100M keys × ~100 bytes ≈ 10 GB memory → easily a 3-node Redis Cluster with replication</li>
+<li>Heartbeat write rate ~7M writes/sec is the binding constraint → met by a 6–9 node cluster sharded by user_id</li>
+</ul>
+<p><strong>Notification service:</strong></p>
+<ul>
+<li>~20% of messages go to offline users → 20B push sends/day</li>
+<li>Requires a fleet doing hundreds of thousands of APNs/FCM calls per second with HTTP/2 connection reuse</li>
+</ul>
+<p><strong>Network egress:</strong></p>
+<ul>
+<li>Media delivery to clients (especially through CDNs) often dwarfs all other bandwidth</li>
+<li>The CDN bill is the line item most likely to prompt an architecture review</li>
+</ul>
+<h2 id="interview-question-model-answer-and-common-pitfall">Interview Question, Model Answer, and Common Pitfall</h2>
+<p><strong>Question:</strong> You are designing a group chat where one conversation has 10,000 members and a single sender can post a message per second. Walk me through how you deliver that message without melting the system, and tell me where the design breaks if the group grows to 1 million members.</p>
+<p><strong>Model Answer:</strong> At 10,000 members, fan-out-on-write is borderline. One send becomes 10,000 delivery attempts, of which perhaps 2,000 are online (immediate pub/sub push) and 8,000 are offline (push notifications and inbox pointers). The single persist to Cassandra is fine, but the 8,000 inbox-pointer writes and 8,000 push enqueues are a write-amplification problem, and the 2,000 pub/sub pushes spike gateway CPU. I would handle this by tiering:</p>
+<ul>
+<li>Online members get immediate pub/sub (cheap, in-memory)</li>
+<li>Offline members get a single batched inbox write per conversation per short window plus a coalesced push notification</li>
+<li>I would also cap the per-recipient ack traffic — for a 10K group, read receipts are sampled or disabled because 10K acks per message is pure overhead</li>
+</ul>
+<p>If the group grows to 1 million members, fan-out-on-write is dead: one send becomes 1M writes, which is a sustained 1M writes/sec just from one sender. The architecture must switch to <strong>fan-out-on-read</strong>: the message is written once to the channel’s timeline, and each member pulls from it with a per-member read cursor, exactly like a Twitter feed. The trade-off is that delivery latency increases (members pull on their own schedule, not on push) and the system is no longer “real-time chat” but “broadcast with a chat UI,” which is the honest framing for a 1M-member channel. The breaking point is the fan-out factor: once <code>members × messages_per_member_per_sec</code> exceeds the system’s write capacity, you must invert the fan-out direction.</p>
+<p><strong>Common Pitfall:</strong> Designers often treat group chat as “just a direct message with more recipients” and reuse the DM fan-out loop. This works to a few hundred members and then fails silently: gateway CPU spikes on pub/sub storms, Cassandra hot-partition latency rises on per-recipient inbox writes, and push notifications get rate-limited or marked spam by the OS. The deeper pitfall is not recognizing the <strong>fan-out-on-write vs fan-out-on-read inflection point</strong> and having no architecture to switch to when a group crosses it, leaving the system to degrade under load instead of changing strategy. A related mistake is giving large groups the same delivery and read-receipt guarantees as DMs — the ack traffic alone can be a denial-of-service attack on your own infrastructure.</p>
+<hr>
+<h2 id="related">Related</h2>
+<ul>
+<li>[[topic-queue]]</li>
+<li>[[WhatsApp Architecture]]</li>
+<li>[[Notification System (Push-Email-SMS)]]</li>
+<li>[[CDN &amp; Edge Computing]]</li>
+<li>[[Database Sharding &amp; Replication]]</li>
+<li>[[Weakness Vault/Day-18-Chat-System]]</li>
+</ul>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>WebSocket for persistent connections (server-push), HTTP for history retrieval, push notifications for offline delivery</li>
+<li>Messages are delivered exactly-once within a chat session using sequence numbers and deduplication</li>
+<li>Presence is the hardest part — use heartbeat + TTL, not immediate connect/disconnect events</li>
+<li>Shard by conversation ID (group chat) or user ID (DMs), not by timestamp</li>
+<li>Read receipts and typing indicators are best-effort, not guaranteed — don’t block on them</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you handle messages when the recipient is offline?” — Store in database, deliver via push notification. On reconnect, client fetches missed messages.</li>
+<li>“How do you scale to 100M concurrent WebSocket connections?” — Connection servers behind a load balancer, shard by user, use epoll/kqueue for efficient I/O multiplexing.</li>
+<li>“How does end-to-end encryption change the architecture?” — Server can’t read messages, so search and moderation must happen client-side. Key exchange via Signal Protocol or similar.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Candidates often design for message delivery but forget presence and read receipts. A chat system without presence is just an email system with lower latency.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/chat-system-websocket-webrtc/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Chat%20System%20(WebSocket%2C%20WebRTC)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fchat-system-websocket-webrtc%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fchat-system-websocket-webrtc%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/chat-system-websocket-webrtc" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/chaos-engineering-failure-injection-game-days" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Chaos Engineering (Failure Injection, Game Days)</span></a><a href="/notes/system-design/circuit-breakers-and-bulkheads" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Circuit Breakers &amp; Bulkheads (Resilience4j, Hystrix patterns)</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Chat System (WebSocket, WebRTC)" data-selector=".article-prose" data-article-slug="system-design/chat-system-websocket-webrtc" data-article-title="Chat System (WebSocket, WebRTC)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

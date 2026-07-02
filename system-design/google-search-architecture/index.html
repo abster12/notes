@@ -1,0 +1,808 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Google Search Architecture · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview" class="toc-link" data-toc-link="overview" data-astro-cid-p33bl5ka>Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#key-requirements" class="toc-link" data-toc-link="key-requirements" data-astro-cid-p33bl5ka>Key Requirements</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#functional" class="toc-link" data-toc-link="functional" data-astro-cid-p33bl5ka>Functional</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#non-functional" class="toc-link" data-toc-link="non-functional" data-astro-cid-p33bl5ka>Non-Functional</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-estimates" class="toc-link" data-toc-link="capacity-estimates" data-astro-cid-p33bl5ka>Capacity Estimates</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#core-design" class="toc-link" data-toc-link="core-design" data-astro-cid-p33bl5ka>Core Design</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-three-pillars" class="toc-link" data-toc-link="the-three-pillars" data-astro-cid-p33bl5ka>The Three Pillars</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-crawling-ingestion" class="toc-link" data-toc-link="1-crawling-ingestion" data-astro-cid-p33bl5ka>1. Crawling (Ingestion)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#url-frontier" class="toc-link" data-toc-link="url-frontier" data-astro-cid-p33bl5ka>URL Frontier</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#crawler-architecture" class="toc-link" data-toc-link="crawler-architecture" data-astro-cid-p33bl5ka>Crawler Architecture</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-indexing-structuring" class="toc-link" data-toc-link="2-indexing-structuring" data-astro-cid-p33bl5ka>2. Indexing (Structuring)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#document-processing-pipeline" class="toc-link" data-toc-link="document-processing-pipeline" data-astro-cid-p33bl5ka>Document Processing Pipeline</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-inverted-index" class="toc-link" data-toc-link="the-inverted-index" data-astro-cid-p33bl5ka>The Inverted Index</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#sharding" class="toc-link" data-toc-link="sharding" data-astro-cid-p33bl5ka>Sharding</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-serving-query-time" class="toc-link" data-toc-link="3-serving-query-time" data-astro-cid-p33bl5ka>3. Serving (Query-Time)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#query-flow" class="toc-link" data-toc-link="query-flow" data-astro-cid-p33bl5ka>Query Flow</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#serving-tree" class="toc-link" data-toc-link="serving-tree" data-astro-cid-p33bl5ka>Serving Tree</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#caching-at-every-layer" class="toc-link" data-toc-link="caching-at-every-layer" data-astro-cid-p33bl5ka>Caching at Every Layer</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#key-concepts-for-interview" class="toc-link" data-toc-link="key-concepts-for-interview" data-astro-cid-p33bl5ka>Key Concepts for Interview</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#1-pagerank-static-ranking" class="toc-link" data-toc-link="1-pagerank-static-ranking" data-astro-cid-p33bl5ka>1. PageRank (Static Ranking)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#2-caffeine-continuous-indexing" class="toc-link" data-toc-link="2-caffeine-continuous-indexing" data-astro-cid-p33bl5ka>2. Caffeine (Continuous Indexing)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#3-query-understanding-nlp" class="toc-link" data-toc-link="3-query-understanding-nlp" data-astro-cid-p33bl5ka>3. Query Understanding (NLP)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#4-freshness-vs-relevance-trade-off" class="toc-link" data-toc-link="4-freshness-vs-relevance-trade-off" data-astro-cid-p33bl5ka>4. Freshness vs. Relevance Trade-off</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-question-pattern" class="toc-link" data-toc-link="interview-question-pattern" data-astro-cid-p33bl5ka>Interview Question Pattern</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#system-diagram-summary" class="toc-link" data-toc-link="system-diagram-summary" data-astro-cid-p33bl5ka>System Diagram Summary</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#references" class="toc-link" data-toc-link="references" data-astro-cid-p33bl5ka>References</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Google Search Architecture</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 10 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 14 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>google</span><span class="tag" data-astro-cid-sgg5joot>search</span><span class="tag" data-astro-cid-sgg5joot>web-crawling</span><span class="tag" data-astro-cid-sgg5joot>inverted-index</span><span class="tag" data-astro-cid-sgg5joot>pagerank</span><span class="tag" data-astro-cid-sgg5joot>mapreduce</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="google-search-architecture">Google Search Architecture</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>The system that crawls the web, builds an inverted index of hundreds of billions of pages, and serves ranked results in under 200ms for 8.5B queries/day.</p>
+<p><strong>How it’s asked:</strong> “Design a search engine that crawls 100B pages, builds an inverted index, and serves results in &lt;200ms. Cover crawling, indexing, ranking, and sharding strategy.”</p>
+<hr>
+<h2 id="overview">Overview</h2>
+<p>Google Search is arguably the most complex distributed system ever built. It crawls the entire web — hundreds of billions of pages across trillions of URLs — builds a searchable inverted index, and serves ranked results in under 200ms per query. The architecture spans three massive subsystems: <strong>Crawling</strong> (ingesting the web), <strong>Indexing</strong> (structuring that data for fast retrieval), and <strong>Serving</strong> (answering user queries at planetary scale). Each subsystem is itself a distributed system with thousands of machines.</p>
+<p>What makes this a classic system design interview topic: it touches nearly every distributed systems concept — MapReduce, sharding, replication, caching, eventual consistency, consensus, tiered storage, batch vs. streaming, and machine learning at scale — all tied together by a product everyone uses daily.</p>
+<h2 id="key-requirements">Key Requirements</h2>
+<h3 id="functional">Functional</h3>
+<ul>
+<li>Accept a text query; return a ranked list of relevant URLs with snippets</li>
+<li>Crawl new and updated pages continuously; re-crawl at appropriate cadences</li>
+<li>Handle image, video, news, map, and shopping searches (multi-corpus)</li>
+<li>Support spelling corrections, autocomplete, and query understanding (NLU)</li>
+<li>Show knowledge panels (structured facts) and direct answers</li>
+<li>Serve ads alongside organic results without degrading search latency</li>
+</ul>
+<h3 id="non-functional">Non-Functional</h3>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Query latency</strong></td>
+<td>&lt; 200ms p99 (user-perceived as “instant”)</td>
+</tr>
+<tr>
+<td><strong>Index freshness</strong></td>
+<td>Minutes-to-hours for news; days for static content</td>
+</tr>
+<tr>
+<td><strong>Scale</strong></td>
+<td>Hundreds of billions of pages; trillions of URLs</td>
+</tr>
+<tr>
+<td><strong>Availability</strong></td>
+<td>99.99%+ — search must “never” be down</td>
+</tr>
+<tr>
+<td><strong>Relevance</strong></td>
+<td>Results quality is existential; measured via human raters + A/B experiments</td>
+</tr>
+<tr>
+<td><strong>Throughput</strong></td>
+<td>~8.5 billion searches/day (~100K QPS at steady state; peaks higher)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="capacity-estimates">Capacity Estimates</h2>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Estimate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pages indexed</td>
+<td>100–200 billion+</td>
+</tr>
+<tr>
+<td>Unique URLs known</td>
+<td>50+ trillion</td>
+</tr>
+<tr>
+<td>Size of raw crawl data</td>
+<td>100+ PB</td>
+</tr>
+<tr>
+<td>Size of inverted index (compressed)</td>
+<td>~10–20 PB</td>
+</tr>
+<tr>
+<td>Queries per second (peak)</td>
+<td>~150,000+</td>
+</tr>
+<tr>
+<td>Crawlers fetching pages/sec</td>
+<td>Millions</td>
+</tr>
+<tr>
+<td>Average page size</td>
+<td>~500 KB (modern web; compressed to ~50 KB)</td>
+</tr>
+<tr>
+<td>Machines in serving fleet</td>
+<td>Tens of thousands</td>
+</tr>
+</tbody>
+</table>
+<h2 id="core-design">Core Design</h2>
+<h3 id="the-three-pillars">The Three Pillars</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────┐     ┌──────────┐     ┌──────────┐</span></span>
+<span class="line"><span>│ CRAWLING │────▶│ INDEXING │────▶│ SERVING  │</span></span>
+<span class="line"><span>│          │     │          │     │          │</span></span>
+<span class="line"><span>│ Fetch    │     │ Parse    │     │ Accept   │</span></span>
+<span class="line"><span>│ Parse    │     │ Build    │     │ Rewrite  │</span></span>
+<span class="line"><span>│ Store    │     │ Invert   │     │ Retrieve │</span></span>
+<span class="line"><span>│ Enqueue  │     │ Shard    │     │ Rank     │</span></span>
+<span class="line"><span>└──────────┘     └──────────┘     └──────────┘</span></span></code></pre>
+<hr>
+<h2 id="1-crawling-ingestion">1. Crawling (Ingestion)</h2>
+<p>The crawler’s job is to download every page on the web, extract links, and feed the indexer — all without overwhelming any single website.</p>
+<h3 id="url-frontier">URL Frontier</h3>
+<p>A priority queue of URLs to crawl. This is a large-scale distributed priority queue where:</p>
+<ul>
+<li><strong>Politeness:</strong> Only one connection per host at a time; respect <code>robots.txt</code> and <code>Crawl-Delay</code></li>
+<li><strong>Priority:</strong> High-value pages (news, frequently updated) crawled more often than static pages</li>
+<li><strong>Freshness:</strong> Re-crawl interval proportional to historical change rate of the page</li>
+<li><strong>Deduplication:</strong> URL canonicalization (trailing slash, <code>www</code>, protocol) + content fingerprinting (SimHash) to avoid re-crawling duplicates</li>
+</ul>
+<h3 id="crawler-architecture">Crawler Architecture</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────┐     ┌──────────────────┐     ┌────────────┐</span></span>
+<span class="line"><span>│ URL Frontier  │────▶│  DNS Resolver    │────▶│   Fetch    │</span></span>
+<span class="line"><span>│ (priority Q)  │     │  (cache + batch) │     │  (HTTP/S)  │</span></span>
+<span class="line"><span>└──────────────┘     └──────────────────┘     └─────┬──────┘</span></span>
+<span class="line"><span>                                                    │</span></span>
+<span class="line"><span>                    ┌──────────────────┐            │</span></span>
+<span class="line"><span>                    │  Link Extractor  │◀───────────┘</span></span>
+<span class="line"><span>                    │  (new URLs)      │</span></span>
+<span class="line"><span>                    └────────┬─────────┘</span></span>
+<span class="line"><span>                             │</span></span>
+<span class="line"><span>                             ▼</span></span>
+<span class="line"><span>                    ┌──────────────────┐</span></span>
+<span class="line"><span>                    │  Content Store   │──▶ Indexer</span></span>
+<span class="line"><span>                    │  (GFS/Colossus)  │</span></span>
+<span class="line"><span>                    └──────────────────┘</span></span></code></pre>
+<p><strong>Key design decisions:</strong></p>
+<ul>
+<li><strong>DNS caching:</strong> A single crawl of a billion pages without DNS caching would DoS the DNS infrastructure. Google runs its own DNS resolution layer with massive caches.</li>
+<li><strong>Robots.txt cache:</strong> Must respect per-host rules; cached aggressively.</li>
+<li><strong>Duplicate detection:</strong> SimHash (locality-sensitive hashing) to detect near-duplicate content — ~30% of the web is duplicate.</li>
+<li><strong>Content store:</strong> Raw HTML stored in Colossus (Google’s successor to GFS). Crawl-first, index-later architecture: crawl is decoupled from indexing.</li>
+</ul>
+<hr>
+<h2 id="2-indexing-structuring">2. Indexing (Structuring)</h2>
+<p>The indexer transforms raw HTML into a searchable <strong>inverted index</strong>.</p>
+<h3 id="document-processing-pipeline">Document Processing Pipeline</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Raw HTML</span></span>
+<span class="line"><span>   │</span></span>
+<span class="line"><span>   ▼</span></span>
+<span class="line"><span>┌──────────┐    ┌─────────────┐    ┌──────────────┐    ┌──────────┐</span></span>
+<span class="line"><span>│  Parse   │───▶│  Tokenize   │───▶│  Normalize   │───▶│  Annotate │</span></span>
+<span class="line"><span>│  (strip  │    │  (words,    │    │  (stemming,  │    │  (NER,    │</span></span>
+<span class="line"><span>│   tags)  │    │   n-grams)  │    │   case-fold) │    │   links)  │</span></span>
+<span class="line"><span>└──────────┘    └─────────────┘    └──────────────┘    └──────────┘</span></span>
+<span class="line"><span>                                                            │</span></span>
+<span class="line"><span>                                                            ▼</span></span>
+<span class="line"><span>                                                     ┌──────────────┐</span></span>
+<span class="line"><span>                                                     │  Build       │</span></span>
+<span class="line"><span>                                                     │  Forward     │</span></span>
+<span class="line"><span>                                                     │  Index       │</span></span>
+<span class="line"><span>                                                     └──────┬───────┘</span></span>
+<span class="line"><span>                                                            │</span></span>
+<span class="line"><span>                                                            ▼</span></span>
+<span class="line"><span>                                                     ┌──────────────┐</span></span>
+<span class="line"><span>                                                     │  Invert      │</span></span>
+<span class="line"><span>                                                     │  (sort/shuf) │</span></span>
+<span class="line"><span>                                                     └──────┬───────┘</span></span>
+<span class="line"><span>                                                            │</span></span>
+<span class="line"><span>                                                            ▼</span></span>
+<span class="line"><span>                                                     ┌──────────────┐</span></span>
+<span class="line"><span>                                                     │  Inverted    │</span></span>
+<span class="line"><span>                                                     │  Index       │</span></span>
+<span class="line"><span>                                                     │  (sharded)   │</span></span>
+<span class="line"><span>                                                     └──────────────┘</span></span></code></pre>
+<h3 id="the-inverted-index">The Inverted Index</h3>
+<p>The heart of any search engine. Maps <strong>term → list of (docID, positions, metadata)</strong>.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Term: "distributed"</span></span>
+<span class="line"><span>├── docID: 17 → [positions: 4, 52, 108], [title: true, bold: false]</span></span>
+<span class="line"><span>├── docID: 42 → [positions: 7, 89], [title: true, bold: true]</span></span>
+<span class="line"><span>├── docID: 991 → [positions: 12], [title: false, bold: false]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Term: "systems"</span></span>
+<span class="line"><span>├── docID: 17 → [positions: 5, 53, 109], [title: true]</span></span>
+<span class="line"><span>├── docID: 3 → [positions: 90], [title: false]</span></span>
+<span class="line"><span>...</span></span></code></pre>
+<p><strong>Optimizations:</strong></p>
+<ul>
+<li><strong>Delta encoding:</strong> Store differences between docIDs, not absolute IDs (saves ~80% space)</li>
+<li><strong>Skip lists:</strong> Within each posting list, skip pointers let the engine jump over irrelevant ranges</li>
+<li><strong>Tiered index:</strong> Fresh (in-memory, recent crawls) + Base (on-disk, bulk of the index). Merged periodically. This is Google’s <strong>Caffeine</strong> architecture — continuous indexing instead of batch.</li>
+<li><strong>Positional data:</strong> Stores word positions to support phrase queries (“distributed systems” must appear consecutively)</li>
+<li><strong>Impact-sorted order:</strong> Store posting lists sorted by PageRank, not docID — allows early termination for top-K queries</li>
+</ul>
+<h3 id="sharding">Sharding</h3>
+<p>The index is too large for one machine. Two strategies:</p>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>How it works</th>
+<th>Trade-off</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Document sharding</strong></td>
+<td>Each shard holds all terms for a subset of docs</td>
+<td>Query goes to ALL shards; fan-out = # shards</td>
+</tr>
+<tr>
+<td><strong>Term sharding</strong></td>
+<td>Each shard holds all docs for a subset of terms</td>
+<td>Multi-term queries fan out to multiple shards</td>
+</tr>
+</tbody>
+</table>
+<p>In practice, Google uses a <strong>hybrid</strong>: replicas of index partitions. Each partition handles a slice of docs. Queries fan out to all partitions. Partitions are replicated for load and fault tolerance.</p>
+<hr>
+<h2 id="3-serving-query-time">3. Serving (Query-Time)</h2>
+<p>This is where the 200ms SLA lives. Every millisecond counts.</p>
+<h3 id="query-flow">Query Flow</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>User query: "distributed systems design"</span></span>
+<span class="line"><span>        │</span></span>
+<span class="line"><span>        ▼</span></span>
+<span class="line"><span>┌──────────────────────┐</span></span>
+<span class="line"><span>│   Query Rewriting    │  Spelling correction, synonym expansion,</span></span>
+<span class="line"><span>│   (spell, synonyms,  │  query relaxation, stop-word removal,</span></span>
+<span class="line"><span>│    NLP, entity rec)  │  intent classification (informational/navigational/transactional)</span></span>
+<span class="line"><span>└──────────┬───────────┘</span></span>
+<span class="line"><span>           │</span></span>
+<span class="line"><span>           ▼</span></span>
+<span class="line"><span>┌──────────────────────┐</span></span>
+<span class="line"><span>│   Retrieval          │  Hit ALL index shards in parallel.</span></span>
+<span class="line"><span>│   (scatter-gather)   │  Each returns top-K candidates using</span></span>
+<span class="line"><span>│                      │  early termination on impact-sorted postings.</span></span>
+<span class="line"><span>└──────────┬───────────┘</span></span>
+<span class="line"><span>           │</span></span>
+<span class="line"><span>           ▼</span></span>
+<span class="line"><span>┌──────────────────────┐</span></span>
+<span class="line"><span>│   Scoring / Ranking  │  Hundreds of signals:</span></span>
+<span class="line"><span>│                      │  - PageRank (static, query-independent)</span></span>
+<span class="line"><span>│                      │  - BM25 / TF-IDF (term frequency)</span></span>
+<span class="line"><span>│                      │  - Proximity (terms close together)</span></span>
+<span class="line"><span>│                      │  - Freshness (recency bias for news queries)</span></span>
+<span class="line"><span>│                      │  - Click-through rate (CTR) history</span></span>
+<span class="line"><span>│                      │  - Personalization (location, history)</span></span>
+<span class="line"><span>│                      │  - ML model (RankBrain, BERT, MUM)</span></span>
+<span class="line"><span>└──────────┬───────────┘</span></span>
+<span class="line"><span>           │</span></span>
+<span class="line"><span>           ▼</span></span>
+<span class="line"><span>┌──────────────────────┐</span></span>
+<span class="line"><span>│   Blending           │  Merge organic results with:</span></span>
+<span class="line"><span>│                      │  - Knowledge Graph panels</span></span>
+<span class="line"><span>│                      │  - Ads (separate auction + serving path)</span></span>
+<span class="line"><span>│                      │  - Images / Videos / News carousels</span></span>
+<span class="line"><span>│                      │  - "People also ask" / featured snippets</span></span>
+<span class="line"><span>└──────────┬───────────┘</span></span>
+<span class="line"><span>           │</span></span>
+<span class="line"><span>           ▼</span></span>
+<span class="line"><span>┌──────────────────────┐</span></span>
+<span class="line"><span>│   Result Assembly    │  Snippet generation, URL display,</span></span>
+<span class="line"><span>│                      │  caching headers, logging</span></span>
+<span class="line"><span>└──────────────────────┘</span></span></code></pre>
+<h3 id="serving-tree">Serving Tree</h3>
+<p>Google organizes its serving fleet as a <strong>tree</strong>:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>         ┌──────────────┐</span></span>
+<span class="line"><span>         │  Root /      │   Accepts query, fans out to leaves</span></span>
+<span class="line"><span>         │  Aggregator  │</span></span>
+<span class="line"><span>         └──────┬───────┘</span></span>
+<span class="line"><span>      ┌─────────┼─────────┐</span></span>
+<span class="line"><span>      ▼         ▼         ▼</span></span>
+<span class="line"><span>   Leaf      Leaf      Leaf      Each leaf: holds one replica</span></span>
+<span class="line"><span>   Server    Server    Server    of one index partition</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Each leaf:</span></span>
+<span class="line"><span>  - Loads its index partition into RAM (SSD for overflow)</span></span>
+<span class="line"><span>  - Runs retrieval + scoring on its slice</span></span>
+<span class="line"><span>  - Returns top-K results to root</span></span>
+<span class="line"><span>Root:</span></span>
+<span class="line"><span>  - Merges results from all leaves</span></span>
+<span class="line"><span>  - Applies final re-ranking (costlier features on fewer candidates)</span></span>
+<span class="line"><span>  - Returns top results to user</span></span></code></pre>
+<p><strong>Why a tree?</strong> A single-level fan-out to thousands of leaf servers would overwhelm the root with network and merge overhead. Two-level tree: root fans to ~1000 intermediate aggregators, each fans to ~10-30 leaf servers. This bounds fan-in at each level.</p>
+<h3 id="caching-at-every-layer">Caching at Every Layer</h3>
+<table>
+<thead>
+<tr>
+<th>Cache</th>
+<th>What</th>
+<th>Hit Rate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Browser/DNS</strong></td>
+<td>DNS resolution, static assets</td>
+<td>50-80%</td>
+</tr>
+<tr>
+<td><strong>Edge/CDN</strong></td>
+<td>Google.com homepage, cached snippets</td>
+<td>Low for unique queries</td>
+</tr>
+<tr>
+<td><strong>Query Result Cache</strong></td>
+<td>Full results for repeated queries</td>
+<td>~30-50% (head queries dominate)</td>
+</tr>
+<tr>
+<td><strong>Posting List Cache</strong></td>
+<td>Frequently accessed posting lists</td>
+<td>60-80%</td>
+</tr>
+<tr>
+<td><strong>Document Cache</strong></td>
+<td>Recently crawled docs</td>
+<td>Medium</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key insight:</strong> The query distribution is heavily skewed — 25% of queries are brand new every day (long tail), but the head queries (“facebook”, “weather”) are hit millions of times. Result caching the head queries saves enormous compute.</p>
+<hr>
+<h2 id="key-concepts-for-interview">Key Concepts for Interview</h2>
+<h3 id="1-pagerank-static-ranking">1. PageRank (Static Ranking)</h3>
+<p>PageRank is query-independent — it’s computed offline during indexing and stored with each document. The intuition: <strong>a page is important if important pages link to it.</strong></p>
+<p>$$PR(A) = \frac{1-d}{N} + d \sum_{p \in \text{inlinks}(A)} \frac{PR(p)}{\text{outlinks}(p)}$$</p>
+<p>Where $d \approx 0.85$ is the damping factor. Computed iteratively using MapReduce across the entire web graph (link structure). This runs on a batch cycle (days), not per-query.</p>
+<p><strong>Modern evolution:</strong> PageRank is now one of hundreds of signals. Google uses ML models (RankBrain, BERT, MUM) that learn ranking from user behavior.</p>
+<h3 id="2-caffeine-continuous-indexing">2. Caffeine (Continuous Indexing)</h3>
+<p>Pre-2010: Google rebuilt the index in batch cycles (every few weeks). Problem: stale results for rapidly changing content.</p>
+<p>Caffeine (2010): <strong>Incremental, continuous indexing.</strong> New/changed pages enter a “fresh” index immediately. A background merger periodically merges fresh → base index. This is essentially an <strong>LSM-tree</strong> (Log-Structured Merge Tree) applied to web search — the same data structure underlying LevelDB/RocksDB.</p>
+<h3 id="3-query-understanding-nlp">3. Query Understanding (NLP)</h3>
+<p>Modern search is not keyword matching — it’s intent understanding:</p>
+<ul>
+<li><strong>Spelling correction:</strong> “distributd systms” → “distributed systems” (noisy-channel model + user click data)</li>
+<li><strong>Synonym expansion:</strong> “automobile” ↔ “car” (learned from co-click patterns)</li>
+<li><strong>Entity recognition:</strong> “jobs” → Steve Jobs (person) or job listings (intent classification)</li>
+<li><strong>BERT (2019):</strong> Bi-directional transformers that understand context — “2019 brazil traveler to usa need a visa” understands the directionality (Brazilian traveling to US)</li>
+<li><strong>MUM (2021):</strong> Multimodal, multilingual — can reason across text + images</li>
+</ul>
+<h3 id="4-freshness-vs-relevance-trade-off">4. Freshness vs. Relevance Trade-off</h3>
+<p>A constant tension: should we show the most relevant result or the most recent? Google resolves this with <strong>query-intent classification</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Query signal</th>
+<th>Bias</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>“election results”</td>
+<td>Freshness-heavy</td>
+</tr>
+<tr>
+<td>“python sort list”</td>
+<td>Relevance-heavy (tutorials don’t age)</td>
+</tr>
+<tr>
+<td>Recency keywords (“today”, “now”)</td>
+<td>Freshness</td>
+</tr>
+<tr>
+<td>Click-through on recent results</td>
+<td>Self-reinforcing freshness</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="interview-question-pattern">Interview Question Pattern</h2>
+<p><strong>Common opener:</strong> “Design a web search engine like Google.”</p>
+<p><strong>What the interviewer is listening for:</strong></p>
+<ol>
+<li>Do you break it into crawling / indexing / serving? (structure)</li>
+<li>Do you mention the <strong>inverted index</strong> as the core data structure?</li>
+<li>Can you estimate scale? (100B+ pages, &lt;200ms latency)</li>
+<li>Do you discuss the <strong>serving tree</strong> and <strong>fan-out</strong> problem?</li>
+<li>Can you articulate <strong>caching layers</strong> and which queries benefit?</li>
+<li>Bonus: PageRank as query-independent static ranking vs. dynamic scoring</li>
+<li>Bonus: Freshness vs. relevance trade-off, Caffeine/incremental indexing</li>
+</ol>
+<p><strong>Common pitfalls:</strong></p>
+<ul>
+<li>❌ Trying to scan all documents per query (you need the inverted index!)</li>
+<li>❌ Focusing only on crawling and forgetting the serving latency SLA</li>
+<li>❌ Assuming single-machine design — this must be partitioned</li>
+<li>❌ Forgetting duplicate detection (30%+ of the web is duplicate content)</li>
+<li>❌ Ignoring politeness in crawling (you’ll get blocked by every website)</li>
+<li>❌ Mixing up real-time vs. batch: PageRank is batch; query scoring is real-time</li>
+</ul>
+<hr>
+<h2 id="system-diagram-summary">System Diagram Summary</h2>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                           ┌──────────────────┐</span></span>
+<span class="line"><span>                           │   Google.com      │</span></span>
+<span class="line"><span>                           │   (UI + CDN)      │</span></span>
+<span class="line"><span>                           └────────┬─────────┘</span></span>
+<span class="line"><span>                                    │ query</span></span>
+<span class="line"><span>                                    ▼</span></span>
+<span class="line"><span>┌──────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                   SERVING TIER                        │</span></span>
+<span class="line"><span>│  ┌─────────┐   ┌──────────┐   ┌───────────────────┐ │</span></span>
+<span class="line"><span>│  │ Query   │──▶│  Root    │──▶│  Leaf Servers     │ │</span></span>
+<span class="line"><span>│  │ Rewrite │   │  Aggreg. │   │  (index shards    │ │</span></span>
+<span class="line"><span>│  │ (NLP)   │   │          │   │   in RAM)         │ │</span></span>
+<span class="line"><span>│  └─────────┘   └──────────┘   └───────────────────┘ │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span>                          ▲</span></span>
+<span class="line"><span>                          │ index updates</span></span>
+<span class="line"><span>                          │</span></span>
+<span class="line"><span>┌──────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                   INDEXING TIER                       │</span></span>
+<span class="line"><span>│  ┌──────────┐   ┌──────────┐   ┌──────────────────┐ │</span></span>
+<span class="line"><span>│  │Document  │──▶│Inverted  │──▶│ Index Shards     │ │</span></span>
+<span class="line"><span>│  │Processor │   │Index     │   │ (GFS/Colossus)   │ │</span></span>
+<span class="line"><span>│  │(MapReduce)│  │Build     │   │                  │ │</span></span>
+<span class="line"><span>│  └──────────┘   └──────────┘   └──────────────────┘ │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span>                          ▲</span></span>
+<span class="line"><span>                          │ raw HTML</span></span>
+<span class="line"><span>                          │</span></span>
+<span class="line"><span>┌──────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                   CRAWLING TIER                       │</span></span>
+<span class="line"><span>│  ┌──────────┐   ┌──────────┐   ┌──────────────────┐ │</span></span>
+<span class="line"><span>│  │URL       │──▶│Fetcher   │──▶│ Content Store    │ │</span></span>
+<span class="line"><span>│  │Frontier  │   │(polite)  │   │ + Link Extract   │ │</span></span>
+<span class="line"><span>│  └──────────┘   └──────────┘   └──────────────────┘ │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────┘</span></span></code></pre>
+<h2 id="references">References</h2>
+<ul>
+<li>Brin &amp; Page, “The Anatomy of a Large-Scale Hypertextual Web Search Engine” (1998) — the original paper</li>
+<li>Google Caffeine (2010) — continuous indexing architecture</li>
+<li>“MapReduce: Simplified Data Processing on Large Clusters” (2004) — the indexing pipeline</li>
+<li>GFS (2003), Bigtable (2006), Spanner (2012), Colossus — storage evolution</li>
+</ul>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Three-stage pipeline: crawl the web → build an inverted index → rank and serve results</li>
+<li>Inverted index maps each term to the list of documents containing it — the core data structure of all search engines</li>
+<li>PageRank uses link structure as a vote of quality, but modern ranking uses hundreds of signals (freshness, location, personalization)</li>
+<li>Sharding by document range, with each shard having its own index and serving nodes</li>
+<li>Google’s scale: ~100B pages indexed, 8.5B queries/day, &lt;200ms response time</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you handle updates to web pages?” — Recrawl on a schedule (popular pages more frequently), update the index incrementally. The index is not rebuilt from scratch.</li>
+<li>“How does personalization affect ranking?” — Same query returns different results based on location, search history, and device. Adds a per-user context layer on top of the base ranker.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Candidates often focus on PageRank and forget that modern Google ranking is dominated by machine-learned models. PageRank is still a signal but it’s one of hundreds. The real engineering challenge is the serving architecture, not the ranking algorithm.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/google-search-architecture/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Google%20Search%20Architecture&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fgoogle-search-architecture%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fgoogle-search-architecture%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/google-search-architecture" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/gitops-and-progressive-delivery" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>GitOps &amp; Progressive Delivery (Argo, Flux, Flagger)</span></a><a href="/notes/system-design/kubernetes-scheduler-and-control-plane-internals" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Kubernetes Scheduler &amp; Control Plane Internals</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Google Search Architecture" data-selector=".article-prose" data-article-slug="system-design/google-search-architecture" data-article-title="Google Search Architecture" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

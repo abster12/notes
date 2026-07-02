@@ -1,0 +1,652 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>CDN &amp; Edge Computing · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#how-request-routing-actually-works" class="toc-link" data-toc-link="how-request-routing-actually-works" data-astro-cid-p33bl5ka>How Request Routing Actually Works</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#dns-based-cdn-routing-flow" class="toc-link" data-toc-link="dns-based-cdn-routing-flow" data-astro-cid-p33bl5ka>DNS-Based CDN Routing Flow</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#cache-key-design" class="toc-link" data-toc-link="cache-key-design" data-astro-cid-p33bl5ka>Cache Key Design</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#cache-invalidation-purge-vs-ttl" class="toc-link" data-toc-link="cache-invalidation-purge-vs-ttl" data-astro-cid-p33bl5ka>Cache Invalidation: Purge vs TTL</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#cache-strategies-comparison" class="toc-link" data-toc-link="cache-strategies-comparison" data-astro-cid-p33bl5ka>Cache Strategies Comparison</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#origin-shield-and-multi-tier-caching" class="toc-link" data-toc-link="origin-shield-and-multi-tier-caching" data-astro-cid-p33bl5ka>Origin Shield and Multi-Tier Caching</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#multi-tier-cache-topology" class="toc-link" data-toc-link="multi-tier-cache-topology" data-astro-cid-p33bl5ka>Multi-Tier Cache Topology</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#cache-hit-ratio-optimization" class="toc-link" data-toc-link="cache-hit-ratio-optimization" data-astro-cid-p33bl5ka>Cache Hit Ratio Optimization</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#edge-compute-cloudflare-workers-and-lambdaedge" class="toc-link" data-toc-link="edge-compute-cloudflare-workers-and-lambdaedge" data-astro-cid-p33bl5ka>Edge Compute: Cloudflare Workers and Lambda@Edge</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#edge-compute-request-flow" class="toc-link" data-toc-link="edge-compute-request-flow" data-astro-cid-p33bl5ka>Edge Compute Request Flow</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#video-streaming-hls-and-dash" class="toc-link" data-toc-link="video-streaming-hls-and-dash" data-astro-cid-p33bl5ka>Video Streaming: HLS and DASH</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#hls-segment-flow" class="toc-link" data-toc-link="hls-segment-flow" data-astro-cid-p33bl5ka>HLS Segment Flow</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#dynamic-content-acceleration-and-cdn-for-apis" class="toc-link" data-toc-link="dynamic-content-acceleration-and-cdn-for-apis" data-astro-cid-p33bl5ka>Dynamic Content Acceleration and CDN for APIs</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#security-at-the-edge-ddos-waf-rate-limiting" class="toc-link" data-toc-link="security-at-the-edge-ddos-waf-rate-limiting" data-astro-cid-p33bl5ka>Security at the Edge: DDoS, WAF, Rate Limiting</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-planning" class="toc-link" data-toc-link="capacity-planning" data-astro-cid-p33bl5ka>Capacity Planning</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#model-answer" class="toc-link" data-toc-link="model-answer" data-astro-cid-p33bl5ka>Model Answer</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>CDN &amp; Edge Computing</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-medium" data-astro-cid-sgg5joot>Medium</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 22 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 31 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>cdn</span><span class="tag" data-astro-cid-sgg5joot>edge-computing</span><span class="tag" data-astro-cid-sgg5joot>caching</span><span class="tag" data-astro-cid-sgg5joot>anycast</span><span class="tag" data-astro-cid-sgg5joot>video-streaming</span><span class="tag" data-astro-cid-sgg5joot>performance</span><span class="tag" data-astro-cid-sgg5joot>ddos</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="cdn--edge-computing">CDN &amp; Edge Computing</h1>
+<p>A Content Delivery Network is a globally distributed fabric of proxy servers whose single purpose is to move bytes closer to the people asking for them. The economics are brutal and simple: a round trip from Mumbai to an origin in us-east-1 is 200–300 ms of network latency before the origin even starts generating a response, while the same request served from an edge point-of-presence (PoP) in Mumbai is 5–20 ms. At scale, that gap is the difference between a product that feels instant and one that users abandon. But a CDN is not a single mechanism — it is the composition of DNS routing, anycast networking, cache key engineering, invalidation policy, edge compute, multi-tier storage, and security controls. Designing with a CDN means making explicit decisions at each of those layers, because the defaults will serve you well until the day they quietly leak personalized data across users or stampede your origin during a launch.</p>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A CDN caches content at geographically distributed edge servers, serving users from the nearest location to reduce latency and origin load. It uses DNS-based routing, anycast networking, cache key engineering, and multi-tier storage to move bytes closer to users, while also absorbing DDoS traffic and offloading work from the origin.</p>
+<p><strong>How it’s asked:</strong> “Design a CDN that serves 10M RPS across 50 edge locations with 95% cache hit rate and &lt;50ms latency globally.”</p>
+<h2 id="how-request-routing-actually-works">How Request Routing Actually Works</h2>
+<p>When a user types <code>https://example.com/assets/logo.png</code>, the first thing that happens is a DNS resolution, and this is where the CDN inserts itself. The domain’s authoritative nameserver — usually delegated to the CDN provider via a CNAME or NS record — does not return a fixed IP. Instead it runs a mapping function that considers the client’s EDNS Client Subnet (ECS), the resolver’s location, real-time PoP load, link health, and cost, then returns one or more IPs that point at a specific edge PoP. This is fundamentally different from geo-DNS round-robin, which is coarse and oblivious to PoP capacity. Modern CDNs (Akamai, Cloudflare, Fastly, AWS CloudFront) use dense, continuously-updated mapping tables and BGP-aware logic so that a user in São Paulo lands on a São Paulo PoP rather than being shipped to Ashburn. The key insight for interviews is that the CDN does not “know” the user’s true location in the packet path — it only knows the recursive resolver’s IP unless ECS is enabled, which is why ECS support across resolvers materially improves routing accuracy and is a common follow-up question.</p>
+<h3 id="dns-based-cdn-routing-flow">DNS-Based CDN Routing Flow</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  User (Mumbai)            Recursive Resolver         CDN Authoritative NS</span></span>
+<span class="line"><span>      |                          |                          |</span></span>
+<span class="line"><span>      |--- example.com --------->|                          |</span></span>
+<span class="line"><span>      |                          |--- query (+ ECS) ------->|</span></span>
+<span class="line"><span>      |                          |                          |</span></span>
+<span class="line"><span>      |                          |    mapping function:     |</span></span>
+<span class="line"><span>      |                          |     - client subnet(ECS) |</span></span>
+<span class="line"><span>      |                          |     - resolver location  |</span></span>
+<span class="line"><span>      |                          |     - PoP load / health  |</span></span>
+<span class="line"><span>      |                          |     - cost / BGP path    |</span></span>
+<span class="line"><span>      |                          |&#x3C;-- 203.0.113.10 (PoP) ---|</span></span>
+<span class="line"><span>      |&#x3C;-- 203.0.113.10 ---------|                          |</span></span>
+<span class="line"><span>      |                          |                          |</span></span>
+<span class="line"><span>      |--- HTTPS to 203.0.113.10>|                          |</span></span>
+<span class="line"><span>      v                          v                          v</span></span>
+<span class="line"><span>  [Mumbai Edge PoP]   (anycast IP announced from hundreds of PoPs;</span></span>
+<span class="line"><span>                       BGP shortest-path delivers user to nearest)</span></span></code></pre>
+<p>Anycast is the networking primitive that makes the edge globally reachable from a small number of advertised IPs. The CDN announces the same IP prefix from hundreds of PoPs simultaneously; BGP’s shortest-path selection causes each user’s traffic to flow to the topologically nearest announcing router. This has three consequences worth naming:</p>
+<ul>
+<li><strong>Failover is nearly free:</strong> if a PoP drops, its BGP withdrawal makes traffic reroute to the next-nearest within seconds, with no DNS change required.</li>
+<li><strong>DDoS dispersion is structural:</strong> anycast naturally distributes a volumetric attack across the entire edge surface, because every attacker packet is attracted to its nearest PoP rather than concentrating on one origin pipe — this is the structural reason CDNs are effective DDoS scrubbers.</li>
+<li><strong>Long-lived TCP is problematic:</strong> anycast is connectionless-friendly but problematic for long-lived TCP sessions, because a route flap mid-connection can hand the flow to a different PoP that has no state for it. For this reason CDNs terminate TCP at the edge and open a fresh connection to the origin (split TCP), so the anycast hop only carries the client-to-edge leg.</li>
+</ul>
+<h2 id="cache-key-design">Cache Key Design</h2>
+<p>The cache key is the single most important and most under-thought design decision in any CDN deployment. A naive key is just the URL path, and that is correct for immutable static assets but catastrophic for anything with personalization. The key is typically constructed from a normalized combination of the scheme, host, path, and a curated subset of query string parameters and headers. The discipline is to include every input that changes the response and exclude every input that does not.</p>
+<p><strong>Cache key rules:</strong></p>
+<ul>
+<li><strong>Include</strong> the scheme, host, and path (the base identity of the resource).</li>
+<li><strong>Include</strong> <code>Accept-Encoding</code> when you serve different byte streams for gzip vs br vs identity.</li>
+<li><strong>Include</strong> <code>Accept-Language</code> when you negotiate locale at the origin.</li>
+<li><strong>Include</strong> the variant header for every token named by <code>Vary</code>.</li>
+<li><strong>Include</strong> a user-identity segment (user ID, or <code>Vary: Cookie</code>) only for genuinely per-user content — and accept the low hit ratio as the price of correctness.</li>
+<li><strong>Exclude</strong> tracking parameters (<code>utm_*</code>, <code>fbclid</code>, <code>gclid</code>) and cache-busters.</li>
+<li><strong>Exclude</strong> any header or query param the origin ignores — every superfluous key fragment shatters the cache into near-unique shards and tanks your hit ratio.</li>
+<li><strong>Normalize</strong> before keying: lowercase host, sort query params, strip trailing slashes, so equivalent requests collapse to one key.</li>
+<li>Most providers expose a “cache key normalization” or “ignore query string” setting, and the right configuration is almost never the default.</li>
+</ul>
+<p>The failure modes here are symmetric and equally bad:</p>
+<ul>
+<li><strong>Over-inclusive keys → cross-user data leakage.</strong> If you cache <code>/api/profile</code> keyed only on path and the response is user-specific, user A’s profile gets served to user B — a security incident, not a performance bug.</li>
+<li><strong>Under-inclusive keys → cache fragmentation.</strong> If you include a per-request nonce, every request misses.</li>
+</ul>
+<p>A staff-level rule is to treat the cache key as a function signature — it must be a pure, minimal function of exactly the inputs that determine the response body. For personalized content the correct move is usually to not cache at the CDN at all, or to cache a shared fragment and personalize at the edge (Edge-Side Includes or edge compute), or to cache per-user with a <code>Vary: Cookie</code> or a key segment derived from the user ID — accepting that hit ratio will be low but correctness is preserved. The <code>Vary</code> header is the origin’s way of telling the CDN “this response depends on this request header,” and ignoring it is one of the most common causes of corrupt cached content in production.</p>
+<h2 id="cache-invalidation-purge-vs-ttl">Cache Invalidation: Purge vs TTL</h2>
+<p>There are only two hard problems in CDNs, and one of them is invalidation. The fundamental tension is that TTL-based expiry is simple, eventually consistent, and free, while explicit purging is immediate, operationally expensive, and racy.</p>
+<p><strong>Invalidation strategies (in order of preference):</strong></p>
+<ul>
+<li><strong>Immutable assets + long TTL (best):</strong> set <code>Cache-Control: max-age=31536000, immutable</code> for fingerprinted assets like <code>logo.a1b2c3.png</code>. You never purge — you publish a new filename and the old one ages out harmlessly. This is the single highest-leverage CDN design choice you can make.</li>
+<li><strong>Moderate TTL + stale-while-revalidate:</strong> for content that changes on the order of minutes to hours (product page, news article, pricing JSON), a 60–300 s TTL with stale-while-revalidate gives users instant responses while the CDN refreshes in the background, trading bounded staleness for a massive hit-ratio win.</li>
+<li><strong>Surrogate-key purge (Fastly surrogate keys / Cloudflare cache tags / Akamai CP codes):</strong> tag every object produced by a given backend with a shared key, and on a deploy purge only that key, limiting origin refetch to the affected subset. This is the staff-level answer to “how do you deploy without melting the origin.”</li>
+<li><strong>Purge by URL:</strong> immediate freshness for a single object; use when correctness demands freshness faster than the TTL (a price change, a takedown).</li>
+<li><strong>stale-if-error:</strong> serve stale when the origin errors so an outage does not become a 500 for users.</li>
+<li><strong>Never “purge everything”:</strong> a global purge during a deploy causes a synchronized cache stampede as every edge re-fetches from origin at once.</li>
+</ul>
+<p>Purges propagate through the CDN’s control plane, not the data plane, so they are not instant: a global purge across thousands of PoPs typically completes in seconds to low tens of seconds, but during that window some edges will still serve the old object. Purges are also rate-limited at scale. When interviewers ask the canonical “cache invalidation is one of the two hard problems” question, the response they want is: avoid invalidation by design through immutable assets and long TTLs; when you cannot, use surrogate-key purges scoped to the smallest possible object set; and never assume a purge is instantaneous or atomic across the edge.</p>
+<h3 id="cache-strategies-comparison">Cache Strategies Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>When to Use</th>
+<th>TTL Behavior</th>
+<th>Invalidation</th>
+<th>Hit Ratio</th>
+<th>Origin Risk</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Immutable + long TTL</td>
+<td>Fingerprinted static assets (JS/CSS/images)</td>
+<td>1 yr, <code>immutable</code></td>
+<td>New filename; never purge</td>
+<td>95–99%</td>
+<td>Near-zero (origin untouched)</td>
+</tr>
+<tr>
+<td>TTL + stale-while-revalidate</td>
+<td>Content changing in minutes–hours (HTML, JSON)</td>
+<td>60–300 s + SWR</td>
+<td>Ages out; no purge</td>
+<td>High</td>
+<td>Bounded QPS (SWR caps refetch)</td>
+</tr>
+<tr>
+<td>Short per-user TTL</td>
+<td>Authenticated, user-scoped reads</td>
+<td>1–30 s, keyed by user ID</td>
+<td>Ages out per user</td>
+<td>Low–moderate</td>
+<td>Moderate (per-user miss rate)</td>
+</tr>
+<tr>
+<td>Surrogate-key purge</td>
+<td>Deploys touching a known object set</td>
+<td>Medium TTL</td>
+<td>Purge one key on deploy</td>
+<td>Recovers fast</td>
+<td>Low (scoped refetch only)</td>
+</tr>
+<tr>
+<td>Purge by URL</td>
+<td>Single-object freshness fix (price, takedown)</td>
+<td>Any</td>
+<td>Explicit, per-URL</td>
+<td>Brief dip</td>
+<td>Low</td>
+</tr>
+<tr>
+<td>Purge everything</td>
+<td>Avoid except emergencies</td>
+<td>Any</td>
+<td>Global</td>
+<td>Drops to ~0%</td>
+<td><strong>Stampede</strong> — origin hammered</td>
+</tr>
+<tr>
+<td>No-store / <code>private</code></td>
+<td>Authed, user-specific, mutating responses</td>
+<td>none</td>
+<td>n/a (never cached)</td>
+<td>0% for that path</td>
+<td>High if mis-cached: data leakage</td>
+</tr>
+<tr>
+<td>stale-if-error</td>
+<td>Resilience overlay on any cacheable path</td>
+<td>Inherits TTL</td>
+<td>Serves stale on origin error</td>
+<td>Preserved during outage</td>
+<td>Graceful degrade, no 500s</td>
+</tr>
+</tbody>
+</table>
+<h2 id="origin-shield-and-multi-tier-caching">Origin Shield and Multi-Tier Caching</h2>
+<p>Without a shield, a cache miss on a popular object produces a thundering herd: 50 edge PoPs around the world all miss simultaneously on the same object and each opens an origin request, so a single viral URL can generate N times the origin load instead of one fetch. An origin shield is an additional caching tier — typically one or two regional CDN PoPs designated as the only nodes allowed to fetch from the origin — that collapses that fan-in. Every edge still misses, but they all miss to the shield, and the shield serves the first object it fetched to all of them. The result is that origin sees at most one request per object per shield region regardless of global edge count. Shields also provide a stable place to enforce origin-side concerns (header rewriting, request normalization, centralized rate limits) and a single point to absorb origin retries.</p>
+<p>Multi-tier caching generalizes this idea into a hierarchy: user-facing edges, regional mid-tier caches, a shield, then the origin. Each tier filters requests so that only misses propagate upward, and each tier has its own TTL and eviction policy. The design tradeoff is latency versus origin protection: every tier adds a hop on a miss, but each hop dramatically reduces the load on the layer above. The right depth depends on object popularity distribution and origin cost. For a long-tail catalog where most objects are rarely requested, two tiers (edge + shield) is usually enough; for a small hot set with a fragile origin, three tiers pay for themselves. The same logic applies inside a single PoP: an in-process memory cache (LRU, hottest objects) sits in front of the on-disk CDN cache, which sits in front of the shield, giving a hit path that never touches disk for the top percentile of objects.</p>
+<h3 id="multi-tier-cache-topology">Multi-Tier Cache Topology</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   Users (global)</span></span>
+<span class="line"><span>     |</span></span>
+<span class="line"><span>     v</span></span>
+<span class="line"><span> +---------------------+       +---------------------+</span></span>
+<span class="line"><span> | Edge PoP (Mumbai)   |  ...  | Edge PoP (São Paulo)|</span></span>
+<span class="line"><span> |  [RAM LRU hot set]  |       |  [RAM LRU hot set]  |</span></span>
+<span class="line"><span> |  [on-disk cache]    |       |  [on-disk cache]    |</span></span>
+<span class="line"><span> +---------+-----------+       +---------+-----------+</span></span>
+<span class="line"><span>           | miss                        | miss</span></span>
+<span class="line"><span>           v                             v</span></span>
+<span class="line"><span>   +-----------------+          +-----------------+</span></span>
+<span class="line"><span>   | Regional Mid-   |   ...    | Regional Mid-   |</span></span>
+<span class="line"><span>   | Tier Cache      |          | Tier Cache      |</span></span>
+<span class="line"><span>   +--------+--------+          +--------+--------+</span></span>
+<span class="line"><span>            | miss                       | miss</span></span>
+<span class="line"><span>            v                            v</span></span>
+<span class="line"><span>        +------------------------------------+</span></span>
+<span class="line"><span>        | Origin Shield (1–2 PoPs only)     |</span></span>
+<span class="line"><span>        |  - only node allowed to hit origin|</span></span>
+<span class="line"><span>        |  - header rewrite / rate limits   |</span></span>
+<span class="line"><span>        |  - absorbs origin retries         |</span></span>
+<span class="line"><span>        +-----------------+------------------+</span></span>
+<span class="line"><span>                          | miss (&#x3C;= 1 fetch per object per region)</span></span>
+<span class="line"><span>                          v</span></span>
+<span class="line"><span>                   +---------------+</span></span>
+<span class="line"><span>                   |    Origin     |</span></span>
+<span class="line"><span>                   +---------------+</span></span></code></pre>
+<h2 id="cache-hit-ratio-optimization">Cache Hit Ratio Optimization</h2>
+<p>Cache hit ratio (CHR) is the metric that determines whether your CDN is saving you money or just adding hops. World-class static-asset deployments run 95–99% CHR; dynamic/API deployments are happy to exceed 50%. The levers, in order of impact, are:</p>
+<ul>
+<li><strong>Cache key normalization</strong> — drop useless query params and headers (highest impact).</li>
+<li><strong>TTL tuning</strong> — raise TTLs to the maximum the business tolerates, with stale-while-revalidate for headroom.</li>
+<li><strong>Popularity-driven pre-warming</strong> — pre-fetch the top decile of objects so the first request is already a hit.</li>
+<li><strong>Serve stale on error</strong> — <code>Cache-Control: stale-if-error</code> so an origin outage does not turn into a 500 for users.</li>
+<li><strong>Request collapsing (coalescing)</strong> — when N users request the same object during a miss window, the edge forwards a single request to origin and holds the other N–1 open until the response arrives, then serves all of them. This is the per-request analog of an origin shield and is essential for surviving traffic spikes on cold or expiring caches.</li>
+</ul>
+<p>Measurement matters as much as tuning. CHR must be measured at the edge, not the origin, and it must be segmented by content type, URL pattern, and PoP, because a global 80% CHR can hide a 30% CHR on your API path that is quietly hammering the origin. Watch the byte hit ratio too: a few large video objects can dominate bandwidth even with a high request CHR, and conversely a long tail of small API calls can produce high request CHR with low bandwidth savings. The failure mode to call out in interviews is the “cache everything” anti-pattern: blindly setting long TTLs on dynamic or personalized content to chase CHR, which produces correctness bugs that are far more expensive than the bandwidth you saved. Hit ratio is a means, not the goal; the goal is correct, fast, cheap responses, in that order.</p>
+<h2 id="edge-compute-cloudflare-workers-and-lambdaedge">Edge Compute: Cloudflare Workers and Lambda@Edge</h2>
+<p>Edge compute moves application logic from the origin into the PoP, dissolving the latency between “request lands at edge” and “logic runs.” The two dominant models are the isolates-based model (Cloudflare Workers, built on V8 isolates; sub-5ms cold starts, no per-request container boot) and the function-at-the-edge model (AWS Lambda@Edge and CloudFront Functions, where Lambda@Edge runs Node/Python functions in regional caches triggered by viewer/origin request/response events, with cold starts in the tens to hundreds of milliseconds). The architectural payoff is that you can do authN/token validation, A/B routing, geo-redirects, header rewriting, bot scoring, response rewriting, and even full request handling (e.g., a Worker that reads from Workers KV and never touches the origin at all) within 20 ms of the user. That shifts the origin’s job from “serve every request” to “handle the long tail of requests the edge could not satisfy,” which can cut origin compute and load by an order of magnitude.</p>
+<h3 id="edge-compute-request-flow">Edge Compute Request Flow</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  Client (Mumbai, 5–20 ms to edge)</span></span>
+<span class="line"><span>    |</span></span>
+<span class="line"><span>    | HTTPS request</span></span>
+<span class="line"><span>    v</span></span>
+<span class="line"><span>  +--------------------------------------------------+</span></span>
+<span class="line"><span>  | Edge PoP  (Cloudflare Worker / Lambda@Edge)      |</span></span>
+<span class="line"><span>  |                                                  |</span></span>
+<span class="line"><span>  |   1. JWT validation against cached JWKS          |</span></span>
+<span class="line"><span>  |   2. Per-IP / per-account rate limit (token-bkt) |</span></span>
+<span class="line"><span>  |   3. A/B routing / geo-redirect                  |</span></span>
+<span class="line"><span>  |   4. WAF rule set (OWASP CRS + custom rules)     |</span></span>
+<span class="line"><span>  |   5. Bot scoring (JA3 TLS fingerprint, headers)  |</span></span>
+<span class="line"><span>  |                                                  |</span></span>
+<span class="line"><span>  |   Fully handleable at edge?                      |</span></span>
+<span class="line"><span>  |     |-- yes --> read edge KV --> respond to user |</span></span>
+<span class="line"><span>  |     |-- no  --> forward verified principal ----->|</span></span>
+<span class="line"><span>  +--------------------------+-----------------------+</span></span>
+<span class="line"><span>                             |</span></span>
+<span class="line"><span>                             v</span></span>
+<span class="line"><span>                      +---------------+</span></span>
+<span class="line"><span>                      |    Origin     |  (only the long tail;</span></span>
+<span class="line"><span>                      |  (us-east-1)  |   unauth traffic never</span></span>
+<span class="line"><span>                      +---------------+   reaches it)</span></span></code></pre>
+<p>The discipline of edge compute is to keep functions small, pure, and stateless-or-edge-stateful. Cold starts, CPU limits, and memory caps are real: Workers get a tight CPU budget measured in milliseconds, Lambda@Edge has stricter limits than regional Lambda and its functions deploy slowly (region by region) with invocation quotas. Edge state must be eventually consistent by nature — Workers KV and similar stores replicate writes across regions in seconds, so you cannot use them for strongly consistent transactions. The right pattern is to use the edge for read-heavy, lateness-tolerant state (config, feature flags, public keys for JWT verification, rate-limit counters) and to keep authoritative writes and strong consistency at the origin. A common staff-level pattern is JWT validation at the edge: the edge holds the JWKS, verifies the signature and expiry, and only forwards a verified principal to the origin, so unauthenticated traffic never reaches your servers — effectively a distributed auth firewall.</p>
+<h2 id="video-streaming-hls-and-dash">Video Streaming: HLS and DASH</h2>
+<p>Video is the workload that built the CDN industry, and it is where chunked, cacheable, adaptive-bitrate delivery matters most. HLS (HTTP Live Streaming, Apple) and DASH (Dynamic Adaptive Streaming over HTTP, MPEG) both work the same fundamental way: the video is encoded at multiple bitrates (renditions), each rendition is sliced into small duration segments (commonly 2–10 s, with LL-HLS pushing to sub-1 s), and a manifest file (<code>.m3u8</code> for HLS, <code>.mpd</code> for DASH) lists the available renditions and segment URLs. The client requests the manifest, picks a rendition based on its bandwidth and buffer, and fetches segments over plain HTTP — which means the entire delivery path is cacheable by any CDN with no special protocol. The CDN caches segments keyed by URL; because segments are immutable once encoded, they get long TTLs and near-100% CHR after the first fetch. The manifest is the only object with freshness concerns, and it is small, so a short TTL on the manifest plus long TTLs on segments is the standard recipe.</p>
+<h3 id="hls-segment-flow">HLS Segment Flow</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span> Client (player)        Edge PoP         Origin Shield      Origin / Encoder</span></span>
+<span class="line"><span>    |                     |                  |                   |</span></span>
+<span class="line"><span>    |-- GET master.m3u8 ->|                  |                   |</span></span>
+<span class="line"><span>    |                     |-- miss? -------->|                   |</span></span>
+<span class="line"><span>    |                     |&#x3C;-- manifest -----|&#x3C;-- GET manifest --|</span></span>
+<span class="line"><span>    |&#x3C;-- master.m3u8 -----|                  |                   |</span></span>
+<span class="line"><span>    |  (lists renditions: |                  |                   |</span></span>
+<span class="line"><span>    |   240p/480p/1080p)  |                  |                   |</span></span>
+<span class="line"><span>    |                     |                  |                   |</span></span>
+<span class="line"><span>    |  choose rendition by bandwidth + buffer                  |</span></span>
+<span class="line"><span>    |                     |                  |                   |</span></span>
+<span class="line"><span>    |-- GET seg-003.ts --->|                  |                   |</span></span>
+<span class="line"><span>    |   (1080p, 4 s)      |-- miss --------->|                   |</span></span>
+<span class="line"><span>    |                     |                 |-- GET seg-003.ts ->|</span></span>
+<span class="line"><span>    |                     |                 |&#x3C;-- 4 s segment ----|</span></span>
+<span class="line"><span>    |                     |&#x3C;-- seg (long TTL)|                  |</span></span>
+<span class="line"><span>    |&#x3C;-- seg-003.ts ------|                  |                   |</span></span>
+<span class="line"><span>    |                     |                  |                   |</span></span>
+<span class="line"><span>    |  next segment (next 2–10 s);           |                   |</span></span>
+<span class="line"><span>    |  adapt bitrate up/down as bw changes   |                   |</span></span>
+<span class="line"><span>    |  ...                                  |                   |</span></span></code></pre>
+<p>Origin shield is almost mandatory for video because of the fan-in problem at scale: a new live segment is requested by every viewer of a stream within seconds of publication, and without a shield each edge would independently fetch the same segment from origin. A single shield collapses that to one origin fetch per segment globally. Capacity planning for video is bandwidth-dominated in a way that web traffic is not: a 1080p stream at 5 Mbps sustained across a million concurrent viewers is ~5 Tbps of egress, and the CDN contract must be sized for peak concurrent streams times peak bitrate times overhead, not for requests per second. CDNs also offer specialized video features — token-signed segment URLs to prevent hotlinking, geo-blocking, DRM integration (FairPlay, Widevine, PlayReady via segmented CENC), and multi-CDN steering for live events where a single provider’s regional capacity is insufficient. The interview-worthy nuance is that live and VOD have opposite cache-warming profiles: VOD segments are requested lazily and warm over time, while live segments are requested by everyone at once, so live requires pre-warming or shield collapsing and VOD does not.</p>
+<h2 id="dynamic-content-acceleration-and-cdn-for-apis">Dynamic Content Acceleration and CDN for APIs</h2>
+<p>CDNs were born for static content, but a large fraction of modern traffic is dynamic and cannot be cached by URL. Dynamic content acceleration still helps here through mechanisms that do not depend on caching the body:</p>
+<ul>
+<li><strong>TCP and TLS optimization:</strong> the edge terminates TLS next to the user (one short RTT) and maintains a warm, persistent, TCP-tuned connection pool to the origin over an optimized backbone (Tier-1 routes, BGP optimization, private fiber), so the client does not pay the cross-globe TCP slow-start and TLS handshake costs.</li>
+<li><strong>Connection reuse and request collapsing at the edge.</strong></li>
+<li><strong>Route optimization:</strong> the CDN’s backbone may take a path that is shorter in latency than the public internet’s BGP-best path, which optimizes for latency rather than hop count.</li>
+</ul>
+<p>The net effect is that even uncacheable API calls can be 30–60% faster through a CDN than direct-to-origin, purely from transport-layer gains.</p>
+<p>Caching API responses is a legitimate and powerful technique but it demands discipline. The safe cases are idempotent, non-personalized, read-heavy endpoints: a product catalog, a public pricing table, a feature-flag config, a leaderboard, a search results page for a popular query. These can be cached at the edge with short TTLs (1–30 s) and stale-while-revalidate, giving the origin a bounded QPS regardless of client load. The unsafe cases are anything authenticated, anything user-scoped, and any mutating verb (POST/PUT/DELETE must not be cached). The right pattern for authed APIs is to cache only the shared sub-responses and assemble the personalized result at the edge, or to use a short per-user TTL with a key segment derived from the user identity. API CDN also requires correct handling of <code>Cache-Control</code> response directives — origins must emit <code>private</code> for user-specific responses so the CDN does not cache them, and <code>no-store</code> for anything truly uncachable. A frequent production bug is an API gateway defaulting to a cacheable <code>Cache-Control</code> on error responses, which then caches 500s at the edge for the TTL duration; always set <code>no-store</code> on error paths.</p>
+<h2 id="security-at-the-edge-ddos-waf-rate-limiting">Security at the Edge: DDoS, WAF, Rate Limiting</h2>
+<p>The edge is the best place to enforce security because it is where malicious traffic is closest to its source and farthest from your origin. DDoS protection at a CDN is partly structural (anycast spreads volumetric attacks across the global edge surface, so a 100 Gbps attack becomes 1 Gbps per PoP) and partly active (edge scrubbing detects and drops SYN floods, UDP reflection, amplification attacks, and application-layer floods using fingerprinting and behavioral signals). L3/L4 attacks are absorbed almost transparently because the edge terminates TCP; L7 attacks require a WAF and rate limiting. A CDN-based WAF applies managed rule sets (OWASP Core Rule Set, provider-curated signatures) to inspect request bodies, headers, and parameters before traffic reaches the origin, blocking SQL injection, XSS, request smuggling, and known-exploit patterns. The WAF can also run custom rules: block by ASN, by geo, by URI pattern, by header anomaly score.</p>
+<p>Rate limiting at the edge is orders of magnitude cheaper than at the origin because the edge sees the full request volume and can reject before any origin work is done. Edge rate limits are typically token-bucket per key (IP, API key, user ID, path) with a configurable window, and at scale they rely on an eventually-consistent edge counter store — meaning a strict global limit is approximate under partition, which is usually acceptable. The design choice is between per-PoP limits (cheap, accurate per PoP, loose globally) and global limits (requires cross-PoP state, stricter, more expensive). For login brute-force and credential-stuffing defense, a per-IP and per-account limit at the edge combined with bot detection (TLS fingerprinting like JA3, header ordering, behavioral signals) is standard.</p>
+<p><strong>Security headers &amp; directives to set at the edge:</strong></p>
+<ul>
+<li><code>Cache-Control: private</code> — user-specific responses; the CDN must not cache these.</li>
+<li><code>Cache-Control: no-store</code> — truly uncachable responses and all error paths (prevents caching 500s).</li>
+<li><code>Cache-Control: max-age=..., immutable</code> — fingerprinted static assets.</li>
+<li><code>Cache-Control: stale-while-revalidate=..., stale-if-error=...</code> — resilience + freshness headroom.</li>
+<li><code>Vary: &lt;header&gt;</code> — declare every request header the response depends on (Accept-Encoding, Accept-Language, Cookie).</li>
+<li><code>Strict-Transport-Security</code> (HSTS) — force TLS at the edge, before traffic ever reaches origin.</li>
+<li><code>Content-Security-Policy</code> — injected at the edge to govern scripts/resources client-side.</li>
+<li><code>X-Content-Type-Options: nosniff</code>, <code>X-Frame-Options</code> / <code>frame-ancestors</code> — baseline hardening added centrally.</li>
+<li><code>CF-Connecting-IP</code> / <code>X-Forwarded-For</code> — the real client IP when behind the CDN; trust only after CDN validation, since spoofing these headers is a bypass vector.</li>
+</ul>
+<p>The pitfall to avoid is relying on the client IP from the TCP source alone when the user is behind the CDN: the real client IP is in <code>CF-Connecting-IP</code> / <code>X-Forwarded-For</code>, and trusting spoofable headers without the CDN’s validation is a bypass vector. The staff-level pattern is defense in depth: edge rate limit for volume, WAF for known attacks, origin-side authorization for correctness, and never let the edge be the only authN boundary for sensitive actions.</p>
+<h2 id="capacity-planning">Capacity Planning</h2>
+<p>CDN capacity planning is fundamentally about peak concurrent demand, object size distribution, and origin resilience, and it is easy to get wrong because the CDN’s elastic feel masks a finite underlying network. The core dimensions are:</p>
+<ul>
+<li><strong>Egress bandwidth</strong> — the dominant cost and the binding constraint for video and large-file workloads.</li>
+<li><strong>Requests per second</strong> — the binding constraint for API and small-object workloads, and what drives edge CPU under TLS.</li>
+<li><strong>Connections per second / concurrent connections</strong> — TLS handshake cost.</li>
+<li><strong>Storage / objects cached</strong> — for disk-bound PoPs.</li>
+</ul>
+<p>You plan to peak, not to average: a live sports stream, a product launch, or a Black Friday spike can be 5–20x the daily average, and a CDN contract with committed bandwidth that is sized to average will bill overages at punitive rates or, worse, throttle during the exact minutes you cannot afford to lose. The right planning unit is the 95th or 99th percentile of historical peak plus a growth factor plus a launch-event buffer, and you should validate it with load tests that drive traffic through the actual CDN, not just against the origin.</p>
+<p>Origin-side capacity planning is the inverse exercise and the more dangerous one, because the CDN’s job is to shield the origin and a misconfigured CDN can invert that protection. The question to answer is: at the worst realistic miss rate, what is the maximum QPS the origin will see, and can it survive that plus a purge stampede plus a regional failover where one shield’s worth of traffic shifts to another? Capacity here is origin CPU, database connections, and the rate at which the origin can regenerate objects. A common failure is sizing the origin for “CDN hit ratio is 95%, so origin sees 5% of traffic” and then discovering that a deploy, a purge, or a cache-warming miss drops hit ratio to 60% for five minutes and the origin melts. The disciplined approach is to plan for the degraded case — origin sized for a 50% miss window sustained for the purge duration — and to use origin shields, request coalescing, queue limits, and circuit breakers so that origin overload degrades to stale or queued responses rather than a cascading failure. Multi-CDN is the final capacity lever: steering traffic across two or more CDN providers via DNS (NS1, Cedexis, Akamai’s Adaptive Acceleration) lets you absorb single-provider regional saturation and gives you negotiating leverage on price, at the cost of operational complexity in cache warming, purge coordination, and consistent security policy across providers.</p>
+<hr>
+<h2 id="model-answer">Model Answer</h2>
+<p><strong>Q: “Design the content delivery for a global platform serving 50M users — static assets, a personalized API, and 1080p live video — with sub-100ms TTFB and a hard requirement that the origin never falls over during a launch. Walk me through the layers.”</strong></p>
+<p>A: <em>“I’d separate the three traffic classes because they have opposite cache profiles. Static assets get fingerprinted filenames, immutable <code>Cache-Control: max-age=31536000</code>, and a CDN in front with normalized cache keys that drop tracking query params — this is the 99% hit-ratio layer and it almost never touches the origin. The live video goes through HLS with segments at a 4-second duration, long TTLs on segments and a short TTL on the manifest, behind an origin shield because every viewer requests each new segment within seconds and the shield collapses that fan-in to one origin fetch per segment; I’d size the CDN contract to peak concurrent viewers times 5 Mbps plus overhead, and I’d consider multi-CDN steering for the live event because a single provider’s regional capacity can saturate. The personalized API is the interesting part — I would not cache user-specific responses at the edge at all; instead I’d put a Cloudflare Worker at the edge that validates the JWT against a cached JWKS, applies per-IP and per-account rate limits, and forwards only authenticated traffic to the origin. For the shared, non-personalized API paths (catalog, config) I’d cache with a 10-second TTL plus stale-while-revalidate, which caps origin QPS at six per object regardless of client load.</em></p>
+<p><em>For the ‘origin never falls over’ requirement, the load-bearing decisions are the origin shield, request coalescing at the edge, surrogate-key purges scoped tightly on deploys instead of ‘purge all,’ and sizing the origin for the degraded miss case — say a 50% miss window for the purge duration — not the steady-state 95% hit case. I’d add stale-if-error so an origin hiccup serves stale instead of 500, and a circuit breaker on the origin path so overload degrades gracefully. Finally I’d put the WAF and DDoS protection at the edge so volumetric and L7 attacks never reach the origin, and I’d load-test by driving traffic through the real CDN, not just the origin, because the failure modes that kill you — cache stampedes, anycast reroutes, shield saturation — only show up end-to-end.“</em></p>
+<p><strong>Common pitfall:</strong> Saying “put a CDN in front of everything” without (a) distinguishing cacheable from personalized content and specifying the cache key for each, (b) naming the invalidation strategy — immutable assets vs surrogate-key purges vs TTL+SWR — and (c) sizing the origin for the cache-miss and purge-stampede case rather than the steady-state hit ratio. Interviewers are testing whether you understand that a CDN moves load, it does not eliminate it, and that the origin is most exposed exactly when the cache is cold or being invalidated.</p>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>A CDN moves load closer to users — it does not eliminate load; the origin is most exposed when the cache is cold or being purged.</li>
+<li>The cache key is the single most important design decision: include every input that changes the response, exclude every input that does not, and normalize before keying.</li>
+<li>Prefer immutable assets + long TTL over explicit purging; when you must purge, use surrogate-key purges scoped to the smallest object set — never “purge everything” during a deploy.</li>
+<li>Origin shields and request coalescing collapse fan-in so a viral URL produces one origin fetch, not N; size the origin for the degraded miss case (50% miss), not the steady-state 95% hit.</li>
+<li>Anycast is the networking primitive that makes the edge globally reachable and structurally absorbs DDoS, but it is connectionless-friendly only — CDNs terminate TCP at the edge (split TCP) to handle long-lived sessions.</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li><strong>How does a CDN route a user to the nearest PoP?</strong> DNS-based mapping using EDNS Client Subnet, resolver location, PoP load/health, and BGP path cost — not coarse geo-DNS round-robin. Without ECS the CDN only sees the recursive resolver’s IP, which degrades routing accuracy.</li>
+<li><strong>How do you cache personalized content safely?</strong> Don’t cache user-specific responses at the edge at all, or cache only shared fragments and personalize at the edge via ESI/edge compute, or cache per-user with a <code>Vary: Cookie</code> or user-ID key segment — accepting low hit ratio as the price of correctness.</li>
+<li><strong>What happens to the origin during a deploy or purge?</strong> A global purge causes a synchronized cache stampede; mitigate with surrogate-key purges, stale-while-revalidate, stale-if-error, request coalescing, and circuit breakers so overload degrades to stale rather than cascading failure.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>A high global cache hit ratio can hide a 30% CHR on your API path that is quietly hammering the origin — always segment CHR by content type, URL pattern, and PoP, and measure at the edge, not the origin. Hit ratio is a means, not the goal; correctness comes first.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/cdn-and-edge-computing/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=CDN%20%26%20Edge%20Computing&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fcdn-and-edge-computing%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fcdn-and-edge-computing%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/cdn-and-edge-computing" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/chaos-engineering-failure-injection-game-days/" class="related-card"><div class="related-card-title">Chaos Engineering (Failure Injection, Game Days)</div><div class="related-card-meta">System Design · 16 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/consistent-hashing" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Consistent Hashing</span></a><a href="/notes/system-design/search-engine-elasticsearch" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Search Engine (Elasticsearch)</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="CDN &amp; Edge Computing" data-selector=".article-prose" data-article-slug="system-design/cdn-and-edge-computing" data-article-title="CDN &amp; Edge Computing" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

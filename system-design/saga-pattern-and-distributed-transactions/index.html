@@ -1,0 +1,1134 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Saga Pattern &amp; Distributed Transactions (Compensation, Orchestration) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-why-sagas-the-problem-of-distributed-transactions" class="toc-link" data-toc-link="1-why-sagas-the-problem-of-distributed-transactions" data-astro-cid-p33bl5ka>1. Why Sagas: The Problem of Distributed Transactions</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#11-the-monolith-baseline-acid" class="toc-link" data-toc-link="11-the-monolith-baseline-acid" data-astro-cid-p33bl5ka>1.1 The Monolith Baseline: ACID</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#12-the-microservices-reality-no-shared-database" class="toc-link" data-toc-link="12-the-microservices-reality-no-shared-database" data-astro-cid-p33bl5ka>1.2 The Microservices Reality: No Shared Database</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#13-why-2pc-doesnt-scale" class="toc-link" data-toc-link="13-why-2pc-doesnt-scale" data-astro-cid-p33bl5ka>1.3 Why 2PC Doesn’t Scale</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-the-saga-pattern-a-structured-alternative" class="toc-link" data-toc-link="2-the-saga-pattern-a-structured-alternative" data-astro-cid-p33bl5ka>2. The Saga Pattern: A Structured Alternative</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#21-the-core-principle" class="toc-link" data-toc-link="21-the-core-principle" data-astro-cid-p33bl5ka>2.1 The Core Principle</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#22-compensation-what-undo-actually-means" class="toc-link" data-toc-link="22-compensation-what-undo-actually-means" data-astro-cid-p33bl5ka>2.2 Compensation: What “Undo” Actually Means</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-saga-coordination-choreography-vs-orchestration" class="toc-link" data-toc-link="3-saga-coordination-choreography-vs-orchestration" data-astro-cid-p33bl5ka>3. Saga Coordination: Choreography vs. Orchestration</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#31-choreography-based-saga-event-driven" class="toc-link" data-toc-link="31-choreography-based-saga-event-driven" data-astro-cid-p33bl5ka>3.1 Choreography-Based Saga (Event-Driven)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#32-orchestration-based-saga-central-coordinator" class="toc-link" data-toc-link="32-orchestration-based-saga-central-coordinator" data-astro-cid-p33bl5ka>3.2 Orchestration-Based Saga (Central Coordinator)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#33-when-to-use-which" class="toc-link" data-toc-link="33-when-to-use-which" data-astro-cid-p33bl5ka>3.3 When to Use Which</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#34-the-hybrid-orchestration-with-event-bus" class="toc-link" data-toc-link="34-the-hybrid-orchestration-with-event-bus" data-astro-cid-p33bl5ka>3.4 The Hybrid: Orchestration with Event Bus</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#4-the-outbox-pattern-reliable-messaging-for-sagas" class="toc-link" data-toc-link="4-the-outbox-pattern-reliable-messaging-for-sagas" data-astro-cid-p33bl5ka>4. The Outbox Pattern: Reliable Messaging for Sagas</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#41-the-problem-dual-write" class="toc-link" data-toc-link="41-the-problem-dual-write" data-astro-cid-p33bl5ka>4.1 The Problem: Dual Write</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#42-the-outbox-solution" class="toc-link" data-toc-link="42-the-outbox-solution" data-astro-cid-p33bl5ka>4.2 The Outbox Solution</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#43-debezium-cdc-vs-poller" class="toc-link" data-toc-link="43-debezium-cdc-vs-poller" data-astro-cid-p33bl5ka>4.3 Debezium (CDC) vs. Poller</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#5-saga-failure-modes--their-mitigations" class="toc-link" data-toc-link="5-saga-failure-modes--their-mitigations" data-astro-cid-p33bl5ka>5. Saga Failure Modes &amp; Their Mitigations</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#51-the-compensating-transaction-that-fails" class="toc-link" data-toc-link="51-the-compensating-transaction-that-fails" data-astro-cid-p33bl5ka>5.1 The Compensating Transaction That Fails</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#52-sequence-matters-order-steps-by-compensatability" class="toc-link" data-toc-link="52-sequence-matters-order-steps-by-compensatability" data-astro-cid-p33bl5ka>5.2 Sequence Matters: Order Steps by Compensatability</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#53-phantom-reads--isolation-anomalies" class="toc-link" data-toc-link="53-phantom-reads--isolation-anomalies" data-astro-cid-p33bl5ka>5.3 Phantom Reads &amp; Isolation Anomalies</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#54-the-orchestrator-crash" class="toc-link" data-toc-link="54-the-orchestrator-crash" data-astro-cid-p33bl5ka>5.4 The Orchestrator Crash</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#55-duplicate-execution-at-least-once-semantics" class="toc-link" data-toc-link="55-duplicate-execution-at-least-once-semantics" data-astro-cid-p33bl5ka>5.5 Duplicate Execution (At-Least-Once Semantics)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#6-saga-implementation-patterns" class="toc-link" data-toc-link="6-saga-implementation-patterns" data-astro-cid-p33bl5ka>6. Saga Implementation Patterns</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#61-the-command--orchestrator-pattern" class="toc-link" data-toc-link="61-the-command--orchestrator-pattern" data-astro-cid-p33bl5ka>6.1 The Command / Orchestrator Pattern</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#62-temporal--cadence-durable-execution" class="toc-link" data-toc-link="62-temporal--cadence-durable-execution" data-astro-cid-p33bl5ka>6.2 Temporal / Cadence: Durable Execution</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#63-aws-step-functions" class="toc-link" data-toc-link="63-aws-step-functions" data-astro-cid-p33bl5ka>6.3 AWS Step Functions</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#7-architectural-decisions--trade-off-table" class="toc-link" data-toc-link="7-architectural-decisions--trade-off-table" data-astro-cid-p33bl5ka>7. Architectural Decisions — Trade-Off Table</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#8-key-metrics-for-saga-observability" class="toc-link" data-toc-link="8-key-metrics-for-saga-observability" data-astro-cid-p33bl5ka>8. Key Metrics for Saga Observability</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#9-interview-questions--model-answers" class="toc-link" data-toc-link="9-interview-questions--model-answers" data-astro-cid-p33bl5ka>9. Interview Questions &amp; Model Answers</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#-q1-design-a-saga-for-an-e-commerce-checkout-create-order--reserve-inventory--charge-payment--schedule-shipping-walk-me-through-a-failure-at-step-4-and-how-you-handle-it" class="toc-link" data-toc-link="-q1-design-a-saga-for-an-e-commerce-checkout-create-order--reserve-inventory--charge-payment--schedule-shipping-walk-me-through-a-failure-at-step-4-and-how-you-handle-it" data-astro-cid-p33bl5ka>⚡ Q1: “Design a saga for an e-commerce checkout: Create Order → Reserve Inventory → Charge Payment → Schedule Shipping. Walk me through a failure at step 4 and how you handle it.”</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#-q2-you-mentioned-idempotency-keys-what-happens-if-two-different-sagas-accidentally-use-the-same-idempotency-key" class="toc-link" data-toc-link="-q2-you-mentioned-idempotency-keys-what-happens-if-two-different-sagas-accidentally-use-the-same-idempotency-key" data-astro-cid-p33bl5ka>⚡ Q2: “You mentioned idempotency keys. What happens if two different sagas accidentally use the same idempotency key?”</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#-common-pitfall-well-just-run-compensation-synchronously-in-the-catch-block" class="toc-link" data-toc-link="-common-pitfall-well-just-run-compensation-synchronously-in-the-catch-block" data-astro-cid-p33bl5ka>❗ Common Pitfall: “We’ll just run compensation synchronously in the catch block”</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#10-beyond-sagas-when-the-pattern-isnt-enough" class="toc-link" data-toc-link="10-beyond-sagas-when-the-pattern-isnt-enough" data-astro-cid-p33bl5ka>10. Beyond Sagas: When the Pattern Isn’t Enough</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#101-long-running-sagas-hours-to-days" class="toc-link" data-toc-link="101-long-running-sagas-hours-to-days" data-astro-cid-p33bl5ka>10.1 Long-Running Sagas (Hours to Days)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#102-sagas-across-organizational-boundaries" class="toc-link" data-toc-link="102-sagas-across-organizational-boundaries" data-astro-cid-p33bl5ka>10.2 Sagas Across Organizational Boundaries</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#103-when-not-to-use-sagas" class="toc-link" data-toc-link="103-when-not-to-use-sagas" data-astro-cid-p33bl5ka>10.3 When NOT to Use Sagas</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#11-key-takeaways" class="toc-link" data-toc-link="11-key-takeaways" data-astro-cid-p33bl5ka>11. Key Takeaways</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#related" class="toc-link" data-toc-link="related" data-astro-cid-p33bl5ka>Related</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Saga Pattern &amp; Distributed Transactions (Compensation, Orchestration)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-advanced" data-astro-cid-sgg5joot>advanced</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 22 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 31 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>platform</span><span class="tag" data-astro-cid-sgg5joot>saga</span><span class="tag" data-astro-cid-sgg5joot>distributed-transactions</span><span class="tag" data-astro-cid-sgg5joot>compensation</span><span class="tag" data-astro-cid-sgg5joot>orchestration</span><span class="tag" data-astro-cid-sgg5joot>choreography</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="saga-pattern--distributed-transactions-compensation-orchestration">Saga Pattern &amp; Distributed Transactions (Compensation, Orchestration)</h1>
+<blockquote>
+<p><strong>Staff-Engineer Focus:</strong> “We use sagas instead of distributed transactions” is the mid-level answer. Understanding the fundamental tension between atomicity and availability — and knowing which side of that trade-off your business domain falls on — that’s the senior answer. <strong>The Saga pattern isn’t a replacement for ACID; it’s an admission that ACID doesn’t scale across service boundaries, and a structured way to manage the consequences. The staff engineer doesn’t ask “should I use saga or 2PC?” They ask: “What is the business cost of an inconsistency, how long can it persist, and which compensating actions are truly reversible vs. merely mitigative?” A refund that issues store credit instead of cash because the payment gateway’s compensating API is down is NOT a successful compensation — it’s a degraded fallback that must be tracked as technical debt. The interview question isn’t “What is a saga?” It’s: “Your order service creates an order, reserves inventory, charges payment, and schedules shipping. The shipping service fails because the warehouse API returns a 500. Payment has already been charged. Walk me through: (a) what state the system is in right now, (b) how you’d structure the compensating transactions, (c) what happens if the refund compensation also fails, and (d) why an orchestrator that retries shipping 3 times before compensating is dangerous if inventory reservation has a 5-minute TTL.”</strong></p>
+</blockquote>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A pattern for managing distributed transactions as a sequence of local transactions, each with a compensating action for rollback — avoiding the blocking of Two-Phase Commit.</p>
+<p><strong>How it’s asked:</strong> “Design a saga for an e-commerce order spanning payment, inventory, shipping, and notification services. Handle compensation, orchestration vs choreography, and failure recovery.”</p>
+<hr>
+<h2 id="1-why-sagas-the-problem-of-distributed-transactions">1. Why Sagas: The Problem of Distributed Transactions</h2>
+<h3 id="11-the-monolith-baseline-acid">1.1 The Monolith Baseline: ACID</h3>
+<p>In a monolithic application with a single database:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#F97583">BEGIN</span><span style="color:#F97583"> TRANSACTION</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">  INSERT INTO</span><span style="color:#E1E4E8"> orders (id, user_id, total) </span><span style="color:#F97583">VALUES</span><span style="color:#E1E4E8"> (...);</span></span>
+<span class="line"><span style="color:#F97583">  UPDATE</span><span style="color:#E1E4E8"> inventory </span><span style="color:#F97583">SET</span><span style="color:#E1E4E8"> quantity </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> quantity </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#F97583"> WHERE</span><span style="color:#E1E4E8"> product_id </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> ...;</span></span>
+<span class="line"><span style="color:#F97583">  INSERT INTO</span><span style="color:#E1E4E8"> payments (order_id, amount, </span><span style="color:#F97583">status</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">VALUES</span><span style="color:#E1E4E8"> (...);</span></span>
+<span class="line"><span style="color:#F97583">COMMIT</span><span style="color:#E1E4E8">;</span></span></code></pre>
+<p>If any statement fails, the entire transaction rolls back. The database guarantees atomicity, consistency, isolation, and durability. This is ACID.</p>
+<h3 id="12-the-microservices-reality-no-shared-database">1.2 The Microservices Reality: No Shared Database</h3>
+<p>In a microservices architecture, each of those operations lives in a separate service with its own database:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────┐    ┌───────────┐    ┌──────────┐    ┌──────────┐</span></span>
+<span class="line"><span>│  Order   │    │ Inventory │    │ Payment  │    │ Shipping │</span></span>
+<span class="line"><span>│ Service  │    │  Service  │    │ Service  │    │ Service  │</span></span>
+<span class="line"><span>│  (DB-A)  │    │  (DB-B)   │    │  (DB-C)  │    │  (DB-D)  │</span></span>
+<span class="line"><span>└──────────┘    └───────────┘    └──────────┘    └──────────┘</span></span></code></pre>
+<p>Now there’s no <code>BEGIN TRANSACTION</code> that spans databases. Each service commits independently. If Payment succeeds but Shipping fails, you have a charged customer with no shipment. This is a <strong>partial failure</strong> — the defining challenge of distributed systems.</p>
+<h3 id="13-why-2pc-doesnt-scale">1.3 Why 2PC Doesn’t Scale</h3>
+<p>Two-Phase Commit (2PC) provides atomicity across databases:</p>
+<ol>
+<li><strong>Prepare phase:</strong> Coordinator asks every participant: “Can you commit?” Each participant locks resources and votes YES/NO.</li>
+<li><strong>Commit phase:</strong> If ALL vote YES, coordinator tells everyone to commit. If ANY vote NO, coordinator tells everyone to abort.</li>
+</ol>
+<p><strong>Why 2PC breaks at scale:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Coordinator is single point of failure</strong></td>
+<td>Coordinator crash during commit → participants blocked holding locks indefinitely (in-doubt transaction)</td>
+</tr>
+<tr>
+<td><strong>Lock duration = slowest participant</strong></td>
+<td>One slow participant holds locks across ALL databases. At 1000 TPS, lock contention kills throughput.</td>
+</tr>
+<tr>
+<td><strong>Participants must ALL be available</strong></td>
+<td>One participant down → entire transaction blocked. Availability = product of individual availabilities (0.99^4 = 96% max).</td>
+</tr>
+<tr>
+<td><strong>Latency is additive</strong></td>
+<td>4 participants × 2 network round trips (prepare + commit) = 8 RTTs minimum. At 50ms RTT, that’s 400ms per transaction.</td>
+</tr>
+<tr>
+<td><strong>Cross-organizational impossibility</strong></td>
+<td>Payment gateway (Stripe) won’t participate in your 2PC. You can’t hold their locks.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The CAP theorem in action:</strong> 2PC chooses consistency over availability. When the network partitions, 2PC blocks. Sagas choose availability over consistency — the transaction eventually completes, but there’s a window of inconsistency.</p>
+<hr>
+<h2 id="2-the-saga-pattern-a-structured-alternative">2. The Saga Pattern: A Structured Alternative</h2>
+<p>A <strong>Saga</strong> is a sequence of local transactions, each updating data within a single service. Each local transaction publishes an event or message that triggers the next step. If any step fails, the saga executes <strong>compensating transactions</strong> to undo the preceding steps.</p>
+<h3 id="21-the-core-principle">2.1 The Core Principle</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Success path:  T1 → T2 → T3 → T4</span></span>
+<span class="line"><span>Failure path:  T1 → T2 → T3(FAILS)</span></span>
+<span class="line"><span>                    ← C2 ← C3 (compensate T2 and T1)</span></span></code></pre>
+<p>Every forward transaction <code>Tn</code> has a corresponding compensating transaction <code>Cn</code> that semantically undoes its effects. This is NOT a database rollback — it’s an application-level undo.</p>
+<h3 id="22-compensation-what-undo-actually-means">2.2 Compensation: What “Undo” Actually Means</h3>
+<table>
+<thead>
+<tr>
+<th>Forward Transaction</th>
+<th>Compensating Transaction</th>
+<th style="text-align: center">Reversible?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>INSERT INTO orders</code></td>
+<td><code>UPDATE orders SET status = 'CANCELLED'</code></td>
+<td style="text-align: center">✅ Semantically (order exists but cancelled)</td>
+</tr>
+<tr>
+<td><code>UPDATE inventory SET quantity = quantity - 1</code></td>
+<td><code>UPDATE inventory SET quantity = quantity + 1</code></td>
+<td style="text-align: center">✅ If no race condition</td>
+</tr>
+<tr>
+<td><code>Charge credit card $100</code></td>
+<td><code>Refund credit card $100</code></td>
+<td style="text-align: center">⚠️ Refund API can fail; may take days</td>
+</tr>
+<tr>
+<td><code>Send confirmation email</code></td>
+<td><code>Send "order cancelled" email</code></td>
+<td style="text-align: center">✅ Semantically</td>
+</tr>
+<tr>
+<td><code>Reserve warehouse slot</code></td>
+<td><code>Release warehouse slot</code></td>
+<td style="text-align: center">✅</td>
+</tr>
+<tr>
+<td><code>Ship physical item</code></td>
+<td><code>Issue return label + restock</code></td>
+<td style="text-align: center">❌ Physically irreversible once shipped</td>
+</tr>
+<tr>
+<td><code>Generate coupon code</code></td>
+<td><code>Invalidate coupon code</code></td>
+<td style="text-align: center">✅</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The critical insight:</strong> Some compensations are <strong>technical reversals</strong> (database update), some are <strong>business reversals</strong> (refund), and some are <strong>physically impossible</strong> (un-shipping an item). The saga designer’s job is to structure the sequence so that the most expensive-to-compensate steps happen LAST.</p>
+<hr>
+<h2 id="3-saga-coordination-choreography-vs-orchestration">3. Saga Coordination: Choreography vs. Orchestration</h2>
+<p>This is the single most important architectural decision in saga design.</p>
+<h3 id="31-choreography-based-saga-event-driven">3.1 Choreography-Based Saga (Event-Driven)</h3>
+<p>Each service listens for events and decides independently what to do next:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Order Service          Inventory Service      Payment Service        Shipping Service</span></span>
+<span class="line"><span>    │                        │                      │                      │</span></span>
+<span class="line"><span>    │ OrderCreated           │                      │                      │</span></span>
+<span class="line"><span>    ├───────────────────────→│                      │                      │</span></span>
+<span class="line"><span>    │                        │ InventoryReserved    │                      │</span></span>
+<span class="line"><span>    │                        ├─────────────────────→│                      │</span></span>
+<span class="line"><span>    │                        │                      │ PaymentCharged       │</span></span>
+<span class="line"><span>    │                        │                      ├─────────────────────→│</span></span>
+<span class="line"><span>    │                        │                      │                      │ ShipmentScheduled</span></span></code></pre>
+<p><strong>Failure scenario (choreography):</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Payment Service fails after charging. It emits PaymentFailed.</span></span>
+<span class="line"><span>    → Inventory Service listens for PaymentFailed → emits InventoryReleased (compensation)</span></span>
+<span class="line"><span>    → Order Service listens for InventoryReleased → marks order CANCELLED</span></span></code></pre>
+<p><strong>Pros:</strong></p>
+<ul>
+<li><strong>Decentralized</strong> — no single point of failure (no orchestrator to crash)</li>
+<li><strong>Loose coupling</strong> — services don’t know about each other; they only know events</li>
+<li><strong>Simple to extend</strong> — add a new listener for OrderCreated without touching existing services</li>
+<li><strong>Low latency</strong> — no extra hop through an orchestrator</li>
+</ul>
+<p><strong>Cons:</strong></p>
+<ul>
+<li><strong>Implicit workflow</strong> — the saga flow is distributed across N services. No single place shows the current state. Debugging: “Is the order stuck because Payment didn’t emit, or because Inventory didn’t listen?”</li>
+<li><strong>Cyclic dependency risk</strong> — Service A listens to B, B listens to C, C listens to A → infinite event loop if not careful</li>
+<li><strong>Compensation complexity</strong> — each service must know which events trigger its compensation. What if InventoryReserved is followed by PaymentFailed AND OrderCancelled? Which compensation runs?</li>
+<li><strong>Testing nightmare</strong> — end-to-end test requires ALL services running. No way to test the saga flow in isolation.</li>
+</ul>
+<h3 id="32-orchestration-based-saga-central-coordinator">3.2 Orchestration-Based Saga (Central Coordinator)</h3>
+<p>A dedicated orchestrator service directs each step:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                     ┌──────────────────┐</span></span>
+<span class="line"><span>                     │ Saga Orchestrator │</span></span>
+<span class="line"><span>                     │                  │</span></span>
+<span class="line"><span>                     │  Current Step: 2  │</span></span>
+<span class="line"><span>                     │  State: RUNNING   │</span></span>
+<span class="line"><span>                     └───────┬──────────┘</span></span>
+<span class="line"><span>                             │</span></span>
+<span class="line"><span>          ┌──────────────────┼──────────────────┐</span></span>
+<span class="line"><span>          │                  │                  │</span></span>
+<span class="line"><span>          ▼                  ▼                  ▼</span></span>
+<span class="line"><span>    ┌──────────┐      ┌───────────┐      ┌──────────┐</span></span>
+<span class="line"><span>    │  Order   │      │ Inventory │      │ Payment  │</span></span>
+<span class="line"><span>    │ Service  │      │  Service  │      │ Service  │</span></span>
+<span class="line"><span>    └──────────┘      └───────────┘      └──────────┘</span></span></code></pre>
+<p>The orchestrator sends commands (not events) to each service, waits for the response, and decides the next step.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Orchestrator:  → CreateOrder()</span></span>
+<span class="line"><span>               ← OrderCreated {orderId: 123}</span></span>
+<span class="line"><span>               → ReserveInventory(orderId, items)</span></span>
+<span class="line"><span>               ← InventoryReserved</span></span>
+<span class="line"><span>               → ChargePayment(orderId, amount)</span></span>
+<span class="line"><span>               ← PaymentFailed {reason: insufficient_funds}</span></span>
+<span class="line"><span>               → CancelOrder(orderId)        ← compensating</span></span>
+<span class="line"><span>               → ReleaseInventory(orderId)    ← compensating</span></span></code></pre>
+<p><strong>Pros:</strong></p>
+<ul>
+<li><strong>Explicit workflow</strong> — the saga is a single state machine in one place. You can query “what step is order 123 on?” and get an answer.</li>
+<li><strong>Centralized error handling</strong> — the orchestrator decides when to retry vs. compensate. No distributed “who’s responsible?” ambiguity.</li>
+<li><strong>Testable in isolation</strong> — mock the services, test the orchestrator’s state machine logic.</li>
+<li><strong>Simpler services</strong> — each service exposes a command API. It doesn’t need saga logic.</li>
+</ul>
+<p><strong>Cons:</strong></p>
+<ul>
+<li><strong>Single point of failure</strong> — if the orchestrator crashes mid-saga, the saga is stuck. (Mitigated by persisting orchestrator state — see below.)</li>
+<li><strong>Extra hop latency</strong> — every step goes through the orchestrator (1 extra network round trip per step).</li>
+<li><strong>Orchestrator becomes a monolith</strong> — as more sagas are added, the orchestrator accumulates business logic. Risk: “distributed monolith.”</li>
+<li><strong>Coupling at the orchestrator</strong> — the orchestrator knows about ALL services. Adding a new step requires modifying the orchestrator.</li>
+</ul>
+<h3 id="33-when-to-use-which">3.3 When to Use Which</h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Choice</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Simple, linear workflow</strong> (3-4 steps, always same order)</td>
+<td>Choreography</td>
+<td>No need for central coordination overhead</td>
+</tr>
+<tr>
+<td><strong>Complex branching/conditional logic</strong></td>
+<td>Orchestration</td>
+<td>Centralized decision-making; choreography would scatter logic</td>
+</tr>
+<tr>
+<td><strong>Need visibility</strong> (“where is order #123 stuck?”)</td>
+<td>Orchestration</td>
+<td>Single place to query state</td>
+</tr>
+<tr>
+<td><strong>High throughput, latency-sensitive</strong> (100K+ TPS)</td>
+<td>Choreography</td>
+<td>No extra hop; each event processed directly</td>
+</tr>
+<tr>
+<td><strong>Cross-team ownership</strong> (each service owned by different team)</td>
+<td>Choreography</td>
+<td>Teams can evolve independently; no shared orchestrator</td>
+</tr>
+<tr>
+<td><strong>Need exactly-once semantics</strong></td>
+<td>Orchestration</td>
+<td>Orchestrator tracks exactly which steps completed; can safely retry</td>
+</tr>
+<tr>
+<td><strong>Compensation must be ordered</strong> (refund BEFORE restock)</td>
+<td>Orchestration</td>
+<td>Explicit ordering of compensations</td>
+</tr>
+</tbody>
+</table>
+<h3 id="34-the-hybrid-orchestration-with-event-bus">3.4 The Hybrid: Orchestration with Event Bus</h3>
+<p>Many real-world implementations use BOTH:</p>
+<ul>
+<li>Orchestrator sends commands via a message queue (not HTTP)</li>
+<li>Services publish domain events that the orchestrator ALSO listens to</li>
+<li>The orchestrator’s state is the source of truth; events are audit trail</li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Orchestrator → [Command Queue] → Service processes → [Event Bus] → Orchestrator updates state</span></span></code></pre>
+<p>This gives you the best of both: centralized state machine + durable, async communication.</p>
+<hr>
+<h2 id="4-the-outbox-pattern-reliable-messaging-for-sagas">4. The Outbox Pattern: Reliable Messaging for Sagas</h2>
+<p>A saga is only as reliable as its messaging. If the orchestrator sends <code>ChargePayment</code> but the message is lost, the saga stalls forever. The <strong>Outbox Pattern</strong> solves this.</p>
+<h3 id="41-the-problem-dual-write">4.1 The Problem: Dual Write</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Orchestrator:  UPDATE saga_state SET step = 'CHARGING' WHERE saga_id = 123;</span></span>
+<span class="line"><span>               publish("ChargePayment", {sagaId: 123, amount: 100});</span></span></code></pre>
+<p>These two operations span the database and the message broker. If either fails:</p>
+<ul>
+<li>DB updated, message NOT sent → saga thinks it’s charging, Payment never gets the message</li>
+<li>Message sent, DB NOT updated → Payment charges the card, saga thinks it’s still reserving</li>
+</ul>
+<p>This is the <strong>dual-write problem</strong> — two systems, no shared transaction.</p>
+<h3 id="42-the-outbox-solution">4.2 The Outbox Solution</h3>
+<p>Instead of directly publishing, write the message to an <code>outbox</code> table in the SAME database transaction as the state update:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#F97583">BEGIN</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">  UPDATE</span><span style="color:#E1E4E8"> saga_state </span><span style="color:#F97583">SET</span><span style="color:#E1E4E8"> step </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> 'CHARGING'</span><span style="color:#F97583"> WHERE</span><span style="color:#E1E4E8"> saga_id </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 123</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">  INSERT INTO</span><span style="color:#E1E4E8"> outbox (id, aggregate_id, event_type, payload, created_at)</span></span>
+<span class="line"><span style="color:#F97583">  VALUES</span><span style="color:#E1E4E8"> (uuid(), </span><span style="color:#79B8FF">123</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">'ChargePayment'</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">'{"amount": 100}'</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">NOW</span><span style="color:#E1E4E8">());</span></span>
+<span class="line"><span style="color:#F97583">COMMIT</span><span style="color:#E1E4E8">;</span></span></code></pre>
+<p>A separate <strong>outbox poller</strong> (or Change Data Capture like Debezium) reads the outbox table and publishes messages to the broker:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────┐   INSERT into outbox   ┌──────────┐   Poll/CDC   ┌──────────┐</span></span>
+<span class="line"><span>│  Saga DB │ ←────────────────────── │ Outbox   │ ───────────→ │ Message  │</span></span>
+<span class="line"><span>│          │                        │ Table    │              │ Broker   │</span></span>
+<span class="line"><span>└──────────┘                        └──────────┘              └──────────┘</span></span></code></pre>
+<p><strong>Guarantees:</strong></p>
+<ul>
+<li><strong>At-least-once delivery:</strong> Outbox poller may deliver same message twice on crash recovery → consumers MUST be idempotent</li>
+<li><strong>Atomicity:</strong> Saga state update and message creation are in the same DB transaction</li>
+<li><strong>Ordering (per saga):</strong> Messages for saga 123 are inserted in order; poller sends them in order</li>
+</ul>
+<h3 id="43-debezium-cdc-vs-poller">4.3 Debezium (CDC) vs. Poller</h3>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Pros</th>
+<th>Cons</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>DB Poller</strong> (SELECT * FROM outbox WHERE published = false)</td>
+<td>Simple; no extra infrastructure</td>
+<td>Adds latency (poll interval); DB load at scale</td>
+</tr>
+<tr>
+<td><strong>Debezium (CDC)</strong></td>
+<td>Near-real-time (reads WAL/binlog); no polling</td>
+<td>Complex infrastructure (Kafka Connect cluster); DB-specific</td>
+</tr>
+<tr>
+<td><strong>Transactional Outbox in the app</strong> (same app writes to outbox + publishes after commit)</td>
+<td>Simplest implementation</td>
+<td>No atomicity if app crashes between DB commit and publish</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Staff-level answer:</strong> The outbox poller is sufficient for 99% of systems. Debezium is warranted when you need sub-second delivery AND you’re already running Kafka. If you don’t have Kafka, don’t introduce it just for the outbox — use a simple poller with a 1-2 second interval.</p>
+<hr>
+<h2 id="5-saga-failure-modes--their-mitigations">5. Saga Failure Modes &amp; Their Mitigations</h2>
+<p>This is where interviews get deep. Knowing that sagas exist is junior-level. Knowing how they fail and how to recover is staff-level.</p>
+<h3 id="51-the-compensating-transaction-that-fails">5.1 The Compensating Transaction That Fails</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>T1: Create Order    ✓</span></span>
+<span class="line"><span>T2: Reserve Stock   ✓</span></span>
+<span class="line"><span>T3: Charge Payment  ✓</span></span>
+<span class="line"><span>T4: Schedule Ship   ✗ (warehouse API down)</span></span>
+<span class="line"><span>C3: Refund Payment  ✗ (payment gateway timeout)</span></span></code></pre>
+<p>Now you have a charged customer, reserved inventory, and no shipment — AND you can’t refund. This is a <strong>compensation failure</strong>.</p>
+<p><strong>Mitigations:</strong></p>
+<ol>
+<li>
+<p><strong>Retry compensation with exponential backoff.</strong> Compensations should be retried MORE aggressively than forward transactions. A compensation failure is worse than a forward failure — money is held, inventory is locked.</p>
+</li>
+<li>
+<p><strong>Compensation Dead Letter Queue (DLQ).</strong> If compensation fails after N retries, move to a DLQ for manual intervention. Alert on-call immediately.</p>
+</li>
+<li>
+<p><strong>Idempotent compensations.</strong> The refund API MUST be idempotent. Use an idempotency key (e.g., <code>saga_id + "_refund"</code>). If the orchestrator crashes after sending the refund command but before recording it, it retries the refund — the payment gateway deduplicates.</p>
+</li>
+<li>
+<p><strong>Design the sequence to minimize compensation blast radius.</strong> Charge payment LAST (or second-to-last before physically irreversible steps). If payment is early and shipping fails, you’re refunding money — expensive, slow, visible to the user.</p>
+</li>
+</ol>
+<h3 id="52-sequence-matters-order-steps-by-compensatability">5.2 Sequence Matters: Order Steps by Compensatability</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>GOOD ordering:</span></span>
+<span class="line"><span>  T1: Validate order (cheap to compensate: delete record)</span></span>
+<span class="line"><span>  T2: Reserve inventory (can release)</span></span>
+<span class="line"><span>  T3: Charge payment (can refund — expensive but possible)</span></span>
+<span class="line"><span>  T4: Ship item (physically irreversible — do this LAST)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>BAD ordering:</span></span>
+<span class="line"><span>  T1: Charge payment (expensive to compensate)</span></span>
+<span class="line"><span>  T2: Ship item (irreversible)</span></span>
+<span class="line"><span>  T3: Reserve inventory (can release)</span></span>
+<span class="line"><span>  T4: Validate order (pointless — payment already charged)</span></span></code></pre>
+<p><strong>Rule of thumb:</strong> Order saga steps from cheapest-to-compensate to most-expensive-to-compensate.</p>
+<h3 id="53-phantom-reads--isolation-anomalies">5.3 Phantom Reads &amp; Isolation Anomalies</h3>
+<p>Sagas provide <strong>ACD</strong> (Atomicity, Consistency, Durability) but NOT <strong>Isolation</strong>. Between T1 and T4, other transactions can read intermediate state.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Saga A:  T1: Reserve last MacBook → T2: Charge payment → T3: Ship</span></span>
+<span class="line"><span>Saga B:  ------------ T1': Read inventory → sees MacBook RESERVED (but not yet paid)</span></span></code></pre>
+<p>Saga B sees inventory as “reserved” but doesn’t know if Saga A will complete or compensate. If Saga A fails and releases, Saga B missed a purchase opportunity.</p>
+<p><strong>Mitigations:</strong></p>
+<ol>
+<li><strong>Semantic Lock:</strong> Mark reserved items with a saga_id and expiry. Other sagas see “reserved until 17:05” and can choose to wait or skip.</li>
+<li><strong>Countermeasures:</strong> Use a counter/version field. If Saga A increments <code>version</code> on reserve and decrements on release, Saga B can read-with-version and detect conflicts.</li>
+<li><strong>Commute the effect:</strong> Instead of <code>quantity = quantity - 1</code> (which can’t be undone cleanly if concurrent sagas read between reserve and release), use a separate <code>reservations</code> table. The actual available quantity = <code>inventory.quantity - SUM(reservations.quantity WHERE expiry &gt; NOW())</code>.</li>
+</ol>
+<h3 id="54-the-orchestrator-crash">5.4 The Orchestrator Crash</h3>
+<p>If the orchestrator crashes mid-saga, the saga must resume from where it left off. This requires <strong>persistent saga state</strong>:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#F97583">CREATE</span><span style="color:#F97583"> TABLE</span><span style="color:#B392F0"> saga_instance</span><span style="color:#E1E4E8"> (</span></span>
+<span class="line"><span style="color:#E1E4E8">  saga_id UUID </span><span style="color:#F97583">PRIMARY KEY</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">  saga_type </span><span style="color:#F97583">VARCHAR</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">100</span><span style="color:#E1E4E8">),      </span><span style="color:#6A737D">-- 'CreateOrderSaga'</span></span>
+<span class="line"><span style="color:#E1E4E8">  current_step </span><span style="color:#F97583">VARCHAR</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">100</span><span style="color:#E1E4E8">),   </span><span style="color:#6A737D">-- 'CHARGING_PAYMENT'</span></span>
+<span class="line"><span style="color:#F97583">  state</span><span style="color:#F97583"> VARCHAR</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">20</span><span style="color:#E1E4E8">),           </span><span style="color:#6A737D">-- 'RUNNING', 'COMPENSATING', 'COMPLETED', 'FAILED'</span></span>
+<span class="line"><span style="color:#E1E4E8">  payload JSONB,               </span><span style="color:#6A737D">-- Full saga data</span></span>
+<span class="line"><span style="color:#E1E4E8">  step_responses JSONB,        </span><span style="color:#6A737D">-- Results from each completed step</span></span>
+<span class="line"><span style="color:#E1E4E8">  created_at </span><span style="color:#F97583">TIMESTAMP</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">  updated_at </span><span style="color:#F97583">TIMESTAMP</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">  completed_at </span><span style="color:#F97583">TIMESTAMP</span></span>
+<span class="line"><span style="color:#E1E4E8">);</span></span></code></pre>
+<p>On restart, the orchestrator:</p>
+<ol>
+<li>Loads all <code>RUNNING</code> sagas from the database</li>
+<li>For each, checks if the last step actually completed (query the service, or check if a response was recorded)</li>
+<li>If the step completed but response wasn’t saved → save response, advance to next step</li>
+<li>If the step didn’t complete → re-issue the command (idempotently)</li>
+<li>If the step failed → initiate compensation</li>
+</ol>
+<p>This is the <strong>Saga Persistence</strong> pattern, used by frameworks like Temporal, Cadence, and AWS Step Functions.</p>
+<h3 id="55-duplicate-execution-at-least-once-semantics">5.5 Duplicate Execution (At-Least-Once Semantics)</h3>
+<p>If the orchestrator crashes after sending <code>ChargePayment</code> but before recording the response, on restart it re-sends <code>ChargePayment</code>. The customer is charged twice.</p>
+<p><strong>Mitigation: Idempotency Keys everywhere.</strong></p>
+<p>Every saga step command includes an idempotency key:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>POST /payments/charge</span></span>
+<span class="line"><span>{</span></span>
+<span class="line"><span>  "amount": 100,</span></span>
+<span class="line"><span>  "order_id": "123",</span></span>
+<span class="line"><span>  "idempotency_key": "saga-456-step-3"   // Same key on retry</span></span>
+<span class="line"><span>}</span></span></code></pre>
+<p>The Payment service stores <code>idempotency_key → response</code> mapping and returns the cached response for duplicate keys.</p>
+<hr>
+<h2 id="6-saga-implementation-patterns">6. Saga Implementation Patterns</h2>
+<h3 id="61-the-command--orchestrator-pattern">6.1 The Command / Orchestrator Pattern</h3>
+<p>Every saga step is a command-response pair:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>interface SagaStep&#x3C;T> {</span></span>
+<span class="line"><span>  StepResponse execute(T data);       // Forward action</span></span>
+<span class="line"><span>  StepResponse compensate(T data);    // Compensating action</span></span>
+<span class="line"><span>}</span></span></code></pre>
+<p>The orchestrator runs:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>for step in saga.steps:</span></span>
+<span class="line"><span>  if step.hasResponse():</span></span>
+<span class="line"><span>    continue  // Already completed (idempotent replay)</span></span>
+<span class="line"><span>  response = step.execute(data)</span></span>
+<span class="line"><span>  if response.isFailure():</span></span>
+<span class="line"><span>    start compensating from current step backwards</span></span>
+<span class="line"><span>    break</span></span>
+<span class="line"><span>  save response</span></span></code></pre>
+<h3 id="62-temporal--cadence-durable-execution">6.2 Temporal / Cadence: Durable Execution</h3>
+<p>Temporal (Uber, now Temporal.io) abstracts saga orchestration into “workflows” — code that runs durably. If the worker crashes, Temporal replays the workflow from history:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#E1E4E8">@</span><span style="color:#F97583">WorkflowInterface</span></span>
+<span class="line"><span style="color:#F97583">public</span><span style="color:#F97583"> interface</span><span style="color:#B392F0"> OrderSaga</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">  @</span><span style="color:#F97583">WorkflowMethod</span></span>
+<span class="line"><span style="color:#F97583">  void</span><span style="color:#B392F0"> createOrder</span><span style="color:#E1E4E8">(OrderRequest </span><span style="color:#FFAB70">request</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">public</span><span style="color:#F97583"> class</span><span style="color:#B392F0"> OrderSagaImpl</span><span style="color:#F97583"> implements</span><span style="color:#B392F0"> OrderSaga</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">  @</span><span style="color:#F97583">Override</span></span>
+<span class="line"><span style="color:#F97583">  public</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> createOrder</span><span style="color:#E1E4E8">(OrderRequest </span><span style="color:#FFAB70">request</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6A737D">    // Each activity() call is recorded in Temporal's event history</span></span>
+<span class="line"><span style="color:#E1E4E8">    Order order </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> activities.</span><span style="color:#B392F0">createOrder</span><span style="color:#E1E4E8">(request);</span></span>
+<span class="line"><span style="color:#F97583">    try</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">      activities.</span><span style="color:#B392F0">reserveInventory</span><span style="color:#E1E4E8">(order);</span></span>
+<span class="line"><span style="color:#E1E4E8">      activities.</span><span style="color:#B392F0">chargePayment</span><span style="color:#E1E4E8">(order);</span></span>
+<span class="line"><span style="color:#E1E4E8">      activities.</span><span style="color:#B392F0">scheduleShipment</span><span style="color:#E1E4E8">(order);</span></span>
+<span class="line"><span style="color:#E1E4E8">    } </span><span style="color:#F97583">catch</span><span style="color:#E1E4E8"> (ActivityFailure </span><span style="color:#FFAB70">e</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6A737D">      // Temporal ensures this compensation runs exactly-once</span></span>
+<span class="line"><span style="color:#E1E4E8">      activities.</span><span style="color:#B392F0">refundPayment</span><span style="color:#E1E4E8">(order);</span></span>
+<span class="line"><span style="color:#E1E4E8">      activities.</span><span style="color:#B392F0">releaseInventory</span><span style="color:#E1E4E8">(order);</span></span>
+<span class="line"><span style="color:#E1E4E8">      activities.</span><span style="color:#B392F0">cancelOrder</span><span style="color:#E1E4E8">(order);</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">  }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>Temporal guarantees:</p>
+<ul>
+<li><strong>Exactly-once execution:</strong> Even if worker crashes and restarts, each activity runs exactly once</li>
+<li><strong>Durable timers:</strong> <code>Workflow.sleep(Duration.ofDays(30))</code> survives worker restarts</li>
+<li><strong>Automatic retry:</strong> Configurable retry policy per activity</li>
+</ul>
+<p><strong>When to use Temporal:</strong> If you have more than 5 saga types, run them yourself. Below that, a simple database-backed orchestrator is sufficient.</p>
+<h3 id="63-aws-step-functions">6.3 AWS Step Functions</h3>
+<p>AWS Step Functions provide saga orchestration as a service:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="json"><code><span class="line"><span style="color:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#79B8FF">  "StartAt"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"CreateOrder"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">  "States"</span><span style="color:#E1E4E8">: {</span></span>
+<span class="line"><span style="color:#79B8FF">    "CreateOrder"</span><span style="color:#E1E4E8">: {</span></span>
+<span class="line"><span style="color:#79B8FF">      "Type"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"Task"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">      "Resource"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"arn:aws:lambda:..."</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">      "Next"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"ReserveInventory"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">      "Catch"</span><span style="color:#E1E4E8">: [{ </span><span style="color:#79B8FF">"ErrorEquals"</span><span style="color:#E1E4E8">: [</span><span style="color:#9ECBFF">"States.ALL"</span><span style="color:#E1E4E8">], </span><span style="color:#79B8FF">"Next"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"CancelOrder"</span><span style="color:#E1E4E8"> }]</span></span>
+<span class="line"><span style="color:#E1E4E8">    },</span></span>
+<span class="line"><span style="color:#79B8FF">    "ReserveInventory"</span><span style="color:#E1E4E8">: {</span></span>
+<span class="line"><span style="color:#79B8FF">      "Type"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"Task"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">      "Resource"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"arn:aws:lambda:..."</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">      "Next"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"ChargePayment"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">      "Catch"</span><span style="color:#E1E4E8">: [{ </span><span style="color:#79B8FF">"ErrorEquals"</span><span style="color:#E1E4E8">: [</span><span style="color:#9ECBFF">"States.ALL"</span><span style="color:#E1E4E8">], </span><span style="color:#79B8FF">"Next"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"ReleaseInventory"</span><span style="color:#E1E4E8"> }]</span></span>
+<span class="line"><span style="color:#E1E4E8">    },</span></span>
+<span class="line"><span style="color:#FDAEB7;font-style:italic">    ...</span></span>
+<span class="line"><span style="color:#E1E4E8">  }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Pros:</strong> Fully managed, visualized state machine, built-in retry/error handling.
+<strong>Cons:</strong> AWS lock-in; 1-year max execution time; pay-per-state-transition pricing can surprise at scale.</p>
+<hr>
+<h2 id="7-architectural-decisions--trade-off-table">7. Architectural Decisions — Trade-Off Table</h2>
+<table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>Option A</th>
+<th>Option B</th>
+<th>Why A Wins</th>
+<th>When B Wins</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Saga vs. 2PC</strong></td>
+<td>Saga</td>
+<td>2PC (XA)</td>
+<td>Availability over consistency; cross-service; long-running</td>
+<td>Strong consistency required; single DB; short transactions</td>
+</tr>
+<tr>
+<td><strong>Choreography vs. Orchestration</strong></td>
+<td>Orchestration</td>
+<td>Choreography</td>
+<td>Visibility, debugging, testability, complex branching</td>
+<td>Simple linear flow; high throughput; cross-team ownership</td>
+</tr>
+<tr>
+<td><strong>Outbox (Poller) vs. Outbox (CDC)</strong></td>
+<td>DB Poller</td>
+<td>Debezium/CDC</td>
+<td>Simple; no Kafka dependency</td>
+<td>Sub-second delivery needed; already running Kafka</td>
+</tr>
+<tr>
+<td><strong>Temporal vs. DIY orchestrator</strong></td>
+<td>Temporal</td>
+<td>DIY DB-backed</td>
+<td>Complex workflows (10+ types); need durable timers</td>
+<td>&lt; 5 saga types; don’t want framework dependency</td>
+</tr>
+<tr>
+<td><strong>Idempotency key vs. Deduplication table</strong></td>
+<td>Idempotency key in request</td>
+<td>Deduplication table in service</td>
+<td>Decouples caller from service internals; standard pattern</td>
+<td>Legacy APIs that don’t accept custom headers</td>
+</tr>
+<tr>
+<td><strong>Compensation: Retry vs. DLQ + manual</strong></td>
+<td>Retry with backoff</td>
+<td>DLQ + on-call alert</td>
+<td>Most compensations succeed on retry (transient failures)</td>
+<td>Compensation failed after 5+ retries; human intervention needed</td>
+</tr>
+<tr>
+<td><strong>Inventory: Pessimistic lock vs. Semantic lock</strong></td>
+<td>Semantic lock (reservation with TTL)</td>
+<td>Pessimistic lock (SELECT FOR UPDATE)</td>
+<td>Avoids blocking other sagas; saga-compatible</td>
+<td>Short-lived sagas (&lt; 5 seconds); high contention on hot items</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="8-key-metrics-for-saga-observability">8. Key Metrics for Saga Observability</h2>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Why</th>
+<th style="text-align: center">Alert?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>saga.duration.p99</code> (from start to COMPLETED/FAILED)</td>
+<td>How long users wait for consistency</td>
+<td style="text-align: center">Warn if &gt; 10× P50</td>
+</tr>
+<tr>
+<td><code>saga.stuck.count</code> (RUNNING &gt; N minutes)</td>
+<td>Sagas that haven’t progressed — likely stuck</td>
+<td style="text-align: center">YES — page</td>
+</tr>
+<tr>
+<td><code>saga.compensation.rate</code> (% of sagas that compensate)</td>
+<td>Are failures systemic or transient?</td>
+<td style="text-align: center">Warn if &gt; 5% sustained</td>
+</tr>
+<tr>
+<td><code>saga.compensation.failure.rate</code> (% of compensations that themselves fail)</td>
+<td>Double failure — the nightmare scenario</td>
+<td style="text-align: center">YES — page immediately</td>
+</tr>
+<tr>
+<td><code>saga.step.retry.count.p99</code></td>
+<td>Are steps retrying excessively?</td>
+<td style="text-align: center">Warn if &gt; 3 per step</td>
+</tr>
+<tr>
+<td><code>outbox.lag.seconds</code></td>
+<td>How far behind is the outbox poller?</td>
+<td style="text-align: center">Warn if &gt; 30s</td>
+</tr>
+<tr>
+<td><code>outbox.dlq.size</code></td>
+<td>Messages that failed all retries</td>
+<td style="text-align: center">YES — page if &gt; 0</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="9-interview-questions--model-answers">9. Interview Questions &amp; Model Answers</h2>
+<h3 id="-q1-design-a-saga-for-an-e-commerce-checkout-create-order--reserve-inventory--charge-payment--schedule-shipping-walk-me-through-a-failure-at-step-4-and-how-you-handle-it">⚡ Q1: “Design a saga for an e-commerce checkout: Create Order → Reserve Inventory → Charge Payment → Schedule Shipping. Walk me through a failure at step 4 and how you handle it.”</h3>
+<p><strong>Staff-level answer:</strong></p>
+<p>“When shipping fails at step 4, the system is in a dangerous state: payment is charged, inventory is reserved, but no shipment is scheduled. The customer has paid for nothing. Here’s the recovery:</p>
+<p><strong>1. Immediate state assessment:</strong> The orchestrator records step 4 as <code>FAILED</code> in the saga instance table. Saga state transitions from <code>RUNNING</code> to <code>COMPENSATING</code>.</p>
+<p><strong>2. Compensation sequence (reverse order):</strong></p>
+<ul>
+<li><strong>C3: Refund Payment</strong> — <code>POST /payments/refund</code> with idempotency key <code>saga-{id}-compensate-payment</code>. The payment gateway deducts the refund. If it fails with a 5xx, retry with exponential backoff (1s, 2s, 4s, 8s, 16s). After 5 retries, move to DLQ and page on-call. The saga remains in <code>COMPENSATING</code> state — it’s NOT failed yet, it’s recovering.</li>
+<li><strong>C2: Release Inventory</strong> — <code>POST /inventory/release</code> with the reservation ID. This is a simple DB update: <code>DELETE FROM reservations WHERE id = ?</code>. Rarely fails. If it does, retry.</li>
+<li><strong>C1: Cancel Order</strong> — <code>PATCH /orders/{id}</code> → <code>status = CANCELLED</code>. Notify the user.</li>
+</ul>
+<p><strong>3. What if refund fails permanently?</strong> The saga enters a <code>MANUAL_INTERVENTION</code> state. An on-call engineer receives an alert with the full saga context (order ID, charge ID, amount, failure reason). They manually issue the refund via the payment gateway’s admin panel and then mark the saga step as <code>MANUALLY_COMPENSATED</code>. The saga then continues with C2 and C1 automatically.</p>
+<p><strong>4. Critical design decision I made:</strong> I ordered the steps as Create → Reserve → Charge → Ship. The reasoning:</p>
+<ul>
+<li><strong>Reserve before Charge:</strong> If we charge first and then discover inventory is gone, we’re refunding money — slow, costs payment processing fees, visible on customer’s statement.</li>
+<li><strong>Charge before Ship:</strong> If we ship first and then payment fails, we’ve physically shipped an unpaid item — the worst possible outcome. Charging before shipping means the worst case is ‘refund a charge’ rather than ‘chase a shipped item.’</li>
+<li><strong>Create first:</strong> No irreversible actions if Create fails — no cleanup needed.</li>
+</ul>
+<p><strong>5. Why I didn’t use choreography here:</strong> The checkout flow has branching logic (different payment methods, gift cards, loyalty points). Scattering that logic across 4 services via events would make it impossible to answer ‘what state is order #123 in?’ I need a single orchestrator that I can query.“</p>
+<h3 id="-q2-you-mentioned-idempotency-keys-what-happens-if-two-different-sagas-accidentally-use-the-same-idempotency-key">⚡ Q2: “You mentioned idempotency keys. What happens if two different sagas accidentally use the same idempotency key?”</h3>
+<p><strong>Staff-level answer:</strong></p>
+<p>“Two scenarios:</p>
+<p><strong>Scenario A — Accidental collision (different sagas, same key):</strong> If Saga-1 and Saga-2 both use <code>idempotency_key = 'step-3'</code> (poor key design), Saga-2’s <code>ChargePayment</code> gets the cached response from Saga-1’s charge. Saga-2 thinks it charged the customer but actually charged Saga-1’s customer. This is catastrophic — money moves between wrong accounts.</p>
+<p><strong>Prevention:</strong> Idempotency keys MUST be globally unique. Use a composite: <code>{saga_type}:{saga_id}:{step_name}</code>. Example: <code>create-order-saga:abc123:charge-payment</code>. Even better, include the entity ID: <code>order:ORD-789:charge-payment</code>.</p>
+<p><strong>Scenario B — Legitimate replay (same saga, same key):</strong> Saga-1’s orchestrator crashes after sending <code>ChargePayment</code> but before recording the response. On restart, it re-sends with the same idempotency key. The Payment service returns the cached response. This is the CORRECT behavior — it’s the whole point of idempotency.</p>
+<p><strong>The deeper problem:</strong> Idempotency key storage itself needs a retention policy. If you cache every idempotency key forever, the cache grows unbounded. Two approaches:</p>
+<ol>
+<li><strong>TTL-based:</strong> Store keys with a 24-hour TTL. After that, a duplicate key is treated as new. This means you have a 24-hour window for safe replay — sagas that can be stuck for &gt; 24 hours need a different mechanism.</li>
+<li><strong>Saga-lifecycle-based:</strong> Store keys until the saga reaches a terminal state (COMPLETED or FAILED), then delete. The orchestrator explicitly cleans up keys when the saga finishes. This is cleaner but requires the orchestrator to manage key lifecycle.</li>
+</ol>
+<p><strong>In practice:</strong> Use approach 2 for payment/charge operations (no TTL expiry — a charge must never be duplicated) and approach 1 for non-critical operations (inventory reserve — worst case is a double-reserve that gets caught by a unique constraint).</p>
+<h3 id="-common-pitfall-well-just-run-compensation-synchronously-in-the-catch-block">❗ Common Pitfall: “We’ll just run compensation synchronously in the catch block”</h3>
+<p><strong>The trap:</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">try</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">  orderService.</span><span style="color:#B392F0">create</span><span style="color:#E1E4E8">(order);</span></span>
+<span class="line"><span style="color:#E1E4E8">  inventoryService.</span><span style="color:#B392F0">reserve</span><span style="color:#E1E4E8">(order);</span></span>
+<span class="line"><span style="color:#E1E4E8">  paymentService.</span><span style="color:#B392F0">charge</span><span style="color:#E1E4E8">(order);</span></span>
+<span class="line"><span style="color:#E1E4E8">} </span><span style="color:#F97583">catch</span><span style="color:#E1E4E8"> (Exception </span><span style="color:#FFAB70">e</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6A737D">  // Synchronous compensation</span></span>
+<span class="line"><span style="color:#E1E4E8">  paymentService.</span><span style="color:#B392F0">refund</span><span style="color:#E1E4E8">(order);  </span><span style="color:#6A737D">// But payment might not have been charged yet!</span></span>
+<span class="line"><span style="color:#E1E4E8">  inventoryService.</span><span style="color:#B392F0">release</span><span style="color:#E1E4E8">(order);</span></span>
+<span class="line"><span style="color:#E1E4E8">  orderService.</span><span style="color:#B392F0">cancel</span><span style="color:#E1E4E8">(order);</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>This code has THREE fatal flaws:</p>
+<ol>
+<li>
+<p><strong>Compensating unexecuted steps:</strong> If <code>inventoryService.reserve()</code> throws, <code>paymentService.refund()</code> runs — but payment was never charged. You’re issuing a refund for a charge that doesn’t exist. The payment gateway returns an error, and now you have TWO failures.</p>
+</li>
+<li>
+<p><strong>Compensation exceptions swallowed:</strong> If <code>paymentService.refund()</code> throws, the exception is caught by the outer catch (if nested) or propagates. Either way, <code>inventoryService.release()</code> never runs. Inventory is leaked permanently.</p>
+</li>
+<li>
+<p><strong>No retry on compensation:</strong> A transient network error on <code>refund()</code> means the saga terminates with inventory reserved and payment charged — the worst outcome.</p>
+</li>
+</ol>
+<p><strong>The fix (proper compensation loop):</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#6A737D">// Track which steps actually completed</span></span>
+<span class="line"><span style="color:#E1E4E8">List&#x3C;</span><span style="color:#F97583">SagaStep</span><span style="color:#E1E4E8">> completedSteps </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> (SagaStep step </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> saga.steps) {</span></span>
+<span class="line"><span style="color:#F97583">  try</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">    StepResult result </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> step.</span><span style="color:#B392F0">execute</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">    completedSteps.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(step);</span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> (result.</span><span style="color:#B392F0">isFailure</span><span style="color:#E1E4E8">()) </span><span style="color:#F97583">break</span><span style="color:#E1E4E8">; </span><span style="color:#6A737D">// Start compensation</span></span>
+<span class="line"><span style="color:#E1E4E8">  } </span><span style="color:#F97583">catch</span><span style="color:#E1E4E8"> (RetryableException </span><span style="color:#FFAB70">e</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6A737D">    // Retry forward step before compensating</span></span>
+<span class="line"><span style="color:#B392F0">    retryWithBackoff</span><span style="color:#E1E4E8">(() </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> step.</span><span style="color:#B392F0">execute</span><span style="color:#E1E4E8">());</span></span>
+<span class="line"><span style="color:#E1E4E8">  }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">// Compensate ONLY completed steps, in REVERSE order</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> completedSteps.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">>=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i</span><span style="color:#F97583">--</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">  SagaStep step </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> completedSteps.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(i);</span></span>
+<span class="line"><span style="color:#F97583">  try</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#B392F0">    retryWithBackoff</span><span style="color:#E1E4E8">(() </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> step.</span><span style="color:#B392F0">compensate</span><span style="color:#E1E4E8">()); </span><span style="color:#6A737D">// Retry compensations!</span></span>
+<span class="line"><span style="color:#E1E4E8">  } </span><span style="color:#F97583">catch</span><span style="color:#E1E4E8"> (NonRetryableException </span><span style="color:#FFAB70">e</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">    dlq.</span><span style="color:#B392F0">send</span><span style="color:#E1E4E8">(step, e); </span><span style="color:#6A737D">// Human must intervene</span></span>
+<span class="line"><span style="color:#F97583">    break</span><span style="color:#E1E4E8">; </span><span style="color:#6A737D">// Stop compensating — later steps depend on earlier steps being undone</span></span>
+<span class="line"><span style="color:#E1E4E8">  }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>The principle:</strong> Compensation is NOT cleanup. It’s a business operation that deserves the same reliability engineering as forward operations: retries, idempotency, monitoring, and alerting.</p>
+<hr>
+<h2 id="10-beyond-sagas-when-the-pattern-isnt-enough">10. Beyond Sagas: When the Pattern Isn’t Enough</h2>
+<h3 id="101-long-running-sagas-hours-to-days">10.1 Long-Running Sagas (Hours to Days)</h3>
+<p>The standard saga assumes steps complete in seconds. What if a step takes 3 days?</p>
+<p><strong>Example: “Verify customer identity”</strong> — calls an external KYC provider that takes 2-3 business days.</p>
+<p><strong>Problems:</strong></p>
+<ul>
+<li>Orchestrator holds state for days — must survive deploys, crashes, maintenance windows</li>
+<li>Compensation might not be valid after 3 days (inventory TTL expired, price changed)</li>
+<li>User expects real-time feedback but gets “pending verification” for days</li>
+</ul>
+<p><strong>Solutions:</strong></p>
+<ul>
+<li><strong>Async callback pattern:</strong> Saga step sends KYC request, records <code>AWAITING_CALLBACK</code> state. KYC provider calls back with result. Saga resumes from the callback.</li>
+<li><strong>Temporal’s durable timers:</strong> <code>Workflow.await(() -&gt; kycComplete)</code> — survives restarts.</li>
+<li><strong>Human-in-the-loop:</strong> For steps requiring manual approval, use a task queue (the saga step creates a task, a human approves/rejects, the task system calls back to the saga).</li>
+</ul>
+<h3 id="102-sagas-across-organizational-boundaries">10.2 Sagas Across Organizational Boundaries</h3>
+<p>If the payment step uses Stripe and the shipping step uses a 3PL provider:</p>
+<ul>
+<li>Stripe won’t participate in your orchestrator’s retry protocol</li>
+<li>3PL’s API might have rate limits you can’t control</li>
+<li>Neither will accept your idempotency key format</li>
+</ul>
+<p><strong>Solution: Anti-Corruption Layer (ACL).</strong> Build adapter services that translate between your saga protocol and the external API. The ACL handles:</p>
+<ul>
+<li>Translating your idempotency key to Stripe’s <code>Idempotency-Key</code> header</li>
+<li>Mapping your retry policy to the external API’s acceptable retry patterns</li>
+<li>Polling for async results (e.g., 3PL shipment confirmation)</li>
+</ul>
+<h3 id="103-when-not-to-use-sagas">10.3 When NOT to Use Sagas</h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Better Alternative</th>
+<th>Why Not Saga</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Single database, simple flow</strong></td>
+<td>ACID transaction</td>
+<td>Saga adds complexity with no benefit</td>
+</tr>
+<tr>
+<td><strong>All-or-nothing with real-time consistency required</strong></td>
+<td>2PC (if latency/availability acceptable)</td>
+<td>Sagas have an inconsistency window</td>
+</tr>
+<tr>
+<td><strong>2-service flow with simple rollback</strong></td>
+<td>Try-catch with sequential API calls</td>
+<td>Saga overhead (outbox, state machine, etc.) is overkill</td>
+</tr>
+<tr>
+<td><strong>Event sourcing architecture already in place</strong></td>
+<td>Event-driven with projections</td>
+<td>Sagas are a workflow pattern; event sourcing handles consistency differently</td>
+</tr>
+<tr>
+<td><strong>Workflow that must complete in &lt; 100ms</strong></td>
+<td>Inline with circuit breaker + fallback</td>
+<td>Saga orchestration adds latency</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="11-key-takeaways">11. Key Takeaways</h2>
+<ol>
+<li>
+<p><strong>Sagas trade consistency for availability.</strong> This trade-off is explicit and deliberate. Before implementing a saga, document what inconsistency looks like, how long it can persist, and what the business cost is. If the answer is “we can’t tolerate ANY inconsistency,” you need 2PC or a single database — not a saga.</p>
+</li>
+<li>
+<p><strong>Compensation is a first-class business operation.</strong> It deserves the same reliability engineering as the forward path: retries with backoff, idempotency keys, monitoring, alerting, and DLQ for manual intervention. The most common saga failure in production is “compensation failed and nobody noticed for 3 days.”</p>
+</li>
+<li>
+<p><strong>Order steps by compensatability.</strong> Cheapest-to-compensate first, most-expensive (or irreversible) last. A charge that’s refunded costs payment processing fees. A shipped item can’t be un-shipped. Design the sequence to minimize the cost of failure.</p>
+</li>
+<li>
+<p><strong>Orchestration gives you visibility; choreography gives you throughput.</strong> For staff engineers, the default should be orchestration — the ability to answer “where is this saga stuck?” is worth the extra hop. Switch to choreography only when throughput demands it.</p>
+</li>
+<li>
+<p><strong>The outbox pattern is NOT optional.</strong> If your saga implementation writes state and publishes messages in separate operations, you WILL lose messages in production. Use the outbox pattern or accept data inconsistency.</p>
+</li>
+<li>
+<p><strong>Idempotency is the foundation.</strong> Every saga step, forward and compensating, must be idempotent. Without idempotency, you can’t safely retry. Without safe retry, you can’t recover from crashes. Without crash recovery, your saga is a distributed ticking time bomb.</p>
+</li>
+<li>
+<p><strong>Staff-level reframe:</strong> Don’t ask “should I use saga or 2PC?” Ask: “<strong>What is the business impact of a partial failure? For each step in the workflow, what does the customer experience during the inconsistency window, what is the cost of compensation, and who is paged when compensation fails?</strong>” The saga pattern is the easy part. Designing the failure modes and recovery procedures is the staff engineer’s job.</p>
+</li>
+<li>
+<p><strong>The hallmark of a well-designed saga:</strong> When a step fails, the system degrades gracefully. The customer sees “Order pending — we’ll confirm shortly” instead of a 500 error. Behind the scenes, the saga is retrying or compensating. The on-call engineer has a dashboard showing exactly which sagas are stuck and why. And nobody at 3 AM is confused about whether inventory should be released manually.</p>
+</li>
+</ol>
+<hr>
+<h2 id="related">Related</h2>
+<ul>
+<li>[[topic-queue]]</li>
+<li>[[Event Sourcing &amp; CQRS]]</li>
+<li>[[Circuit Breakers &amp; Bulkheads]]</li>
+<li>[[Design an Idempotent API]]</li>
+<li>[[Two-Phase Commit &amp; Consensus (Raft-Paxos)]]</li>
+<li>[[Data Pipeline Architecture (Kafka + Flink + Lakehouse)]]</li>
+<li>[[Weakness Vault/Day-44-Saga-Pattern-Distributed-Transactions]]</li>
+</ul>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>A saga trades ACID atomicity for availability: each step is a local transaction, and failure triggers <em>compensating transactions</em> (semantic undo), not database rollbacks. Some compensations are reversible (release inventory), some are expensive (refund), some are physically impossible (un-ship an item).</li>
+<li>Order saga steps from cheapest-to-compensate to most-expensive/irreversible. Charge payment <em>before</em> shipping but <em>after</em> inventory reservation, so the worst case is “refund a charge,” not “chase a shipped unpaid item.”</li>
+<li>Orchestration gives visibility (one place to query “where is order #123?”) and testability; choreography gives throughput and loose coupling. Default to orchestration unless throughput or cross-team autonomy demands choreography.</li>
+<li>The outbox pattern is mandatory for reliable messaging — never do dual writes (DB update + message publish) separately, or you’ll lose messages on crash. Use idempotency keys everywhere so retries are safe.</li>
+<li>Compensation is a first-class business operation: retry with backoff, alert on failure, and have a DLQ + manual intervention path. The most common production incident is “compensation failed and nobody noticed for 3 days.”</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li><em>What happens if a compensating transaction itself fails?</em> — Retry with exponential backoff, then move to a DLQ and page on-call. The saga stays in a COMPENSATING/MANUAL_INTERVENTION state; a human completes the refund and the saga resumes automatically.</li>
+<li><em>Choreography vs. orchestration — how do you choose?</em> — Orchestration by default (visibility, debugging, branching logic); choreography when you need maximum throughput or each service is owned by a different team.</li>
+<li><em>Why not just use 2PC?</em> — 2PC blocks on the slowest participant, requires all participants available, and can’t span external services like Stripe. Sagas choose availability over consistency and accept a temporary inconsistency window.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>People think compensation is a database rollback, but it’s an <em>application-level</em> semantic undo — and some operations (shipping a physical item, sending an email) can’t be truly reversed, only mitigated. A refund that issues store credit instead of cash because the payment API is down is a degraded fallback, not a successful compensation, and must be tracked as technical debt.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/saga-pattern-and-distributed-transactions/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Saga%20Pattern%20%26%20Distributed%20Transactions%20(Compensation%2C%20Orchestration)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fsaga-pattern-and-distributed-transactions%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fsaga-pattern-and-distributed-transactions%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/saga-pattern-and-distributed-transactions" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/s3-like-object-storage" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>S3-like Object Storage</span></a><a href="/notes/system-design/service-mesh-istio-linkerd" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Service Mesh (Istio/Linkerd)</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Saga Pattern &amp; Distributed Transactions (Compensation, Orchestration)" data-selector=".article-prose" data-article-slug="system-design/saga-pattern-and-distributed-transactions" data-article-title="Saga Pattern &amp; Distributed Transactions (Compensation, Orchestration)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

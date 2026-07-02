@@ -1,0 +1,778 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Uber&#39;s Dispatch System · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview" class="toc-link" data-toc-link="overview" data-astro-cid-p33bl5ka>Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#key-requirements" class="toc-link" data-toc-link="key-requirements" data-astro-cid-p33bl5ka>Key Requirements</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#geospatial-indexing-geohash-s2-and-h3" class="toc-link" data-toc-link="geospatial-indexing-geohash-s2-and-h3" data-astro-cid-p33bl5ka>Geospatial Indexing: Geohash, S2, and H3</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#geohash" class="toc-link" data-toc-link="geohash" data-astro-cid-p33bl5ka>Geohash</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#s2" class="toc-link" data-toc-link="s2" data-astro-cid-p33bl5ka>S2</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#h3" class="toc-link" data-toc-link="h3" data-astro-cid-p33bl5ka>H3</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#geospatial-index-comparison" class="toc-link" data-toc-link="geospatial-index-comparison" data-astro-cid-p33bl5ka>Geospatial Index Comparison</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#nearest-driver-matching-algorithm" class="toc-link" data-toc-link="nearest-driver-matching-algorithm" data-astro-cid-p33bl5ka>Nearest Driver Matching Algorithm</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#supply-demand-balancing" class="toc-link" data-toc-link="supply-demand-balancing" data-astro-cid-p33bl5ka>Supply-Demand Balancing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#surge-pricing" class="toc-link" data-toc-link="surge-pricing" data-astro-cid-p33bl5ka>Surge Pricing</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#surge-pricing-factors" class="toc-link" data-toc-link="surge-pricing-factors" data-astro-cid-p33bl5ka>Surge Pricing Factors</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#driver-location-tracking" class="toc-link" data-toc-link="driver-location-tracking" data-astro-cid-p33bl5ka>Driver Location Tracking</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#dispatch-optimization" class="toc-link" data-toc-link="dispatch-optimization" data-astro-cid-p33bl5ka>Dispatch Optimization</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#eta-estimation" class="toc-link" data-toc-link="eta-estimation" data-astro-cid-p33bl5ka>ETA Estimation</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#trip-lifecycle" class="toc-link" data-toc-link="trip-lifecycle" data-astro-cid-p33bl5ka>Trip Lifecycle</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#real-time-updates" class="toc-link" data-toc-link="real-time-updates" data-astro-cid-p33bl5ka>Real-Time Updates</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#map-matching-gps-to-road" class="toc-link" data-toc-link="map-matching-gps-to-road" data-astro-cid-p33bl5ka>Map Matching: GPS to Road</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-planning-for-millions-of-concurrent-trips" class="toc-link" data-toc-link="capacity-planning-for-millions-of-concurrent-trips" data-astro-cid-p33bl5ka>Capacity Planning for Millions of Concurrent Trips</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#failure-handling" class="toc-link" data-toc-link="failure-handling" data-astro-cid-p33bl5ka>Failure Handling</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#sharp-interview-question" class="toc-link" data-toc-link="sharp-interview-question" data-astro-cid-p33bl5ka>Sharp Interview Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Uber&#39;s Dispatch System</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 31 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 43 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>uber</span><span class="tag" data-astro-cid-sgg5joot>dispatch</span><span class="tag" data-astro-cid-sgg5joot>geospatial</span><span class="tag" data-astro-cid-sgg5joot>real-time</span><span class="tag" data-astro-cid-sgg5joot>matching</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="ubers-dispatch-system">Uber’s Dispatch System</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A real-time marketplace matching riders to drivers using geospatial indexing (H3/quadtrees), in-memory grids on dispatch workers, and dynamic surge pricing based on supply-demand ratios.</p>
+<p><strong>How it’s asked:</strong> “Design Uber’s dispatch system for 500K drivers updating location every 4 seconds. Cover geospatial indexing, matching algorithm, surge pricing, and the break points at scale.”</p>
+<hr>
+<h2 id="overview">Overview</h2>
+<p>Uber’s dispatch system — internally called the “matching” engine — is the real-time marketplace brain that pairs riders requesting trips with the nearest suitable available drivers. It is not merely a nearest-neighbor lookup over a set of GPS points; it is a geospatial-temporal optimization problem layered on top of a two-sided marketplace, with dynamic pricing, ETA prediction, batching for pooled rides, driver incentives, and hard latency budgets measured in seconds. Every day the system processes tens of millions of ride requests across hundreds of cities, each with idiosyncratic road networks, traffic patterns, regulatory constraints, and driver densities. The fundamental constraint is that a rider waits seconds, not minutes, for a match, and a driver offered a trip responds in seconds, not minutes. Everything else — indexing scheme, matching algorithm, surge model, capacity boundaries — is downstream of that latency budget.</p>
+<p>At its core the dispatch problem can be stated compactly: given a stream of rider requests each carrying a pickup point, destination, and service class, and a continuously updated stream of driver positions and states (online, en-route, on-trip, offline), assign each rider request to the driver that minimizes a composite cost function combining expected pickup time, acceptance probability, trip value, and marketplace fairness — all while keeping p99 matching latency under roughly two seconds and sustaining tens of thousands of matches per second at peak. The cost function is deliberately not pure distance, because the closest driver by Euclidean distance may be on the wrong side of a river, facing the wrong direction, or statistically unlikely to accept. The system therefore blends geometric proximity with route-aware ETA, historical acceptance models, and supply-demand signals into a single dispatching decision.</p>
+<h2 id="key-requirements">Key Requirements</h2>
+<p>The functional surface is straightforward to enumerate but hard to implement well. A rider opens the app, enters a destination, and requests a ride; the system must find an optimal available driver within seconds and return an ETA. The matched driver receives an offer screen showing pickup location, destination, fare estimate, and trip distance, and may accept or decline; declines trigger re-matching without the rider ever seeing a failure in the common case. The system supports cancellations from both sides, scheduled rides booked minutes to hours in advance, pooled rides that batch multiple riders whose routes overlap, and dynamic surge pricing that adjusts the fare multiplier in real time based on local supply-demand imbalance. Beyond matching, the system must continuously track every active driver’s position, update rider ETAs as traffic conditions change, re-dispatch if a driver cancels after acceptance, and handle the full trip lifecycle from request through pickup, trip, and completion including billing.</p>
+<p>The non-functional requirements are where the engineering pain lives. Match latency must stay under two seconds at p99 because every additional second of waiting measurably increases rider cancellation rate. Throughput must absorb peak-hour load that can be ten to fifty times the daily average in a given city, with global peaks during Friday-evening rush hours, holidays, and weather events. ETA accuracy needs variance under roughly thirty seconds or riders lose trust and drivers game the system. Fairness matters operationally: if a small subset of drivers captures most trips, the rest churn, and the supply side collapses. The system must scale across six hundred-plus cities with independent demand patterns, regulatory rules, and map quality, and it must degrade gracefully during traffic spikes, GPS outages, partial map-data corruption, or the failure of an entire availability zone.</p>
+<h2 id="geospatial-indexing-geohash-s2-and-h3">Geospatial Indexing: Geohash, S2, and H3</h2>
+<p>The foundation of any dispatch system is a way to index two-dimensional points on the Earth’s surface so that “find all drivers within roughly X meters of point P” becomes a cheap, bounded operation rather than a full scan of every driver in the city. The naive approach — store all driver positions in a relational table and query with a bounding-box WHERE clause on latitude and longitude — collapses past a few thousand drivers because a two-dimensional range scan cannot use a single B-tree index efficiently, and the Earth is a sphere, not a flat plane, so bounding boxes near the poles or the antimeridian behave badly. The solution is to encode geographic coordinates into one-dimensional strings or integer cell IDs that preserve locality, then index those. Three encodings dominate the industry: geohash, Google’s S2, and Uber’s own H3.</p>
+<h3 id="geohash">Geohash</h3>
+<p>Geohash is the oldest and simplest. It interleaves the bits of a point’s quantized latitude and longitude into a single bit string, then Base32-encodes it into a short string like “drm3btev3e”. The interleaving means that points close on the ground usually share a long prefix, so you can find neighbors by doing string-prefix range scans. Geohash is trivial to implement, fits in a database column, and is good enough for many applications. Its weakness is the “edge case” problem: cells are rectangular and become arbitrarily skinny near the poles, and two points on opposite sides of a cell boundary can be physically adjacent but share no common prefix, forcing you to query all eight neighboring cells to be safe. It also suffers from precision loss at the antimeridian. Geohash is fine for coarse filtering but painful as a primary index at city scale.</p>
+<h3 id="s2">S2</h3>
+<p>Google’s S2 geometry solves the spherical-distortion problem by projecting the Earth’s surface onto the six faces of a cube, then recursively subdividing each face into a quadtree to produce a 64-bit cell ID that uniquely identifies a leaf cell at any of 31 levels of resolution. S2 cell IDs are designed so that cells at the same level have roughly equal area everywhere on the sphere, and the Hilbert-curve ordering of the underlying quadtree means nearby cells have numerically close IDs, making range scans efficient. S2 is used heavily inside Google Maps and is available as an open-source library. Its strengths are spherical correctness, a clean hierarchy of levels, and rich tooling for polygon containment and region coverings. Its weakness for dispatch specifically is that the cell shapes are quadrilaterals that vary in shape with latitude and do not tessellate cleanly into the hexagonal grids that Uber and many mapping teams prefer for urban density analysis.</p>
+<h3 id="h3">H3</h3>
+<p>Uber built H3 precisely to address the shortcomings of both geohash and S2 for ride-hailing. H3 is a discrete global grid system that partitions the Earth’s surface into hexagonal cells at sixteen resolutions, from the very coarse (a cell the size of a small country) down to resolution fifteen (cells under one square meter). Hexagons are chosen because they are the most circular regular polygon that tessellates, which minimizes the quantization error between a point and its containing cell and — crucially for dispatch — gives every cell exactly six equidistant neighbors, unlike squares which have eight neighbors of two different distances. This uniform-neighbor property makes ring-based neighbor queries (“all drivers within three cells of this rider”) clean and isotropic. H3 is now open source and used well beyond Uber. In practice Uber uses H3 at around resolution eight or nine (cells roughly 0.7 km across) as the primary unit of supply-demand measurement and surge computation, and finer resolutions for dispatch radius queries. The choice between the three is not academic: geohash gets you started in an afternoon, S2 gets you spherical correctness for free, and H3 gets you the cleanest urban analytics and neighbor topology at the cost of a more complex library and a fixed hexagonal hierarchy that does not subdivide into smaller hexagons exactly (children of a hex are a mix of hexes and pentagons, handled by the library).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>H3 Hexagonal Grid — Ring Expansion for Dispatch</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>              ___</span></span>
+<span class="line"><span>          ___/ 2 \___</span></span>
+<span class="line"><span>      ___/ 2 \___/ 2 \___</span></span>
+<span class="line"><span>     / 2  \___/ 1 \___/ 2  \</span></span>
+<span class="line"><span>     \___/ 1 \___/ 1 \___/</span></span>
+<span class="line"><span>     / 1  \___/ 0 \___/ 1  \</span></span>
+<span class="line"><span>     \___/ 1 \___/ 1 \___/</span></span>
+<span class="line"><span>     / 2  \___/ 1 \___/ 2  \</span></span>
+<span class="line"><span>     \___/ 2 \___/ 2 \___/</span></span>
+<span class="line"><span>         \___/ 2 \___/</span></span>
+<span class="line"><span>             \___/</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   0  = rider's pickup cell (ring 0)           1 cell</span></span>
+<span class="line"><span>   1  = six immediate neighbors (ring 1)       6 cells</span></span>
+<span class="line"><span>   2  = twelve second-ring neighbors (ring 2)  12 cells</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Key property: every hex has exactly 6 equidistant neighbors,</span></span>
+<span class="line"><span>   making ring queries isotropic (uniform in all directions).</span></span>
+<span class="line"><span>   Cell count for ring k = 6 * k (for k >= 1).</span></span></code></pre>
+<h3 id="geospatial-index-comparison">Geospatial Index Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Geohash</th>
+<th>S2</th>
+<th>H3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Cell shape</strong></td>
+<td>Rectangle</td>
+<td>Quadrilateral</td>
+<td>Hexagon</td>
+</tr>
+<tr>
+<td><strong>Spherical correctness</strong></td>
+<td>No (flat projection)</td>
+<td>Yes (cube projection)</td>
+<td>Yes (icosahedral)</td>
+</tr>
+<tr>
+<td><strong>Neighbor count</strong></td>
+<td>8 (2 different distances)</td>
+<td>4 (quadtree children)</td>
+<td>6 (uniform distance)</td>
+</tr>
+<tr>
+<td><strong>Locality preservation</strong></td>
+<td>String-prefix sharing</td>
+<td>Hilbert-curve ordering</td>
+<td>Ring-based topology</td>
+</tr>
+<tr>
+<td><strong>Resolution levels</strong></td>
+<td>Variable (string length)</td>
+<td>31 levels</td>
+<td>16 resolutions</td>
+</tr>
+<tr>
+<td><strong>Cell area uniformity</strong></td>
+<td>Varies by latitude</td>
+<td>Roughly equal</td>
+<td>Roughly equal</td>
+</tr>
+<tr>
+<td><strong>Edge / antimeridian</strong></td>
+<td>Poor (precision loss)</td>
+<td>Good</td>
+<td>Good</td>
+</tr>
+<tr>
+<td><strong>Index type</strong></td>
+<td>String prefix</td>
+<td>64-bit integer</td>
+<td>64-bit integer</td>
+</tr>
+<tr>
+<td><strong>Hierarchy subdivision</strong></td>
+<td>Exact (truncate prefix)</td>
+<td>Exact (quadtree)</td>
+<td>Approximate (hex + pentagon mix)</td>
+</tr>
+<tr>
+<td><strong>Sharding simplicity</strong></td>
+<td>Easy (prefix range)</td>
+<td>Easy (integer range)</td>
+<td>Easy (cell ID modulo)</td>
+</tr>
+<tr>
+<td><strong>Polygon / region tooling</strong></td>
+<td>Minimal</td>
+<td>Rich (coverings, containment)</td>
+<td>Moderate (rings, polygons)</td>
+</tr>
+<tr>
+<td><strong>Primary use case</strong></td>
+<td>Coarse filtering, DB index</td>
+<td>Maps, polygon containment</td>
+<td>Urban analytics, dispatch</td>
+</tr>
+<tr>
+<td><strong>Best for dispatch</strong></td>
+<td>v1 / fallback only</td>
+<td>Google-ecosystem shops</td>
+<td>Production ride-hailing</td>
+</tr>
+</tbody>
+</table>
+<h2 id="nearest-driver-matching-algorithm">Nearest Driver Matching Algorithm</h2>
+<p>With an index in place, the matching algorithm itself is a constrained k-nearest-neighbor search over the driver set, filtered by eligibility and ranked by a composite cost. The canonical flow is: when a rider request arrives, the dispatch service resolves the rider’s pickup H3 cell, then expands outward ring by ring — first the containing cell, then its six immediate neighbors, then the next ring — querying the driver-location store for all drivers in those cells whose state is “online and available” and whose vehicle class matches the request. Expansion stops as soon as enough candidate drivers are found or a maximum radius (typically a few kilometers) is reached. Each candidate is then scored by a cost function such as <code>cost = w1 * expected_pickup_eta + w2 * (1 - acceptance_probability) + w3 * trip_value_penalty + w4 * fairness_credit</code>, where the weights are tuned per market and time of day. The lowest-cost driver is offered the trip first; if they decline or do not respond within a short timeout (a few seconds), the next candidate is offered, and so on. This serial-offer pattern is preferred over broadcasting the request to many drivers simultaneously because it avoids the “tragedy of the commons” where every driver ignores the offer hoping someone else takes it, and it lets the system learn and adapt the acceptance model per driver.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Nearest Driver Matching Flow</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  ┌─────────────────────┐</span></span>
+<span class="line"><span>  │   Rider Request      │</span></span>
+<span class="line"><span>  │  (pickup, dest,      │</span></span>
+<span class="line"><span>  │   service class)     │</span></span>
+<span class="line"><span>  └──────────┬──────────┘</span></span>
+<span class="line"><span>             │</span></span>
+<span class="line"><span>             ▼</span></span>
+<span class="line"><span>  ┌─────────────────────┐</span></span>
+<span class="line"><span>  │  Resolve H3 pickup   │</span></span>
+<span class="line"><span>  │  cell from lat/lon   │</span></span>
+<span class="line"><span>  └──────────┬──────────┘</span></span>
+<span class="line"><span>             │</span></span>
+<span class="line"><span>             ▼</span></span>
+<span class="line"><span>  ┌─────────────────────┐</span></span>
+<span class="line"><span>  │  Ring-by-ring        │◄──── max radius</span></span>
+<span class="line"><span>  │  expansion           │      (few km)</span></span>
+<span class="line"><span>  │  (ring 0 → 1 → 2…)   │</span></span>
+<span class="line"><span>  └──────────┬──────────┘</span></span>
+<span class="line"><span>             │</span></span>
+<span class="line"><span>             ▼</span></span>
+<span class="line"><span>  ┌─────────────────────┐</span></span>
+<span class="line"><span>  │  Query cell sets     │</span></span>
+<span class="line"><span>  │  for available       │</span></span>
+<span class="line"><span>  │  drivers (scatter-   │</span></span>
+<span class="line"><span>  │  gather to shards)   │</span></span>
+<span class="line"><span>  └──────────┬──────────┘</span></span>
+<span class="line"><span>             │</span></span>
+<span class="line"><span>             ▼</span></span>
+<span class="line"><span>  ┌─────────────────────┐</span></span>
+<span class="line"><span>  │  Filter candidates:  │</span></span>
+<span class="line"><span>  │  • vehicle class     │</span></span>
+<span class="line"><span>  │  • state = available │</span></span>
+<span class="line"><span>  │  • position freshness│</span></span>
+<span class="line"><span>  └──────────┬──────────┘</span></span>
+<span class="line"><span>             │</span></span>
+<span class="line"><span>             ▼</span></span>
+<span class="line"><span>  ┌─────────────────────┐</span></span>
+<span class="line"><span>  │  Score by cost fn:   │</span></span>
+<span class="line"><span>  │  w1*ETA + w2*(1-P)   │</span></span>
+<span class="line"><span>  │  + w3*value + w4*fair│</span></span>
+<span class="line"><span>  └──────────┬──────────┘</span></span>
+<span class="line"><span>             │</span></span>
+<span class="line"><span>             ▼</span></span>
+<span class="line"><span>  ┌─────────────────────┐     decline /</span></span>
+<span class="line"><span>  │  Serial offer        │──── no resp ─────┐</span></span>
+<span class="line"><span>  │  (lowest cost first) │    (few sec)      │</span></span>
+<span class="line"><span>  └──────────┬──────────┘                  │</span></span>
+<span class="line"><span>             │ accept                        │</span></span>
+<span class="line"><span>             ▼                              │</span></span>
+<span class="line"><span>  ┌─────────────────────┐                  │</span></span>
+<span class="line"><span>  │  MATCH!             │            next</span></span>
+<span class="line"><span>  │  Trip created       │◄── candidate ────┘</span></span>
+<span class="line"><span>  │  Driver → "offered" │</span></span>
+<span class="line"><span>  └─────────────────────┘</span></span></code></pre>
+<p>The data structure backing the cell query matters at scale. For the hot path, Uber maintains an in-memory grid — effectively a hash map from H3 cell ID to a set or sorted container of driver IDs currently in that cell — replicated across many dispatch worker nodes, with each node owning a shard of cells (city-partitioned). Driver position updates stream in continuously and update the in-memory grid; when a driver crosses a cell boundary they are removed from one set and inserted into another. A quadtree is an alternative that some systems use instead of a fixed grid: it subdivides dynamically so dense downtown areas get fine-grained leaf nodes and sparse rural areas get coarse ones, all within one tree. The tradeoff is that quadtrees require rebalancing under churn and are harder to shard cleanly across machines, whereas a fixed H3 grid shards trivially by cell ID modulo the number of partitions. Uber landed on the fixed hex grid with in-memory sets per cell, backed by Redis-like stores for persistence and cross-node fan-out for queries that span shards. The matching worker that receives a request may need to query cells owned by other workers; this is done via a scatter-gather RPC where the requesting node fans out to the relevant cell owners, each returns its local candidate set, and the requesting node merges, scores, and offers serially.</p>
+<h2 id="supply-demand-balancing">Supply-Demand Balancing</h2>
+<p>Matching solves the instantaneous problem of “which driver gets this request,” but the marketplace is healthy only if supply and demand are roughly in balance across space and time. Imbalance manifests in two directions: too few drivers relative to riders produces long ETAs, cancellations, and rider churn; too many drivers relative to riders produces idle time, low earnings, and driver churn. The dispatch system therefore runs a continuous supply-demand balancing layer that measures, per H3 cell and per time bucket, the ratio of requesting riders to available drivers, and uses that ratio both to set surge pricing (pulling demand down and supply up when riders exceed drivers) and to position incentives for drivers to relocate toward under-supplied cells before requests actually arrive.</p>
+<p>The measurement is straightforward in concept but noisy in practice. For each cell and each one-minute window the system counts unique rider requests (demand) and time-integral of available drivers (supply, normalized by availability duration). The raw ratio is smoothed with an exponential moving average to avoid thrashing on transient spikes — a single bus depositing thirty tourists should not trigger a permanent surge. The smoothed ratio feeds a pricing function that maps ratio buckets to surge multipliers: a ratio near one yields no surge, a ratio of two might yield a 1.5x multiplier, and extreme ratios cap out at a regulatory or product-defined ceiling (often 2.0x to 2.5x in most markets). The multiplier is published per cell and propagates to the fare calculation shown to riders before they request and to drivers as an earnings signal.</p>
+<p>Positioning supply proactively is the harder half of balancing. Uber and similar systems compute a “heat map” of projected demand per cell for the next several minutes using historical patterns blended with live signals (concerts, weather, transit disruptions), then send push notifications or in-app prompts to idle drivers in oversupplied cells suggesting they drive toward nearby undersupplied cells, sometimes with a small monetary incentive. The dispatch matching algorithm itself can also be biased to favor drivers who are positioned in currently oversupplied areas for the next trip, on the theory that sending them a trip now moves them out of an area where they would otherwise idle. None of this is perfectly optimal — it is a feedback control loop with significant lag, since drivers take minutes to relocate — but it materially improves the balance compared to purely reactive matching.</p>
+<h2 id="surge-pricing">Surge Pricing</h2>
+<p>Surge pricing is the most visible output of the supply-demand layer and the most product-sensitive. The goal is twofold: allocate the scarce supply to the riders who value the trip most (revealed by willingness to pay the multiplier), and incentivize more supply to come online or relocate into the surge zone. The multiplier for a given cell is computed from the smoothed supply-demand ratio and a marketplace-health score, then geographically smoothed so neighboring cells do not have jarringly different multipliers (which would cause rider confusion and gaming). Temporal smoothing prevents the multiplier from oscillating minute to minute, which would erode trust; Uber moved years ago from a continuous multiplier to discrete “surge levels” in some markets partly to make the number feel stable and legible.</p>
+<h3 id="surge-pricing-factors">Surge Pricing Factors</h3>
+<table>
+<thead>
+<tr>
+<th>Factor</th>
+<th>Input Signal</th>
+<th>Effect on Surge Multiplier</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Supply-demand ratio</strong></td>
+<td>requesting riders / available drivers per cell</td>
+<td>Higher ratio → higher multiplier</td>
+</tr>
+<tr>
+<td><strong>EMA smoothing</strong></td>
+<td>exponential moving average of raw ratio</td>
+<td>Dampens transient spikes (e.g., bus of tourists)</td>
+</tr>
+<tr>
+<td><strong>Marketplace health score</strong></td>
+<td>acceptance rates, fulfillment rate</td>
+<td>Lower health → higher multiplier</td>
+</tr>
+<tr>
+<td><strong>Geographic smoothing</strong></td>
+<td>neighboring cell multipliers</td>
+<td>Prevents jarring cross-cell price cliffs</td>
+</tr>
+<tr>
+<td><strong>Temporal smoothing</strong></td>
+<td>recent multiplier history</td>
+<td>Prevents minute-to-minute oscillation</td>
+</tr>
+<tr>
+<td><strong>Regulatory cap</strong></td>
+<td>city / region regulations</td>
+<td>Hard ceiling (typically 2.0x–2.5x)</td>
+</tr>
+<tr>
+<td><strong>Hysteresis</strong></td>
+<td>separate start vs stop thresholds</td>
+<td>Prevents rapid on/off toggling (whack-a-mole)</td>
+</tr>
+<tr>
+<td><strong>Route barriers</strong></td>
+<td>rivers, highways between cell and demand</td>
+<td>Reduces effective supply response → multiplier may not help</td>
+</tr>
+</tbody>
+</table>
+<p>The mechanics of applying surge are deceptively subtle. The multiplier must be shown to the rider before they request, so it must be computed and cached per cell with low latency, and the fare estimate shown pre-request must use the same multiplier that will be applied post-request, or riders feel bait-and-switched. The multiplier is applied to the base fare components — time and distance — but not to fixed fees or minimum fares in most markets, and regulatory caps in some cities force a hard ceiling. Drivers see the surge as part of their earnings projection and are more likely to accept trips and to drive into surge zones. The system must also handle surge decay: as drivers relocate into a surge cell and the ratio improves, the multiplier must come down, but not so fast that drivers who just relocated feel cheated. This is a control problem with human behavior in the loop, and tuning it is as much art as engineering.</p>
+<p>A frequent failure mode is surge “whack-a-mole”: a surge appears in a cell, drivers flood in, the cell becomes oversupplied, surge drops to zero, drivers leave, demand spikes again, surge returns. The smoothing and EMA parameters are tuned to dampen this, and some systems add hysteresis (a higher threshold to start surge, a lower threshold to stop it) to prevent rapid toggling. Another failure mode is geographic mismatch: surge in a cell whose drivers cannot physically reach the demand (across a river with no bridge nearby) produces no supply response, so the pricing layer must be route-aware or at least aware of barriers, not purely cell-ratio-driven.</p>
+<h2 id="driver-location-tracking">Driver Location Tracking</h2>
+<p>Every online driver emits a GPS update every few seconds — Uber targets roughly one update every four seconds during active trips and less frequently when idle — and these updates flow through a location ingestion pipeline into the in-memory cell grid that matching queries. The volume is substantial: with several million drivers online globally and updates every few seconds, the ingestion path sees tens of thousands of updates per second at peak, each update carrying a driver ID, latitude, longitude, heading, speed, accuracy estimate, and timestamp. The pipeline must be lossy-tolerant: a dropped update is fine because the next one will arrive shortly, but a stale position is dangerous because it causes bad matches. The ingestion service therefore tags each position with a freshness timestamp and the matching layer ignores or down-weights positions older than a threshold.</p>
+<p>The storage backing the live grid is a combination of an in-memory data structure on the dispatch workers (for sub-millisecond query) and a durable, replicated store (often Redis Cluster or a custom geospatial store) that holds the authoritative current position per driver for cross-shard queries and recovery. Driver positions are sharded by H3 cell so that a query for a region touches a small number of shards. When a driver crosses a cell boundary the old cell removes them and the new cell adds them; this churn is high in dense cities but is a cheap hash-set operation. Quadtree-based tracking is an alternative some systems use: the tree subdivides where drivers are dense, so a downtown block with hundreds of drivers gets a deep leaf node while a rural area with one driver gets a shallow one. The advantage is adaptive resolution; the disadvantage is that rebalancing the tree under churn and sharding it across machines is more complex than sharding a fixed grid. Uber’s choice of a fixed H3 grid with per-cell sets is a deliberate tradeoff favoring operational simplicity and clean sharding over adaptive resolution.</p>
+<p>A critical detail is that raw GPS is not what gets stored for matching. Raw GPS from a phone in an urban canyon can be off by tens of meters, which would cause the system to think a driver is on the wrong street and compute an ETA through a building. Positions are therefore map-matched before being used for matching (see below), snapping the GPS point to the most likely road segment, and the matching layer uses the map-matched position and the road network graph for ETA rather than the raw point.</p>
+<h2 id="dispatch-optimization">Dispatch Optimization</h2>
+<p>The serial-offer matching described above is the baseline, but it is locally greedy and not globally optimal. If three riders request within the same second in adjacent cells and the system matches them one at a time, the first match might grab a driver that would have been better assigned to the second rider, leaving the second rider with a worse match. Dispatch optimization addresses this by batching requests over a short window — typically a few seconds — and solving a small assignment problem over the batch. With N riders and M candidate drivers, the problem is to find the assignment minimizing total cost, which is a bipartite matching problem solvable with the Hungarian algorithm in O(N^2 * M) or, for larger batches, a min-cost max-flow formulation. The batch window is short because the latency budget is tight; a one-to-two-second batch adds that much latency but can materially improve total pickup ETA across the batch, especially in dense areas.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Dispatch Optimization Pipeline</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Time →</span></span>
+<span class="line"><span>  ◄──────── batch window (1–2 sec) ────────►</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  R1   R2   R3   R4  ...   Rn      rider requests arriving</span></span>
+<span class="line"><span>  │    │    │    │          │</span></span>
+<span class="line"><span>  ▼    ▼    ▼    ▼          ▼</span></span>
+<span class="line"><span>  ┌──────────────────────────────────┐</span></span>
+<span class="line"><span>  │      Request Batch Buffer         │</span></span>
+<span class="line"><span>  └───────────────┬──────────────────┘</span></span>
+<span class="line"><span>                  │</span></span>
+<span class="line"><span>                  ▼</span></span>
+<span class="line"><span>  ┌──────────────────────────────────┐</span></span>
+<span class="line"><span>  │  Collect candidate drivers        │</span></span>
+<span class="line"><span>  │  (H3 ring query per rider)        │</span></span>
+<span class="line"><span>  └───────────────┬──────────────────┘</span></span>
+<span class="line"><span>                  │</span></span>
+<span class="line"><span>                  ▼</span></span>
+<span class="line"><span>  ┌──────────────────────────────────┐</span></span>
+<span class="line"><span>  │  Build cost matrix                │</span></span>
+<span class="line"><span>  │  rows = N riders                  │</span></span>
+<span class="line"><span>  │  cols = M drivers                 │</span></span>
+<span class="line"><span>  │  cell[i][j] = composite cost      │</span></span>
+<span class="line"><span>  └───────────────┬──────────────────┘</span></span>
+<span class="line"><span>                  │</span></span>
+<span class="line"><span>                  ▼</span></span>
+<span class="line"><span>  ┌──────────────────────────────────┐</span></span>
+<span class="line"><span>  │  Bipartite Assignment             │</span></span>
+<span class="line"><span>  │  Hungarian algorithm  O(N² × M)   │</span></span>
+<span class="line"><span>  │  or min-cost max-flow             │</span></span>
+<span class="line"><span>  └───────────────┬──────────────────┘</span></span>
+<span class="line"><span>                  │</span></span>
+<span class="line"><span>                  ▼</span></span>
+<span class="line"><span>  ┌──────────────────────────────────┐</span></span>
+<span class="line"><span>  │  Globally optimal assignments     │</span></span>
+<span class="line"><span>  │  (rider i ↔ driver j)             │</span></span>
+<span class="line"><span>  └───────────────┬──────────────────┘</span></span>
+<span class="line"><span>                  │</span></span>
+<span class="line"><span>                  ▼</span></span>
+<span class="line"><span>  ┌──────────────────────────────────┐</span></span>
+<span class="line"><span>  │  Serial offers in                 │</span></span>
+<span class="line"><span>  │  assignment order                 │</span></span>
+<span class="line"><span>  └──────────────────────────────────┘</span></span></code></pre>
+<p>Optimization also extends to pooled rides, where the assignment problem becomes a vehicle routing problem: a single driver may pick up multiple riders whose pick-up and drop-off points can be interleaved along a route, and the objective is to minimize total detour across all riders while keeping each rider’s total trip time within an acceptable multiple of their direct trip. This is NP-hard in the general case, so production systems use greedy insertion heuristics: for each new rider request, try inserting the pickup and dropoff into every position of every active pool trip’s existing sequence, compute the added detour, and accept the insertion with the least added cost if it stays within per-rider detour bounds. The heuristic is not optimal but runs in milliseconds and produces good empirical results.</p>
+<p>A third optimization axis is pre-positioning and fleet-level dispatch for large partners (e.g., a fleet of airport shuttles or corporate accounts), where the system can plan driver movements minutes ahead based on forecast demand rather than waiting for requests. This crosses into operations-research territory and is typically handled by a separate planning service that writes suggested movements back into the driver app. The real-time dispatch path remains reactive; the planning path is proactive and slower.</p>
+<h2 id="eta-estimation">ETA Estimation</h2>
+<p>ETA is the single number that most affects rider and driver experience, and it is surprisingly hard to compute accurately. The naive approach — straight-line distance divided by an average speed — is wrong by a factor of two or more in cities with rivers, one-way grids, or traffic. Production ETA is computed on the road network graph: the map-matched pickup point and the driver’s current map-matched position are both nodes (or snapped to edges) on a directed graph where edges carry a travel time that is a function of road class, current traffic, and time of day. A shortest-path algorithm — typically a contraction-hierarchy or A* variant precomputed for the region — returns the fastest route and its total travel time, which is the ETA. The graph is large (a major city has millions of edges) so it is preprocessed offline into a hierarchy that enables millisecond queries, and edge travel times are updated continuously from live traffic feeds and historical patterns.</p>
+<p>ETA is not a single number; it is a distribution. The system reports a point estimate (the median expected arrival) but internally models the variance, because a driver might arrive in four minutes median but with a tail to ten minutes if a drawbridge opens. Rider-facing ETAs are rounded and slightly pessimistic so that early arrivals feel like a pleasant surprise rather than late arrivals feeling like a failure. ETA is recomputed periodically throughout the trip — for the pickup leg as the driver approaches, and for the trip leg as traffic evolves — and pushed to both rider and driver apps via the real-time update channel. A persistent ETA error, where the reported ETA is systematically too optimistic, is one of the most damaging bugs a dispatch team can ship, because it directly drives cancellations and bad ratings; ETA accuracy is monitored as a first-class SLO with alerting on bias and variance by city and time of day.</p>
+<p>Machine-learned ETA models increasingly augment or replace pure graph-based ETA. A model trained on historical actual arrival times given route, time, weather, and driver features can correct systematic biases in the graph-based estimate — for example, learning that a particular neighborhood has slow driveway exits that the graph does not capture. The hybrid pattern is to use the graph ETA as a strong prior and a learned residual model to correct it, which keeps the model interpretable and robust to novel situations (the graph still works in a new city with no training data) while improving accuracy where data is plentiful.</p>
+<h2 id="trip-lifecycle">Trip Lifecycle</h2>
+<p>A trip passes through a well-defined state machine, and the dispatch system owns or observes every transition. The lifecycle begins when a rider taps “request”: the request enters the dispatch queue, the matching algorithm runs, and a driver is selected and sent an offer. The driver’s state transitions from “available” to “offered” and they have a few seconds to accept or decline. On acceptance the trip enters the “accepted” or “en route” state: the driver is now committed to this rider, their position is no longer in the available pool, and the rider sees the driver’s identity, vehicle, and live ETA. As the driver approaches the pickup, ETAs are refreshed continuously and both parties see each other on the map. When the driver arrives at the pickup location the trip enters “arrived”; the rider is notified, and a wait timer starts counting toward a no-show threshold. Once the rider boards and the driver starts the trip, the state becomes “on trip”: the destination is fixed (in most markets; riders can add stops), the fare is accruing, and the navigation is now turn-by-turn to the destination via the routing engine. On arrival at the destination the driver ends the trip, the fare is finalized from the recorded time and distance (surge multiplier applied), payment is processed, and receipts and ratings are exchanged. The driver’s state returns to “available” and they re-enter the matching pool, typically after a short cooldown to allow them to finish the trip paperwork.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Trip Lifecycle State Machine</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  ┌───────────────┐</span></span>
+<span class="line"><span>  │   Request      │</span></span>
+<span class="line"><span>  │   Created      │</span></span>
+<span class="line"><span>  └───────┬───────┘</span></span>
+<span class="line"><span>          │ matching algorithm runs</span></span>
+<span class="line"><span>          ▼</span></span>
+<span class="line"><span>  ┌───────────────┐     decline / timeout</span></span>
+<span class="line"><span>  │   Offered     │────────────────────────────┐</span></span>
+<span class="line"><span>  └───────┬───────┘                            │</span></span>
+<span class="line"><span>          │ accept (few sec)                    ▼</span></span>
+<span class="line"><span>          ▼                               re-match:</span></span>
+<span class="line"><span>  ┌───────────────┐                        offer to</span></span>
+<span class="line"><span>  │  Accepted /   │                        next</span></span>
+<span class="line"><span>  │  En Route     │                       candidate</span></span>
+<span class="line"><span>  └───────┬───────┘</span></span>
+<span class="line"><span>          │ driver approaches pickup</span></span>
+<span class="line"><span>          ▼</span></span>
+<span class="line"><span>  ┌───────────────┐     rider no-show</span></span>
+<span class="line"><span>  │   Arrived     │──── (timer exceeds) ──► cancel +</span></span>
+<span class="line"><span>  └───────┬───────┘                        fee logic</span></span>
+<span class="line"><span>          │ rider boards, driver starts trip</span></span>
+<span class="line"><span>          ▼</span></span>
+<span class="line"><span>  ┌───────────────┐</span></span>
+<span class="line"><span>  │   On Trip     │</span></span>
+<span class="line"><span>  └───────┬───────┘</span></span>
+<span class="line"><span>          │ driver ends trip at destination</span></span>
+<span class="line"><span>          ▼</span></span>
+<span class="line"><span>  ┌───────────────┐</span></span>
+<span class="line"><span>  │   Completed   │</span></span>
+<span class="line"><span>  └───────┬───────┘</span></span>
+<span class="line"><span>          │ fare finalized + payment + ratings</span></span>
+<span class="line"><span>          ▼</span></span>
+<span class="line"><span>  Driver → "Available" (re-enters matching pool)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Cancellation paths (at any pre-trip state):</span></span>
+<span class="line"><span>  ┌─────────────────────┐</span></span>
+<span class="line"><span>  │ Rider cancel         │──► re-match rider (no fee in</span></span>
+<span class="line"><span>  │                      │    common case)</span></span>
+<span class="line"><span>  │ Driver cancel        │──► re-match rider, driver</span></span>
+<span class="line"><span>  │  (after acceptance)  │    may get cancellation fee</span></span>
+<span class="line"><span>  └─────────────────────┘</span></span></code></pre>
+<p>Each transition is an event written to an append-only trip event log, which is the source of truth for billing, analytics, and dispute resolution. The state machine is explicit and idempotent because duplicate events arrive under network retries: a “trip started” event processed twice must not double-charge. The dispatch worker that owns a trip is the coordinator for its transitions, but ownership can transfer between workers during failover, so the trip state is persisted to a durable store (a trip database) at each transition and the in-memory state is reconstructable from the log. Cancellations can occur at several points — rider cancels before assignment, rider or driver cancels after acceptance but before pickup, no-show after driver arrives — each with different fee and re-disposition logic. A cancellation after acceptance triggers re-matching of the rider (if they did not cancel) and returns the driver to the pool, possibly with a cancellation fee credited to the driver to compensate for the dead trip to the pickup.</p>
+<h2 id="real-time-updates">Real-Time Updates</h2>
+<p>Both rider and driver apps need a continuously updated view: the rider wants to watch the driver approach on the map and see ETA tick down, and the driver wants to see the rider’s pickup location and navigate to it. This is not polling; it is a persistent low-latency push channel. The architecture is a fleet of connection-handling servers (websocket or a custom mobile push protocol) that maintain long-lived connections to hundreds of thousands of concurrent mobile clients, sharded by client ID. Driver position updates flow from the driver’s phone to the location ingestion pipeline, which updates the in-memory grid and also publishes the updated position onto a pub-sub bus; the connection server that owns the rider’s connection subscribes to position updates for the driver assigned to that rider and pushes each update down the rider’s open connection. The same channel carries ETA recomputations, trip state transitions, and messages between rider and driver.</p>
+<p>The scale of the connection tier is significant: at peak, hundreds of thousands of concurrent websocket connections per city, each idle most of the time but bursting on every position update. Connection servers are stateful and partitioned, so a rider whose connection lands on server A and whose driver’s updates arrive at server B requires a cross-server fan-in: the driver’s position events are published to a topic keyed by trip ID, and every connection server with a client subscribed to that trip receives the event and forwards it. This is typically built on a pub-sub system like Kafka or a lighter in-memory broker for the hot path, with the connection servers acting as fan-out leaves. Failover is handled by client reconnect with session resumption: if a connection server dies, clients reconnect to a new one, re-subscribe to their active trip’s topic, and resume; a few seconds of missed updates is acceptable because the next position update refreshes the full state.</p>
+<h2 id="map-matching-gps-to-road">Map Matching: GPS to Road</h2>
+<p>Raw GPS is insufficient for dispatch because consumer-grade GPS in urban environments has median error of five to ten meters and tail error of tens of meters, especially among tall buildings, in tunnels, and under elevated tracks. A driver reported at a GPS point ten meters off their actual road, if taken literally, would be matched to a driver on the wrong block, with an ETA computed through buildings. Map matching is the process of taking a stream of noisy GPS observations and inferring the most likely actual road segment the vehicle is on, producing a corrected position snapped to the road network graph. This is a hidden Markov model problem: the hidden state is the true road segment, the observations are the GPS points, and the transition probabilities between segments are given by the road graph connectivity and plausible vehicle speeds. The Viterbi algorithm over the sequence of recent GPS points yields the most likely path of road segments, and the current position is snapped to the most likely current segment.</p>
+<p>Production map matching runs on the device, on the server, or split between both. On-device matching has the advantage of low latency and offline operation but is constrained by phone CPU and the size of the local map cache; server-side matching has the full map and compute but adds round-trip latency. Uber and most ride-hailing systems do a hybrid: the driver app does a fast local snap for immediate display and navigation, and sends the raw GPS plus a local snap hint to the server, which runs the authoritative matcher with the full graph and historical traffic and returns the corrected position. The matched position is what feeds the location grid for matching and the ETA engine; the raw GPS is retained for forensics and model training. Map matching quality directly determines ETA quality and matching quality, so it is monitored as a first-class signal: a sudden increase in “off-road” positions in a city usually indicates a map-data regression (a new road not yet in the graph) or a GPS firmware bug on a popular phone model, and the dispatch team treats it as a high-priority incident.</p>
+<h2 id="capacity-planning-for-millions-of-concurrent-trips">Capacity Planning for Millions of Concurrent Trips</h2>
+<p>Sizing the dispatch system for millions of concurrent trips is an exercise in identifying the hot-path components and provisioning each for peak with headroom. The hot path has three high-volume components: location ingestion (every driver, every few seconds), matching queries (every rider request, plus retries and re-dispatch), and the real-time update fan-out (every driver position update to every watching rider). At a global scale of tens of millions of daily rides, several million online drivers, and peak concurrency of several hundred thousand active trips:</p>
+<p><strong>Location Ingestion Path:</strong></p>
+<ul>
+<li>~50,000 driver position updates per second at global peak</li>
+<li>Each update carries: driver ID, lat, lon, heading, speed, accuracy estimate, timestamp</li>
+<li>Sharded by driver ID for horizontal scalability</li>
+<li>Updates every ~4 seconds during active trips, less frequent when idle</li>
+<li>Lossy-tolerant: dropped update acceptable, stale position is not</li>
+</ul>
+<p><strong>Matching Query Path:</strong></p>
+<ul>
+<li>Several thousand requests per second at peak (most match on first offer)</li>
+<li>Offer rate is a small multiple of request rate due to declines/retries</li>
+<li>Sharded by H3 cell — hot cells in dense downtown areas are the bottleneck</li>
+<li>p99 matching latency must stay under ~2 seconds</li>
+<li>Tens of thousands of matches per second at global peak</li>
+</ul>
+<p><strong>Real-Time Update Fan-Out:</strong></p>
+<ul>
+<li>Hundreds of thousands of position events per second pushed to watching riders</li>
+<li>Hundreds of thousands of concurrent websocket connections per city</li>
+<li>Each connection: tens of kilobytes of buffer and state</li>
+<li>Connection servers are stateful, sharded by client ID</li>
+<li>Tens of thousands of connection servers globally</li>
+</ul>
+<p><strong>Provisioning Headroom:</strong></p>
+<ul>
+<li>Stateless tiers (matching workers, ETA engine, connection servers): 2–3x peak observed load with autoscaling</li>
+<li>Stateful tiers (live grid, trip database): careful manual capacity planning</li>
+<li>Per-region / per-city provisioning, not purely global (single city rush hour can spike 10–50x daily average)</li>
+<li>Large cities or regions often isolated onto dedicated clusters to prevent cross-city interference</li>
+</ul>
+<p>Each component is horizontally scalable and sharded by a natural key: ingestion by driver ID, matching by H3 cell, connection servers by client ID. The cell-sharded matching grid is the trickiest because a single hot cell — a downtown block at rush hour with hundreds of drivers — can become a bottleneck on the shard owning that cell. Mitigations include finer cell resolution in dense areas (more, smaller cells means more shards share the load) and dynamic re-sharding that splits overloaded cells across multiple workers. The connection tier is memory-bound: each websocket connection consumes tens of kilobytes of buffer and state, so a server with tens of gigabytes can hold on the order of a million connections, and the fleet scales to tens of thousands of servers globally. The matching workers are CPU-bound on scoring and graph queries, and the ETA engine is CPU-bound on shortest-path computation, so both are provisioned by cores and scaled by request rate. Storage is secondary on the hot path — the live grid is in-memory — but the trip database and event log grow continuously and are scaled by daily trip volume with retention policies.</p>
+<p>Capacity planning must account for geographic skew: a single city’s rush hour can spike local load ten to fifty times the daily average while the rest of the world is quiet, so provisioning is per-region and per-city, not purely global. Multi-tenancy across cities on shared infrastructure is possible but risky because a bug or traffic spike in one city can starve others; many systems isolate large cities or regions onto dedicated clusters. Headroom is typically provisioned at two to three times peak observed load to absorb incidents, weather events, and growth, with autoscaling for the stateless tiers (matching workers, ETA engine, connection servers) and careful manual capacity planning for the stateful tiers (the live grid, the trip database). The cost of under-provisioning is visible — surge without supply, failed matches, rider churn — while the cost of over-provisioning is invisible but real, so the team monitors utilization and cost-per-trip as joint SLOs.</p>
+<h2 id="failure-handling">Failure Handling</h2>
+<p>A dispatch system that cannot degrade gracefully will, under any real incident, fail in a way that cascades into a marketplace collapse: riders cannot get cars, drivers idle without earnings, and both sides leave the platform. Failure handling is therefore designed in depth at every layer. At the ingestion layer, a lost position update is fine — the next one arrives in seconds — so the ingestion pipeline is allowed to drop updates under load and the matching layer uses freshness timestamps to ignore stale positions rather than trusting them. At the matching layer, if the primary cell-grid shard is unavailable, the worker falls back to a secondary replica or to a coarser-grained index (larger cells, fewer shards) that is more likely to be available; a degraded match is better than no match. If no driver is found within the radius, the rider is told “no cars available” with a retry suggestion rather than hanging indefinitely. At the ETA layer, if the routing engine is slow or unavailable, the system falls back to a cached or straight-line ETA clearly marked as approximate, so the rider still gets a number rather than a spinner.</p>
+<p>The connection tier handles failure by client-side reconnect with exponential backoff and session resumption, so the death of a connection server is largely invisible to users beyond a brief gap. The trip state machine is persisted at every transition to a durable store, so if a dispatch worker dies mid-trip the trip is picked up by another worker from the last persisted state; the event log is the source of truth and is append-only, so reconstruction is deterministic. Cross-zone failover is practiced regularly: each region runs in multiple availability zones with the stateless tiers active-active and the stateful tiers in primary-replica with automated promotion on failure. A full-region failure is the worst case and is handled by serving the affected region from a neighbor region with reduced capacity, or by shedding load (disabling pooling, raising surge caps, showing longer ETAs) to keep the core matching path alive.</p>
+<p>A particularly insidious failure mode is a thundering herd on recovery: if a zone fails and drivers reconnect en masse when it returns, the ingestion and matching paths can be overwhelmed by a synchronized burst of position updates and re-registrations. Mitigations include jittered reconnect backoff on the client, rate-limiting on the ingestion ingress, and warming up caches and grid state progressively rather than accepting full load immediately. Another subtle failure is a map-data regression: a bad map update that removes a major road from the graph causes ETAs to spike and matching to misfire across a whole city, and the only fix is a rollback of the map data, so map updates are versioned, canary-deployed by region, and quickly reversible. GPS firmware bugs on a popular phone model can cause a sudden flood of bad positions that look like a map-matching failure; the map-matching layer must be robust to absurd inputs (a GPS point in the ocean should be rejected, not snapped to the nearest coastline road) and alert on anomaly rates. Cultural readiness matters as much as the mechanisms: the team runs game days that intentionally fail zones, inject latency, and corrupt map data, because a failure-handling design that has never been exercised under load is an untested hypothesis.</p>
+<h2 id="sharp-interview-question">Sharp Interview Question</h2>
+<p><strong>Question:</strong> You are designing the dispatch matching path. A rider request arrives and you need to find the nearest available driver. You have a Redis geospatial index (GEOSEARCH) over all driver positions and a Postgres table of drivers with latitude and longitude columns. The city has fifty thousand drivers online. Walk me through how you serve this query in under two seconds at p99, and where does this design break first as the city grows to five hundred thousand drivers?</p>
+<p><strong>Model Answer:</strong> Start by rejecting the Postgres bounding-box approach for the hot path: a two-dimensional range scan on latitude and longitude cannot use a single B-tree index, so even with separate indexes the planner does an index intersection that is slow at fifty thousand rows and dies at five hundred thousand. Postgres with PostGIS and a GiST index on a geometry column would work and is a reasonable v1, but for sub-hundred-millisecond p99 at scale the hot path should be in-memory. Redis GEOSEARCH uses geohash under the hood and serves a radius query over fifty thousand points in under a millisecond, so it is a fine v1 and a fine fallback. The real design, though, is a sharded in-memory H3 grid: each cell maps to a set of driver IDs, cells are sharded across dispatch workers by cell ID, and a query does a scatter-gather to the shards owning the rider’s cell and its neighbor rings. This keeps the hot path in process memory with no Redis round-trip, scales horizontally by adding shards as driver density grows, and lets you tune resolution per city.</p>
+<p>Where it breaks first at five hundred thousand drivers is not the query — the scatter-gather is still fast — but the cell hot-spot: a downtown cell with thousands of drivers makes the set on that cell’s shard large and the fan-out from that shard to every query touching it a CPU bottleneck. The fix is finer resolution in dense areas (split the hot cell into seven child hexes, spreading the drivers across more shards) or dynamic re-sharding of overloaded cells. The second break point is ingestion: five hundred thousand drivers updating every four seconds is 125k updates per second, and the cross-cell move churn in a dense downtown is high, so the ingestion path must be sharded by driver ID and the cell-set updates must be lock-free or finely locked to avoid contention. The third break point, often missed, is the real-time fan-out: if a significant fraction of those drivers are on trips with watching riders, the connection-tier fan-out of position updates can saturate the connection servers before the matching path does, and the connection tier is stateful and harder to scale than the stateless matching workers. A strong answer names all three break points and the mitigation for each, rather than stopping at “add more Redis shards.”</p>
+<p><strong>Common Pitfall:</strong> Reaching for a spatial database (PostGIS, Redis GEO) as the primary hot-path index and discovering at scale that the network round-trip and the single-shard hot-spot dominate latency. The geospatial index is necessary but not sufficient; the production pattern is an in-memory, sharded-by-cell grid on the dispatch workers themselves, with the database as a durable fallback and recovery source, not the query path. Candidates who propose only “use Redis GEOSEARCH” have a working v1 and a broken v2, and the follow-up question about the five-hundred-thousand-driver break point is where that becomes visible. A related pitfall is matching on raw GPS rather than map-matched positions: the nearest driver by raw GPS may be on the wrong side of a barrier, producing a match that looks good in the data and is terrible on the ground.</p>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Core problem: match riders to nearby drivers in real-time, considering location, ETA, and supply-demand balance</li>
+<li>Geospatial index: geohash, quadtree, or H3 for spatial partitioning. In-memory grid on dispatch workers, not DB</li>
+<li>Surge pricing: dynamically adjust multipliers based on real-time supply-demand ratio per zone</li>
+<li>Map-matching: snap raw GPS to road network before matching — nearest by GPS ≠ nearest by road</li>
+<li>Dispatch is a real-time optimization problem, not a database query — avoid PostGIS/Redis GEO on the hot path</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you handle 500K drivers updating location every 4 seconds?” — WebSocket connections, location updates go to in-memory grid (sharded by geocell), periodically checkpointed to database.</li>
+<li>“How do you prevent the thundering herd when a surge area opens?” — Gradual price adjustment, driver notification batching, and jittered dispatch to avoid all drivers racing to one zone.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Using a spatial database (PostGIS, Redis GEO) as the primary hot-path index works at small scale but fails at the 500K driver break point — the network round-trip and single-shard hot-spot dominate latency. The production pattern is an in-memory, sharded-by-cell grid on the dispatch workers, with the database as a durable fallback, not the query path.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/uber-dispatch-system/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Uber's%20Dispatch%20System&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fuber-dispatch-system%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fuber-dispatch-system%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/uber-dispatch-system" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/two-phase-commit-and-consensus-raft-paxos" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Two-Phase Commit &amp; Consensus (Raft/Paxos)</span></a><a href="/notes/system-design/url-shortener" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>URL Shortener</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Uber's Dispatch System" data-selector=".article-prose" data-article-slug="system-design/uber-dispatch-system" data-article-title="Uber's Dispatch System" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

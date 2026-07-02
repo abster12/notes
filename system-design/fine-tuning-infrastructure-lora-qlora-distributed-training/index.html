@@ -1,0 +1,1261 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Fine-Tuning Infrastructure (LoRA, QLoRA, Distributed Training) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-the-fine-tuning-problem-landscape" class="toc-link" data-toc-link="1-the-fine-tuning-problem-landscape" data-astro-cid-p33bl5ka>1. The Fine-Tuning Problem Landscape</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#11-full-fine-tuning-vs-parameter-efficient-fine-tuning-peft" class="toc-link" data-toc-link="11-full-fine-tuning-vs-parameter-efficient-fine-tuning-peft" data-astro-cid-p33bl5ka>1.1 Full Fine-Tuning vs. Parameter-Efficient Fine-Tuning (PEFT)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#12-the-multi-tenant-adapter-problem" class="toc-link" data-toc-link="12-the-multi-tenant-adapter-problem" data-astro-cid-p33bl5ka>1.2 The Multi-Tenant Adapter Problem</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-lora-low-rank-adaptation" class="toc-link" data-toc-link="2-lora-low-rank-adaptation" data-astro-cid-p33bl5ka>2. LoRA: Low-Rank Adaptation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#21-the-core-insight" class="toc-link" data-toc-link="21-the-core-insight" data-astro-cid-p33bl5ka>2.1 The Core Insight</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#22-where-to-apply-lora" class="toc-link" data-toc-link="22-where-to-apply-lora" data-astro-cid-p33bl5ka>2.2 Where to Apply LoRA</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#23-rank-selection-r--the-silent-knob" class="toc-link" data-toc-link="23-rank-selection-r--the-silent-knob" data-astro-cid-p33bl5ka>2.3 Rank Selection (r) — The Silent Knob</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#24-alpha-scaling" class="toc-link" data-toc-link="24-alpha-scaling" data-astro-cid-p33bl5ka>2.4 Alpha Scaling</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-qlora-quantization--lora" class="toc-link" data-toc-link="3-qlora-quantization--lora" data-astro-cid-p33bl5ka>3. QLoRA: Quantization + LoRA</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#31-the-memory-breakthrough" class="toc-link" data-toc-link="31-the-memory-breakthrough" data-astro-cid-p33bl5ka>3.1 The Memory Breakthrough</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#32-nf4-quantization--not-just-any-4-bit" class="toc-link" data-toc-link="32-nf4-quantization--not-just-any-4-bit" data-astro-cid-p33bl5ka>3.2 NF4 Quantization — Not Just Any 4-bit</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#33-double-quantization" class="toc-link" data-toc-link="33-double-quantization" data-astro-cid-p33bl5ka>3.3 Double Quantization</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#34-the-precision-mismatch-problem" class="toc-link" data-toc-link="34-the-precision-mismatch-problem" data-astro-cid-p33bl5ka>3.4 The Precision Mismatch Problem</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#4-distributed-training-strategies" class="toc-link" data-toc-link="4-distributed-training-strategies" data-astro-cid-p33bl5ka>4. Distributed Training Strategies</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#41-the-parallelism-taxonomy" class="toc-link" data-toc-link="41-the-parallelism-taxonomy" data-astro-cid-p33bl5ka>4.1 The Parallelism Taxonomy</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#42-data-parallelism-ddp" class="toc-link" data-toc-link="42-data-parallelism-ddp" data-astro-cid-p33bl5ka>4.2 Data Parallelism (DDP)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#43-fsdp--zero-fully-sharded-data-parallelism" class="toc-link" data-toc-link="43-fsdp--zero-fully-sharded-data-parallelism" data-astro-cid-p33bl5ka>4.3 FSDP / ZeRO (Fully Sharded Data Parallelism)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#44-tensor-parallelism-and-pipeline-parallelism" class="toc-link" data-toc-link="44-tensor-parallelism-and-pipeline-parallelism" data-astro-cid-p33bl5ka>4.4 Tensor Parallelism and Pipeline Parallelism</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#45-3d-parallelism-in-practice" class="toc-link" data-toc-link="45-3d-parallelism-in-practice" data-astro-cid-p33bl5ka>4.5 3D Parallelism in Practice</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#5-training-infrastructure-design" class="toc-link" data-toc-link="5-training-infrastructure-design" data-astro-cid-p33bl5ka>5. Training Infrastructure Design</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#51-the-full-pipeline-architecture" class="toc-link" data-toc-link="51-the-full-pipeline-architecture" data-astro-cid-p33bl5ka>5.1 The Full Pipeline Architecture</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#52-checkpointing-and-fault-tolerance" class="toc-link" data-toc-link="52-checkpointing-and-fault-tolerance" data-astro-cid-p33bl5ka>5.2 Checkpointing and Fault Tolerance</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#53-memory-optimizations-beyond-quantization" class="toc-link" data-toc-link="53-memory-optimizations-beyond-quantization" data-astro-cid-p33bl5ka>5.3 Memory Optimizations Beyond Quantization</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#6-inference-serving-for-multi-tenant-lora" class="toc-link" data-toc-link="6-inference-serving-for-multi-tenant-lora" data-astro-cid-p33bl5ka>6. Inference Serving for Multi-Tenant LoRA</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#61-adapter-hot-swapping" class="toc-link" data-toc-link="61-adapter-hot-swapping" data-astro-cid-p33bl5ka>6.1 Adapter Hot-Swapping</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#62-s-lora--punica--serving-thousands-of-lora-adapters" class="toc-link" data-toc-link="62-s-lora--punica--serving-thousands-of-lora-adapters" data-astro-cid-p33bl5ka>6.2 S-LoRA / Punica — Serving Thousands of LoRA Adapters</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#63-batching-across-tenants" class="toc-link" data-toc-link="63-batching-across-tenants" data-astro-cid-p33bl5ka>6.3 Batching Across Tenants</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#7-quality-assurance-and-evaluation" class="toc-link" data-toc-link="7-quality-assurance-and-evaluation" data-astro-cid-p33bl5ka>7. Quality Assurance and Evaluation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#71-the-eval-pipeline" class="toc-link" data-toc-link="71-the-eval-pipeline" data-astro-cid-p33bl5ka>7.1 The Eval Pipeline</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#72-catastrophic-forgetting-detection" class="toc-link" data-toc-link="72-catastrophic-forgetting-detection" data-astro-cid-p33bl5ka>7.2 Catastrophic Forgetting Detection</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#8-system-design-complete-fine-tuning-platform" class="toc-link" data-toc-link="8-system-design-complete-fine-tuning-platform" data-astro-cid-p33bl5ka>8. System Design: Complete Fine-Tuning Platform</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#81-requirements" class="toc-link" data-toc-link="81-requirements" data-astro-cid-p33bl5ka>8.1 Requirements</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#82-capacity-planning" class="toc-link" data-toc-link="82-capacity-planning" data-astro-cid-p33bl5ka>8.2 Capacity Planning</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#83-failure-modes" class="toc-link" data-toc-link="83-failure-modes" data-astro-cid-p33bl5ka>8.3 Failure Modes</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#u26a1-sharp-question" class="toc-link" data-toc-link="u26a1-sharp-question" data-astro-cid-p33bl5ka>&lt;U+26A1&gt; Sharp Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#key-takeaways" class="toc-link" data-toc-link="key-takeaways" data-astro-cid-p33bl5ka>Key Takeaways</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Fine-Tuning Infrastructure (LoRA, QLoRA, Distributed Training)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 26 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 36 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>ai-ml</span><span class="tag" data-astro-cid-sgg5joot>fine-tuning</span><span class="tag" data-astro-cid-sgg5joot>lora</span><span class="tag" data-astro-cid-sgg5joot>qlora</span><span class="tag" data-astro-cid-sgg5joot>distributed-training</span><span class="tag" data-astro-cid-sgg5joot>fsdp</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="fine-tuning-infrastructure-lora-qlora-distributed-training">Fine-Tuning Infrastructure (LoRA, QLoRA, Distributed Training)</h1>
+<blockquote>
+<p><strong>Staff-Engineer Focus:</strong> “We fine-tune with LoRA on a single GPU” is the junior answer. “We use QLoRA with 4-bit quantization and FSDP” is the mid-level answer. <strong>The staff engineer doesn’t ask which PEFT method to use. They ask: “For our customer-specific LoRA adapters serving 500 tenants, each adapter is 8 MB but we have 500 of them — that’s 4 GB of adapter weights. When a batch contains requests from 47 different tenants, does our inference server materialize all 47 adapters in GPU memory simultaneously, or do we fuse the adapter weights into the base model’s forward pass lazily? If we pre-merge, the base model weights change and we lose adapter isolation — one tenant’s fine-tune bleeds into another’s. If we keep them separate, the adapter-switching overhead per forward pass adds latency per tenant switch in the batch. For distributed fine-tuning across 64 GPUs, we’re using FSDP to shard the base model but LoRA adapters are tiny — do they even need sharding? If not, every GPU holds a full copy of every tenant’s adapter, and our all-gather for the base model weights is a rounding error compared to the adapter duplication. And when we QLoRA fine-tune on a single A100, the NF4 quantization means the base model is frozen in 4-bit — but our downstream inference runs in FP16. Walk me through: (a) the exact precision mismatch between 4-bit training and 16-bit inference and whether the adapter weights trained in the 4-bit space generalize correctly to 16-bit forward passes, (b) how you’d design the adapter storage layer so that hot-swapping 500 LoRA adapters at inference time doesn’t require 500 separate model reloads, (c) the failure mode when fine-tuning runs are distributed across spot instances and a single preemption corrupts the global FSDP state.”</strong> The interview question isn’t “Explain LoRA.” It’s: “You have 500 customers, each needing a personalized LoRA adapter on Llama-3-70B. Fine-tuning throughput is 4 adapters per hour on 8×A100. Inference must serve all 500 tenants simultaneously with P99 latency under 300ms. Design the full pipeline: training orchestration, adapter storage, and inference serving. Where does your system break first, and what do you measure to know it’s about to break?”**</p>
+</blockquote>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>Infrastructure for adapting pre-trained LLMs to specific tasks — LoRA trains small adapter matrices instead of all weights, QLoRA adds 4-bit quantization for single-GPU fine-tuning.</p>
+<p><strong>How it’s asked:</strong> “Design a fine-tuning pipeline for 500 customer-specific LoRA adapters on Llama-3-70B. Handle distributed training, adapter storage, multi-tenant serving, and quality validation.”</p>
+<hr>
+<h2 id="1-the-fine-tuning-problem-landscape">1. The Fine-Tuning Problem Landscape</h2>
+<h3 id="11-full-fine-tuning-vs-parameter-efficient-fine-tuning-peft">1.1 Full Fine-Tuning vs. Parameter-Efficient Fine-Tuning (PEFT)</h3>
+<p>Fine-tuning is the process of adapting a pre-trained model to a specific task or domain by continuing training on new data. The naive approach — full fine-tuning — updates every parameter in the model. For a 70B model, that means:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Full fine-tuning of Llama-3-70B:</span></span>
+<span class="line"><span>  - Optimizer states (AdamW): 70B × 8 bytes (fp32 master) + 70B × 4 bytes (momentum)</span></span>
+<span class="line"><span>    + 70B × 4 bytes (variance) = 1.12 TB</span></span>
+<span class="line"><span>  - Gradients: 70B × 2 bytes (fp16) = 140 GB</span></span>
+<span class="line"><span>  - Model weights: 70B × 2 bytes (fp16) = 140 GB</span></span>
+<span class="line"><span>  - Activations (checkpointed): ~200 GB for batch size 1, seq len 4096</span></span>
+<span class="line"><span>  - Total minimum: ~1.6 TB of GPU memory for a single training step</span></span>
+<span class="line"><span>  - That's 20× A100-80GB — not for training speed, just to avoid OOM</span></span></code></pre>
+<p>PEFT methods solve this by freezing most parameters and training only a small subset. The taxonomy matters for system design:</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Trainable Params</th>
+<th>Storage per Adapter</th>
+<th>Training Memory</th>
+<th>Inference Overhead</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Full FT</strong></td>
+<td>100% (70B)</td>
+<td>140 GB</td>
+<td>~1.6 TB</td>
+<td>None (model replaced)</td>
+</tr>
+<tr>
+<td><strong>LoRA</strong></td>
+<td>~0.1-1% (7M-70M)</td>
+<td>8-80 MB</td>
+<td>~200 GB (1×A100-80GB for 70B)</td>
+<td>+2-5% latency</td>
+</tr>
+<tr>
+<td><strong>QLoRA</strong></td>
+<td>~0.1-1%</td>
+<td>8-80 MB</td>
+<td>~48 GB (1×A100-80GB, model in 4-bit)</td>
+<td>+2-5% latency + dequant</td>
+</tr>
+<tr>
+<td><strong>Prefix Tuning</strong></td>
+<td>~0.01%</td>
+<td>&lt;1 MB</td>
+<td>~160 GB</td>
+<td>+1% latency</td>
+</tr>
+<tr>
+<td><strong>IA³</strong></td>
+<td>~0.01%</td>
+<td>&lt;1 MB</td>
+<td>~160 GB</td>
+<td>+1% latency</td>
+</tr>
+<tr>
+<td><strong>Adapter Layers</strong></td>
+<td>~1-3%</td>
+<td>100-300 MB</td>
+<td>~250 GB</td>
+<td>+3-8% latency</td>
+</tr>
+</tbody>
+</table>
+<h3 id="12-the-multi-tenant-adapter-problem">1.2 The Multi-Tenant Adapter Problem</h3>
+<p>The staff-engineer insight: PEFT doesn’t just reduce training cost — it creates a <strong>new system architecture</strong> where the base model is a shared platform and adapters are lightweight per-tenant customizations. This fundamentally changes infrastructure requirements:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                    +------------------------------------------+</span></span>
+<span class="line"><span>                    |        Inference Gateway                 |</span></span>
+<span class="line"><span>                    |  (routes tenant_id -> adapter_id)        |</span></span>
+<span class="line"><span>                    +------------------+-----------------------+</span></span>
+<span class="line"><span>                                       |</span></span>
+<span class="line"><span>                    +------------------+-----------------------+</span></span>
+<span class="line"><span>                    |         Adapter Cache (GPU)              |</span></span>
+<span class="line"><span>                    |  +-----+ +-----+ +-----+       +-----+  |</span></span>
+<span class="line"><span>                    |  |Ten1 | |Ten2 | |Ten3 | ...   |TenN |  |</span></span>
+<span class="line"><span>                    |  | 8MB | | 8MB | | 8MB |       | 8MB |  |</span></span>
+<span class="line"><span>                    |  +-----+ +-----+ +-----+       +-----+  |</span></span>
+<span class="line"><span>                    |  LRU eviction when GPU memory tight      |</span></span>
+<span class="line"><span>                    +------------------+-----------------------+</span></span>
+<span class="line"><span>                                       |</span></span>
+<span class="line"><span>                    +------------------+-----------------------+</span></span>
+<span class="line"><span>                    |      Base Model (Frozen, FP16)           |</span></span>
+<span class="line"><span>                    |      70B params / 4 GPUs (TP=4)          |</span></span>
+<span class="line"><span>                    |      GPU 0  |  GPU 1  | GPU 2 | GPU 3   |</span></span>
+<span class="line"><span>                    +------------------+-----------------------+</span></span>
+<span class="line"><span>                                       |</span></span>
+<span class="line"><span>                    +------------------+-----------------------+</span></span>
+<span class="line"><span>                    |       Adapter Object Store (S3)          |</span></span>
+<span class="line"><span>                    |  tenant_001/lora/adapter_config.json     |</span></span>
+<span class="line"><span>                    |  tenant_001/lora/adapter_model.safetensors|</span></span>
+<span class="line"><span>                    |  tenant_002/lora/...                     |</span></span>
+<span class="line"><span>                    +------------------------------------------+</span></span></code></pre>
+<p>The key system design question: <strong>Do you merge adapters into the base model or keep them separate?</strong> This is the adapter isolation vs. throughput trade-off:</p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Adapter Isolation</th>
+<th>Throughput</th>
+<th>Hot-Swap Speed</th>
+<th>Memory Overhead</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Pre-merge</strong> (W’ = W + BA)</td>
+<td>No (shared model, bleed risk)</td>
+<td>Best (no overhead)</td>
+<td>Slow (model reload, minutes)</td>
+<td>None (merged)</td>
+</tr>
+<tr>
+<td><strong>Separate forward</strong> (y = Wx + BAx)</td>
+<td>Yes (isolated per-request)</td>
+<td>Good (+2-5% latency)</td>
+<td>Fast (&lt;1ms adapter swap)</td>
+<td>BA matrices in GPU</td>
+</tr>
+<tr>
+<td><strong>LoRAX / Punica</strong> (CUDA kernel fusion)</td>
+<td>Yes (isolated)</td>
+<td>Best (near-zero overhead)</td>
+<td>Fast (&lt;1ms swap)</td>
+<td>Adapter weights in GPU</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="2-lora-low-rank-adaptation">2. LoRA: Low-Rank Adaptation</h2>
+<h3 id="21-the-core-insight">2.1 The Core Insight</h3>
+<p>The hypothesis behind LoRA: during fine-tuning, the <strong>weight updates (delta_W) have low intrinsic rank</strong>. Instead of learning delta_W directly (a d×d matrix), LoRA decomposes it into two low-rank matrices:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>delta_W = B × A    where B in R^(d×r), A in R^(r×k), and r &#x3C;&#x3C; min(d,k)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Forward pass: h = W_0 * x + delta_W * x = W_0 * x + B * A * x</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>              +-----------------------------------+</span></span>
+<span class="line"><span>              |      Pre-trained Weight W_0       |</span></span>
+<span class="line"><span>              |         (d_out × d_in)            |</span></span>
+<span class="line"><span>              |           FROZEN                   |</span></span>
+<span class="line"><span>              +---------------+-------------------+</span></span>
+<span class="line"><span>                              |  W_0 * x</span></span>
+<span class="line"><span>                              v</span></span>
+<span class="line"><span>              +-------------------------------+</span></span>
+<span class="line"><span>   Input x -->|            SUM                |--> Output h</span></span>
+<span class="line"><span>              +---------------^---------------+</span></span>
+<span class="line"><span>                              |  B * A * x</span></span>
+<span class="line"><span>              +---------------+---------------+</span></span>
+<span class="line"><span>              |     B (d_out × r)             |</span></span>
+<span class="line"><span>              |      TRAINABLE                |</span></span>
+<span class="line"><span>              +---------------^---------------+</span></span>
+<span class="line"><span>                              |</span></span>
+<span class="line"><span>              +---------------+---------------+</span></span>
+<span class="line"><span>              |     A (r × d_in)              |</span></span>
+<span class="line"><span>              |      TRAINABLE                |</span></span>
+<span class="line"><span>              +---------------^---------------+</span></span>
+<span class="line"><span>                              |</span></span>
+<span class="line"><span>                         Input x</span></span></code></pre>
+<p>With r=16 and d=4096, the trainable parameters drop from 16.8M (full matrix) to 131K (LoRA) — a <strong>128× reduction</strong>. This is why LoRA fits on a single GPU for 70B models.</p>
+<h3 id="22-where-to-apply-lora">2.2 Where to Apply LoRA</h3>
+<p>LoRA is typically applied to the attention projection matrices — Q, K, V, O. The choice of which layers to target is itself a design decision:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Layer types in a transformer block:</span></span>
+<span class="line"><span>+------------------------------------------------------+</span></span>
+<span class="line"><span>|                 Transformer Block                     |</span></span>
+<span class="line"><span>|                                                       |</span></span>
+<span class="line"><span>|  +---------+   +---------+   +---------+              |</span></span>
+<span class="line"><span>|  | Q_proj  |   | K_proj  |   | V_proj  |  &#x3C;-- LoRA   |</span></span>
+<span class="line"><span>|  | (LoRA)  |   | (LoRA)  |   | (LoRA)  |              |</span></span>
+<span class="line"><span>|  +----+----+   +----+----+   +----+----+              |</span></span>
+<span class="line"><span>|       +-------------+-------------+                    |</span></span>
+<span class="line"><span>|                     v                                  |</span></span>
+<span class="line"><span>|              +---------------+                        |</span></span>
+<span class="line"><span>|              |   Attention   |                        |</span></span>
+<span class="line"><span>|              +-------+-------+                        |</span></span>
+<span class="line"><span>|                      v                                |</span></span>
+<span class="line"><span>|  +-----------------------------------+                |</span></span>
+<span class="line"><span>|  |           O_proj (LoRA)           |  &#x3C;-- LoRA      |</span></span>
+<span class="line"><span>|  +---------------+-------------------+                |</span></span>
+<span class="line"><span>|                  v                                    |</span></span>
+<span class="line"><span>|  +-----------------------------------+                |</span></span>
+<span class="line"><span>|  |         Feed-Forward (MLP)        |                |</span></span>
+<span class="line"><span>|  |  gate_proj | up_proj | down_proj  |  &#x3C;-- Optional |</span></span>
+<span class="line"><span>|  +-----------------------------------+                |</span></span>
+<span class="line"><span>+------------------------------------------------------+</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Standard: LoRA on Q, K, V, O --> ~0.1% of total params</span></span>
+<span class="line"><span>Extended: LoRA on Q, K, V, O + MLP --> ~0.3% of total params</span></span>
+<span class="line"><span>Full block: every linear layer --> ~0.5% of total params</span></span></code></pre>
+<p><strong>Staff-level nuance:</strong> Adding LoRA to more layers improves expressivity but increases adapter size linearly. With 500 tenants, every extra 8 MB per adapter adds 4 GB to the inference cache. The system designer must find the <strong>adapter-size-to-quality Pareto frontier</strong> for their specific use case.</p>
+<h3 id="23-rank-selection-r--the-silent-knob">2.3 Rank Selection (r) — The Silent Knob</h3>
+<p>The rank <code>r</code> controls the adapter’s capacity. Higher r = more expressivity = larger adapter:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>r = 4:   adapter ~ 2 MB   --> good for simple style adaptation</span></span>
+<span class="line"><span>r = 8:   adapter ~ 4 MB   --> typical starting point</span></span>
+<span class="line"><span>r = 16:  adapter ~ 8 MB   --> good for domain adaptation</span></span>
+<span class="line"><span>r = 64:  adapter ~ 32 MB  --> high-fidelity task transfer</span></span>
+<span class="line"><span>r = 256: adapter ~ 128 MB --> approaching full fine-tuning quality</span></span></code></pre>
+<p><strong>The trap:</strong> Most engineers default to r=16 because “that’s what the paper used.” But r is a hyperparameter that depends on task complexity. For 500 tenants with 500 different tasks, each may need a different r — and your system must support heterogeneous adapter sizes in the same serving infrastructure.</p>
+<h3 id="24-alpha-scaling">2.4 Alpha Scaling</h3>
+<p>LoRA introduces a scaling factor alpha/r. The update is: delta_W = (alpha/r) × BA. This is not just a learning rate — it decouples the learning dynamics from the adapter’s effective magnitude:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># Common pitfall: confusing alpha with learning rate</span></span>
+<span class="line"><span style="color:#6A737D"># Alpha controls how much the LoRA update contributes relative to the base model</span></span>
+<span class="line"><span style="color:#6A737D"># Learning rate controls how fast the optimizer moves</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># If alpha = 16, r = 16 --> scaling = 1.0  (default, no scaling)</span></span>
+<span class="line"><span style="color:#6A737D"># If alpha = 32, r = 16 --> scaling = 2.0  (LoRA contribution amplified)</span></span>
+<span class="line"><span style="color:#6A737D"># If alpha = 8,  r = 16 --> scaling = 0.5  (LoRA contribution dampened)</span></span></code></pre>
+<p>When designing a fine-tuning platform, alpha should be exposed as a configurable parameter — different tenants may need different adaptation strengths. A tenant fine-tuning on 10 examples needs higher alpha than one with 100,000 examples.</p>
+<hr>
+<h2 id="3-qlora-quantization--lora">3. QLoRA: Quantization + LoRA</h2>
+<h3 id="31-the-memory-breakthrough">3.1 The Memory Breakthrough</h3>
+<p>QLoRA (Quantized LoRA) enables fine-tuning a 65B model on a single 48GB GPU by quantizing the frozen base model to 4-bit. The key innovations:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Standard LoRA memory for Llama-2-70B:</span></span>
+<span class="line"><span>  Base model (FP16):      140 GB</span></span>
+<span class="line"><span>  Gradients (LoRA only):    ~0.016 GB (tiny)</span></span>
+<span class="line"><span>  Optimizer states:         ~0.048 GB (tiny, Adam for LoRA params only)</span></span>
+<span class="line"><span>  Total:                   ~140 GB --> requires 2x A100-80GB</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>QLoRA memory for Llama-2-70B:</span></span>
+<span class="line"><span>  Base model (NF4):         ~18 GB (4-bit storage + quantization constants)</span></span>
+<span class="line"><span>  Gradients (LoRA only):    ~0.016 GB</span></span>
+<span class="line"><span>  Optimizer states:         ~0.048 GB</span></span>
+<span class="line"><span>  Total:                    ~18 GB --> fits on 1x A100-40GB or 1x RTX 4090</span></span></code></pre>
+<p>This ~8× memory reduction democratizes fine-tuning — but creates new system challenges.</p>
+<h3 id="32-nf4-quantization--not-just-any-4-bit">3.2 NF4 Quantization — Not Just Any 4-bit</h3>
+<p>The QLoRA paper introduced <strong>NormalFloat4 (NF4)</strong>, a data type optimized for normally distributed weights (which neural network weights empirically follow):</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Standard 4-bit quantization:</span></span>
+<span class="line"><span>  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+</span></span>
+<span class="line"><span>  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |10 |11 |12 |13 |14 |15|</span></span>
+<span class="line"><span>  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+</span></span>
+<span class="line"><span>  Uniform spacing --> wastes bits on tail values that are rarely used</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>NF4 quantization:</span></span>
+<span class="line"><span>  +-+--+---+---+----+----+----+-----+-----+-----+------+------+----+</span></span>
+<span class="line"><span>  |#|# | # | # | #  | #  | #  | #   | #   | #   | #    | #    | #  |</span></span>
+<span class="line"><span>  +-+--+---+---+----+----+----+-----+-----+-----+------+------+----+</span></span>
+<span class="line"><span>  Dense near zero, sparse at tails --> more precision where weights live</span></span></code></pre>
+<p>The quantiles of NF4 are chosen to match the quantiles of N(0,1). This means the 16 quantization levels are not uniformly spaced — they’re denser near zero.</p>
+<h3 id="33-double-quantization">3.3 Double Quantization</h3>
+<p>QLoRA also quantizes the quantization constants themselves (second level), saving another ~0.5 GB for a 65B model:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Level 0: Raw weights stored as 4-bit NF4 indices</span></span>
+<span class="line"><span>Level 1: Per-block scaling factors (e.g., one FP32 scalar per 64 weights)</span></span>
+<span class="line"><span>         --> These scaling factors are themselves quantized to FP8</span></span>
+<span class="line"><span>         --> Saves ~3 GB on a 65B model (from ~3.5 GB to ~0.5 GB)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        +--------------------------------------------+</span></span>
+<span class="line"><span>        | Raw Weights (NF4, 4-bit)                   |</span></span>
+<span class="line"><span>        | [w0 w1 w2 ... w63] x millions              |</span></span>
+<span class="line"><span>        +-------------------+------------------------+</span></span>
+<span class="line"><span>                            | each block of 64 has one...</span></span>
+<span class="line"><span>                            v</span></span>
+<span class="line"><span>        +--------------------------------------------+</span></span>
+<span class="line"><span>        | Block-wise Scale (FP32, 32-bit)            |</span></span>
+<span class="line"><span>        | [s0] [s1] [s2] ... [s_N]                   |</span></span>
+<span class="line"><span>        +-------------------+------------------------+</span></span>
+<span class="line"><span>                            | double-quantize to...</span></span>
+<span class="line"><span>                            v</span></span>
+<span class="line"><span>        +--------------------------------------------+</span></span>
+<span class="line"><span>        | Quantized Scales (FP8, 8-bit)              |</span></span>
+<span class="line"><span>        | + one FP32 global scale per 256 blocks     |</span></span>
+<span class="line"><span>        +--------------------------------------------+</span></span></code></pre>
+<h3 id="34-the-precision-mismatch-problem">3.4 The Precision Mismatch Problem</h3>
+<p><strong>This is the staff-engineer question.</strong> QLoRA trains adapters against a 4-bit base model, but the adapters are stored in FP16/BF16. During inference, the base model runs in FP16. The adapters were optimized in a quantized space where:</p>
+<ul>
+<li>Gradient computations happened against dequantized (but still approximate) base model activations</li>
+<li>The 4-bit forward pass introduces quantization noise that the LoRA adapter learns to compensate for</li>
+<li>When you move to FP16 inference, that noise disappears — but the adapter was trained to correct for it</li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Training (QLoRA):                Inference (standard):</span></span>
+<span class="line"><span>+--------------------------+     +---------------------------+</span></span>
+<span class="line"><span>| Base Model (NF4)         |     | Base Model (FP16)         |</span></span>
+<span class="line"><span>|  | dequantize to BF16    |     |  |                        |</span></span>
+<span class="line"><span>| Forward pass (BF16)      |     | Forward pass (FP16)       |</span></span>
+<span class="line"><span>|  + quantization noise    |     |  + NO quantization noise  |</span></span>
+<span class="line"><span>|  |                       |     |  |                        |</span></span>
+<span class="line"><span>| LoRA adapts to           |     | LoRA applied to           |</span></span>
+<span class="line"><span>| BASE_4bit + noise        |     | BASE_16bit (no noise)     |</span></span>
+<span class="line"><span>+--------------------------+     +---------------------------+</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>The adapter learned: delta_W = target_output - noisy_4bit_output</span></span>
+<span class="line"><span>At inference:        output = clean_16bit_output + (target - noisy_4bit_output)</span></span>
+<span class="line"><span>                           = target + (clean_16bit - noisy_4bit)</span></span>
+<span class="line"><span>                           = target + epsilon</span></span></code></pre>
+<p>The mismatch epsilon exists but is empirically small for most tasks. However, for tasks requiring high precision (math, code generation, structured output), this can cause measurable degradation. <strong>The system must support quality validation that compares QLoRA-trained adapters against the same data on FP16 inference before deploying.</strong></p>
+<hr>
+<h2 id="4-distributed-training-strategies">4. Distributed Training Strategies</h2>
+<h3 id="41-the-parallelism-taxonomy">4.1 The Parallelism Taxonomy</h3>
+<p>When one GPU isn’t enough (and for full fine-tuning of 70B+ models, it never is), you distribute across GPUs. There are four fundamental strategies, and real systems compose them:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                    DATA PARALLELISM              MODEL PARALLELISM</span></span>
+<span class="line"><span>                    +------------------+       +----------------------------+</span></span>
+<span class="line"><span>                    |   DDP            |       | Tensor Parallelism (TP)    |</span></span>
+<span class="line"><span>                    |                  |       | Pipeline Parallel (PP)     |</span></span>
+<span class="line"><span>                    | Each GPU         |       | FSDP (ZeRO)                |</span></span>
+<span class="line"><span>                    | has full         |       |                            |</span></span>
+<span class="line"><span>                    | model copy       |       | Each GPU holds a slice     |</span></span>
+<span class="line"><span>                    +------------------+       +----------------------------+</span></span>
+<span class="line"><span>                           |                            |</span></span>
+<span class="line"><span>                           +-------------+--------------+</span></span>
+<span class="line"><span>                                         v</span></span>
+<span class="line"><span>                                +--------------------+</span></span>
+<span class="line"><span>                                |  3D Parallelism    |</span></span>
+<span class="line"><span>                                |  DP x TP x PP      |</span></span>
+<span class="line"><span>                                |  (real systems)    |</span></span>
+<span class="line"><span>                                +--------------------+</span></span></code></pre>
+<h3 id="42-data-parallelism-ddp">4.2 Data Parallelism (DDP)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>+----------------------------------------------------------------+</span></span>
+<span class="line"><span>|                        DDP (Distributed Data Parallel)          |</span></span>
+<span class="line"><span>|                                                                 |</span></span>
+<span class="line"><span>|   GPU 0              GPU 1              GPU 2              GPU 3|</span></span>
+<span class="line"><span>|  +---------+        +---------+        +---------+        +---------+</span></span>
+<span class="line"><span>|  | Batch_0 |        | Batch_1 |        | Batch_2 |        | Batch_3 |</span></span>
+<span class="line"><span>|  | Model   |        | Model   |        | Model   |        | Model   |</span></span>
+<span class="line"><span>|  | (full)  |        | (full)  |        | (full)  |        | (full)  |</span></span>
+<span class="line"><span>|  +----+----+        +----+----+        +----+----+        +----+----+</span></span>
+<span class="line"><span>|       | grad_L0          | grad_L1          | grad_L2          | grad_L3</span></span>
+<span class="line"><span>|       +------------------+------------------+------------------+</span></span>
+<span class="line"><span>|                          | All-Reduce                          |</span></span>
+<span class="line"><span>|                  +-------+-----------------------------+------+</span></span>
+<span class="line"><span>|                  |   Average gradients across all GPUs,      |</span></span>
+<span class="line"><span>|                  |   then each updates its local copy         |</span></span>
+<span class="line"><span>|                  +--------------------------------------------+</span></span>
+<span class="line"><span>|                                                                 |</span></span>
+<span class="line"><span>|   Pros: Simple, near-linear scaling for small models            |</span></span>
+<span class="line"><span>|   Cons: Each GPU must hold full model + optimizer states        |</span></span>
+<span class="line"><span>|   Communication: All-reduce gradients, O(model_size) per step   |</span></span>
+<span class="line"><span>+----------------------------------------------------------------+</span></span></code></pre>
+<h3 id="43-fsdp--zero-fully-sharded-data-parallelism">4.3 FSDP / ZeRO (Fully Sharded Data Parallelism)</h3>
+<p>FSDP (PyTorch’s implementation of Microsoft’s ZeRO) shards model parameters, gradients, and optimizer states across GPUs — while still appearing as data parallelism to the user:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>ZeRO Stages:</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Stage 1: Shard optimizer states only</span></span>
+<span class="line"><span>  +----------+----------+----------+----------+</span></span>
+<span class="line"><span>  |  GPU 0   |  GPU 1   |  GPU 2   |  GPU 3   |</span></span>
+<span class="line"><span>  | Weights  | Weights  | Weights  | Weights  |</span></span>
+<span class="line"><span>  | Grads    | Grads    | Grads    | Grads    |</span></span>
+<span class="line"><span>  | Opt_0    | Opt_1    | Opt_2    | Opt_3    | &#x3C;-- sharded</span></span>
+<span class="line"><span>  +----------+----------+----------+----------+</span></span>
+<span class="line"><span>  Memory saved: 4x reduction in optimizer memory</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Stage 2: Shard optimizer states + gradients</span></span>
+<span class="line"><span>  +----------+----------+----------+----------+</span></span>
+<span class="line"><span>  |  GPU 0   |  GPU 1   |  GPU 2   |  GPU 3   |</span></span>
+<span class="line"><span>  | Weights  | Weights  | Weights  | Weights  |</span></span>
+<span class="line"><span>  | Grad_0   | Grad_1   | Grad_2   | Grad_3   | &#x3C;-- sharded</span></span>
+<span class="line"><span>  | Opt_0    | Opt_1    | Opt_2    | Opt_3    | &#x3C;-- sharded</span></span>
+<span class="line"><span>  +----------+----------+----------+----------+</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Stage 3: Shard optimizer states + gradients + parameters</span></span>
+<span class="line"><span>  +----------+----------+----------+----------+</span></span>
+<span class="line"><span>  |  GPU 0   |  GPU 1   |  GPU 2   |  GPU 3   |</span></span>
+<span class="line"><span>  | W_0      | W_1      | W_2      | W_3      | &#x3C;-- sharded</span></span>
+<span class="line"><span>  | Grad_0   | Grad_1   | Grad_2   | Grad_3   | &#x3C;-- sharded</span></span>
+<span class="line"><span>  | Opt_0    | Opt_1    | Opt_2    | Opt_3    | &#x3C;-- sharded</span></span>
+<span class="line"><span>  +----------+----------+----------+----------+</span></span>
+<span class="line"><span>  Each GPU only owns 1/4 of the parameters at rest</span></span>
+<span class="line"><span>  All-gather before forward, reduce-scatter after backward</span></span></code></pre>
+<p><strong>The FSDP-LoRA interaction:</strong> When using FSDP with LoRA, the base model is sharded but LoRA parameters are tiny — typically each GPU holds a FULL copy of all LoRA adapters. This means:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>FSDP + LoRA (training 500 tenant adapters on 64 GPUs):</span></span>
+<span class="line"><span>  +-----------------------------------------------------------+</span></span>
+<span class="line"><span>  | Base model (70B): sharded across 64 GPUs -- ~2.2 GB/GPU  |</span></span>
+<span class="line"><span>  | LoRA adapters (500 x 8 MB): FULL COPY on EVERY GPU       |</span></span>
+<span class="line"><span>  |   = 4 GB of adapter weights x 64 GPUs = 256 GB wasted    |</span></span>
+<span class="line"><span>  +-----------------------------------------------------------+</span></span></code></pre>
+<p><strong>The staff-engineer insight:</strong> For multi-tenant adapter training, FSDP can be counterproductive. If you’re training 500 different adapters independently, you should shard the <strong>adapters</strong> across GPUs (adapter parallelism), not the base model. Each GPU trains 8 adapters, all sharing the same base model — that’s 500/8 ~ 63 GPUs × 1 copy of base model = 2.2 GB/GPU, vs. 64 GPUs each with the full adapter set = 256 GB wasted.</p>
+<h3 id="44-tensor-parallelism-and-pipeline-parallelism">4.4 Tensor Parallelism and Pipeline Parallelism</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Tensor Parallelism (TP): Split individual layers across GPUs</span></span>
+<span class="line"><span>+-------------------------------------------------------+</span></span>
+<span class="line"><span>|  Layer: Y = WX                                         |</span></span>
+<span class="line"><span>|                                                        |</span></span>
+<span class="line"><span>|  GPU 0              GPU 1              GPU 2           |</span></span>
+<span class="line"><span>|  W[:, 0:d/3]        W[:, d/3:2d/3]    W[:, 2d/3:d]   |</span></span>
+<span class="line"><span>|  X[0:d/3]           X[d/3:2d/3]       X[2d/3:d]      |</span></span>
+<span class="line"><span>|       |                  |                  |          |</span></span>
+<span class="line"><span>|       +------------------+------------------+          |</span></span>
+<span class="line"><span>|                    All-Reduce                          |</span></span>
+<span class="line"><span>|                          |                             |</span></span>
+<span class="line"><span>|                    Y (full output)                     |</span></span>
+<span class="line"><span>|                                                        |</span></span>
+<span class="line"><span>|  Communication: Two all-reduces per transformer block  |</span></span>
+<span class="line"><span>|  Best for: Models too big for single GPU (70B+)        |</span></span>
+<span class="line"><span>|  Limitation: High communication, only within a node    |</span></span>
+<span class="line"><span>+-------------------------------------------------------+</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Pipeline Parallelism (PP): Split model layers across GPUs</span></span>
+<span class="line"><span>+----------------------------------------------------------+</span></span>
+<span class="line"><span>|  GPU 0: Layers 0-19     (first 20 transformer blocks)    |</span></span>
+<span class="line"><span>|    | micro-batch0 -> micro-batch1 -> micro-batch2         |</span></span>
+<span class="line"><span>|    v                                                     |</span></span>
+<span class="line"><span>|  GPU 1: Layers 20-39                                      |</span></span>
+<span class="line"><span>|    | micro-batch0 -> micro-batch1 -> micro-batch2         |</span></span>
+<span class="line"><span>|    v                                                     |</span></span>
+<span class="line"><span>|  GPU 2: Layers 40-59                                      |</span></span>
+<span class="line"><span>|    | micro-batch0 -> micro-batch1 -> micro-batch2         |</span></span>
+<span class="line"><span>|    v                                                     |</span></span>
+<span class="line"><span>|  GPU 3: Layers 60-79   (last 20 transformer blocks)      |</span></span>
+<span class="line"><span>|                                                           |</span></span>
+<span class="line"><span>|  Pipeline bubble: GPUs idle at start/end of schedule     |</span></span>
+<span class="line"><span>|  Communication: Only activations between stages           |</span></span>
+<span class="line"><span>|  Best for: Very deep models, low inter-node bandwidth     |</span></span>
+<span class="line"><span>+----------------------------------------------------------+</span></span></code></pre>
+<h3 id="45-3d-parallelism-in-practice">4.5 3D Parallelism in Practice</h3>
+<p>Real training systems compose all three:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>+------------------------------------------------------------------+</span></span>
+<span class="line"><span>|                   3D Parallelism for Llama-3-70B                  |</span></span>
+<span class="line"><span>|                                                                   |</span></span>
+<span class="line"><span>|  64 GPUs (8 nodes x 8 GPUs)                                      |</span></span>
+<span class="line"><span>|                                                                   |</span></span>
+<span class="line"><span>|  DP = 4  (4 data-parallel replicas, each processing 1/4 batches) |</span></span>
+<span class="line"><span>|  TP = 4  (each layer split across 4 GPUs within a node)          |</span></span>
+<span class="line"><span>|  PP = 4  (80 layers split: 20 per pipeline stage)                |</span></span>
+<span class="line"><span>|                                                                   |</span></span>
+<span class="line"><span>|  Check: 4 x 4 x 4 = 64                                           |</span></span>
+<span class="line"><span>|                                                                   |</span></span>
+<span class="line"><span>|  +------------------ Node 0 -------------------+                  |</span></span>
+<span class="line"><span>|  |  +-----+ +-----+ +-----+ +-----+           |                  |</span></span>
+<span class="line"><span>|  |  |GPU0 | |GPU1 | |GPU2 | |GPU3 |           | &#x3C;-- PP Stage 0  |</span></span>
+<span class="line"><span>|  |  |L0-19| |L0-19| |L0-19| |L0-19|           |     TP across 4 |</span></span>
+<span class="line"><span>|  |  +--+--+ +--+--+ +--+--+ +--+--+           |                  |</span></span>
+<span class="line"><span>|  |     +------+------+------+                  |                  |</span></span>
+<span class="line"><span>|  |  +-----+ +-----+ +-----+ +-----+           |                  |</span></span>
+<span class="line"><span>|  |  |GPU4 | |GPU5 | |GPU6 | |GPU7 |           | &#x3C;-- PP Stage 1  |</span></span>
+<span class="line"><span>|  |  |L20- | |L20- | |L20- | |L20- |           |     TP across 4 |</span></span>
+<span class="line"><span>|  |  | 39  | | 39  | | 39  | | 39  |           |                  |</span></span>
+<span class="line"><span>|  |  +-----+ +-----+ +-----+ +-----+           |                  |</span></span>
+<span class="line"><span>|  +--------------------------------------------+                  |</span></span>
+<span class="line"><span>|                                                                   |</span></span>
+<span class="line"><span>|  Nodes 1-3: identical copies (DP=4), different micro-batches     |</span></span>
+<span class="line"><span>|  Inter-node: All-reduce gradients (DP), send activations (PP)    |</span></span>
+<span class="line"><span>|  Intra-node: All-reduce within TP group (NVLink, 900 GB/s)       |</span></span>
+<span class="line"><span>+------------------------------------------------------------------+</span></span></code></pre>
+<hr>
+<h2 id="5-training-infrastructure-design">5. Training Infrastructure Design</h2>
+<h3 id="51-the-full-pipeline-architecture">5.1 The Full Pipeline Architecture</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>+----------------------------------------------------------------------+</span></span>
+<span class="line"><span>|                    Fine-Tuning Platform Architecture                  |</span></span>
+<span class="line"><span>|                                                                       |</span></span>
+<span class="line"><span>|  +----------+    +--------------+    +--------------------------+     |</span></span>
+<span class="line"><span>|  | Training |    |   Training   |    |     GPU Cluster          |     |</span></span>
+<span class="line"><span>|  | Job API  |--->|  Orchestrator|--->|  +--------------------+  |     |</span></span>
+<span class="line"><span>|  | (REST)   |    |  (Scheduler) |    |  |  Training Pods     |  |     |</span></span>
+<span class="line"><span>|  +----------+    +-------+------+    |  |  (K8s Jobs)        |  |     |</span></span>
+<span class="line"><span>|                          |           |  |  +----+ +----+     |  |     |</span></span>
+<span class="line"><span>|  +----------+    +-------+------+    |  |  |GPU0| |GPU1|     |  |     |</span></span>
+<span class="line"><span>|  | Dataset  |    |  Experiment  |    |  |  +----+ +----+     |  |     |</span></span>
+<span class="line"><span>|  | Registry |&#x3C;---|  Tracker     |    |  |  +----+ +----+     |  |     |</span></span>
+<span class="line"><span>|  | (S3/DB)  |    |  (W&#x26;B/MLflow)|    |  |  |GPU2| |GPU3|     |  |     |</span></span>
+<span class="line"><span>|  +----------+    +-------+------+    |  |  +----+ +----+     |  |     |</span></span>
+<span class="line"><span>|                          |           |  +--------------------+  |     |</span></span>
+<span class="line"><span>|  +----------+    +-------+------+    +--------------------------+     |</span></span>
+<span class="line"><span>|  | Template |    |   Checkpoint |              |                      |</span></span>
+<span class="line"><span>|  | Library  |    |    Store     |              | Adapter weights      |</span></span>
+<span class="line"><span>|  | (Git)    |    |   (S3/GCS)   |              v                      |</span></span>
+<span class="line"><span>|  +----------+    +--------------+    +--------------------------+     |</span></span>
+<span class="line"><span>|                                      |   Model Registry         |     |</span></span>
+<span class="line"><span>|  +----------+                        |  +--------------------+   |     |</span></span>
+<span class="line"><span>|  |Quality   |&#x3C;------------------------| tenant_001/lora/    |   |     |</span></span>
+<span class="line"><span>|  |Eval      |                        |  adapter_config.json |   |     |</span></span>
+<span class="line"><span>|  |Pipeline  |                        |  adapter_model.safe- |   |     |</span></span>
+<span class="line"><span>|  +----------+                        |  tensors             |   |     |</span></span>
+<span class="line"><span>|                                      |  eval_results.json   |   |     |</span></span>
+<span class="line"><span>|                                      |  +--------------------+   |     |</span></span>
+<span class="line"><span>|                                      +--------------------------+     |</span></span>
+<span class="line"><span>+----------------------------------------------------------------------+</span></span></code></pre>
+<h3 id="52-checkpointing-and-fault-tolerance">5.2 Checkpointing and Fault Tolerance</h3>
+<p>Distributed training on spot/preemptible instances requires robust checkpointing:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Checkpointing Strategies:</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>+------------------------------------------------------------+</span></span>
+<span class="line"><span>| Synchronous (blocking):                                     |</span></span>
+<span class="line"><span>|   All GPUs pause --> each writes its shard --> resume       |</span></span>
+<span class="line"><span>|   Pros: Consistent snapshot                                  |</span></span>
+<span class="line"><span>|   Cons: Training stalls during I/O (seconds to minutes)     |</span></span>
+<span class="line"><span>+------------------------------------------------------------+</span></span>
+<span class="line"><span>| Asynchronous (non-blocking):                                |</span></span>
+<span class="line"><span>|   GPU writes its shard while others continue training       |</span></span>
+<span class="line"><span>|   Pros: No training pause                                   |</span></span>
+<span class="line"><span>|   Cons: Checkpoint may be inconsistent (some GPUs ahead)    |</span></span>
+<span class="line"><span>+------------------------------------------------------------+</span></span>
+<span class="line"><span>| Incremental (only changed params):                          |</span></span>
+<span class="line"><span>|   Full checkpoint: 140 GB every time (impractical)          |</span></span>
+<span class="line"><span>|   LoRA-only ckpt: 8 MB --> checkpoint every 10 steps        |</span></span>
+<span class="line"><span>|   This is a hidden advantage of PEFT                        |</span></span>
+<span class="line"><span>+------------------------------------------------------------+</span></span></code></pre>
+<p><strong>The spot-preemption failure mode:</strong> When FSDP state is sharded across 64 GPUs and one GPU gets preempted, the global training state is corrupt. Recovery requires:</p>
+<ol>
+<li>Detect preemption (node-level heartbeat, not just process-level)</li>
+<li>Load the last consistent checkpoint across ALL GPUs</li>
+<li>Re-establish the FSDP communication groups</li>
+<li>Resume from the last saved optimizer state</li>
+</ol>
+<p>Without step (3), the remaining GPUs will hang waiting for all-reduce from the dead GPU. <strong>Elastic training</strong> (resizing the GPU count mid-training) is the staff-level solution but adds significant complexity to the data loader, learning rate schedule, and FSDP state management.</p>
+<h3 id="53-memory-optimizations-beyond-quantization">5.3 Memory Optimizations Beyond Quantization</h3>
+<table>
+<thead>
+<tr>
+<th>Technique</th>
+<th>Memory Saved</th>
+<th>Compute Overhead</th>
+<th>Implementation Complexity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Gradient Checkpointing</strong></td>
+<td>30-50% (activations)</td>
+<td>+20-30% (recompute forward)</td>
+<td>One-line: <code>model.gradient_checkpointing_enable()</code></td>
+</tr>
+<tr>
+<td><strong>Mixed Precision (FP16/BF16)</strong></td>
+<td>50% (weights + activations)</td>
+<td>-10-30% (faster on Tensor Cores)</td>
+<td><code>torch.cuda.amp</code></td>
+</tr>
+<tr>
+<td><strong>Gradient Accumulation</strong></td>
+<td>Enables larger effective batch</td>
+<td>None (trades time for memory)</td>
+<td>Loop: accumulate N steps, then step</td>
+</tr>
+<tr>
+<td><strong>CPU Offloading</strong></td>
+<td>Offloads optimizer states to CPU</td>
+<td>+50-200% (PCIe transfer)</td>
+<td><code>device_map="auto"</code> with offload</td>
+</tr>
+<tr>
+<td><strong>Flash Attention</strong></td>
+<td>O(n) instead of O(n²) memory</td>
+<td>+5-10% wall time</td>
+<td>Drop-in: <code>flash_attn</code> package</td>
+</tr>
+<tr>
+<td><strong>Activation Offloading</strong></td>
+<td>Moves intermediate activations to CPU</td>
+<td>+100-300%</td>
+<td>Custom hooks, rarely worth it</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The staff-engineer’s memory budget:</strong> Before launching any training run, compute the exact memory breakdown:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Memory Budget for QLoRA Fine-Tuning of Llama-3-70B on 1xA100-80GB:</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Base model (NF4):            ~17.6 GB</span></span>
+<span class="line"><span>LoRA parameters (FP16):       ~0.016 GB</span></span>
+<span class="line"><span>LoRA gradients (FP16):        ~0.016 GB</span></span>
+<span class="line"><span>Optimizer states (FP32):      ~0.048 GB</span></span>
+<span class="line"><span>Activations (w/ grad ckpt):   ~8.0 GB  (batch=4, seq=2048)</span></span>
+<span class="line"><span>CUDA context + overhead:       ~2.0 GB</span></span>
+<span class="line"><span>-----------------------------------------</span></span>
+<span class="line"><span>Total:                        ~27.7 GB</span></span>
+<span class="line"><span>Available:                     80.0 GB</span></span>
+<span class="line"><span>Headroom:                     ~52.3 GB  --> can increase batch x6 or seq x3</span></span></code></pre>
+<hr>
+<h2 id="6-inference-serving-for-multi-tenant-lora">6. Inference Serving for Multi-Tenant LoRA</h2>
+<h3 id="61-adapter-hot-swapping">6.1 Adapter Hot-Swapping</h3>
+<p>This is the crux of the staff-level system design. You cannot reload the model for every tenant switch, and you can’t keep all 500 adapters in GPU memory simultaneously:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>+------------------------------------------------------------------+</span></span>
+<span class="line"><span>|              LoRA Adapter Serving Architecture                    |</span></span>
+<span class="line"><span>|                                                                   |</span></span>
+<span class="line"><span>|  Request: tenant=42, prompt="Explain quantum..."                  |</span></span>
+<span class="line"><span>|       |                                                           |</span></span>
+<span class="line"><span>|       v                                                           |</span></span>
+<span class="line"><span>|  +-----------------+                                              |</span></span>
+<span class="line"><span>|  |  Adapter Cache   |  (GPU memory, LRU eviction)                 |</span></span>
+<span class="line"><span>|  |  +---++---++---+|                                              |</span></span>
+<span class="line"><span>|  |  |T5 ||T12||T89||  &#x3C;-- Currently loaded (e.g., 32 adapters)   |</span></span>
+<span class="line"><span>|  |  +---++---++---+|                                              |</span></span>
+<span class="line"><span>|  |  +-----------+  |                                              |</span></span>
+<span class="line"><span>|  |  | T42 (HIT!)|  |  &#x3C;-- Adapter already on GPU                 |</span></span>
+<span class="line"><span>|  |  +-----------+  |                                              |</span></span>
+<span class="line"><span>|  +--------+--------+                                              |</span></span>
+<span class="line"><span>|           | T42 found in cache                                    |</span></span>
+<span class="line"><span>|           v                                                       |</span></span>
+<span class="line"><span>|  +----------------------------------------------------+          |</span></span>
+<span class="line"><span>|  |           LoRA-Enabled Forward Pass                 |          |</span></span>
+<span class="line"><span>|  |                                                     |          |</span></span>
+<span class="line"><span>|  |  y = W_0*x + B_42*A_42*x                           |          |</span></span>
+<span class="line"><span>|  |       ^         ^                                   |          |</span></span>
+<span class="line"><span>|  |   Base Model   Adapter                              |          |</span></span>
+<span class="line"><span>|  |   (shared,     (tenant-specific,                    |          |</span></span>
+<span class="line"><span>|  |    frozen,      hot-swapped per request)            |          |</span></span>
+<span class="line"><span>|  |    sharded)                                          |          |</span></span>
+<span class="line"><span>|  +----------------------------------------------------+          |</span></span>
+<span class="line"><span>|                                                                   |</span></span>
+<span class="line"><span>|  Cache Miss Path:                                                 |</span></span>
+<span class="line"><span>|  +---------------------------------------------------------+     |</span></span>
+<span class="line"><span>|  | T42 NOT in GPU cache                                     |     |</span></span>
+<span class="line"><span>|  |   --> Check RAM cache (system memory, larger, slower)   |     |</span></span>
+<span class="line"><span>|  |     --> HIT: DMA transfer to GPU (~2ms for 8 MB)        |     |</span></span>
+<span class="line"><span>|  |     --> MISS: Read from S3 (~50ms), load to GPU (~52ms) |     |</span></span>
+<span class="line"><span>|  |   --> Evict LRU adapter from GPU cache if full           |     |</span></span>
+<span class="line"><span>|  |   --> Install T42 adapter into model's LoRA hooks        |     |</span></span>
+<span class="line"><span>|  +---------------------------------------------------------+     |</span></span>
+<span class="line"><span>+------------------------------------------------------------------+</span></span></code></pre>
+<h3 id="62-s-lora--punica--serving-thousands-of-lora-adapters">6.2 S-LoRA / Punica — Serving Thousands of LoRA Adapters</h3>
+<p>Recent research (S-LoRA, Punica) introduced <strong>unified paging</strong> — treating KV cache blocks and LoRA adapter weights as pages in a unified memory pool. The key insight: LoRA adapters are small (8 MB) and KV cache blocks are small (typically 16 tokens × hidden_dim). Both can be managed by the same memory allocator:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Unified Memory Pool (GPU):</span></span>
+<span class="line"><span>+------------------------------------------------------------+</span></span>
+<span class="line"><span>| +------+ +------+ +------+ +------+ +------+ +------+     |</span></span>
+<span class="line"><span>| |KV pg | |KV pg | |LoRA  | |KV pg | |LoRA  | |KV pg | ... |</span></span>
+<span class="line"><span>| |Seq_1 | |Seq_2 | |T5    | |Seq_3 | |T12   | |Seq_1 |     |</span></span>
+<span class="line"><span>| +------+ +------+ +------+ +------+ +------+ +------+     |</span></span>
+<span class="line"><span>|                                                             |</span></span>
+<span class="line"><span>| Total: 80 GB                                                |</span></span>
+<span class="line"><span>| Base model: 65 GB (FP16)                                    |</span></span>
+<span class="line"><span>| Remaining: 15 GB for KV cache + LoRA adapters               |</span></span>
+<span class="line"><span>| Max adapters in GPU: 15 GB / 8 MB ~ 1,875 adapters          |</span></span>
+<span class="line"><span>|                                                             |</span></span>
+<span class="line"><span>| In practice: KV cache takes ~10 GB --> 5 GB for adapters    |</span></span>
+<span class="line"><span>|             --> 625 adapters can coexist in GPU             |</span></span>
+<span class="line"><span>+------------------------------------------------------------+</span></span></code></pre>
+<h3 id="63-batching-across-tenants">6.3 Batching Across Tenants</h3>
+<p>When a batch contains requests from different tenants with different LoRA adapters:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Batch of 4 requests: tenants [5, 5, 12, 89]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Naive approach:</span></span>
+<span class="line"><span>  y1 = W_0*x1 + B_5*A_5*x1     (tenant 5)</span></span>
+<span class="line"><span>  y2 = W_0*x2 + B_5*A_5*x2     (tenant 5)</span></span>
+<span class="line"><span>  y3 = W_0*x3 + B_12*A_12*x3   (tenant 12)</span></span>
+<span class="line"><span>  y4 = W_0*x4 + B_89*A_89*x4   (tenant 89)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  W_0*x part: batched as one big matmul [OK]</span></span>
+<span class="line"><span>  BAx part: three different matmuls x 1-2 rows each</span></span>
+<span class="line"><span>            --> kernel launch overhead kills throughput</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Optimized (Punica/S-LoRA approach):</span></span>
+<span class="line"><span>  Group by adapter: [tenants 5,5] + [tenant 12] + [tenant 89]</span></span>
+<span class="line"><span>  Batch1: y1,2 = W_0*x1,2 + B_5*A_5*x1,2</span></span>
+<span class="line"><span>  Batch2: y3    = W_0*x3 + B_12*A_12*x3</span></span>
+<span class="line"><span>  Batch3: y4    = W_0*x4 + B_89*A_89*x4</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Each LoRA forward gets a batch with multiple rows --> efficient matmul [OK]</span></span>
+<span class="line"><span>  Still only one W_0*x batched matmul (base model shared) [OK]</span></span></code></pre>
+<hr>
+<h2 id="7-quality-assurance-and-evaluation">7. Quality Assurance and Evaluation</h2>
+<h3 id="71-the-eval-pipeline">7.1 The Eval Pipeline</h3>
+<p>Fine-tuning without rigorous evaluation is cargo-cult engineering. A staff-level platform requires:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>+---------------------------------------------------------------+</span></span>
+<span class="line"><span>|                    Evaluation Pipeline                         |</span></span>
+<span class="line"><span>|                                                                |</span></span>
+<span class="line"><span>|  Fine-tuned Adapter --> +------------------+                  |</span></span>
+<span class="line"><span>|                          |  Automated Evals  |                 |</span></span>
+<span class="line"><span>|                          |  +--------------+ |                 |</span></span>
+<span class="line"><span>|                          |  | Perplexity   | | &#x3C;-- Fast, cheap|</span></span>
+<span class="line"><span>|                          |  | on holdout   | |                 |</span></span>
+<span class="line"><span>|                          |  +------+-------+ |                 |</span></span>
+<span class="line"><span>|                          |         v          |                 |</span></span>
+<span class="line"><span>|                          |  +--------------+ |                 |</span></span>
+<span class="line"><span>|                          |  | Task-specific| | &#x3C;-- Accuracy,   |</span></span>
+<span class="line"><span>|                          |  | benchmarks   | |     F1, BLEU,   |</span></span>
+<span class="line"><span>|                          |  | (MMLU, GSM8K)| |     ROUGE, etc. |</span></span>
+<span class="line"><span>|                          |  +------+-------+ |                 |</span></span>
+<span class="line"><span>|                          |         v          |                 |</span></span>
+<span class="line"><span>|                          |  +--------------+ |                 |</span></span>
+<span class="line"><span>|                          |  | Human Eval   | | &#x3C;-- Slow, costly|</span></span>
+<span class="line"><span>|                          |  | (sampling)   | |     definitive  |</span></span>
+<span class="line"><span>|                          |  +------+-------+ |                 |</span></span>
+<span class="line"><span>|                          +---------+---------+                 |</span></span>
+<span class="line"><span>|                                    v                            |</span></span>
+<span class="line"><span>|                          +------------------+                  |</span></span>
+<span class="line"><span>|                          |  Quality Gate    |                  |</span></span>
+<span class="line"><span>|                          |  +--------------+|                  |</span></span>
+<span class="line"><span>|                          |  |Perplexity    || &#x3C;-- Must improve |</span></span>
+<span class="line"><span>|                          |  | drop >= 5%?  ||     over base    |</span></span>
+<span class="line"><span>|                          |  +--------------+|                  |</span></span>
+<span class="line"><span>|                          |  |Benchmarks    || &#x3C;-- Must not     |</span></span>
+<span class="line"><span>|                          |  | regress?     ||     get worse    |</span></span>
+<span class="line"><span>|                          |  +--------------+|                  |</span></span>
+<span class="line"><span>|                          |  |Safety checks || &#x3C;-- No toxic     |</span></span>
+<span class="line"><span>|                          |  | pass?        ||     degeneration |</span></span>
+<span class="line"><span>|                          |  +------+-------+|                  |</span></span>
+<span class="line"><span>|                          +---------+---------+                  |</span></span>
+<span class="line"><span>|                                    v                            |</span></span>
+<span class="line"><span>|                    +--------------------------+                 |</span></span>
+<span class="line"><span>|                    |  Deploy / Rollback       |                 |</span></span>
+<span class="line"><span>|                    |  (canary -> 10% -> 100%) |                 |</span></span>
+<span class="line"><span>|                    +--------------------------+                 |</span></span>
+<span class="line"><span>+---------------------------------------------------------------+</span></span></code></pre>
+<h3 id="72-catastrophic-forgetting-detection">7.2 Catastrophic Forgetting Detection</h3>
+<p>Fine-tuning can cause the model to “forget” its original capabilities. The eval pipeline must include:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Regression Test Suite:</span></span>
+<span class="line"><span>+------------------------------------------------------------+</span></span>
+<span class="line"><span>| Baseline metrics on base model (pre-fine-tune):              |</span></span>
+<span class="line"><span>|   MMLU: 68.2% | GSM8K: 54.1% | HellaSwag: 81.3%            |</span></span>
+<span class="line"><span>|                                                              |</span></span>
+<span class="line"><span>| After fine-tuning:                                            |</span></span>
+<span class="line"><span>|   MMLU: 67.9% | GSM8K: 53.8% | HellaSwag: 80.9%            |</span></span>
+<span class="line"><span>|   --> All within +/-1% --> NO catastrophic forgetting        |</span></span>
+<span class="line"><span>|                                                              |</span></span>
+<span class="line"><span>| Red flag scenario:                                           |</span></span>
+<span class="line"><span>|   MMLU: 62.1% | GSM8K: 48.3% | HellaSwag: 76.2%            |</span></span>
+<span class="line"><span>|   --> Significant drops --> adapter overfit to narrow task   |</span></span>
+<span class="line"><span>|   --> Action: Reduce learning rate, add KL-divergence loss  |</span></span>
+<span class="line"><span>|             to penalize deviation from base model outputs    |</span></span>
+<span class="line"><span>+------------------------------------------------------------+</span></span></code></pre>
+<hr>
+<h2 id="8-system-design-complete-fine-tuning-platform">8. System Design: Complete Fine-Tuning Platform</h2>
+<h3 id="81-requirements">8.1 Requirements</h3>
+<p>Design a fine-tuning platform supporting 500 tenants, each with custom LoRA adapters on Llama-3-70B:</p>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Constraint</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Training throughput</td>
+<td>4 adapters/hour on 8×A100-80GB</td>
+</tr>
+<tr>
+<td>Training cost target</td>
+<td>&lt;$2 per adapter</td>
+</tr>
+<tr>
+<td>Inference P99 latency</td>
+<td>&lt;300ms with adapter hot-swap</td>
+</tr>
+<tr>
+<td>Max concurrent inference tenants</td>
+<td>500</td>
+</tr>
+<tr>
+<td>Adapter storage</td>
+<td>500 × 8 MB = 4 GB</td>
+</tr>
+<tr>
+<td>Training data per tenant</td>
+<td>100-10,000 examples</td>
+</tr>
+<tr>
+<td>GPU cluster for training</td>
+<td>64×A100-80GB (8 nodes × 8 GPUs)</td>
+</tr>
+<tr>
+<td>GPU cluster for inference</td>
+<td>4×A100-80GB (TP=4)</td>
+</tr>
+<tr>
+<td>Checkpointing frequency</td>
+<td>Every 50 steps (LoRA only, 8 MB)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="82-capacity-planning">8.2 Capacity Planning</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Training Capacity:</span></span>
+<span class="line"><span>+-------------------------------------------------------------+</span></span>
+<span class="line"><span>| Active tenants: 500                                          |</span></span>
+<span class="line"><span>| Adapters per training run: 4 (parallel on 8 GPUs)           |</span></span>
+<span class="line"><span>| Time per adapter: ~15 minutes (QLoRA, 1000 examples)        |</span></span>
+<span class="line"><span>| Adapters per hour: 4                                         |</span></span>
+<span class="line"><span>| Time to train all 500: 500/4 = 125 hours ~ 5.2 days         |</span></span>
+<span class="line"><span>|                                                              |</span></span>
+<span class="line"><span>| With 8x nodes (64 GPUs), run 8 independent training jobs:   |</span></span>
+<span class="line"><span>| Adapters per hour: 32                                        |</span></span>
+<span class="line"><span>| Time to train all 500: 500/32 = ~16 hours                   |</span></span>
+<span class="line"><span>| Cost: 64 GPUs x $3.50/hr x 16 hrs = ~$3,584 total           |</span></span>
+<span class="line"><span>| Per-adapter cost: $3,584/500 = ~$7.17                        |</span></span>
+<span class="line"><span>|                                                              |</span></span>
+<span class="line"><span>| Using spot instances (70% discount):                         |</span></span>
+<span class="line"><span>| Per-adapter cost: ~$2.15                                     |</span></span>
+<span class="line"><span>| But: need fault tolerance for preemptions                    |</span></span>
+<span class="line"><span>+-------------------------------------------------------------+</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Inference Capacity:</span></span>
+<span class="line"><span>+-------------------------------------------------------------+</span></span>
+<span class="line"><span>| Base model: 140 GB FP16 --> 2xA100-80GB minimum             |</span></span>
+<span class="line"><span>| With TP=4: 4xA100-80GB for throughput headroom              |</span></span>
+<span class="line"><span>| KV cache budget: 40 GB (50% of non-model memory)            |</span></span>
+<span class="line"><span>| Adapter cache: 10 GB --> 1,250 adapters max in GPU          |</span></span>
+<span class="line"><span>|                                                              |</span></span>
+<span class="line"><span>| Per-request latency budget:                                  |</span></span>
+<span class="line"><span>|   Token generation: ~20ms/token (typical for 70B on A100)   |</span></span>
+<span class="line"><span>|   Adapter swap (GPU cache hit): &#x3C;1ms                        |</span></span>
+<span class="line"><span>|   Adapter swap (RAM cache hit): ~2ms (DMA transfer)         |</span></span>
+<span class="line"><span>|   Adapter swap (S3 miss): ~50ms + 2ms GPU load              |</span></span>
+<span class="line"><span>|   P99 target: 300ms --> max ~12 tokens at 20ms/token        |</span></span>
+<span class="line"><span>|                                                              |</span></span>
+<span class="line"><span>| Throughput: ~256 concurrent requests at 20ms/token           |</span></span>
+<span class="line"><span>| Requests/second: 256/20ms ~ 12,800 req/s (query processing) |</span></span>
+<span class="line"><span>| Generated tokens/second: ~640 tokens/s (generation)          |</span></span>
+<span class="line"><span>+-------------------------------------------------------------+</span></span></code></pre>
+<h3 id="83-failure-modes">8.3 Failure Modes</h3>
+<table>
+<thead>
+<tr>
+<th>Failure Mode</th>
+<th>Symptom</th>
+<th>Detection</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>QLoRA precision drift</strong></td>
+<td>Adapter quality degrades on FP16 inference</td>
+<td>Automated eval before deploy</td>
+<td>Compare QLoRA vs FP16 eval; flag if delta &gt; 2%</td>
+</tr>
+<tr>
+<td><strong>Adapter cache thrashing</strong></td>
+<td>P99 latency spikes under mixed-tenant load</td>
+<td>Monitor cache miss rate</td>
+<td>Increase GPU adapter cache; pre-warm top-N tenants</td>
+</tr>
+<tr>
+<td><strong>Spot preemption cascade</strong></td>
+<td>Single GPU loss –&gt; entire FSDP group hangs</td>
+<td>Node heartbeat, NCCL timeout</td>
+<td>Elastic training; checkpoint every 10 steps for LoRA</td>
+</tr>
+<tr>
+<td><strong>Catastrophic forgetting</strong></td>
+<td>Base model capabilities degrade</td>
+<td>Regression test suite</td>
+<td>KL-divergence regularization; early stopping</td>
+</tr>
+<tr>
+<td><strong>Adapter storage fragmentation</strong></td>
+<td>S3 LIST operations slow with 500+ adapters</td>
+<td>S3 request latency monitoring</td>
+<td>Partition by tenant prefix; use prefix-based listing</td>
+</tr>
+<tr>
+<td><strong>GPU OOM from KV + adapter memory</strong></td>
+<td>Inference pod crashes under high concurrency</td>
+<td>GPU memory utilization alerts</td>
+<td>Unified paging; evict idle adapters before KV blocks</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="u26a1-sharp-question">&lt;U+26A1&gt; Sharp Question</h2>
+<p><strong>Question:</strong> You’ve built a platform serving 500 LoRA fine-tuned Llama-3-70B adapters. A new customer, Tenant 501, uploads a dataset of 50,000 examples — far larger than any existing tenant. You fine-tune with QLoRA (r=16, alpha=32) on 1×A100. The adapter passes your automated eval with perplexity drop of 8% on their holdout and no benchmark regression. You deploy to production. Two days later, Tenant 12 (your largest existing customer) reports their outputs have degraded — the model is producing verbose, overly-formal responses that don’t match their fine-tuned style. Tenant 12’s adapter hasn’t been touched in 3 weeks. What happened, and how do you fix it?</p>
+<p><strong>Model Answer:</strong></p>
+<p>The most likely cause is <strong>adapter mixing at inference time due to a cache consistency bug or model weight corruption from a botched hot-swap</strong>. Here’s the forensic walkthrough:</p>
+<p><strong>(a) The hot-swap race condition.</strong> When Tenant 501’s adapter was loaded into the inference server, the adapter loading code (or the LoRA hook installation) may have failed to fully isolate the forward pass. Specifically, if the adapter cache uses a shared mutable reference to the LoRA matrices and the hot-swap didn’t acquire the proper lock, Tenant 12’s request could have been processed with Tenant 501’s adapter matrices partially loaded — a “torn write” where some attention heads used Tenant 12’s LoRA weights and others used Tenant 501’s. This produces garbled outputs that inherit stylistic properties from both adapters. The fix: adapter swapping must be atomic — either all LoRA matrices for a request belong to one tenant or none. Implement this with a read-copy-update (RCU) pattern: each request captures a pointer to the adapter set at dispatch time, and new adapter loads create a new set while in-flight requests complete with the old one.</p>
+<p><strong>(b) The KV cache contamination hypothesis</strong> (less likely but must be ruled out). If the inference server uses a shared KV cache pool and doesn’t properly segregate blocks by tenant, a defragmentation pass might have moved KV blocks from Tenant 501’s long-context requests into memory regions adjacent to Tenant 12’s blocks. Some inference engines use prefix caching where KV blocks are shared across requests with identical prefixes. If Tenant 501’s fine-tune altered the model’s token probability distribution such that it generates tokens that happen to share prefixes with Tenant 12’s common prompts, the prefix cache could return Tenant 501’s KV blocks to Tenant 12’s requests. The fix: tag KV cache blocks with the adapter ID they were computed under, and invalidate (or never share) blocks computed under a different adapter.</p>
+<p><strong>(c) The shared base model contamination</strong> (most subtle). If you’re using a pre-merge strategy (W’ = W + BA) and the merge was applied to a shared model object rather than a per-request copy, Tenant 501’s adapter merge could have permanently altered the base model weights visible to all tenants. This is catastrophic because every subsequent tenant gets a corrupted model. The fix: never merge adapters into the shared base model. Always run separate forward pass (y = W_0*x + BAx) with per-request adapter selection. If merging is required for throughput, merge into a per-request copy and discard after.</p>
+<p><strong>Diagnostic steps:</strong> (1) Roll back Tenant 12 to a known-good checkpoint and verify degradation disappears — this confirms it’s a serving issue, not a training issue. (2) Enable adapter-ID logging in the inference server and correlate request timestamps with adapter loads. (3) Check GPU memory for shared weight corruption by computing a checksum of the base model weights and comparing to the known-good hash.</p>
+<p><strong>Common Pitfall:</strong> Most engineers jump to “catastrophic forgetting during fine-tuning” or “Tenant 501’s training corrupted something.” But the timeline doesn’t fit — Tenant 12 was fine for 3 weeks before Tenant 501 was deployed. The degradation appeared only after the new adapter was loaded. This is a <strong>deployment-induced regression</strong>, not a training problem. Always check “what changed in production?” before “what went wrong in training?”</p>
+<hr>
+<h2 id="key-takeaways">Key Takeaways</h2>
+<table>
+<thead>
+<tr>
+<th>Principle</th>
+<th>Implication</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LoRA’s low rank is both a feature and a constraint — r=16 works for 90% of tasks but fails silently on the 10% that need high-fidelity weight updates</td>
+<td>Monitor per-adapter training loss curves; flag adapters where loss plateaus above baseline</td>
+</tr>
+<tr>
+<td>QLoRA trains against quantized weights but inference runs on full precision — the 4-bit-to-16-bit gap creates a systematic bias that must be measured per-task</td>
+<td>Always run both QLoRA-trained and FP16-fine-tuned evals on the same holdout before deploying</td>
+</tr>
+<tr>
+<td>Multi-tenant LoRA serving is an adapter isolation problem, not a throughput problem — one corrupted hot-swap affects every tenant using the shared base model</td>
+<td>Implement RCU-style adapter switching; never mutate shared model weights</td>
+</tr>
+<tr>
+<td>FSDP + LoRA wastes GPU memory on adapter duplication — for multi-tenant training, shard adapters, not the base model</td>
+<td>Design training jobs where each GPU trains a subset of adapters against the full model</td>
+</tr>
+<tr>
+<td>The most dangerous failure mode is silent degradation — a partially corrupted adapter can produce plausible-looking but systematically wrong outputs for weeks</td>
+<td>Automated eval gating at deploy time + continuous quality monitoring in production</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>LoRA freezes the base model and trains small low-rank matrices (A×B) added to weights — ~1% of parameters, 99% smaller</li>
+<li>QLoRA = LoRA on a 4-bit quantized base model — fine-tune a 70B model on a single 48GB GPU</li>
+<li>Full fine-tuning updates all weights — best quality but needs multi-GPU (FSDP/DeepSpeed) and is expensive</li>
+<li>Distributed training: Data Parallel (same model, different data), Tensor Parallel (split layers), Pipeline Parallel (split stages)</li>
+<li>Adapter serving: keep base model fixed, swap adapters per tenant. Multi-LoRA serving for multi-tenant use cases</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“When would you use full fine-tuning vs LoRA?” — Full fine-tuning for fundamental capability changes (new language, new domain). LoRA for style/tone/task-specific tuning where base capabilities are sufficient.</li>
+<li>“How do you serve 500 LoRA adapters without 500 model copies?” — Load the base model once, keep adapters in CPU memory, swap into GPU on demand. vLLM supports this with multi-LoRA serving.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>QLoRA trains on 4-bit quantized weights but inference typically runs in FP16. The adapter weights learned in 4-bit space may not transfer perfectly to 16-bit inference. Always validate inference quality after QLoRA training — the training loss may look great while inference quality degrades.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/fine-tuning-infrastructure-lora-qlora-distributed-training/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Fine-Tuning%20Infrastructure%20(LoRA%2C%20QLoRA%2C%20Distributed%20Training)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Ffine-tuning-infrastructure-lora-qlora-distributed-training%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Ffine-tuning-infrastructure-lora-qlora-distributed-training%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/fine-tuning-infrastructure-lora-qlora-distributed-training" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/feature-store-and-online-offline-consistency" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Feature Store &amp; Online/Offline Consistency</span></a><a href="/notes/system-design/geo-distributed-databases" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Geo-Distributed Databases (CockroachDB, Spanner, Fauna)</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Fine-Tuning Infrastructure (LoRA, QLoRA, Distributed Training)" data-selector=".article-prose" data-article-slug="system-design/fine-tuning-infrastructure-lora-qlora-distributed-training" data-article-title="Fine-Tuning Infrastructure (LoRA, QLoRA, Distributed Training)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

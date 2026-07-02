@@ -1,0 +1,1015 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Rate Limiter — LLD Focus · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview" class="toc-link" data-toc-link="overview" data-astro-cid-p33bl5ka>Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#core-interface-design" class="toc-link" data-toc-link="core-interface-design" data-astro-cid-p33bl5ka>Core Interface Design</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-ratelimiter-contract" class="toc-link" data-toc-link="the-ratelimiter-contract" data-astro-cid-p33bl5ka>The RateLimiter Contract</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ratelimiter-interface--class-diagram-uml-style" class="toc-link" data-toc-link="ratelimiter-interface--class-diagram-uml-style" data-astro-cid-p33bl5ka>RateLimiter Interface / Class Diagram (UML-style)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#immutable-result-and-status-types" class="toc-link" data-toc-link="immutable-result-and-status-types" data-astro-cid-p33bl5ka>Immutable Result and Status Types</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#concrete-implementations" class="toc-link" data-toc-link="concrete-implementations" data-astro-cid-p33bl5ka>Concrete Implementations</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#token-bucket-implementation" class="toc-link" data-toc-link="token-bucket-implementation" data-astro-cid-p33bl5ka>Token Bucket Implementation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#sliding-window-implementation" class="toc-link" data-toc-link="sliding-window-implementation" data-astro-cid-p33bl5ka>Sliding Window Implementation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#fixed-window-implementation" class="toc-link" data-toc-link="fixed-window-implementation" data-astro-cid-p33bl5ka>Fixed Window Implementation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#algorithm-comparison" class="toc-link" data-toc-link="algorithm-comparison" data-astro-cid-p33bl5ka>Algorithm Comparison</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#strategy-pattern-and-the-factory" class="toc-link" data-toc-link="strategy-pattern-and-the-factory" data-astro-cid-p33bl5ka>Strategy Pattern and the Factory</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#strategy-pattern-swapping-algorithms-at-the-boundary" class="toc-link" data-toc-link="strategy-pattern-swapping-algorithms-at-the-boundary" data-astro-cid-p33bl5ka>Strategy Pattern: Swapping Algorithms at the Boundary</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#factory-pattern-constructing-limiters-from-configuration" class="toc-link" data-toc-link="factory-pattern-constructing-limiters-from-configuration" data-astro-cid-p33bl5ka>Factory Pattern: Constructing Limiters from Configuration</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#configuration-management" class="toc-link" data-toc-link="configuration-management" data-astro-cid-p33bl5ka>Configuration Management</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#thread-safety-considerations" class="toc-link" data-toc-link="thread-safety-considerations" data-astro-cid-p33bl5ka>Thread Safety Considerations</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#in-process-concurrency-model" class="toc-link" data-toc-link="in-process-concurrency-model" data-astro-cid-p33bl5ka>In-Process Concurrency Model</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#memory-and-eviction" class="toc-link" data-toc-link="memory-and-eviction" data-astro-cid-p33bl5ka>Memory and Eviction</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#distributed-locking-for-shared-state" class="toc-link" data-toc-link="distributed-locking-for-shared-state" data-astro-cid-p33bl5ka>Distributed Locking for Shared State</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#why-in-process-locks-stop-working" class="toc-link" data-toc-link="why-in-process-locks-stop-working" data-astro-cid-p33bl5ka>Why In-Process Locks Stop Working</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#locking-strategies-on-shared-state" class="toc-link" data-toc-link="locking-strategies-on-shared-state" data-astro-cid-p33bl5ka>Locking Strategies on Shared State</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#redis-integration-design" class="toc-link" data-toc-link="redis-integration-design" data-astro-cid-p33bl5ka>Redis Integration Design</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#atomic-scripts-not-multi-call-sequences" class="toc-link" data-toc-link="atomic-scripts-not-multi-call-sequences" data-astro-cid-p33bl5ka>Atomic Scripts, Not Multi-Call Sequences</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-redisratelimiter-adapter" class="toc-link" data-toc-link="the-redisratelimiter-adapter" data-astro-cid-p33bl5ka>The RedisRateLimiter Adapter</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interface-segregation-and-solid-principles-applied" class="toc-link" data-toc-link="interface-segregation-and-solid-principles-applied" data-astro-cid-p33bl5ka>Interface Segregation and SOLID Principles Applied</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#solid-principles--summary" class="toc-link" data-toc-link="solid-principles--summary" data-astro-cid-p33bl5ka>SOLID Principles — Summary</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#interface-segregation-dont-force-capabilities-onto-all-clients" class="toc-link" data-toc-link="interface-segregation-dont-force-capabilities-onto-all-clients" data-astro-cid-p33bl5ka>Interface Segregation: Don’t Force Capabilities onto All Clients</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-single-responsibility-principle" class="toc-link" data-toc-link="the-single-responsibility-principle" data-astro-cid-p33bl5ka>The Single Responsibility Principle</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-openclosed-principle" class="toc-link" data-toc-link="the-openclosed-principle" data-astro-cid-p33bl5ka>The Open/Closed Principle</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-liskov-substitution-principle" class="toc-link" data-toc-link="the-liskov-substitution-principle" data-astro-cid-p33bl5ka>The Liskov Substitution Principle</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-dependency-inversion-principle" class="toc-link" data-toc-link="the-dependency-inversion-principle" data-astro-cid-p33bl5ka>The Dependency Inversion Principle</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#composing-limiters-stacking-policies" class="toc-link" data-toc-link="composing-limiters-stacking-policies" data-astro-cid-p33bl5ka>Composing Limiters: Stacking Policies</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#code-structure-and-package-organization" class="toc-link" data-toc-link="code-structure-and-package-organization" data-astro-cid-p33bl5ka>Code Structure and Package Organization</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#sequence-diagrams" class="toc-link" data-toc-link="sequence-diagrams" data-astro-cid-p33bl5ka>Sequence Diagrams</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#local-single-limiter-sequence" class="toc-link" data-toc-link="local-single-limiter-sequence" data-astro-cid-p33bl5ka>Local Single-Limiter Sequence</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#distributed-redis-sequence" class="toc-link" data-toc-link="distributed-redis-sequence" data-astro-cid-p33bl5ka>Distributed Redis Sequence</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#unit-testing-strategy" class="toc-link" data-toc-link="unit-testing-strategy" data-astro-cid-p33bl5ka>Unit Testing Strategy</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#testability-built-into-the-design" class="toc-link" data-toc-link="testability-built-into-the-design" data-astro-cid-p33bl5ka>Testability Built into the Design</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-test-matrix" class="toc-link" data-toc-link="the-test-matrix" data-astro-cid-p33bl5ka>The Test Matrix</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#extensibility-for-new-algorithms" class="toc-link" data-toc-link="extensibility-for-new-algorithms" data-astro-cid-p33bl5ka>Extensibility for New Algorithms</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#common-pitfalls" class="toc-link" data-toc-link="common-pitfalls" data-astro-cid-p33bl5ka>Common Pitfalls</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-question" class="toc-link" data-toc-link="interview-question" data-astro-cid-p33bl5ka>Interview Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#further-reading" class="toc-link" data-toc-link="further-reading" data-astro-cid-p33bl5ka>Further Reading</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Rate Limiter — LLD Focus</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 30 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 42 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>rate-limiting</span><span class="tag" data-astro-cid-sgg5joot>LLD</span><span class="tag" data-astro-cid-sgg5joot>concurrency</span><span class="tag" data-astro-cid-sgg5joot>thread-safety</span><span class="tag" data-astro-cid-sgg5joot>design-patterns</span><span class="tag" data-astro-cid-sgg5joot>SOLID</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="rate-limiter--low-level-design-lld-focus">Rate Limiter — Low-Level Design (LLD) Focus</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>The low-level design of rate limiting — data structures, concurrency patterns, and lock-free algorithms for enforcing request limits in a single process. This article covers the implementation layer rather than the distributed architecture.</p>
+<p><strong>How it’s asked:</strong> “Design a thread-safe rate limiter using the token bucket algorithm. Handle concurrent requests without locks, and discuss the trade-offs of CAS vs striped locks.”</p>
+<hr>
+<h2 id="overview">Overview</h2>
+<p>This is the Low-Level Design companion to the [[Rate Limiter]] fundamentals article. Where the high-level discussion covers algorithm trade-offs, distributed architecture, and capacity planning, this article is concerned with what you would actually type into an IDE: the interfaces, the classes, the concurrency primitives, the configuration plumbing, and the test scaffolding. This is the layer senior and staff candidates are expected to whiteboard when the interviewer leans in and says, “That’s the architecture — now show me how you’d implement it.”</p>
+<p>At the LLD level a rate limiter is best understood as a <strong>concurrent, time-aware state machine bolted to a configurable policy engine</strong>. Getting it right is almost never about the algorithm itself; everyone knows token bucket. It is about three engineering properties that are easy to get wrong and expensive to debug in production: <strong>atomicity</strong> (no double-counting or token leakage under real concurrency), <strong>memory</strong> (efficient per-key state that does not balloon with cardinality), and <strong>composability</strong> (the ability to stack limiters — per-user <em>and</em> per-IP <em>and</em> global — without violating each contract or producing surprising coupling). The design below is built around those three properties, with design patterns chosen to keep the code open for extension but closed for modification.</p>
+<h2 id="core-interface-design">Core Interface Design</h2>
+<h3 id="the-ratelimiter-contract">The RateLimiter Contract</h3>
+<p>A good LLD begins with a clean, narrow interface. The contract below is intentionally small: one primary decision method, one introspection method, and one administrative method. Everything else is a specialization that should live behind a separate interface rather than bloating the core.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>public interface RateLimiter {</span></span>
+<span class="line"><span>    // Primary decision: is this request allowed under the configured policy?</span></span>
+<span class="line"><span>    RateLimitResult tryAcquire(String key);</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    // Read-only introspection: tokens/requests remaining, retry hint.</span></span>
+<span class="line"><span>    // Must NEVER mutate state and must be safe to call from monitoring threads.</span></span>
+<span class="line"><span>    RateLimitStatus getStatus(String key);</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    // Administrative reset: tests, ops runbooks, key rotation.</span></span>
+<span class="line"><span>    void reset(String key);</span></span>
+<span class="line"><span>}</span></span></code></pre>
+<p>The return type is an immutable value object, never a mutable handle into the limiter’s internals. Returning mutable state is the most common encapsulation leak in hand-rolled limiters; it lets callers corrupt counters or race the refill thread. A well-designed result carries the decision, the remaining budget, the timestamp the decision was computed against, and a <code>RetryAfter</code> hint expressed in milliseconds so the caller can back off precisely rather than guessing.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>public final class RateLimitResult {</span></span>
+<span class="line"><span>    private final boolean allowed;</span></span>
+<span class="line"><span>    private final long remaining;       // tokens or requests left in current window</span></span>
+<span class="line"><span>    private final long retryAfterMillis; // 0 when allowed; hint when denied</span></span>
+<span class="line"><span>    private final String policyId;      // which rule produced this decision</span></span>
+<span class="line"><span>    private final long decidedAtEpochMillis;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    // all-args constructor, getters, equals/hashCode, toString.</span></span>
+<span class="line"><span>    // No setters. Construct once, share freely across threads.</span></span>
+<span class="line"><span>}</span></span></code></pre>
+<h3 id="ratelimiter-interface--class-diagram-uml-style">RateLimiter Interface / Class Diagram (UML-style)</h3>
+<p>The core type hierarchy: a decision interface, two segregated sibling interfaces, and the concrete strategies that implement them. The immutable value objects <code>RateLimitResult</code> and <code>RateLimitStatus</code> flow back from every call.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                  &#x3C;&#x3C;interface>>                       &#x3C;&#x3C;interface>>                  &#x3C;&#x3C;interface>></span></span>
+<span class="line"><span>                  RateLimiter                         RateLimitInspector             RateLimitAdmin</span></span>
+<span class="line"><span>                  ─────────────                       ──────────────────             ──────────────</span></span>
+<span class="line"><span>                  + tryAcquire(key): RateLimitResult  + getStatus(key): RateLimitStatus  + reset(key): void</span></span>
+<span class="line"><span>                                                                                         + resetAll(): void</span></span>
+<span class="line"><span>                        ▲                                    ▲                                ▲</span></span>
+<span class="line"><span>                        │ implements                         │ implements                     │ implements</span></span>
+<span class="line"><span>   ┌────────────────────┼──────────────────────┐    ┌────────┴────────┐                  ┌────┴────────────┐</span></span>
+<span class="line"><span>   │                    │                      │    │                 │                  │                 │</span></span>
+<span class="line"><span>┌──┴──────────────┐ ┌───┴───────────────┐ ┌────┴────────────┐ ┌─────┴──────┐ ┌───────────┴────┐  (in-process</span></span>
+<span class="line"><span>│ TokenBucketRate │ │ SlidingWindowRate │ │ FixedWindowRate │ │ RedisRate  │ │ in-process      │   limiters</span></span>
+<span class="line"><span>│ Limiter         │ │ Limiter           │ │ Limiter         │ │ Limiter    │ │ limiters        │   implement</span></span>
+<span class="line"><span>│ ─────────────── │ │ ───────────────── │ │ ─────────────── │ │ (also      │ │ (Token/Sliding/ │   reset +</span></span>
+<span class="line"><span>│ - buckets:Map   │ │ - logs:Map&#x3C;Deque> │ │ - counters:Map  │ │  RateLimiter)│ │  Fixed)         │   resetAll)</span></span>
+<span class="line"><span>│ - config        │ │ - config          │ │ - config        │ │            │ │ + getStatus()   │</span></span>
+<span class="line"><span>│ - clock         │ │ - clock           │ │ - clock         │ │            │ └─────────────────┘</span></span>
+<span class="line"><span>│ + tryAcquire()  │ │ + tryAcquire()    │ │ + tryAcquire()  │ │</span></span>
+<span class="line"><span>└─────────────────┘ └───────────────────┘ └─────────────────┘ │</span></span>
+<span class="line"><span>                                                             │</span></span>
+<span class="line"><span>   ┌─────────────────────────────┐     ┌─────────────────────────────────┐</span></span>
+<span class="line"><span>   │ RateLimitResult             │     │ RateLimitStatus                 │</span></span>
+<span class="line"><span>   │ &#x3C;&#x3C;final, immutable value>>  │     │ &#x3C;&#x3C;final, immutable snapshot>>   │</span></span>
+<span class="line"><span>   │ ─────────────────────────── │     │ ─────────────────────────────── │</span></span>
+<span class="line"><span>   │ - allowed: boolean          │     │ - tokensAvailable: long         │</span></span>
+<span class="line"><span>   │ - remaining: long           │     │ - lastRefillTime: long          │</span></span>
+<span class="line"><span>   │ - retryAfterMillis: long    │     │ - windowBoundaries: long[]      │</span></span>
+<span class="line"><span>   │ - policyId: String          │     │ - policyId: String              │</span></span>
+<span class="line"><span>   │ - decidedAtEpochMillis:long │     └─────────────────────────────────┘</span></span>
+<span class="line"><span>   │ (no setters; safe to publish│</span></span>
+<span class="line"><span>   │  across threads)            │</span></span>
+<span class="line"><span>   └─────────────────────────────┘</span></span></code></pre>
+<p>A class may implement one, two, or all three interfaces. A Redis-backed read replica might implement only <code>RateLimitInspector</code> (it cannot authorize writes); a test stub might implement only <code>RateLimiter</code>. Callers always depend on the narrowest interface that suffices.</p>
+<h3 id="immutable-result-and-status-types">Immutable Result and Status Types</h3>
+<p><code>RateLimitStatus</code> is the read-only sibling used by dashboards, health checks, and the <code>/debug/ratelimit</code> endpoints. It carries a snapshot of the current state for a key — tokens available, last refill time, window boundaries — but, critically, it is a <strong>snapshot taken under the same lock or atomic read</strong> that guards mutation. If you compute status outside the lock you will publish inconsistent views (tokens reported as available that a concurrent <code>tryAcquire</code> has just consumed), which leads to confusing dashboards and noisy alerts.</p>
+<p>Making both result and status <code>final</code> value classes with all fields set at construction time gives you three properties for free: they are safe to publish across threads without additional synchronization, they can be cached or logged without defensive copying, and they cannot be turned into a covert channel for mutating limiter state. This is the single most important habit to carry into the rest of the design.</p>
+<h2 id="concrete-implementations">Concrete Implementations</h2>
+<p>Each algorithm is a concrete strategy implementing <code>RateLimiter</code>. The implementations share a common skeleton — a keyed store of state, a clock, a config — but differ in <em>what</em> state they keep and <em>how</em> they mutate it. Keeping the state representation inside each class (rather than in a shared base class) is deliberate: it lets each algorithm choose the minimal representation it needs and prevents a “god base class” that pretends all algorithms have the same fields.</p>
+<h3 id="token-bucket-implementation">Token Bucket Implementation</h3>
+<p>Token bucket maintains, per key, a bucket of capacity <code>C</code> that refills at rate <code>R</code> tokens per second. Each allowed request consumes one token. The trick is computing the refill lazily on every access rather than running a refill thread, which avoids a background scheduler and the coordination headaches that come with it.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>public final class TokenBucketRateLimiter implements RateLimiter {</span></span>
+<span class="line"><span>    private final ConcurrentMap&#x3C;String, BucketState> buckets = new ConcurrentHashMap&#x3C;>();</span></span>
+<span class="line"><span>    private final TokenBucketConfig config;   // capacity, refillRatePerSec</span></span>
+<span class="line"><span>    private final Clock clock;                // injectable for testing</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    private static final class BucketState {</span></span>
+<span class="line"><span>        // Guarded by this instance's intrinsic lock.</span></span>
+<span class="line"><span>        double tokens;</span></span>
+<span class="line"><span>        long lastRefillNanos;</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    public RateLimitResult tryAcquire(String key) {</span></span>
+<span class="line"><span>        BucketState state = buckets.computeIfAbsent(key,</span></span>
+<span class="line"><span>            k -> new BucketState(config.getCapacity(), clock.nanoTime()));</span></span>
+<span class="line"><span>        synchronized (state) {                         // lock per-key, not global</span></span>
+<span class="line"><span>            long now = clock.nanoTime();</span></span>
+<span class="line"><span>            long elapsedNanos = now - state.lastRefillNanos;</span></span>
+<span class="line"><span>            double refilled = (elapsedNanos / 1e9) * config.getRefillRatePerSec();</span></span>
+<span class="line"><span>            state.tokens = Math.min(config.getCapacity(), state.tokens + refilled);</span></span>
+<span class="line"><span>            state.lastRefillNanos = now;</span></span>
+<span class="line"><span>            if (state.tokens >= 1.0) {</span></span>
+<span class="line"><span>                state.tokens -= 1.0;</span></span>
+<span class="line"><span>                return allowed(key, (long) state.tokens);</span></span>
+<span class="line"><span>            }</span></span>
+<span class="line"><span>            double deficit = 1.0 - state.tokens;</span></span>
+<span class="line"><span>            long retryMs = (long) Math.ceil(deficit / config.getRefillRatePerSec() * 1000);</span></span>
+<span class="line"><span>            return denied(key, (long) state.tokens, retryMs);</span></span>
+<span class="line"><span>        }</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>    // getStatus() takes the same synchronized(state) read; reset() removes the key.</span></span>
+<span class="line"><span>}</span></span></code></pre>
+<p>Two details matter. First, the lock is <strong>per-bucket</strong> (<code>synchronized(state)</code>), not on the limiter; this gives independent keys independent throughput and prevents one hot key from serializing the world. Second, <code>computeIfAbsent</code> is used to lazily materialize state, so memory is proportional to the number of <em>distinct active keys</em>, not pre-allocated capacity. A bounded <code>ConcurrentHashMap</code> or an LRU eviction policy layered on top prevents unbounded growth from adversarial key spaces — a real concern for per-IP limiters facing a botnet.</p>
+<h3 id="sliding-window-implementation">Sliding Window Implementation</h3>
+<p>The sliding window log keeps a sorted structure of request timestamps within the window <code>[now - windowSize, now]</code> and rejects when the count exceeds the limit. The sliding window <em>counter</em> approximation is a memory optimization that splits the window into sub-buckets and interpolates, trading exactness for O(1) memory; both share the same interface.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>public final class SlidingWindowRateLimiter implements RateLimiter {</span></span>
+<span class="line"><span>    private final ConcurrentMap&#x3C;String, Deque&#x3C;Long>> logs = new ConcurrentHashMap&#x3C;>();</span></span>
+<span class="line"><span>    private final SlidingWindowConfig config;   // maxRequests, windowMillis</span></span>
+<span class="line"><span>    private final Clock clock;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    public RateLimitResult tryAcquire(String key) {</span></span>
+<span class="line"><span>        Deque&#x3C;Long> log = logs.computeIfAbsent(key, k -> new ConcurrentLinkedDeque&#x3C;>());</span></span>
+<span class="line"><span>        long now = clock.currentTimeMillis();</span></span>
+<span class="line"><span>        long windowStart = now - config.getWindowMillis();</span></span>
+<span class="line"><span>        synchronized (log) {</span></span>
+<span class="line"><span>            // Evict expired entries.</span></span>
+<span class="line"><span>            while (!log.isEmpty() &#x26;&#x26; log.peekFirst() &#x3C;= windowStart) log.pollFirst();</span></span>
+<span class="line"><span>            if (log.size() &#x3C; config.getMaxRequests()) {</span></span>
+<span class="line"><span>                log.addLast(now);</span></span>
+<span class="line"><span>                return allowed(key, config.getMaxRequests() - log.size());</span></span>
+<span class="line"><span>            }</span></span>
+<span class="line"><span>            long oldest = log.peekFirst();</span></span>
+<span class="line"><span>            long retryMs = (oldest + config.getWindowMillis()) - now;</span></span>
+<span class="line"><span>            return denied(key, 0, Math.max(retryMs, 1));</span></span>
+<span class="line"><span>        }</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>}</span></span></code></pre>
+<p>The eviction-then-count sequence must be atomic with respect to the count decision, hence the <code>synchronized(log)</code>. Doing eviction in a separate pass without holding the lock is a classic race: between eviction and the size check a concurrent thread can insert, making the count stale and admitting an over-limit request. The synchronized block is short and contention is bounded per key, so throughput stays high for distinct keys.</p>
+<h3 id="fixed-window-implementation">Fixed Window Implementation</h3>
+<p>Fixed window is the simplest and cheapest: a key plus a window identifier (epoch floor) map to an integer counter that resets when the window rolls over. It is the right choice for coarse limits where the boundary burstiness at window edges is acceptable.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>public final class FixedWindowRateLimiter implements RateLimiter {</span></span>
+<span class="line"><span>    private final ConcurrentMap&#x3C;String, WindowCounter> counters = new ConcurrentHashMap&#x3C;>();</span></span>
+<span class="line"><span>    private final FixedWindowConfig config;   // maxRequests, windowMillis</span></span>
+<span class="line"><span>    private final Clock clock;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    private static final class WindowCounter {</span></span>
+<span class="line"><span>        volatile long windowStart;</span></span>
+<span class="line"><span>        final AtomicLong count = new AtomicLong();</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    public RateLimitResult tryAcquire(String key) {</span></span>
+<span class="line"><span>        long now = clock.currentTimeMillis();</span></span>
+<span class="line"><span>        long currentWindowStart = (now / config.getWindowMillis()) * config.getWindowMillis();</span></span>
+<span class="line"><span>        WindowCounter wc = counters.computeIfAbsent(key, k -> new WindowCounter(currentWindowStart));</span></span>
+<span class="line"><span>        synchronized (wc) {</span></span>
+<span class="line"><span>            if (wc.windowStart != currentWindowStart) {   // window rollover</span></span>
+<span class="line"><span>                wc.windowStart = currentWindowStart;</span></span>
+<span class="line"><span>                wc.count.set(0);</span></span>
+<span class="line"><span>            }</span></span>
+<span class="line"><span>            long c = wc.count.incrementAndGet();</span></span>
+<span class="line"><span>            if (c &#x3C;= config.getMaxRequests()) return allowed(key, config.getMaxRequests() - c);</span></span>
+<span class="line"><span>            return denied(key, 0, wc.windowStart + config.getWindowMillis() - now);</span></span>
+<span class="line"><span>        }</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>}</span></span></code></pre>
+<p>The rollover check and the increment must be atomic together; if you only rely on <code>AtomicLong</code> without the surrounding <code>synchronized(wc)</code>, two threads can both observe a stale window, both reset to zero, and both admit, producing a double-burst at the boundary. The counter is still <code>AtomicLong</code> so that <code>getStatus</code> can read it without taking the lock for the common steady-state case, but the <em>decision</em> path always holds the per-key monitor.</p>
+<h3 id="algorithm-comparison">Algorithm Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Algorithm</th>
+<th>State per Key</th>
+<th>Memory</th>
+<th>Burst Behavior</th>
+<th>Accuracy</th>
+<th>Correctness Primitive</th>
+<th>Best For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Token Bucket</strong></td>
+<td><code>tokens (double), lastRefillNanos</code></td>
+<td>O(1)</td>
+<td>Smooth bursts up to capacity</td>
+<td>Exact, lazy-refill</td>
+<td>per-key <code>synchronized(state)</code></td>
+<td>APIs needing burst tolerance + steady rate</td>
+</tr>
+<tr>
+<td><strong>Sliding Window Log</strong></td>
+<td>Sorted <code>Deque&lt;Long&gt;</code> of timestamps</td>
+<td>O(N) where N = requests in window</td>
+<td>No burst beyond limit; strict</td>
+<td>Exact</td>
+<td>per-key <code>synchronized(log)</code></td>
+<td>Strict per-request fairness</td>
+</tr>
+<tr>
+<td><strong>Sliding Window Counter</strong></td>
+<td>Sub-bucket counters</td>
+<td>O(1) (fixed sub-buckets)</td>
+<td>Interpolated</td>
+<td>Approximate</td>
+<td>per-key lock</td>
+<td>High-cardinality keys needing bounded memory</td>
+</tr>
+<tr>
+<td><strong>Fixed Window</strong></td>
+<td><code>windowStart, AtomicLong count</code></td>
+<td>O(1)</td>
+<td>Boundary burst (up to 2× at edges)</td>
+<td>Coarse</td>
+<td><code>synchronized(wc)</code> around rollover+increment</td>
+<td>Cheap edge scrubbers, coarse limits</td>
+</tr>
+<tr>
+<td><strong>Leaky Bucket</strong></td>
+<td>Queue depth + leak rate</td>
+<td>O(queue size)</td>
+<td>Smoothed output, no bursts</td>
+<td>Exact (as queue)</td>
+<td>per-key lock</td>
+<td>Traffic shaping / output smoothing</td>
+</tr>
+<tr>
+<td><strong>Redis (any algo)</strong></td>
+<td>Lua-managed <code>HMSET</code> in Redis</td>
+<td>O(1) per key server-side</td>
+<td>Per underlying algorithm</td>
+<td>Globally consistent</td>
+<td>atomic <code>EVAL</code> script (single-threaded)</td>
+<td>Multi-instance deployments</td>
+</tr>
+</tbody>
+</table>
+<h2 id="strategy-pattern-and-the-factory">Strategy Pattern and the Factory</h2>
+<h3 id="strategy-pattern-swapping-algorithms-at-the-boundary">Strategy Pattern: Swapping Algorithms at the Boundary</h3>
+<p>The <code>RateLimiter</code> interface is the strategy contract; each concrete limiter is a strategy. The value of the pattern here is that the <strong>call site never knows which algorithm it is using</strong>. A middleware filter or interceptor holds a <code>RateLimiter</code> reference and calls <code>tryAcquire(key)</code>; whether that resolves to token bucket, sliding window, or fixed window is a deployment concern, not a code-path concern. This is what lets you run token bucket in one tier (API gateway) and fixed window in another (per-IP scrubber at the edge) from the same codebase.</p>
+<h4 id="strategy-pattern-structure">Strategy Pattern Structure</h4>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   ┌─────────────────────────────┐</span></span>
+<span class="line"><span>   │          Context            │</span></span>
+<span class="line"><span>   │   RateLimitInterceptor      │</span></span>
+<span class="line"><span>   │   ──────────────────────    │</span></span>
+<span class="line"><span>   │   - limiter: RateLimiter    │──── holds a strategy ref ───┐</span></span>
+<span class="line"><span>   │   - keyResolver: KeyResolver│                             │</span></span>
+<span class="line"><span>   │   + intercept(req): Response│                             │</span></span>
+<span class="line"><span>   └─────────────┬───────────────┘                             │</span></span>
+<span class="line"><span>                 │ calls                                        │</span></span>
+<span class="line"><span>                 ▼                                             │</span></span>
+<span class="line"><span>   ┌─────────────────────────────────────────────┐             │</span></span>
+<span class="line"><span>   │       &#x3C;&#x3C;interface>> Strategy                │◀────────────┘</span></span>
+<span class="line"><span>   │            RateLimiter                      │</span></span>
+<span class="line"><span>   │   + tryAcquire(key): RateLimitResult        │</span></span>
+<span class="line"><span>   └────────────────▲────────────────────────────┘</span></span>
+<span class="line"><span>                    │ implements</span></span>
+<span class="line"><span>   ┌────────────────┼────────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │                │                │                  │        │</span></span>
+<span class="line"><span>   ▼                ▼                ▼                  ▼        ▼</span></span>
+<span class="line"><span>┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐</span></span>
+<span class="line"><span>│ TokenBucket  │ │ SlidingWindow│ │ FixedWindow  │ │ LeakyBucket  │ │ RedisRateLimiter │</span></span>
+<span class="line"><span>│ RateLimiter  │ │ RateLimiter  │ │ RateLimiter  │ │ RateLimiter  │ │ (distributed     │</span></span>
+<span class="line"><span>│ (in-process) │ │ (in-process) │ │ (in-process) │ │ (in-process) │ │  adapter)        │</span></span>
+<span class="line"><span>└──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘ └──────────────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   ┌──────────────────────┐  create(policy)   ┌──────────────────────────────┐</span></span>
+<span class="line"><span>   │ RateLimiterFactory   │──────────────────▶│ one concrete strategy above  │</span></span>
+<span class="line"><span>   │ + create()           │  createDistributed│ (the ONLY place that knows   │</span></span>
+<span class="line"><span>   │ + createDistributed()│──────────────────▶│  concrete class names)       │</span></span>
+<span class="line"><span>   └──────────────────────┘                   └──────────────────────────────┘</span></span></code></pre>
+<p><code>KeyResolver</code> is itself a strategy, deliberately decoupled so that keying policy (per-user, per-IP, per-tenant-per-endpoint composite) can evolve independently of the limiting algorithm. In practice you will stack strategies through composition (covered below), but the unit of interchange remains the single <code>RateLimiter</code> contract.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>public final class RateLimitInterceptor {</span></span>
+<span class="line"><span>    private final RateLimiter limiter;            // strategy reference</span></span>
+<span class="line"><span>    private final KeyResolver keyResolver;        // userId? ip? apiKey?</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    public Response intercept(Request req) {</span></span>
+<span class="line"><span>        String key = keyResolver.resolve(req);</span></span>
+<span class="line"><span>        RateLimitResult result = limiter.tryAcquire(key);</span></span>
+<span class="line"><span>        if (!result.isAllowed()) {</span></span>
+<span class="line"><span>            return Response.status(429)</span></span>
+<span class="line"><span>                .header("Retry-After", result.getRetryAfterMillis() / 1000)</span></span>
+<span class="line"><span>                .header("X-RateLimit-Remaining", result.getRemaining())</span></span>
+<span class="line"><span>                .build();</span></span>
+<span class="line"><span>        }</span></span>
+<span class="line"><span>        return chain.proceed(req);</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>}</span></span></code></pre>
+<p>The <code>KeyResolver</code> is itself a strategy, deliberately decoupled so that keying policy (per-user, per-IP, per-tenant-per-endpoint composite) can evolve independently of the limiting algorithm. In practice you will stack strategies through composition (covered below), but the unit of interchange remains the single <code>RateLimiter</code> contract.</p>
+<h3 id="factory-pattern-constructing-limiters-from-configuration">Factory Pattern: Constructing Limiters from Configuration</h3>
+<p>Construction is non-trivial because each algorithm needs different config fields and different state stores, and you do not want <code>if/else</code> ladders leaking into business code. A factory centralizes this, taking a <code>RateLimitPolicy</code> descriptor and returning a fully-wired <code>RateLimiter</code>. The factory is the only place that knows concrete class names, which keeps the rest of the system dependent on abstractions.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>public final class RateLimiterFactory {</span></span>
+<span class="line"><span>    private final Clock clock;</span></span>
+<span class="line"><span>    private final RedisConnection redis;   // null when in-process only</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    public RateLimiter create(RateLimitPolicy policy) {</span></span>
+<span class="line"><span>        return switch (policy.getAlgorithm()) {</span></span>
+<span class="line"><span>            case TOKEN_BUCKET   -> new TokenBucketRateLimiter(policy.asTokenBucket(), clock);</span></span>
+<span class="line"><span>            case SLIDING_WINDOW  -> new SlidingWindowRateLimiter(policy.asSlidingWindow(), clock);</span></span>
+<span class="line"><span>            case FIXED_WINDOW    -> new FixedWindowRateLimiter(policy.asFixedWindow(), clock);</span></span>
+<span class="line"><span>            case LEOAKED_BUCKET   -> new LeakyBucketRateLimiter(policy.asLeakyBucket(), clock);</span></span>
+<span class="line"><span>        };</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    public RateLimiter createDistributed(RateLimitPolicy policy) {</span></span>
+<span class="line"><span>        // Returns a Redis-backed limiter sharing the same contract.</span></span>
+<span class="line"><span>        return new RedisRateLimiter(policy, redis, clock);</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>}</span></span></code></pre>
+<p>The factory is also the natural seam for <strong>distributed vs. local</strong>: <code>create()</code> returns an in-process limiter, <code>createDistributed()</code> returns one backed by Redis. Both implement the same <code>RateLimiter</code> interface, so the interceptor does not change. This is the Open/Closed Principle in action — adding a new algorithm or a new backend means adding a factory branch, not editing the interceptor or the interface.</p>
+<h2 id="configuration-management">Configuration Management</h2>
+<p>Configuration is a first-class concern, not an afterthought. A <code>RateLimitPolicy</code> is an immutable descriptor that carries the algorithm choice, the numeric parameters, the keying strategy, and an identifier used in results and logs. Keeping it immutable means policies can be cached, shared across threads, and hot-reloaded without partial-update races.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>public final class RateLimitPolicy {</span></span>
+<span class="line"><span>    private final String policyId;</span></span>
+<span class="line"><span>    private final Algorithm algorithm;</span></span>
+<span class="line"><span>    private final KeyStrategy keyStrategy;</span></span>
+<span class="line"><span>    private final long limit;          // requests or tokens</span></span>
+<span class="line"><span>    private final long windowMillis;   // for window algorithms</span></span>
+<span class="line"><span>    private final double refillRatePerSec; // for token bucket</span></span>
+<span class="line"><span>    private final List&#x3C;String> scope;  // e.g. ["user","endpoint"]</span></span>
+<span class="line"><span>    // builder with validation: limit > 0, window > 0, etc.</span></span>
+<span class="line"><span>}</span></span></code></pre>
+<p>Policies are loaded from configuration sources — YAML, a database table, a feature-flag service — and assembled by a <code>PolicyRepository</code>. The repository exposes a <code>get(policyId)</code> that returns the current effective policy and supports hot reload via a watch or polling loop. When a policy changes, the repository constructs a <em>new</em> <code>RateLimiter</code> instance through the factory and atomically swaps it into the interceptor’s reference (a <code>volatile RateLimiter</code> field or an <code>AtomicReference&lt;RateLimiter&gt;</code>). In-flight requests continue against the old instance; new requests pick up the new one. This avoids any “half-applied config” window and requires no global lock.</p>
+<p>Validation belongs in the builder, not at use time. A policy with <code>limit = 0</code> or <code>windowMillis = -1</code> should fail fast at load time with a clear error, never silently degrade to “block everything” or “allow everything” in production. This is defensive configuration: the system should refuse to start with a malformed rate-limit rule rather than discover the misconfiguration during an incident.</p>
+<h2 id="thread-safety-considerations">Thread Safety Considerations</h2>
+<h3 id="in-process-concurrency-model">In-Process Concurrency Model</h3>
+<p>The implementations above use a <strong>per-key striped locking</strong> model: each key’s mutable state is wrapped in a small object, and decisions synchronize on that object. This is preferable to a single global lock (which serializes all traffic) and to lock-free atomics alone (which cannot make the multi-step “evict, count, decide” decision atomic). The stripe granularity is the key itself, so contention is proportional to how many threads hit the <em>same</em> key simultaneously, not to total traffic.</p>
+<p>Two failure modes dominate hand-rolled limiters. The first is <strong>check-then-act without synchronization</strong>: reading the count, comparing to the limit, then incrementing, with no lock between read and write. Under concurrency this admits roughly <code>threadCount - 1</code> extra requests per burst, which is exactly when the limit matters most. The second is <strong>double-checked locking done wrong</strong>: publishing a partially-constructed <code>BucketState</code> through a non-volatile field so another thread sees a non-null reference but zeroed fields. Using <code>computeIfAbsent</code> on <code>ConcurrentHashMap</code> sidesteps this entirely because the map guarantees the inserted value is safely published and the function runs at most once per absent key.</p>
+<p>A subtle point: <code>ConcurrentHashMap.computeIfAbsent</code> can hold a bin lock during the mapping function, so the function must be <strong>fast and side-effect-free</strong> — never do I/O or nested map mutations inside it. Our mapping functions only allocate a small state object, which is safe. If you ever need expensive initialization, compute the value first into a local, then put-if-absent.</p>
+<h3 id="memory-and-eviction">Memory and Eviction</h3>
+<p>Unbounded <code>ConcurrentHashMap</code> growth is the silent killer for per-IP or per-device limiters. A botnet rotating through millions of source IPs will OOM a naive implementation. The production-grade answer is to layer a bounded cache — Caffeine with <code>maximumSize</code> and <code>expireAfterAccess</code> set to a few times the largest window — on top of the map, or to use a <code>LinkedHashMap</code> with <code>removeEldestEntry</code> under a lock. Eviction must be tolerant of state being reclaimed mid-use: <code>tryAcquire</code> already handles this because <code>computeIfAbsent</code> re-creates state on demand, so an evicted key simply starts a fresh bucket on its next request. That is acceptable behavior for a limiter; the worst case is one extra request slips through when an idle key’s state is reclaimed and then immediately reused.</p>
+<h2 id="distributed-locking-for-shared-state">Distributed Locking for Shared State</h2>
+<h3 id="why-in-process-locks-stop-working">Why In-Process Locks Stop Working</h3>
+<p>The moment you run more than one instance of your service, the per-key <code>synchronized</code> blocks guard nothing — each instance has its own <code>ConcurrentHashMap</code>, so a key is limited per-instance, not globally. Two instances behind a load balancer each allow <code>N</code> requests, so the effective limit is <code>N * instanceCount</code>. This is the central correctness problem of distributed rate limiting, and the LLD must address it explicitly rather than hand-waving “use Redis.”</p>
+<h3 id="locking-strategies-on-shared-state">Locking Strategies on Shared State</h3>
+<p>There are two correctness strategies for shared state, and you should know both because they trade off latency against accuracy.</p>
+<p>The first is <strong>optimistic concurrency via compare-and-swap</strong> (Redis <code>WATCH</code>/<code>MULTI</code> or Lua scripts that read-modify-write atomically server-side). The limiter reads the current counter, computes the new value, and writes it back only if no one changed it in between; on conflict it retries. This avoids holding a lock across the network and scales well, but retry storms under heavy contention can waste Redis CPU and increase tail latency.</p>
+<p>The second is <strong>distributed locking</strong> (Redis <code>SET NX PX</code> with a fencing token, or Redlock across multiple Redis nodes for fault tolerance). The limiter acquires a per-key lock, reads and mutates state, and releases. This serializes per-key access across instances, giving strict correctness, at the cost of one extra round trip and the lock’s TTL window. The TTL must be short (a few hundred milliseconds) to avoid a crashed holder blocking the key forever, and a fencing token (a monotonically increasing lock id) must be included in writes so a slow holder that recovers after its TTL expired cannot stomp on a newer holder’s state.</p>
+<p>The strong recommendation is to <strong>prefer Lua-scripted atomicity over distributed locks</strong> for rate limiting, because the operations are simple stateless functions (read counter, increment, compare) that fit naturally into a single atomic server-side script and do not need the lock’s “holding” semantics. Locks are the right tool when you need to coordinate a <em>multi-step</em> critical section; rate limiting almost never does.</p>
+<h2 id="redis-integration-design">Redis Integration Design</h2>
+<h3 id="atomic-scripts-not-multi-call-sequences">Atomic Scripts, Not Multi-Call Sequences</h3>
+<p>The Redis integration’s cardinal rule is that the read-modify-write for a single decision must execute as <strong>one atomic server-side operation</strong>. Splitting it into a <code>GET</code>, a client-side computation, and a <code>SET</code> is incorrect under any concurrency, because two clients can both read the same value and both write <code>value + 1</code>, losing an increment. The correct approach is a Lua script executed with <code>EVAL</code>; Redis runs scripts atomically, single-threaded, so the entire decision is consistent.</p>
+<h4 id="redis-lua-script-atomic-flow">Redis Lua Script Atomic Flow</h4>
+<p>Redis executes a script to completion with no other command interleaving. Instance B’s <code>EVALSHA</code> is queued and only begins after Instance A’s atomic block returns, which is what makes the decision globally consistent across all instances.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   Instance A (client)              Redis (single-threaded server)</span></span>
+<span class="line"><span>        │                                  │</span></span>
+<span class="line"><span>        │  EVALSHA(scriptSha, key, args)   │</span></span>
+<span class="line"><span>        │─────────────────────────────────>│</span></span>
+<span class="line"><span>        │                                  │  ┌─────────────────────────┐</span></span>
+<span class="line"><span>        │                                  │  │  ◆ ATOMIC BLOCK START   │  ← no other command</span></span>
+<span class="line"><span>        │                                  │  └─────────────────────────┘    can interleave</span></span>
+<span class="line"><span>        │                                  │           │</span></span>
+<span class="line"><span>        │                                  │           ▼ 1. HMGET key "tokens" "lastRefill"</span></span>
+<span class="line"><span>        │                                  │                    (or seed defaults from ARGV)</span></span>
+<span class="line"><span>        │                                  │           │</span></span>
+<span class="line"><span>        │                                  │           ▼ 2. Compute refill</span></span>
+<span class="line"><span>        │                                  │              elapsed = (now - last) / 1000</span></span>
+<span class="line"><span>        │                                  │              refilled = min(capacity, tokens + elapsed*rate)</span></span>
+<span class="line"><span>        │                                  │           │</span></span>
+<span class="line"><span>        │                                  │           ▼ 3. Decide</span></span>
+<span class="line"><span>        │                                  │              if refilled >= cost:</span></span>
+<span class="line"><span>        │                                  │                  refilled -= cost  → ALLOW {1, refilled, 0}</span></span>
+<span class="line"><span>        │                                  │              else:</span></span>
+<span class="line"><span>        │                                  │                  retry = ceil((cost-refilled)/rate*1000)</span></span>
+<span class="line"><span>        │                                  │                              → DENY  {0, refilled, retry}</span></span>
+<span class="line"><span>        │                                  │           │</span></span>
+<span class="line"><span>        │                                  │           ▼ 4. HMSET key "tokens" refilled "lastRefill" now</span></span>
+<span class="line"><span>        │                                  │              EXPIRE key 300   (≈5× largest window)</span></span>
+<span class="line"><span>        │                                  │  ┌─────────────────────────┐</span></span>
+<span class="line"><span>        │                                  │  │  ◆ ATOMIC BLOCK END     │</span></span>
+<span class="line"><span>        │                                  │  └─────────────────────────┘</span></span>
+<span class="line"><span>        │       [1, remaining, retryMs]    │</span></span>
+<span class="line"><span>        │&#x3C;─────────────────────────────────│</span></span>
+<span class="line"><span>        │                                  │</span></span>
+<span class="line"><span>   Instance B (client)                     │</span></span>
+<span class="line"><span>        │  EVALSHA(...) while A's block    │  ◀── queued; only starts after A's block ENDs</span></span>
+<span class="line"><span>        │─────────────────────────────────>│      → reads A's committed state, never a stale mid-update</span></span>
+<span class="line"><span>        │       [...]                      │</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>-- Token bucket in one script. KEYS[1] = bucket key.</span></span>
+<span class="line"><span>-- ARGV = [capacity, refillRatePerSec, nowMillis, cost]</span></span>
+<span class="line"><span>local state = redis.call("HMGET", KEYS[1], "tokens", "lastRefill")</span></span>
+<span class="line"><span>local tokens = tonumber(state[1]) or tonumber(ARGV[1])</span></span>
+<span class="line"><span>local last = tonumber(state[2]) or tonumber(ARGV[3])</span></span>
+<span class="line"><span>local now = tonumber(ARGV[3])</span></span>
+<span class="line"><span>local refilled = math.min(tonumber(ARGV[1]),</span></span>
+<span class="line"><span>    tokens + ((now - last) / 1000.0) * tonumber(ARGV[2]))</span></span>
+<span class="line"><span>if refilled >= tonumber(ARGV[4]) then</span></span>
+<span class="line"><span>    refilled = refilled - tonumber(ARGV[4])</span></span>
+<span class="line"><span>    redis.call("HMSET", KEYS[1], "tokens", refilled, "lastRefill", now)</span></span>
+<span class="line"><span>    redis.call("EXPIRE", KEYS[1], 300)</span></span>
+<span class="line"><span>    return {1, math.floor(refilled), 0}</span></span>
+<span class="line"><span>else</span></span>
+<span class="line"><span>    local deficit = tonumber(ARGV[4]) - refilled</span></span>
+<span class="line"><span>    local retryMs = math.ceil(deficit / tonumber(ARGV[2]) * 1000)</span></span>
+<span class="line"><span>    redis.call("HMSET", KEYS[1], "tokens", refilled, "lastRefill", now)</span></span>
+<span class="line"><span>    redis.call("EXPIRE", KEYS[1], 300)</span></span>
+<span class="line"><span>    return {0, math.floor(refilled), retryMs}</span></span>
+<span class="line"><span>end</span></span></code></pre>
+<p>The <code>EXPIRE</code> is essential: without it, keys for transient clients accumulate forever in Redis. A TTL of roughly 5x the largest window is a safe default; it lets an idle key’s state expire and be garbage-collected by Redis while keeping active keys warm.</p>
+<h3 id="the-redisratelimiter-adapter">The RedisRateLimiter Adapter</h3>
+<p>The Redis-backed limiter implements the <em>same</em> <code>RateLimiter</code> interface so the interceptor is unaware of the backend. It serializes the decision into a script call and deserializes the reply into the same immutable <code>RateLimitResult</code>. This is a straight adapter — it owns no in-process state, only a connection and a script SHA cache — which keeps instances cheap and lets you create one per policy without concern.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>public final class RedisRateLimiter implements RateLimiter {</span></span>
+<span class="line"><span>    private final RedisConnection redis;</span></span>
+<span class="line"><span>    private final String scriptSha;        // pre-loaded via SCRIPT LOAD</span></span>
+<span class="line"><span>    private final RateLimitPolicy policy;</span></span>
+<span class="line"><span>    private final Clock clock;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    public RateLimitResult tryAcquire(String key) {</span></span>
+<span class="line"><span>        String redisKey = "rl:" + policy.getPolicyId() + ":" + key;</span></span>
+<span class="line"><span>        List&#x3C;Long> reply = redis.evalSha(scriptSha,</span></span>
+<span class="line"><span>            List.of(redisKey),</span></span>
+<span class="line"><span>            policy.serializedArgs(clock.currentTimeMillis()));</span></span>
+<span class="line"><span>        boolean allowed = reply.get(0) == 1L;</span></span>
+<span class="line"><span>        return new RateLimitResult(allowed, reply.get(1),</span></span>
+<span class="line"><span>            reply.get(2), policy.getPolicyId(), clock.currentTimeMillis());</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>}</span></span></code></pre>
+<p>Pre-loading the script with <code>SCRIPT LOAD</code> and referencing it by SHA avoids re-sending the script body on every call, cutting bandwidth and parse cost. The failure mode to design for is <strong>Redis unavailability</strong>: a hard choice between fail-open (allow traffic, risk overload downstream) and fail-closed (deny traffic, risk an outage). Most production systems choose fail-open with an alarm and a circuit breaker, because a rate limiter that takes the site down when Redis blips is worse than no limiter. This decision must be explicit in the LLD and wired through a <code>FallbackPolicy</code> enum on the limiter, not buried in a catch block.</p>
+<h2 id="interface-segregation-and-solid-principles-applied">Interface Segregation and SOLID Principles Applied</h2>
+<h3 id="solid-principles--summary">SOLID Principles — Summary</h3>
+<table>
+<thead>
+<tr>
+<th>Principle</th>
+<th>How It Is Applied in This Design</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>S — Single Responsibility</strong></td>
+<td>Each class has exactly one reason to change: <code>TokenBucketRateLimiter</code> (the algorithm), <code>RateLimiterFactory</code> (construction wiring), <code>PolicyRepository</code> (the configuration source), <code>RateLimitInterceptor</code> (the interception mechanics). Co-locating two responsibilities is how a 600-line “RateLimitManager” that everyone is afraid to touch gets born.</td>
+</tr>
+<tr>
+<td><strong>O — Open/Closed</strong></td>
+<td>New algorithms are added by writing a new concrete <code>RateLimiter</code> and adding one branch to the factory. No existing class is edited, no interface is widened, no call site is touched. The seam is the interface; the extension point is the factory; the closure is the rest of the system being oblivious.</td>
+</tr>
+<tr>
+<td><strong>L — Liskov Substitution</strong></td>
+<td>Every concrete limiter honors the behavioral guarantees: <code>tryAcquire</code> is deterministic for a given key and time, never throws on a valid key, never returns a <code>remaining</code> that exceeds the configured limit, and never mutates state when it returns <code>allowed == false</code>. Fail-open behavior is modeled as an explicit <code>FallbackRateLimiter</code> decorator, not a hidden contract violation buried inside one implementation.</td>
+</tr>
+<tr>
+<td><strong>I — Interface Segregation</strong></td>
+<td>Three narrow interfaces — <code>RateLimiter</code> (decision), <code>RateLimitInspector</code> (status), <code>RateLimitAdmin</code> (reset) — so a Redis-backed read replica can implement only the inspector, a test stub can implement only <code>RateLimiter</code>, and no client is ever forced to depend on methods it does not use.</td>
+</tr>
+<tr>
+<td><strong>D — Dependency Inversion</strong></td>
+<td>High-level policy — the interceptor, the orchestrator — depends on the <code>RateLimiter</code> abstraction, not on <code>TokenBucketRateLimiter</code> or <code>RedisRateLimiter</code>. <code>Clock</code>, <code>RedisConnection</code>, and <code>KeyResolver</code> are likewise abstractions injected at construction, so the core logic depends on interfaces and concrete infrastructure is injected from the outside.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="interface-segregation-dont-force-capabilities-onto-all-clients">Interface Segregation: Don’t Force Capabilities onto All Clients</h3>
+<p>Not every caller needs every operation. A request handler needs <code>tryAcquire</code>; a dashboard needs <code>getStatus</code>; an admin tool needs <code>reset</code>. Forcing them all through one fat interface couples the dashboard to methods it never calls and tempts implementers to stub methods they do not support. The cleaner split is three segregated interfaces, each narrow enough that an implementation can meaningfully satisfy all of its methods.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>public interface RateLimiter        { RateLimitResult tryAcquire(String key); }</span></span>
+<span class="line"><span>public interface RateLimitInspector { RateLimitStatus  getStatus(String key); }</span></span>
+<span class="line"><span>public interface RateLimitAdmin     { void reset(String key); void resetAll(); }</span></span></code></pre>
+<p>A class can implement all three when it supports them, but a Redis-backed read replica might implement only <code>RateLimitInspector</code> (it cannot authorize writes), and a test stub might implement only <code>RateLimiter</code>. Callers depend on the narrowest interface that suffices, which is the Interface Segregation Principle in its purest form: no client should be forced to depend on methods it does not use.</p>
+<h3 id="the-single-responsibility-principle">The Single Responsibility Principle</h3>
+<p>Each class has one reason to change. <code>TokenBucketRateLimiter</code> changes only when the token bucket algorithm changes. <code>RateLimiterFactory</code> changes only when construction wiring changes. <code>PolicyRepository</code> changes only when the configuration source changes. <code>RateLimitInterceptor</code> changes only when the interception mechanics change. Co-locating two of these responsibilities in one class is how you get a 600-line “RateLimitManager” that everyone is afraid to touch.</p>
+<h3 id="the-openclosed-principle">The Open/Closed Principle</h3>
+<p>New algorithms are added by writing a new concrete <code>RateLimiter</code> and adding one branch to the factory. No existing class is edited, no interface is widened, no call site is touched. This is the property that lets a team add a leaky-bucket or a sliding-window-counter approximation three months later without a cross-cutting refactor. The seam is the interface; the extension point is the factory; the closure is the rest of the system being oblivious.</p>
+<h3 id="the-liskov-substitution-principle">The Liskov Substitution Principle</h3>
+<p>Every concrete limiter must honor the <code>RateLimiter</code> contract’s behavioral guarantees: <code>tryAcquire</code> is deterministic for a given key and time, never throws on a valid key, never returns a result whose <code>remaining</code> exceeds the configured limit, and never mutates state when it returns <code>allowed == false</code>. A limiter that “fails open” by returning allowed on internal errors violates LSP because callers written against the interface assume denials are meaningful. If you need fail-open behavior, model it as an explicit <code>FallbackRateLimiter</code> decorator that wraps a real limiter and substitutes an allowed result on failure — the substitution is then intentional and visible, not a hidden contract violation buried inside one implementation.</p>
+<h3 id="the-dependency-inversion-principle">The Dependency Inversion Principle</h3>
+<p>High-level policy — the interceptor, the orchestrator — depends on the <code>RateLimiter</code> abstraction, not on <code>TokenBucketRateLimiter</code> or <code>RedisRateLimiter</code>. The <code>Clock</code>, <code>RedisConnection</code>, and <code>KeyResolver</code> are likewise abstractions injected at construction, so the core logic depends on interfaces and the concrete infrastructures are injected from the outside. This is what makes the in-process limiter unit-testable without Redis and the Redis limiter testable with a fake connection.</p>
+<h2 id="composing-limiters-stacking-policies">Composing Limiters: Stacking Policies</h2>
+<p>Real systems rarely apply a single limit. A request is subject to a per-user limit <em>and</em> a per-endpoint limit <em>and</em> a global safety limit, and a denial from any one must reject. This is the <strong>composite rate limiter</strong>, a list of child limiters evaluated in order, returning the most restrictive result.</p>
+<h4 id="composite-rate-limiter-stacking-flow">Composite Rate Limiter Stacking Flow</h4>
+<p>Children are ordered most-selective-first so the first denial short-circuits and saves work on the children most likely to admit. When all children admit, the retry hints are merged to the largest (most restrictive) value so the caller backs off long enough for every policy to recover.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                                  Request (key = userId + endpoint)</span></span>
+<span class="line"><span>                                              │</span></span>
+<span class="line"><span>                                              ▼</span></span>
+<span class="line"><span>                       ┌────────────────────────────────────────────┐</span></span>
+<span class="line"><span>                       │        CompositeRateLimiter                 │</span></span>
+<span class="line"><span>                       │        &#x3C;&#x3C;implements RateLimiter>>           │</span></span>
+<span class="line"><span>                       │        ─────────────────────────────────    │</span></span>
+<span class="line"><span>                       │        children (ordered, most-selective    │</span></span>
+<span class="line"><span>                       │         first):                             │</span></span>
+<span class="line"><span>                       └───────────────────┬────────────────────────┘</span></span>
+<span class="line"><span>                                           │ tryAcquire(key)</span></span>
+<span class="line"><span>            ┌──────────────────────────────┼──────────────────────────────┐</span></span>
+<span class="line"><span>            ▼                              ▼                              ▼</span></span>
+<span class="line"><span>   ┌───────────────────┐         ┌───────────────────┐         ┌───────────────────┐</span></span>
+<span class="line"><span>   │  Per-User         │         │  Per-Endpoint     │         │  Global Safety    │</span></span>
+<span class="line"><span>   │  Limiter          │         │  Limiter          │         │  Limiter          │</span></span>
+<span class="line"><span>   │  (token bucket)   │         │  (sliding window) │         │  (fixed window)   │</span></span>
+<span class="line"><span>   └─────────┬─────────┘         └─────────┬─────────┘         └─────────┬─────────┘</span></span>
+<span class="line"><span>             │                             │                             │</span></span>
+<span class="line"><span>             │ result                      │ result                      │ result</span></span>
+<span class="line"><span>             ▼                             ▼                             ▼</span></span>
+<span class="line"><span>        allowed?                       allowed?                       allowed?</span></span>
+<span class="line"><span>        │                              │                              │</span></span>
+<span class="line"><span>   NO → return r (short-circuit)  NO → return r (short-circuit)  NO → return r (short-circuit)</span></span>
+<span class="line"><span>   YES → keep r, continue         YES → keep r, continue         YES → keep r, continue</span></span>
+<span class="line"><span>        │                              │                              │</span></span>
+<span class="line"><span>        └──────────────┬───────────────┘──────────────────────────────┘</span></span>
+<span class="line"><span>                       │ all children allowed</span></span>
+<span class="line"><span>                       ▼</span></span>
+<span class="line"><span>            merge retryAfterMillis across kept results</span></span>
+<span class="line"><span>            → pick the LARGEST (most restrictive) hint</span></span>
+<span class="line"><span>                       │</span></span>
+<span class="line"><span>                       ▼</span></span>
+<span class="line"><span>            return final RateLimitResult (allowed=true, most-restrictive retry hint)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Note: a child can itself be a CompositeRateLimiter (e.g. a per-tenant composite</span></span>
+<span class="line"><span>   nested inside the global composite) → Composite pattern on top of Strategy,</span></span>
+<span class="line"><span>   turning "one algorithm per request" into "a policy graph per request" with no</span></span>
+<span class="line"><span>   special-case code and no interface change.</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>public final class CompositeRateLimiter implements RateLimiter {</span></span>
+<span class="line"><span>    private final List&#x3C;RateLimiter> children;   // ordered most-selective to least</span></span>
+<span class="line"><span>    public RateLimitResult tryAcquire(String key) {</span></span>
+<span class="line"><span>        RateLimitResult mostRestrictive = null;</span></span>
+<span class="line"><span>        for (RateLimiter child : children) {</span></span>
+<span class="line"><span>            RateLimitResult r = child.tryAcquire(key);</span></span>
+<span class="line"><span>            if (!r.isAllowed()) return r;                 // short-circuit on first deny</span></span>
+<span class="line"><span>            if (mostRestrictive == null ||</span></span>
+<span class="line"><span>                r.getRetryAfterMillis() > mostRestrictive.getRetryAfterMillis())</span></span>
+<span class="line"><span>                mostRestrictive = r;</span></span>
+<span class="line"><span>        }</span></span>
+<span class="line"><span>        return mostRestrictive;                            // all allowed; merge hints</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>}</span></span></code></pre>
+<p>Two design notes: ordering children most-selective-first short-circuits on the limiter most likely to deny, saving work; and <code>CompositeRateLimiter</code> is itself a <code>RateLimiter</code>, so composites can nest (a per-tenant composite inside a global composite) without any special-case code. This is the Composite pattern layered on the Strategy pattern, and it is the mechanism that turns “one algorithm per request” into “a policy graph per request” without breaking the interface.</p>
+<h2 id="code-structure-and-package-organization">Code Structure and Package Organization</h2>
+<p>Package structure should make the seams visible: interfaces at the top, implementations grouped by concern, infrastructure behind its own boundary. A clean layout looks like this:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>com.acme.ratelimit/</span></span>
+<span class="line"><span>  api/              RateLimiter, RateLimitResult, RateLimitStatus, RateLimitAdmin</span></span>
+<span class="line"><span>  policy/           RateLimitPolicy, Algorithm enum, KeyStrategy, PolicyRepository</span></span>
+<span class="line"><span>  factory/          RateLimiterFactory</span></span>
+<span class="line"><span>  core/             TokenBucketRateLimiter, SlidingWindowRateLimiter,</span></span>
+<span class="line"><span>                    FixedWindowRateLimiter, CompositeRateLimiter</span></span>
+<span class="line"><span>  storage/          RedisRateLimiter, RedisConnection, LuaScripts</span></span>
+<span class="line"><span>  web/              RateLimitInterceptor, KeyResolver impls, 429 exception mapper</span></span>
+<span class="line"><span>  metrics/          RateLimitMetrics, Micrometer bindings</span></span>
+<span class="line"><span>  test/             unit tests, fakes, Clock stub, RedisTestContainer</span></span></code></pre>
+<p>The <code>api</code> package depends on nothing. <code>core</code> depends only on <code>api</code> and <code>policy</code>. <code>storage</code> depends on <code>api</code>, <code>policy</code>, and a Redis client. <code>web</code> depends on <code>api</code> and the web framework. This layered dependency graph means you can compile and unit-test <code>core</code> with zero infrastructure, and the only place concrete Redis classes appear is behind the <code>storage</code> boundary. Enforcing this with a tool like ArchUnit or Checkstyle’s import-control prevents the slow rot where an implementation accidentally imports a web class.</p>
+<h2 id="sequence-diagrams">Sequence Diagrams</h2>
+<h3 id="local-single-limiter-sequence">Local Single-Limiter Sequence</h3>
+<p>The request path through an in-process limiter, showing the lazy-refill and per-key lock interaction:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Client          Interceptor        TokenBucketLimiter        ConcurrentHashMap        BucketState</span></span>
+<span class="line"><span>  |  POST /api      |                     |                       |                       |</span></span>
+<span class="line"><span>  |---------------->|                     |                       |                       |</span></span>
+<span class="line"><span>  |                 | tryAcquire(userId)  |                       |                       |</span></span>
+<span class="line"><span>  |                 |-------------------->|                       |                       |</span></span>
+<span class="line"><span>  |                 |                     | computeIfAbsent(key)  |                       |</span></span>
+<span class="line"><span>  |                 |                     |---------------------->|                       |</span></span>
+<span class="line"><span>  |                 |                     |       BucketState     |                       |</span></span>
+<span class="line"><span>  |                 |                     |&#x3C;----------------------|                       |</span></span>
+<span class="line"><span>  |                 |                     | synchronized(state)   |                       |</span></span>
+<span class="line"><span>  |                 |                     |-----------------------|---------------------->|</span></span>
+<span class="line"><span>  |                 |                     |                       |  refill + consume     |</span></span>
+<span class="line"><span>  |                 |                     |       Result(allowed) |&#x3C;----------------------|</span></span>
+<span class="line"><span>  |                 |       Result        |&#x3C;----------------------|                       |</span></span>
+<span class="line"><span>  |                 |&#x3C;--------------------|                       |                       |</span></span>
+<span class="line"><span>  |    200 OK       |                     |                       |                       |</span></span>
+<span class="line"><span>  |&#x3C;----------------|                     |                       |                       |</span></span></code></pre>
+<p>The important property is that the lock is held only on <code>BucketState</code>, for the duration of the arithmetic, and the map’s own bin lock is released as soon as <code>computeIfAbsent</code> returns. Distinct keys never contend on the same monitor.</p>
+<h3 id="distributed-redis-sequence">Distributed Redis Sequence</h3>
+<p>The distributed path replaces the in-process map with a single round-trip script evaluation. The interceptor is identical; only the limiter’s internals change.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Client      Interceptor     RedisRateLimiter         Redis (Lua, atomic)        Downstream</span></span>
+<span class="line"><span>  |  POST       |                 |                       |                         |</span></span>
+<span class="line"><span>  |------------>|                 |                       |                         |</span></span>
+<span class="line"><span>  |             | tryAcquire(key) |                       |                         |</span></span>
+<span class="line"><span>  |             |---------------->|                       |                         |</span></span>
+<span class="line"><span>  |             |                 | EVALSHA(sha, key,args)|                         |</span></span>
+<span class="line"><span>  |             |                 |---------------------->|                         |</span></span>
+<span class="line"><span>  |             |                 |                       | HMGET + refill + EXPIRE |</span></span>
+<span class="line"><span>  |             |                 |     [1, remaining, 0] |                         |</span></span>
+<span class="line"><span>  |             |                 |&#x3C;----------------------|                         |</span></span>
+<span class="line"><span>  |             |      Result     |                       |                         |</span></span>
+<span class="line"><span>  |             |&#x3C;----------------|                       |                         |</span></span>
+<span class="line"><span>  |             |  chain.proceed()|                       |                         |</span></span>
+<span class="line"><span>  |             |------------------------------------------------->|            |</span></span>
+<span class="line"><span>  |             |                         200 OK                                |</span></span>
+<span class="line"><span>  |&#x3C;------------|                                                          |&#x3C;----|</span></span></code></pre>
+<p>If Redis is unreachable, the limiter consults its <code>FallbackPolicy</code>: fail-open returns an allowed result and emits an alarm; fail-closed returns a 503-class denial. The diagram hides this branch, but the code path is mandatory — an unhandled Redis exception in <code>tryAcquire</code> is a production bug.</p>
+<h2 id="unit-testing-strategy">Unit Testing Strategy</h2>
+<h3 id="testability-built-into-the-design">Testability Built into the Design</h3>
+<p>Two design choices make the limiter cheaply testable. First, <code>Clock</code> is an injected abstraction, so tests drive time forward without <code>Thread.sleep</code>, which is the difference between a suite that runs in 200ms and one that runs in 20 seconds. Second, the in-process limiters depend on no infrastructure, so they test as pure logic. A <code>MutableClock</code> implementation with <code>advanceMillis(long)</code> lets a test simulate window rollovers, token refills, and boundary bursts deterministically.</p>
+<h3 id="the-test-matrix">The Test Matrix</h3>
+<p>The unit test matrix has three orthogonal axes. Each axis is exercised as a distinct set of steps so a regression in one dimension does not hide behind a pass in another.</p>
+<ul>
+<li><strong>Algorithm axis</strong> — verify each limiter in isolation:
+<ul>
+<li>Allow requests up to the configured limit.</li>
+<li>Deny the request immediately beyond the limit.</li>
+<li>Recover correctly after the window/refill period elapses (advance the <code>MutableClock</code>).</li>
+<li>Report correct <code>remaining</code> and <code>retryAfterMillis</code> on both allow and deny paths.</li>
+<li>Return <code>remaining</code> that never exceeds the configured limit (LSP check).</li>
+</ul>
+</li>
+<li><strong>Concurrency axis</strong> — verify atomicity under contention:
+<ul>
+<li>Spin up <code>N</code> threads (e.g. 16), each calling <code>tryAcquire</code> <code>M</code> times (e.g. 1000) against the <em>same</em> key.</li>
+<li>Collect admissions into a single <code>AtomicInteger</code>.</li>
+<li>Await all futures and shut down the pool.</li>
+<li>Assert exactly <code>limit</code> admissions — no more, no less — which is the test that catches check-then-act races.</li>
+</ul>
+</li>
+<li><strong>Composition axis</strong> — verify the composite behaves correctly:
+<ul>
+<li>Short-circuit and return on the first child that denies.</li>
+<li>Continue to the next child only while every prior child admitted.</li>
+<li>Merge <code>retryAfterMillis</code> across all admitting children and return the largest (most restrictive) hint.</li>
+<li>Nest a composite inside a composite and confirm the interface is unchanged.</li>
+</ul>
+</li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>@Test void tokenBucket_admitsExactlyCapacityUnderConcurrency() throws Exception {</span></span>
+<span class="line"><span>    MutableClock clock = new MutableClock();</span></span>
+<span class="line"><span>    TokenBucketRateLimiter lb = new TokenBucketRateLimiter(</span></span>
+<span class="line"><span>        TokenBucketConfig.builder().capacity(100).refillRatePerSec(0).build(), clock);</span></span>
+<span class="line"><span>    ExecutorService pool = Executors.newFixedThreadPool(16);</span></span>
+<span class="line"><span>    AtomicInteger allowed = new AtomicInteger();</span></span>
+<span class="line"><span>    List&#x3C;Future&#x3C;?>> futs = new ArrayList&#x3C;>();</span></span>
+<span class="line"><span>    for (int i = 0; i &#x3C; 16; i++) futs.add(pool.submit(() -></span></span>
+<span class="line"><span>        IntStream.range(0, 1000).forEach(j -> { if (lb.tryAcquire("k").isAllowed()) allowed.incrementAndGet(); })));</span></span>
+<span class="line"><span>    for (Future&#x3C;?> f : futs) f.get();</span></span>
+<span class="line"><span>    pool.shutdown();</span></span>
+<span class="line"><span>    assertEquals(100, allowed.get(), "must not exceed capacity under contention");</span></span>
+<span class="line"><span>}</span></span></code></pre>
+<p>The Redis-backed limiter is tested against a real Redis via Testcontainers, not a mock, because the correctness property lives in the Lua script’s atomicity and a mock cannot validate that. The script itself is also unit-tested by loading it into the container and asserting edge cases: empty bucket, exact refill to capacity, boundary at <code>now == windowStart</code>, and idempotent re-evaluation. Fuzzing the script with random <code>now</code> sequences is a cheap way to catch non-monotonic-time bugs that unit tests with fixed clocks miss.</p>
+<h2 id="extensibility-for-new-algorithms">Extensibility for New Algorithms</h2>
+<p>The design is extensible by construction. Adding a new algorithm — say, a leaky bucket with a queue, or a sliding-window-counter approximation — is a four-step process that touches no existing production code:</p>
+<ol>
+<li><strong>Write the strategy class</strong> — implement <code>RateLimiter</code> (and <code>RateLimitInspector</code> if it can answer status cheaply); keep all state representation inside the class.</li>
+<li><strong>Register it in the factory</strong> — add an enum value to <code>Algorithm</code> and a builder branch to <code>RateLimiterFactory.create()</code> that wires the new config type.</li>
+<li><strong>Extend the policy descriptor</strong> — add the new algorithm’s fields to <code>RateLimitPolicy</code> with sensible defaults so existing configs still parse and validation fails fast on malformed values.</li>
+<li><strong>Add the algorithm to the test matrix</strong> — cover it on the algorithm axis, the concurrency axis, and (if distributed) the Redis script-edge-case suite.</li>
+</ol>
+<p>The interface does not change, the interceptor does not change, the Redis adapter does not change. This low-friction extension is the payoff of the strategy and factory patterns combined with interface segregation. A team that has to edit five files and re-review the interceptor to add a limiter will simply not add one; a team that adds one self-contained class and one factory branch will. The LLD’s job is to make the second team’s path the obvious one.</p>
+<h2 id="common-pitfalls">Common Pitfalls</h2>
+<p>The most common pitfall is <strong>treating the rate limiter as a single global singleton with one algorithm hard-coded</strong>. This passes a code review because it “works,” but it couples limiting policy to deployment topology, makes per-endpoint limits impossible without code changes, and forces every team through the same algorithm even when their traffic shapes differ. The fix is the pattern set above: interface + strategy + factory + per-policy instances, with the singleton replaced by a <code>PolicyRepository</code> that hands out the right limiter for the right scope.</p>
+<p>The second pitfall is <strong>non-atomic distributed decisions</strong> — splitting the Redis read, computation, and write into separate calls and reasoning that “it’s mostly fine.” It is mostly fine right up until a traffic spike, at which point the limit leaks by the number of concurrent clients and the downstream service gets exactly the burst you built the limiter to prevent. The fix is a single <code>EVAL</code> script, always, with no exceptions for “simple” cases.</p>
+<p>The third pitfall is <strong>ignoring clock skew and non-monotonic time</strong>. Using <code>System.currentTimeMillis()</code> for refill math across instances with skewed clocks, or wall-clock jumps from NTP corrections, can produce negative elapsed times and either stall or flood a limiter. Inject a <code>Clock</code> that documents monotonicity guarantees, and in the distributed case key all time on the Redis server’s <code>TIME</code> command so there is a single authoritative clock.</p>
+<p>The fourth pitfall is <strong>failing to design the failure mode</strong>. A rate limiter that throws on Redis timeout and propagates a 500 to the client is, in effect, a self-inflicted DoS amplifier. Decide fail-open vs fail-closed explicitly per policy, wire it through a decorator, emit a metric on fallback, and test the fallback path as deliberately as the happy path.</p>
+<h2 id="interview-question">Interview Question</h2>
+<p><strong>Question:</strong> “You implemented token bucket with a per-key <code>synchronized</code> block. Now we scale to twenty instances and move the state to Redis. Walk me through exactly what changes in your code, what stays the same, and where the correctness guarantees now come from. Then tell me what happens to a request in flight when Redis becomes unreachable for two seconds.”</p>
+<p><strong>Model Answer:</strong> “At the interface level nothing changes — <code>RateLimiter.tryAcquire</code> has the same signature, the <code>RateLimitInterceptor</code> is untouched, and the immutable <code>RateLimitResult</code> still flows back to the caller. What changes is the implementation behind the factory: <code>RateLimiterFactory.createDistributed(policy)</code> returns a <code>RedisRateLimiter</code> instead of a <code>TokenBucketRateLimiter</code>. That adapter owns no in-process state; it serializes the same read-refill-consume logic into a Lua script and sends it with <code>EVALSHA</code> against a key namespaced by policy id and the resolved key. The correctness guarantee moves from the JVM monitor on <code>BucketState</code> to Redis’s single-threaded, atomic script execution — the entire decision runs server-side with no client-visible intermediate states, so two instances hitting the same key cannot interleave and double-admit. I lose the per-key lock locality, so I pay one Redis round trip per decision, but I gain a globally consistent limit across all twenty instances. The <code>EXPIRE</code> in the script bounds Redis memory; the <code>SCRIPT LOAD</code> + SHA reference avoids resending the body.</p>
+<p>“For the failure case, I do not let a Redis exception escape <code>tryAcquire</code>. Each policy carries a <code>FallbackPolicy</code>. For most external-facing endpoints I choose fail-open: the limiter catches the Redis error, emits a <code>ratelimit.fallback.open</code> counter and a warning log, and returns an allowed <code>RateLimitResult</code> so the request proceeds to the downstream. For high-value or abusive endpoints I choose fail-closed, returning a 503-class denial. In flight, a request that already got an allowed result before the outage is unaffected — it proceeds downstream and the response is on the downstream service. A request that calls <code>tryAcquire</code> during the outage takes the fallback branch synchronously. The two-second blip is visible as a spike in the fallback metric, which pages the on-call to investigate Redis; it does not take the application down, which is the design goal. I would also put a circuit breaker around the Redis client so that during a sustained outage the limiter stops paying the timeout cost on every request and fails fast in the chosen direction.”</p>
+<h2 id="further-reading">Further Reading</h2>
+<ul>
+<li>[[Rate Limiter]] — the high-level design companion: algorithm trade-offs, distributed architecture, capacity sizing.</li>
+<li>[[Consistent Hashing]] — relevant when sharding rate-limit state across many Redis instances by key.</li>
+<li>[[Circuit Breakers &amp; Bulkheads]] — the fail-open/fail-closed and timeout patterns overlap heavily with limiter fallback design.</li>
+<li>[[Distributed Cache (Redis-Memcached)]] — Lua scripting, eviction, and Redis operational concerns in depth.</li>
+<li>[[Concurrency Patterns]] — striped locks, compare-and-swap, and safe publication underpin the in-process guarantees.</li>
+</ul>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>LLD rate limiter = data structure design, not system architecture. Focus on thread safety, memory, and correctness</li>
+<li>Token bucket: atomic counter + last refill timestamp. O(1) per check. Use CAS (compare-and-swap) for lock-free updates</li>
+<li>Sliding window counter: two counters (current + previous window) with weighted interpolation. O(1) memory per key</li>
+<li>For concurrency: use striped locks (lock per key hash bucket) to avoid global contention</li>
+<li>Distributed: Redis sorted set for sliding window log, Lua script for atomic check-and-increment</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you make the token bucket thread-safe without locks?” — Use AtomicInteger/AtomicLong with CAS loop. Read current tokens and timestamp, compute new values, CAS — retry on failure.</li>
+<li>“What’s the memory overhead of per-user rate limit state?” — Token bucket: 16 bytes (tokens + timestamp) per key. 1M keys = 16MB. Sliding window log: O(n) per key — much more.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Using <code>synchronized</code> on the entire rate limiter creates a global bottleneck. The fix is striped locks (array of locks, pick by key hash) or per-key lock-free CAS. Candidates who propose a single lock fail the LLD round.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/rate-limiter-lld-focus/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Rate%20Limiter%20%E2%80%94%20LLD%20Focus&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Frate-limiter-lld-focus%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Frate-limiter-lld-focus%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/rate-limiter-lld-focus" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/rate-limiter" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Rate Limiter</span></a><a href="/notes/system-design/rate-limiting-algorithms-deep-dive" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Rate Limiting Algorithms Deep Dive</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Rate Limiter — LLD Focus" data-selector=".article-prose" data-article-slug="system-design/rate-limiter-lld-focus" data-article-title="Rate Limiter — LLD Focus" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

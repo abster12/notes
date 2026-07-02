@@ -1,0 +1,1331 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Intervals — Interview Prep · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link active" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-interval-representation-and-sorting" class="toc-link" data-toc-link="1-interval-representation-and-sorting" data-astro-cid-p33bl5ka>1. Interval Representation and Sorting</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#11-the-two-sort-orders" class="toc-link" data-toc-link="11-the-two-sort-orders" data-astro-cid-p33bl5ka>1.1 The two sort orders</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#12-the-three-overlap-relationships" class="toc-link" data-toc-link="12-the-three-overlap-relationships" data-astro-cid-p33bl5ka>1.2 The three overlap relationships</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#13-merging-two-overlapping-intervals" class="toc-link" data-toc-link="13-merging-two-overlapping-intervals" data-astro-cid-p33bl5ka>1.3 Merging two overlapping intervals</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-the-sweep-line-technique" class="toc-link" data-toc-link="2-the-sweep-line-technique" data-astro-cid-p33bl5ka>2. The Sweep-Line Technique</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-merge-intervals-leetcode-56" class="toc-link" data-toc-link="3-merge-intervals-leetcode-56" data-astro-cid-p33bl5ka>3. Merge Intervals (LeetCode 56)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach" class="toc-link" data-toc-link="approach" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#merge-flow-diagram" class="toc-link" data-toc-link="merge-flow-diagram" data-astro-cid-p33bl5ka>Merge flow diagram</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution" class="toc-link" data-toc-link="java-solution" data-astro-cid-p33bl5ka>Java solution</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#complexity" class="toc-link" data-toc-link="complexity" data-astro-cid-p33bl5ka>Complexity</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#notes" class="toc-link" data-toc-link="notes" data-astro-cid-p33bl5ka>Notes</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#4-insert-interval-leetcode-57" class="toc-link" data-toc-link="4-insert-interval-leetcode-57" data-astro-cid-p33bl5ka>4. Insert Interval (LeetCode 57)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-three-phase-linear-scan" class="toc-link" data-toc-link="approach-three-phase-linear-scan" data-astro-cid-p33bl5ka>Approach (three-phase linear scan)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-1" class="toc-link" data-toc-link="java-solution-1" data-astro-cid-p33bl5ka>Java solution</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#complexity-1" class="toc-link" data-toc-link="complexity-1" data-astro-cid-p33bl5ka>Complexity</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#notes-1" class="toc-link" data-toc-link="notes-1" data-astro-cid-p33bl5ka>Notes</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#5-meeting-rooms-i-leetcode-252" class="toc-link" data-toc-link="5-meeting-rooms-i-leetcode-252" data-astro-cid-p33bl5ka>5. Meeting Rooms I (LeetCode 252)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-1" class="toc-link" data-toc-link="approach-1" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-2" class="toc-link" data-toc-link="java-solution-2" data-astro-cid-p33bl5ka>Java solution</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#complexity-2" class="toc-link" data-toc-link="complexity-2" data-astro-cid-p33bl5ka>Complexity</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#notes-2" class="toc-link" data-toc-link="notes-2" data-astro-cid-p33bl5ka>Notes</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#6-meeting-rooms-ii-leetcode-253" class="toc-link" data-toc-link="6-meeting-rooms-ii-leetcode-253" data-astro-cid-p33bl5ka>6. Meeting Rooms II (LeetCode 253)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-a-min-heap-of-end-times-chronological" class="toc-link" data-toc-link="approach-a-min-heap-of-end-times-chronological" data-astro-cid-p33bl5ka>Approach A: Min-heap of end times (chronological)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-b-sweep-line-events" class="toc-link" data-toc-link="approach-b-sweep-line-events" data-astro-cid-p33bl5ka>Approach B: Sweep-line (events)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-min-heap" class="toc-link" data-toc-link="java-solution-min-heap" data-astro-cid-p33bl5ka>Java solution (min-heap)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-sweep-line-chronological-separation" class="toc-link" data-toc-link="java-solution-sweep-line-chronological-separation" data-astro-cid-p33bl5ka>Java solution (sweep-line, chronological separation)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#complexity-both-approaches" class="toc-link" data-toc-link="complexity-both-approaches" data-astro-cid-p33bl5ka>Complexity (both approaches)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#notes-3" class="toc-link" data-toc-link="notes-3" data-astro-cid-p33bl5ka>Notes</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#7-non-overlapping-intervals-leetcode-435" class="toc-link" data-toc-link="7-non-overlapping-intervals-leetcode-435" data-astro-cid-p33bl5ka>7. Non-overlapping Intervals (LeetCode 435)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-greedy-by-earliest-end" class="toc-link" data-toc-link="approach-greedy-by-earliest-end" data-astro-cid-p33bl5ka>Approach (greedy by earliest end)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#why-sort-by-end-not-start" class="toc-link" data-toc-link="why-sort-by-end-not-start" data-astro-cid-p33bl5ka>Why sort by end, not start?</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#greedy-flow" class="toc-link" data-toc-link="greedy-flow" data-astro-cid-p33bl5ka>Greedy flow</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-3" class="toc-link" data-toc-link="java-solution-3" data-astro-cid-p33bl5ka>Java solution</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#complexity-3" class="toc-link" data-toc-link="complexity-3" data-astro-cid-p33bl5ka>Complexity</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#notes-4" class="toc-link" data-toc-link="notes-4" data-astro-cid-p33bl5ka>Notes</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#8-interval-list-intersections-leetcode-986" class="toc-link" data-toc-link="8-interval-list-intersections-leetcode-986" data-astro-cid-p33bl5ka>8. Interval List Intersections (LeetCode 986)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-two-pointers" class="toc-link" data-toc-link="approach-two-pointers" data-astro-cid-p33bl5ka>Approach (two pointers)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-4" class="toc-link" data-toc-link="java-solution-4" data-astro-cid-p33bl5ka>Java solution</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#complexity-4" class="toc-link" data-toc-link="complexity-4" data-astro-cid-p33bl5ka>Complexity</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#notes-5" class="toc-link" data-toc-link="notes-5" data-astro-cid-p33bl5ka>Notes</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#9-employee-free-time-leetcode-759" class="toc-link" data-toc-link="9-employee-free-time-leetcode-759" data-astro-cid-p33bl5ka>9. Employee Free Time (LeetCode 759)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-2" class="toc-link" data-toc-link="approach-2" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-5" class="toc-link" data-toc-link="java-solution-5" data-astro-cid-p33bl5ka>Java solution</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#complexity-5" class="toc-link" data-toc-link="complexity-5" data-astro-cid-p33bl5ka>Complexity</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#notes-6" class="toc-link" data-toc-link="notes-6" data-astro-cid-p33bl5ka>Notes</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#10-partition-labels-leetcode-763" class="toc-link" data-toc-link="10-partition-labels-leetcode-763" data-astro-cid-p33bl5ka>10. Partition Labels (LeetCode 763)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-interval-fusion" class="toc-link" data-toc-link="approach-interval-fusion" data-astro-cid-p33bl5ka>Approach (interval fusion)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-6" class="toc-link" data-toc-link="java-solution-6" data-astro-cid-p33bl5ka>Java solution</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#complexity-6" class="toc-link" data-toc-link="complexity-6" data-astro-cid-p33bl5ka>Complexity</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#notes-7" class="toc-link" data-toc-link="notes-7" data-astro-cid-p33bl5ka>Notes</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#11-data-stream-as-disjoint-intervals-leetcode-352--summary-ranges" class="toc-link" data-toc-link="11-data-stream-as-disjoint-intervals-leetcode-352--summary-ranges" data-astro-cid-p33bl5ka>11. Data Stream as Disjoint Intervals (LeetCode 352 — Summary Ranges)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-3" class="toc-link" data-toc-link="approach-3" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-7" class="toc-link" data-toc-link="java-solution-7" data-astro-cid-p33bl5ka>Java solution</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#complexity-7" class="toc-link" data-toc-link="complexity-7" data-astro-cid-p33bl5ka>Complexity</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#notes-8" class="toc-link" data-toc-link="notes-8" data-astro-cid-p33bl5ka>Notes</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#12-the-telescope-problem" class="toc-link" data-toc-link="12-the-telescope-problem" data-astro-cid-p33bl5ka>12. The Telescope Problem</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-greedy-by-earliest-end-1" class="toc-link" data-toc-link="approach-greedy-by-earliest-end-1" data-astro-cid-p33bl5ka>Approach (greedy by earliest end)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-8" class="toc-link" data-toc-link="java-solution-8" data-astro-cid-p33bl5ka>Java solution</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#complexity-8" class="toc-link" data-toc-link="complexity-8" data-astro-cid-p33bl5ka>Complexity</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#notes-9" class="toc-link" data-toc-link="notes-9" data-astro-cid-p33bl5ka>Notes</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#13-comparison-table-interval-patterns" class="toc-link" data-toc-link="13-comparison-table-interval-patterns" data-astro-cid-p33bl5ka>13. Comparison Table: Interval Patterns</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#14-common-pitfalls" class="toc-link" data-toc-link="14-common-pitfalls" data-astro-cid-p33bl5ka>14. Common Pitfalls</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#15-pattern-recognition-table" class="toc-link" data-toc-link="15-pattern-recognition-table" data-astro-cid-p33bl5ka>15. Pattern Recognition Table</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#decision-shortcut" class="toc-link" data-toc-link="decision-shortcut" data-astro-cid-p33bl5ka>Decision shortcut</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/coding-interview/" class="article-category" data-astro-cid-sgg5joot>Coding Interview</a><h1 class="article-title" data-astro-cid-sgg5joot>Intervals — Interview Prep</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-medium-to-hard" data-astro-cid-sgg5joot>medium-to-hard</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 22 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 31 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>intervals</span><span class="tag" data-astro-cid-sgg5joot>sweep-line</span><span class="tag" data-astro-cid-sgg5joot>merge-intervals</span><span class="tag" data-astro-cid-sgg5joot>meeting-rooms</span><span class="tag" data-astro-cid-sgg5joot>java</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>greedy</span><span class="tag" data-astro-cid-sgg5joot>sorting</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="intervals">Intervals</h1>
+<p>Interval problems are about reasoning over ranges — start and end points on a line — and deciding how they overlap, merge, conflict, or leave gaps. They look deceptively simple, but the clean solutions all depend on the same opening move: <strong>sort by start time</strong>. Once sorted, almost every interval question reduces to a single left-to-right sweep comparing the current interval against the last one you kept.</p>
+<p>This article covers interval fundamentals, the sweep-line technique, ten fully-worked Java solutions with complexity analysis, and a pattern-recognition table to classify any new interval problem in seconds.</p>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>Problems involving ranges with start/end points, almost always solved by sorting by start time and sweeping left to right.</p>
+<p><strong>How it’s asked:</strong> “Merge intervals, insert interval, meeting rooms, meeting rooms II, interval list intersections — ‘given a set of ranges, determine overlaps/conflicts/merges.’”</p>
+<hr>
+<h2 id="1-interval-representation-and-sorting">1. Interval Representation and Sorting</h2>
+<p>An interval is a pair <code>[start, end]</code> representing a half-open or closed range. LeetCode conventionally treats intervals as closed <code>[start, end]</code> inclusive on both ends. In Java they arrive as <code>int[][] intervals</code> where each row is <code>{start, end}</code>.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Interval:  [1, 3]</span></span>
+<span class="line"><span>Meaning:   covers every point from 1 to 3 inclusive</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Number line:</span></span>
+<span class="line"><span>          1---2---3</span></span>
+<span class="line"><span>          [=======]      &#x3C;- the interval</span></span>
+<span class="line"><span>   ... 0   1   2   3   4 ...</span></span></code></pre>
+<h3 id="11-the-two-sort-orders">1.1 The two sort orders</h3>
+<p>Almost every solution begins by sorting. The two useful orderings are:</p>
+<ul>
+<li><strong>Sort by start, then end</strong> — the default. Used for merging, detecting overlaps, greedy removal, inserting.</li>
+<li><strong>Sort by end</strong> — used when you want the earliest-finishing interval (greedy interval scheduling: maximum non-overlapping set, activity selection).</li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#6A737D">// Sort by start ascending, ties broken by end ascending</span></span>
+<span class="line"><span style="color:#E1E4E8">Arrays.</span><span style="color:#B392F0">sort</span><span style="color:#E1E4E8">(intervals, (a, b) </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> a[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">!=</span><span style="color:#E1E4E8"> b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#F97583">        ?</span><span style="color:#E1E4E8"> Integer.</span><span style="color:#B392F0">compare</span><span style="color:#E1E4E8">(a[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">], b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">])</span></span>
+<span class="line"><span style="color:#F97583">        :</span><span style="color:#E1E4E8"> Integer.</span><span style="color:#B392F0">compare</span><span style="color:#E1E4E8">(a[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">], b[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]));</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">// Sort by end ascending (activity selection)</span></span>
+<span class="line"><span style="color:#E1E4E8">Arrays.</span><span style="color:#B392F0">sort</span><span style="color:#E1E4E8">(intervals, (a, b) </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> Integer.</span><span style="color:#B392F0">compare</span><span style="color:#E1E4E8">(a[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">], b[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]));</span></span></code></pre>
+<p>Use <code>Integer.compare</code> instead of <code>a[0] - b[0]</code> to avoid integer overflow on large negative values.</p>
+<h3 id="12-the-three-overlap-relationships">1.2 The three overlap relationships</h3>
+<p>Given two sorted intervals <code>A = [a0, a1]</code> and <code>B = [b0, b1]</code> with <code>a0 &lt;= b0</code>:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Case 1: OVERLAP       A: [1, 5]  B: [3, 7]   -> b0 &#x3C;= a1</span></span>
+<span class="line"><span>   1==2==3==4==5==6==7</span></span>
+<span class="line"><span>   [========]</span></span>
+<span class="line"><span>      [========]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Case 2: TOUCHING      A: [1, 4]  B: [4, 7]   -> b0 == a1</span></span>
+<span class="line"><span>   1==2==3==4==5==6==7</span></span>
+<span class="line"><span>   [======]</span></span>
+<span class="line"><span>           [======]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Case 3: DISJOINT      A: [1, 3]  B: [5, 7]   -> b0 > a1</span></span>
+<span class="line"><span>   1==2==3==4==5==6==7</span></span>
+<span class="line"><span>   [===]</span></span>
+<span class="line"><span>            [===]</span></span></code></pre>
+<p>The overlap test (closed intervals): <code>boolean overlaps = b0 &lt;= a1;</code>
+For half-open <code>[start, end)</code>: <code>boolean overlaps = b0 &lt; a1;</code></p>
+<h3 id="13-merging-two-overlapping-intervals">1.3 Merging two overlapping intervals</h3>
+<p>When <code>A</code> and <code>B</code> overlap, their union spans both. Since <code>a0 &lt;= b0</code> (sorted), the merged start is always <code>a0</code>; you only extend the end:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>A: [1, 5]   B: [3, 8]   ->   merged: [1, max(5,8)] = [1, 8]</span></span>
+<span class="line"><span>   1==2==3==4==5==6==7==8</span></span>
+<span class="line"><span>   [========]</span></span>
+<span class="line"><span>      [========]</span></span>
+<span class="line"><span>   [================]</span></span></code></pre>
+<hr>
+<h2 id="2-the-sweep-line-technique">2. The Sweep-Line Technique</h2>
+<p>Some interval problems are not about the intervals themselves but about <strong>how many are active at each moment</strong>. The sweep-line (line sweep) technique handles this:</p>
+<ol>
+<li>Decompose every interval <code>[start, end]</code> into two <strong>events</strong>: a <code>+1</code> at start, a <code>-1</code> at end.</li>
+<li>Sort events by time. At a tie, process <code>-1</code> (end) before <code>+1</code> (start) so that a meeting ending at time t frees a room before one starting at t grabs it.</li>
+<li>Walk the events left to right, maintaining a running count. The answer is a function of that count (its maximum, whether it exceeds a threshold, etc.).</li>
+</ol>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Intervals: [0,30], [5,10], [15,20]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Events (sorted, end before start on ties):</span></span>
+<span class="line"><span>   time 0: +1 (count=1)</span></span>
+<span class="line"><span>   time 5: +1 (count=2)  &#x3C;- peak: 2 rooms</span></span>
+<span class="line"><span>   time 10: -1 (count=1)</span></span>
+<span class="line"><span>   time 15: +1 (count=2)  &#x3C;- peak</span></span>
+<span class="line"><span>   time 20: -1 (count=1)</span></span>
+<span class="line"><span>   time 30: -1 (count=0)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Count over time:</span></span>
+<span class="line"><span>   2 |      * *          * *</span></span>
+<span class="line"><span>   1 |    *       *    *       *</span></span>
+<span class="line"><span>   0 |____________________________</span></span>
+<span class="line"><span>      0   5  10  15  20  30</span></span></code></pre>
+<p>Sweep-line is the conceptual parent of the two-pointer / min-heap solutions for Meeting Rooms II. It generalizes to “maximum number of overlapping intervals at any point,” “find all peak concurrency windows,” and “when is the system idle.”</p>
+<hr>
+<h2 id="3-merge-intervals-leetcode-56">3. Merge Intervals (LeetCode 56)</h2>
+<p>Given an array of intervals, merge all overlapping intervals and return the non-overlapping set covering the same ranges.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Input:  [[1,3],[2,6],[8,10],[15,18]]</span></span>
+<span class="line"><span>        1==2==3==4==5==6  8==9==10  15==16==17==18</span></span>
+<span class="line"><span>        [====]</span></span>
+<span class="line"><span>          [======]          [===]    [====]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>After merge: [[1,6],[8,10],[15,18]]</span></span>
+<span class="line"><span>        1========6  8==10  15====18</span></span>
+<span class="line"><span>        [=========] [===]  [======]</span></span></code></pre>
+<h3 id="approach">Approach</h3>
+<ol>
+<li>Sort by start.</li>
+<li>Initialize <code>merged</code> with the first interval.</li>
+<li>For each subsequent interval, compare its start to the last merged interval’s end.
+<ul>
+<li>If <code>start &lt;= lastEnd</code>: overlap — extend <code>lastEnd = max(lastEnd, currentEnd)</code>.</li>
+<li>Else: disjoint — append the current interval as a new entry.</li>
+</ul>
+</li>
+</ol>
+<h3 id="merge-flow-diagram">Merge flow diagram</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>sorted: [1,3] [2,6] [8,10] [15,18]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 1: merged = [[1,3]]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 2: curr=[2,6], last=[1,3]</span></span>
+<span class="line"><span>        2 &#x3C;= 3?  YES -> overlap, extend end</span></span>
+<span class="line"><span>        last = [1, max(3,6)] = [1,6]</span></span>
+<span class="line"><span>        merged = [[1,6]]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 3: curr=[8,10], last=[1,6]</span></span>
+<span class="line"><span>        8 &#x3C;= 6?  NO  -> disjoint, append</span></span>
+<span class="line"><span>        merged = [[1,6],[8,10]]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 4: curr=[15,18], last=[8,10]</span></span>
+<span class="line"><span>        15 &#x3C;= 10? NO  -> disjoint, append</span></span>
+<span class="line"><span>        merged = [[1,6],[8,10],[15,18]]</span></span></code></pre>
+<h3 id="java-solution">Java solution</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[][] </span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">intervals</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (intervals.length </span><span style="color:#F97583">&#x3C;=</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#E1E4E8"> intervals;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // Sort by start time</span></span>
+<span class="line"><span style="color:#E1E4E8">        Arrays.</span><span style="color:#B392F0">sort</span><span style="color:#E1E4E8">(intervals, (a, b) </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> Integer.</span><span style="color:#B392F0">compare</span><span style="color:#E1E4E8">(a[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">], b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]));</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[]> merged </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">        merged.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(intervals[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> intervals.length; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8">[] last </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> merged.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(merged.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8">[] curr </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> intervals[i];</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (curr[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> last[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]) {</span></span>
+<span class="line"><span style="color:#6A737D">                // Overlapping: extend the end</span></span>
+<span class="line"><span style="color:#E1E4E8">                last[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(last[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">], curr[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]);</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#6A737D">                // Disjoint: start a new merged interval</span></span>
+<span class="line"><span style="color:#E1E4E8">                merged.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(curr);</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> merged.</span><span style="color:#B392F0">toArray</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[merged.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">()][]);</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="complexity">Complexity</h3>
+<ul>
+<li>Time: O(n log n) for sorting + O(n) sweep = O(n log n).</li>
+<li>Space: O(n) for the output list (or O(log n) sort stack if you exclude output).</li>
+</ul>
+<h3 id="notes">Notes</h3>
+<ul>
+<li>Sorting by start alone is sufficient; you do not need the end tiebreaker for correctness. If two intervals share a start, <code>max(end)</code> handles it.</li>
+</ul>
+<hr>
+<h2 id="4-insert-interval-leetcode-57">4. Insert Interval (LeetCode 57)</h2>
+<p>You are given a set of non-overlapping intervals sorted by start, plus one new interval. Insert it, merging as needed.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Input:  intervals = [[1,2],[3,5],[6,7],[8,10],[12,16]], newInterval = [4,8]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        1=2  3==5  6=7  8==10     12====16</span></span>
+<span class="line"><span>        [=]  [==]  [=]  [===]     [====]</span></span>
+<span class="line"><span>                ^^^^^^^^^^^^^</span></span>
+<span class="line"><span>                new [4,8] overlaps [3,5],[6,7],[8,10]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Result: [[1,2],[3,10],[12,16]]</span></span>
+<span class="line"><span>        [=]  [======]  [====]</span></span></code></pre>
+<h3 id="approach-three-phase-linear-scan">Approach (three-phase linear scan)</h3>
+<p>Because the input is already sorted, we avoid a full re-sort. Walk left to right in three phases:</p>
+<ol>
+<li><strong>Add all intervals ending before <code>newInterval</code> starts</strong> — no overlap, copy as-is.</li>
+<li><strong>Merge all overlapping intervals</strong> — any interval whose <code>start &lt;= newEnd</code>. Update <code>newInterval</code> to the union. Stop at the first disjoint interval.</li>
+<li><strong>Add the merged <code>newInterval</code>, then the rest</strong> — copy remaining intervals.</li>
+</ol>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>intervals: [1,2] [3,5] [6,7] [8,10] [12,16], new: [4,8]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Phase 1: [1,2] ends 2 &#x3C; 4 -> add. [3,5] ends 5 >= 4 -> STOP.</span></span>
+<span class="line"><span>Phase 2: [3,5] overlaps -> new=[3,8]. [6,7] overlaps -> new=[3,8].</span></span>
+<span class="line"><span>         [8,10] overlaps -> new=[3,10]. [12,16] disjoint (12>10) -> STOP.</span></span>
+<span class="line"><span>Phase 3: add [3,10], add [12,16].</span></span>
+<span class="line"><span>Result: [[1,2],[3,10],[12,16]]</span></span></code></pre>
+<h3 id="java-solution-1">Java solution</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[][] </span><span style="color:#B392F0">insert</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">intervals</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">newInterval</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[]> result </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> intervals.length;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // Phase 1: add all intervals that end before newInterval starts</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> intervals[i][</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> newInterval[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            result.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(intervals[i]);</span></span>
+<span class="line"><span style="color:#E1E4E8">            i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // Phase 2: merge all overlapping intervals into newInterval</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> intervals[i][</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> newInterval[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            newInterval[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">min</span><span style="color:#E1E4E8">(newInterval[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">], intervals[i][</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]);</span></span>
+<span class="line"><span style="color:#E1E4E8">            newInterval[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(newInterval[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">], intervals[i][</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]);</span></span>
+<span class="line"><span style="color:#E1E4E8">            i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">        result.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(newInterval);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // Phase 3: add the remaining intervals</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> n) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            result.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(intervals[i]);</span></span>
+<span class="line"><span style="color:#E1E4E8">            i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> result.</span><span style="color:#B392F0">toArray</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[result.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">()][]);</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="complexity-1">Complexity</h3>
+<ul>
+<li>Time: O(n) — single pass, input already sorted.</li>
+<li>Space: O(n) for output.</li>
+</ul>
+<h3 id="notes-1">Notes</h3>
+<ul>
+<li>The overlap condition in phase 2 is the symmetric overlap test: <code>a0 &lt;= b1 &amp;&amp; b0 &lt;= a1</code>. We already skipped everything ending before <code>newInterval[0]</code>, so checking <code>intervals[i][0] &lt;= newInterval[1]</code> suffices.</li>
+<li>If the input were not sorted, you’d append <code>newInterval</code>, sort, then run Merge Intervals — O(n log n). The three-phase scan exploits the sorted invariant for O(n).</li>
+</ul>
+<hr>
+<h2 id="5-meeting-rooms-i-leetcode-252">5. Meeting Rooms I (LeetCode 252)</h2>
+<p>Given meeting intervals <code>[start, end)</code>, determine whether a person could attend <strong>all</strong> meetings (i.e., no two overlap).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Input:  [[0,30],[5,10],[15,20]]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        0======30</span></span>
+<span class="line"><span>           5=10     15=20        -> overlaps -> CANNOT attend all</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Input:  [[7,10],[2,4]]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        2=4    7==10             -> no overlap -> CAN attend all</span></span></code></pre>
+<h3 id="approach-1">Approach</h3>
+<ol>
+<li>Sort by start.</li>
+<li>Check each consecutive pair: if the next meeting starts before the previous ends, return false.</li>
+</ol>
+<p>This is the simplest possible overlap check — you only need adjacent comparisons because sorting guarantees that if any overlap exists, it shows up between neighbors.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Sorted: [0,30] [5,10] [15,20]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Check 1: [0,30] vs [5,10]   5 &#x3C; 30?  YES -> overlap -> false</span></span></code></pre>
+<h3 id="java-solution-2">Java solution</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> canAttendMeetings</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">intervals</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (intervals.length </span><span style="color:#F97583">&#x3C;=</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // Sort by start time</span></span>
+<span class="line"><span style="color:#E1E4E8">        Arrays.</span><span style="color:#B392F0">sort</span><span style="color:#E1E4E8">(intervals, (a, b) </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> Integer.</span><span style="color:#B392F0">compare</span><span style="color:#E1E4E8">(a[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">], b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]));</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> intervals.length; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6A737D">            // Half-open: overlap if next starts before prev ends</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (intervals[i][</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> intervals[i </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">][</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]) {</span></span>
+<span class="line"><span style="color:#F97583">                return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="complexity-2">Complexity</h3>
+<ul>
+<li>Time: O(n log n).</li>
+<li>Space: O(log n) for sort (or O(1) if in-place sort excluded).</li>
+</ul>
+<h3 id="notes-2">Notes</h3>
+<ul>
+<li>This problem uses <strong>half-open</strong> intervals <code>[start, end)</code>, so <code>[2,4]</code> and <code>[4,6]</code> do NOT conflict. Use strict <code>&lt;</code>, not <code>&lt;=</code>.</li>
+</ul>
+<hr>
+<h2 id="6-meeting-rooms-ii-leetcode-253">6. Meeting Rooms II (LeetCode 253)</h2>
+<p>Given meeting intervals <code>[start, end)</code>, find the <strong>minimum number of conference rooms</strong> required so no two meetings share a room.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Input:  [[0,30],[5,10],[15,20]]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        0======30</span></span>
+<span class="line"><span>           5=10        &#x3C;- needs room 2</span></span>
+<span class="line"><span>              15=20    &#x3C;- reuses room 2 (10 frees before 15)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Peak concurrency = 2 -> answer: 2 rooms</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Timeline (rooms occupied):</span></span>
+<span class="line"><span>   Room 1: [0,30]          ##############################</span></span>
+<span class="line"><span>   Room 2:       [5,10][15,20]   #####  #####</span></span></code></pre>
+<p>This is the canonical “maximum number of overlapping intervals at any point” problem.</p>
+<h3 id="approach-a-min-heap-of-end-times-chronological">Approach A: Min-heap of end times (chronological)</h3>
+<ol>
+<li>Sort by start.</li>
+<li>Maintain a min-heap of <strong>end times</strong> of meetings currently occupying rooms.</li>
+<li>For each meeting: if the earliest-ending meeting has finished (<code>heap.peek() &lt;= start</code>), reuse that room (poll it). Push the current meeting’s end.</li>
+<li>The heap size at the end is the number of rooms.</li>
+</ol>
+<p>The heap always contains exactly the meetings that are “still going” when the current meeting starts. Its size is the concurrency count; its maximum size over the loop is the answer. Since we only ever need the final max and the heap never shrinks below the peak in a greedy reuse, the final heap size equals the peak.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Sorted: [0,30] [5,10] [15,20]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>[0,30]: heap empty -> push 30.          heap={30}      size=1</span></span>
+<span class="line"><span>[5,10]: peek=30, 30&#x3C;=5? NO -> push 10.  heap={10,30}   size=2  &#x3C;- peak</span></span>
+<span class="line"><span>[15,20]: peek=10, 10&#x3C;=15? YES -> poll, push 20.        heap={20,30}  size=2</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Answer = 2</span></span></code></pre>
+<h3 id="approach-b-sweep-line-events">Approach B: Sweep-line (events)</h3>
+<p>Decompose into events, sort, and track the running count. This generalizes better.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Events (end before start on ties):</span></span>
+<span class="line"><span>   (0,+1) (5,+1) (10,-1) (15,+1) (20,-1) (30,-1)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   count: 1 -> 2(max) -> 1 -> 2(max) -> 1 -> 0</span></span>
+<span class="line"><span>   Answer = max(count) = 2</span></span></code></pre>
+<h3 id="java-solution-min-heap">Java solution (min-heap)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> minMeetingRooms</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">intervals</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (intervals.length </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // Sort by start time</span></span>
+<span class="line"><span style="color:#E1E4E8">        Arrays.</span><span style="color:#B392F0">sort</span><span style="color:#E1E4E8">(intervals, (a, b) </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> Integer.</span><span style="color:#B392F0">compare</span><span style="color:#E1E4E8">(a[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">], b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]));</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // Min-heap of end times (rooms currently in use)</span></span>
+<span class="line"><span style="color:#E1E4E8">        PriorityQueue&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> rooms </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> PriorityQueue&#x3C;>();</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] interval </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> intervals) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> start </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> interval[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> end </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> interval[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">            // If the earliest-finishing room is free, reuse it</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">rooms.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> rooms.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> start) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                rooms.</span><span style="color:#B392F0">poll</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">            rooms.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(end);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> rooms.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="java-solution-sweep-line-chronological-separation">Java solution (sweep-line, chronological separation)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> minMeetingRooms</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">intervals</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> intervals.length;</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[] starts </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[n];</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[] ends </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[n];</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> n; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            starts[i] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> intervals[i][</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#E1E4E8">            ends[i] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> intervals[i][</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">        Arrays.</span><span style="color:#B392F0">sort</span><span style="color:#E1E4E8">(starts);</span></span>
+<span class="line"><span style="color:#E1E4E8">        Arrays.</span><span style="color:#B392F0">sort</span><span style="color:#E1E4E8">(ends);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> rooms </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, maxRooms </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> s </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, e </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (s </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> n) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (starts[s] </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> ends[e]) {</span></span>
+<span class="line"><span style="color:#6A737D">                // A meeting starts before the next one ends -> need a room</span></span>
+<span class="line"><span style="color:#E1E4E8">                rooms</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">                s</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">                maxRooms </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(maxRooms, rooms);</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#6A737D">                // A meeting ended -> free a room</span></span>
+<span class="line"><span style="color:#E1E4E8">                rooms</span><span style="color:#F97583">--</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">                e</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> maxRooms;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>The two-array approach mirrors the event sweep without explicit event objects: <code>starts[s] &lt; ends[e]</code> means “a new meeting begins before the in-progress one ends” → increment; otherwise a meeting ended → decrement and advance the end pointer.</p>
+<h3 id="complexity-both-approaches">Complexity (both approaches)</h3>
+<ul>
+<li>Time: O(n log n) — sorting dominates.</li>
+<li>Space: O(n) for the heap or the two arrays.</li>
+</ul>
+<h3 id="notes-3">Notes</h3>
+<ul>
+<li>The tie-breaking rule (end before start, i.e., <code>&lt;=</code> in the heap check, <code>&lt;</code> in the two-pointer check) is what makes a meeting ending at t free its room for one starting at t. Get this wrong and you over-count rooms.</li>
+<li>This maps directly onto “minimum platforms for trains,” “maximum concurrent streams,” and “car pooling capacity.”</li>
+</ul>
+<hr>
+<h2 id="7-non-overlapping-intervals-leetcode-435">7. Non-overlapping Intervals (LeetCode 435)</h2>
+<p>Given intervals, find the <strong>minimum number to remove</strong> so the rest are non-overlapping. This is the complement of “maximum number of non-overlapping intervals you can keep” — the classic <strong>activity selection / interval scheduling</strong> problem.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Input:  [[1,2],[2,3],[3,4],[1,3]]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        1=2  2=3  3=4</span></span>
+<span class="line"><span>        [=]  [=]  [=]</span></span>
+<span class="line"><span>        [===]          &#x3C;- [1,3] overlaps both [1,2] and [2,3]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Remove [1,3] -> 1 removal -> remaining 3 are non-overlapping.</span></span>
+<span class="line"><span>(Or remove [1,2] and [2,3], but that's 2 removals — not minimal.)</span></span></code></pre>
+<h3 id="approach-greedy-by-earliest-end">Approach (greedy by earliest end)</h3>
+<p>The greedy choice that maximizes kept intervals: <strong>always keep the interval that ends earliest</strong> — it leaves the most room for future intervals.</p>
+<ol>
+<li>Sort by end time.</li>
+<li>Track <code>end</code> of the last kept interval.</li>
+<li>For each interval: if <code>start &gt;= end</code>, keep it (update <code>end</code>). Otherwise, remove it (increment count).</li>
+</ol>
+<h3 id="why-sort-by-end-not-start">Why sort by end, not start?</h3>
+<p>Consider <code>[[1,5],[2,3],[4,6]]</code>: sorting by start picks <code>[1,5]</code> first (end=5), which blocks <code>[2,3]</code> and <code>[4,6]</code> — 2 removals. Sorting by end picks <code>[2,3]</code> first (end=3), then <code>[4,6]</code> (start 4 &gt;= 3) — only 1 removal. Sorting by start can greedily pick a long interval that blocks many short ones; sorting by end always picks the one that finishes soonest, maximizing remaining capacity.</p>
+<h3 id="greedy-flow">Greedy flow</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>sorted by end: [1,2] [2,3] [1,3] [3,4]</span></span>
+<span class="line"><span>end=-inf, removed=0</span></span>
+<span class="line"><span>[1,2]: 1>=end? YES -> keep, end=2</span></span>
+<span class="line"><span>[2,3]: 2>=2?   YES -> keep, end=3</span></span>
+<span class="line"><span>[1,3]: 1>=3?   NO  -> remove, removed=1</span></span>
+<span class="line"><span>[3,4]: 3>=3?   YES -> keep, end=4</span></span>
+<span class="line"><span>Answer: 1 removal</span></span></code></pre>
+<h3 id="java-solution-3">Java solution</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> eraseOverlapIntervals</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">intervals</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (intervals.length </span><span style="color:#F97583">&#x3C;=</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // Sort by end time (greedy: keep earliest-finishing)</span></span>
+<span class="line"><span style="color:#E1E4E8">        Arrays.</span><span style="color:#B392F0">sort</span><span style="color:#E1E4E8">(intervals, (a, b) </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> Integer.</span><span style="color:#B392F0">compare</span><span style="color:#E1E4E8">(a[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">], b[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]));</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> removed </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> end </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> intervals[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">][</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> intervals.length; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (intervals[i][</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">>=</span><span style="color:#E1E4E8"> end) {</span></span>
+<span class="line"><span style="color:#6A737D">                // No overlap: keep this interval, extend end</span></span>
+<span class="line"><span style="color:#E1E4E8">                end </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> intervals[i][</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#6A737D">                // Overlap with last kept: remove this one</span></span>
+<span class="line"><span style="color:#E1E4E8">                removed</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> removed;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="complexity-3">Complexity</h3>
+<ul>
+<li>Time: O(n log n).</li>
+<li>Space: O(log n) for sort.</li>
+</ul>
+<h3 id="notes-4">Notes</h3>
+<ul>
+<li>For half-open intervals, use <code>&gt;</code> instead of <code>&gt;=</code> in the overlap check. LeetCode 435 uses closed intervals, so <code>start &gt;= end</code> means non-overlapping (touching is allowed).</li>
+<li>The problem is equivalent to finding the <strong>maximum independent set in an interval graph</strong>, which is polynomial precisely because the greedy-by-end strategy is optimal.</li>
+</ul>
+<hr>
+<h2 id="8-interval-list-intersections-leetcode-986">8. Interval List Intersections (LeetCode 986)</h2>
+<p>Given two lists of <strong>closed, disjoint, sorted</strong> intervals, return their intersection.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Input:  A = [[0,2],[5,10],[13,23],[24,25]]</span></span>
+<span class="line"><span>        B = [[1,5],[8,12],[15,24],[25,26]]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        A: [0=2]    [5====10] [13========23] [24]</span></span>
+<span class="line"><span>        B:  [1==5]     [8=12]    [15======24]  [25]</span></span>
+<span class="line"><span>Output: [[1,2],[5,5],[8,10],[15,23],[24,24],[25,25]]</span></span></code></pre>
+<h3 id="approach-two-pointers">Approach (two pointers)</h3>
+<p>Both lists are sorted and internally disjoint. Walk both with two pointers <code>i</code> and <code>j</code>:</p>
+<ol>
+<li>Compute the intersection: <code>lo = max(a0, b0)</code>, <code>hi = min(a1, b1)</code>. If <code>lo &lt;= hi</code>, record it.</li>
+<li>Advance the pointer of whichever interval <strong>ends first</strong> — it cannot intersect anything further in the other list.</li>
+</ol>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Step: A[i]=[0,2], B[j]=[1,5] -> lo=1,hi=2 -> [1,2]; A ends first -> i++</span></span>
+<span class="line"><span>Step: A[i]=[5,10], B[j]=[1,5] -> lo=5,hi=5 -> [5,5]; B ends first -> j++</span></span>
+<span class="line"><span>Step: A[i]=[5,10], B[j]=[8,12] -> lo=8,hi=10 -> [8,10]; A ends first -> i++</span></span>
+<span class="line"><span>...continue until either list is exhausted.</span></span></code></pre>
+<h3 id="java-solution-4">Java solution</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[][] </span><span style="color:#B392F0">intervalIntersection</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">firstList</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">secondList</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[]> result </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, j </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> firstList.length </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> j </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> secondList.length) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8">[] a </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> firstList[i];</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8">[] b </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> secondList[j];</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">            // Intersection of a and b</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(a[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">], b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]);</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">min</span><span style="color:#E1E4E8">(a[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">], b[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (lo </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> hi) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                result.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{lo, hi});</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">            // Advance the one that ends first</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (a[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> b[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">                j</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> result.</span><span style="color:#B392F0">toArray</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[result.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">()][]);</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="complexity-4">Complexity</h3>
+<ul>
+<li>Time: O(m + n) — each pointer advances at most its list length.</li>
+<li>Space: O(m + n) for output in the worst case.</li>
+</ul>
+<h3 id="notes-5">Notes</h3>
+<ul>
+<li>The advance rule (<code>a[1] &lt; b[1] ? i++ : j++</code>) is the key: the interval that ends earlier cannot intersect anything further in the other list, so it is done.</li>
+<li>This is essentially the merge step of merge-sort, adapted to compute <code>max(start)</code> / <code>min(end)</code>.</li>
+</ul>
+<hr>
+<h2 id="9-employee-free-time-leetcode-759">9. Employee Free Time (LeetCode 759)</h2>
+<p>Given multiple employees’ schedules (each a list of disjoint busy intervals, all sorted), find the <strong>common free time</strong> — intervals where every employee is free. Return only free time strictly between the overall earliest and latest busy points.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Input:  [[[1,2],[5,6]], [[1,3]], [[4,10]]]  (3 employees)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Flattened &#x26; sorted: [1,2] [1,3] [4,10] [5,6]</span></span>
+<span class="line"><span>Merged busy:        [1,3] [4,10]</span></span>
+<span class="line"><span>Free gaps:          [3,4]  (between merged intervals)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Output: [[3,4]]</span></span></code></pre>
+<h3 id="approach-2">Approach</h3>
+<ol>
+<li><strong>Flatten</strong> all employees’ intervals into one list.</li>
+<li><strong>Merge</strong> them (Merge Intervals pattern) to get the union of all busy time.</li>
+<li>The <strong>gaps between consecutive merged intervals</strong> are the common free time — a time is commonly free iff no employee is busy there.</li>
+</ol>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Flattened: [1,2] [5,6] [1,3] [4,10]</span></span>
+<span class="line"><span>Sorted:    [1,2] [1,3] [4,10] [5,6]</span></span>
+<span class="line"><span>Merged:    [1,3] [4,10]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Gaps:</span></span>
+<span class="line"><span>  between [1,3] and [4,10] -> [3,4]  (free!)</span></span>
+<span class="line"><span>  before [1,3]  -> excluded (before earliest)</span></span>
+<span class="line"><span>  after  [4,10] -> excluded (after latest)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Output: [[3,4]]</span></span></code></pre>
+<h3 id="java-solution-5">Java solution</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#6A737D">/*</span></span>
+<span class="line"><span style="color:#6A737D">// Definition for Interval.</span></span>
+<span class="line"><span style="color:#6A737D">class Interval {</span></span>
+<span class="line"><span style="color:#6A737D">    public int start;</span></span>
+<span class="line"><span style="color:#6A737D">    public int end;</span></span>
+<span class="line"><span style="color:#6A737D">    public Interval() {}</span></span>
+<span class="line"><span style="color:#6A737D">    public Interval(int _start, int _end) {</span></span>
+<span class="line"><span style="color:#6A737D">        start = _start;</span></span>
+<span class="line"><span style="color:#6A737D">        end = _end;</span></span>
+<span class="line"><span style="color:#6A737D">    }</span></span>
+<span class="line"><span style="color:#6A737D">}</span></span>
+<span class="line"><span style="color:#6A737D">*/</span></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> List&#x3C;</span><span style="color:#F97583">Interval</span><span style="color:#E1E4E8">> </span><span style="color:#B392F0">employeeFreeTime</span><span style="color:#E1E4E8">(List&#x3C;List&#x3C;</span><span style="color:#F97583">Interval</span><span style="color:#E1E4E8">>> </span><span style="color:#FFAB70">schedule</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;</span><span style="color:#F97583">Interval</span><span style="color:#E1E4E8">> all </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (List&#x3C;</span><span style="color:#F97583">Interval</span><span style="color:#E1E4E8">> emp </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> schedule) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            all.</span><span style="color:#B392F0">addAll</span><span style="color:#E1E4E8">(emp);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // Sort by start</span></span>
+<span class="line"><span style="color:#E1E4E8">        all.</span><span style="color:#B392F0">sort</span><span style="color:#E1E4E8">((a, b) </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> Integer.</span><span style="color:#B392F0">compare</span><span style="color:#E1E4E8">(a.start, b.start));</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // Merge</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;</span><span style="color:#F97583">Interval</span><span style="color:#E1E4E8">> merged </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (Interval iv </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> all) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (merged.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">||</span><span style="color:#E1E4E8"> iv.start </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> merged.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(merged.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">).end) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                merged.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(iv);</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">                merged.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(merged.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">).end </span><span style="color:#F97583">=</span></span>
+<span class="line"><span style="color:#E1E4E8">                    Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(merged.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(merged.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">).end, iv.end);</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // Gaps between merged intervals are free time</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;</span><span style="color:#F97583">Interval</span><span style="color:#E1E4E8">> free </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> merged.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">(); i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> gapStart </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> merged.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(i </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">).end;</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> gapEnd </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> merged.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(i).start;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (gapStart </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> gapEnd) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                free.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#B392F0"> Interval</span><span style="color:#E1E4E8">(gapStart, gapEnd));</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> free;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="complexity-5">Complexity</h3>
+<ul>
+<li>Time: O(C log C) where C is total number of intervals across all employees.</li>
+<li>Space: O(C) for the flattened and merged lists.</li>
+</ul>
+<h3 id="notes-6">Notes</h3>
+<ul>
+<li>The problem uses a custom <code>Interval</code> class (not <code>int[]</code>) on LeetCode — adjust to the platform’s signature.</li>
+<li>Free time outside the global busy range is excluded by construction — the gap loop only runs between merged intervals.</li>
+<li>A priority-heap variant avoids the full sort: merge k sorted lists with a min-heap, merging as you pop. Same complexity class, but lower constant if one employee has huge data.</li>
+<li>This is the dual of Meeting Rooms II: instead of peak concurrency, you want peak <strong>idle</strong> time (gaps where concurrency is 0).</li>
+</ul>
+<hr>
+<h2 id="10-partition-labels-leetcode-763">10. Partition Labels (LeetCode 763)</h2>
+<p>A string <code>S</code> of lowercase letters. Partition it into as many pieces as possible so each letter appears in at most one piece. Return the sizes.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Input:  "ababcbacadefegdehijhklij"</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  a b a b c b a c a d e f e g d e h i j h k l i j</span></span>
+<span class="line"><span>  |---------------| |-----------| |-------------|</span></span>
+<span class="line"><span>        part 1          part 2        part 3</span></span>
+<span class="line"><span>  sizes: 9              7              8</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Output: [9,7,8]</span></span></code></pre>
+<h3 id="approach-interval-fusion">Approach (interval fusion)</h3>
+<p>Treat each letter’s first-to-last occurrence as an interval. Partition boundaries are the points where all intervals that started have closed.</p>
+<ol>
+<li>Record <code>last[char]</code> — the last index of each character.</li>
+<li>Scan left to right, maintaining <code>end</code> = the furthest last-occurrence among characters seen so far.</li>
+<li>When the scan index reaches <code>end</code>, all characters in the current segment are complete — cut here.</li>
+</ol>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>"ababcbaca | defegde | hijhklij"</span></span>
+<span class="line"><span>  'a' last=8, 'b' last=5, 'c' last=7 -> end=8, cut at i=8 (size 9)</span></span>
+<span class="line"><span>  'd' last=14, 'e' last=15, 'f' last=9, 'g' last=13 -> end=15, cut at i=15 (size 7)</span></span>
+<span class="line"><span>  'h' last=19, 'i' last=22, 'j' last=23, 'k' last=20, 'l' last=21 -> end=23, cut (size 8)</span></span></code></pre>
+<h3 id="java-solution-6">Java solution</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> </span><span style="color:#B392F0">partitionLabels</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[] last </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[</span><span style="color:#79B8FF">26</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">(); i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            last[s.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(i) </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'a'</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> i;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> result </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> start </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> end </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">(); i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            end </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(end, last[s.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(i) </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'a'</span><span style="color:#E1E4E8">]);</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> end) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                result.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(i </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> start </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">                start </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="complexity-6">Complexity</h3>
+<ul>
+<li>Time: O(n) — two passes.</li>
+<li>Space: O(1) — the <code>last</code> array is fixed size 26.</li>
+</ul>
+<h3 id="notes-7">Notes</h3>
+<ul>
+<li>This is an interval problem in disguise: each character defines an interval <code>[first, last]</code>, and the algorithm greedily merges overlapping intervals, emitting a partition whenever the merged interval closes.</li>
+<li>The “extend end to max last-occurrence” trick appears in “jump game” and “video stitching.”</li>
+</ul>
+<hr>
+<h2 id="11-data-stream-as-disjoint-intervals-leetcode-352--summary-ranges">11. Data Stream as Disjoint Intervals (LeetCode 352 — Summary Ranges)</h2>
+<p>Design a structure that supports <code>addNum(val)</code> and <code>getIntervals()</code> returning the current numbers as a list of disjoint sorted ranges.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>addNum(1) -> [[1,1]]      addNum(7) -> [[1,1],[3,3],[7,7]]</span></span>
+<span class="line"><span>addNum(3) -> [[1,1],[3,3]]  addNum(2) -> [[1,3],[7,7]]  (2 bridges 1 and 3)</span></span>
+<span class="line"><span>addNum(6) -> [[1,3],[6,7]]  (6 extends into 7's range)</span></span>
+<span class="line"><span>getIntervals() -> [[1,3],[6,7]]</span></span></code></pre>
+<h3 id="approach-3">Approach</h3>
+<p>Maintain a sorted set of disjoint intervals keyed by start (a <code>TreeMap&lt;Integer, int[]&gt;</code> mapping <code>start -&gt; [start, end]</code> gives O(log n) floor/ceiling lookups). On each insertion:</p>
+<ol>
+<li>Find where <code>val</code> belongs via <code>lowerKey</code>/<code>higherKey</code>. Skip if already covered.</li>
+<li>If <code>val</code> bridges left and right (<code>left.end == val-1</code> and <code>right.start == val+1</code>): merge both into one.</li>
+<li>Else if <code>val</code> extends left (<code>left.end == val-1</code>): extend it.</li>
+<li>Else if <code>val</code> extends right (<code>right.start == val+1</code>): shift its start left.</li>
+<li>Else: insert a new singleton <code>[val, val]</code>.</li>
+</ol>
+<h3 id="java-solution-7">Java solution</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> SummaryRanges</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#6A737D">    // start -> [start, end]</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#E1E4E8"> TreeMap&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[]> intervals;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#B392F0"> SummaryRanges</span><span style="color:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#E1E4E8">        intervals </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> TreeMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> addNum</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> val</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6A737D">        // Already covered?</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (intervals.</span><span style="color:#B392F0">containsKey</span><span style="color:#E1E4E8">(val)) </span><span style="color:#F97583">return</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">        Integer lower </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> intervals.</span><span style="color:#B392F0">lowerKey</span><span style="color:#E1E4E8">(val);   </span><span style="color:#6A737D">// largest start &#x3C; val</span></span>
+<span class="line"><span style="color:#E1E4E8">        Integer higher </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> intervals.</span><span style="color:#B392F0">higherKey</span><span style="color:#E1E4E8">(val);  </span><span style="color:#6A737D">// smallest start > val</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // Bridges two intervals?</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (lower </span><span style="color:#F97583">!=</span><span style="color:#79B8FF"> null</span><span style="color:#F97583"> &#x26;&#x26;</span><span style="color:#E1E4E8"> higher </span><span style="color:#F97583">!=</span><span style="color:#79B8FF"> null</span></span>
+<span class="line"><span style="color:#F97583">                &#x26;&#x26;</span><span style="color:#E1E4E8"> intervals.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(lower)[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#F97583"> ==</span><span style="color:#E1E4E8"> val</span></span>
+<span class="line"><span style="color:#F97583">                &#x26;&#x26;</span><span style="color:#E1E4E8"> higher </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> val </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6A737D">            // Merge: extend lower's end to higher's end, remove higher</span></span>
+<span class="line"><span style="color:#E1E4E8">            intervals.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(lower)[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> intervals.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(higher)[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#E1E4E8">            intervals.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">(higher);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#6A737D">        // Extends the lower interval?</span></span>
+<span class="line"><span style="color:#F97583">        else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (lower </span><span style="color:#F97583">!=</span><span style="color:#79B8FF"> null</span><span style="color:#F97583"> &#x26;&#x26;</span><span style="color:#E1E4E8"> intervals.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(lower)[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#F97583"> ==</span><span style="color:#E1E4E8"> val) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            intervals.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(lower)[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> val;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#6A737D">        // Extends the higher interval?</span></span>
+<span class="line"><span style="color:#F97583">        else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (higher </span><span style="color:#F97583">!=</span><span style="color:#79B8FF"> null</span><span style="color:#F97583"> &#x26;&#x26;</span><span style="color:#E1E4E8"> higher </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> val </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8">[] r </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> intervals.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">(higher);</span></span>
+<span class="line"><span style="color:#E1E4E8">            r[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> val;</span></span>
+<span class="line"><span style="color:#E1E4E8">            intervals.</span><span style="color:#B392F0">put</span><span style="color:#E1E4E8">(val, r);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#6A737D">        // Standalone new interval</span></span>
+<span class="line"><span style="color:#F97583">        else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">            intervals.</span><span style="color:#B392F0">put</span><span style="color:#E1E4E8">(val, </span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{val, val});</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[][] </span><span style="color:#B392F0">getIntervals</span><span style="color:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> intervals.</span><span style="color:#B392F0">values</span><span style="color:#E1E4E8">().</span><span style="color:#B392F0">toArray</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[intervals.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">()][]);</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="complexity-7">Complexity</h3>
+<ul>
+<li><code>addNum</code>: O(log n) for TreeMap lookups.</li>
+<li><code>getIntervals</code>: O(k) where k is the number of disjoint ranges.</li>
+</ul>
+<h3 id="notes-8">Notes</h3>
+<ul>
+<li>The “bridge” case is the only one that reduces the interval count by one; the “extend” cases keep the count; the “new” case increases it.</li>
+<li>This is the dynamic/incremental cousin of Merge Intervals — instead of a batch sort+merge, you maintain the invariant on every insert.</li>
+</ul>
+<hr>
+<h2 id="12-the-telescope-problem">12. The Telescope Problem</h2>
+<p>A common interval variant (sometimes called “points covering intervals” or “minimum points to cover all intervals”): given a set of intervals, find the <strong>minimum number of points</strong> such that every interval contains at least one point.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Intervals: [1,3], [2,5], [3,6], [4,7]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  [1==3]</span></span>
+<span class="line"><span>     [2====5]</span></span>
+<span class="line"><span>        [3====6]</span></span>
+<span class="line"><span>           [4===7]</span></span>
+<span class="line"><span>  Point at 3 covers [1,3],[2,5],[3,6]; [4,7] uncovered.</span></span>
+<span class="line"><span>  Point at 4 (or 5) covers [4,7].</span></span>
+<span class="line"><span>  Answer: 2 points (e.g., at 3 and at 5).</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Greedy: sort by end. Place a point at the end of the first interval.</span></span>
+<span class="line"><span>Skip all intervals containing that point. Repeat.</span></span></code></pre>
+<h3 id="approach-greedy-by-earliest-end-1">Approach (greedy by earliest end)</h3>
+<ol>
+<li>Sort by end.</li>
+<li>Place a point at the first interval’s end.</li>
+<li>Skip all intervals whose <code>start &lt;= point</code> (covered). When you hit one with <code>start &gt; point</code>, place a new point at its end, repeat.</li>
+</ol>
+<p>This is the same greedy skeleton as Non-overlapping Intervals, but instead of removing the overlapping interval, you place a covering point.</p>
+<h3 id="java-solution-8">Java solution</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> findMinArrowShots</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">points</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (points.length </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        // Sort by end (greedy: shoot at the earliest end)</span></span>
+<span class="line"><span style="color:#E1E4E8">        Arrays.</span><span style="color:#B392F0">sort</span><span style="color:#E1E4E8">(points, (a, b) </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> Integer.</span><span style="color:#B392F0">compare</span><span style="color:#E1E4E8">(a[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">], b[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]));</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> arrows </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> arrowPos </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> points[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">][</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> points.length; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6A737D">            // If this balloon starts after the last arrow, need a new arrow</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (points[i][</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> arrowPos) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                arrows</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">                arrowPos </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> points[i][</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#6A737D">            // else: this interval contains arrowPos -> already covered</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> arrows;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>This is exactly LeetCode 452 “Minimum Number of Arrows to Burst Balloons,” the standard framing of the telescope/covering-points problem.</p>
+<h3 id="complexity-8">Complexity</h3>
+<ul>
+<li>Time: O(n log n).</li>
+<li>Space: O(log n) for sort.</li>
+</ul>
+<h3 id="notes-9">Notes</h3>
+<ul>
+<li>The greedy is optimal by the standard exchange argument: any solution can be transformed into one that places its first point at the earliest end without increasing the count.</li>
+<li>The structure is identical to activity selection: “earliest end” is the universal greedy anchor for interval problems where you minimize the number of selected anchors.</li>
+</ul>
+<hr>
+<h2 id="13-comparison-table-interval-patterns">13. Comparison Table: Interval Patterns</h2>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Sort Key</th>
+<th>Core Operation</th>
+<th>Data Structure</th>
+<th>Time</th>
+<th>Key Insight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Merge Intervals (56)</td>
+<td>start</td>
+<td>Extend end on overlap</td>
+<td>List</td>
+<td>O(n log n)</td>
+<td>Sort by start, merge greedily</td>
+</tr>
+<tr>
+<td>Insert Interval (57)</td>
+<td>(pre-sorted)</td>
+<td>Three-phase scan</td>
+<td>List</td>
+<td>O(n)</td>
+<td>Exploit sorted input; merge in place</td>
+</tr>
+<tr>
+<td>Meeting Rooms I (252)</td>
+<td>start</td>
+<td>Adjacent overlap check</td>
+<td>Array</td>
+<td>O(n log n)</td>
+<td>Sorted =&gt; only neighbors can overlap</td>
+</tr>
+<tr>
+<td>Meeting Rooms II (253)</td>
+<td>start</td>
+<td>Track running concurrency</td>
+<td>Min-heap / 2 arrays</td>
+<td>O(n log n)</td>
+<td>Max overlapping = min rooms; heap of end times</td>
+</tr>
+<tr>
+<td>Non-overlapping (435)</td>
+<td>end</td>
+<td>Greedy keep earliest-ending</td>
+<td>Array</td>
+<td>O(n log n)</td>
+<td>Activity selection: sort by END not start</td>
+</tr>
+<tr>
+<td>Interval Intersections (986)</td>
+<td>(pre-sorted)</td>
+<td>Two-pointer max/min</td>
+<td>Two pointers</td>
+<td>O(m+n)</td>
+<td>lo=max(start), hi=min(end); advance earlier-ending</td>
+</tr>
+<tr>
+<td>Employee Free Time (759)</td>
+<td>start</td>
+<td>Merge all, find gaps</td>
+<td>List / Heap</td>
+<td>O(C log C)</td>
+<td>Gaps in merged union = common free time</td>
+</tr>
+<tr>
+<td>Partition Labels (763)</td>
+<td>(implicit)</td>
+<td>Extend end to max last</td>
+<td>Array[26]</td>
+<td>O(n)</td>
+<td>Char interval = [first,last]; cut when merged closes</td>
+</tr>
+<tr>
+<td>Summary Ranges (352)</td>
+<td>(TreeMap)</td>
+<td>Insert + bridge/extend</td>
+<td>TreeMap</td>
+<td>O(log n) per op</td>
+<td>Maintain disjoint invariant on each insert</td>
+</tr>
+<tr>
+<td>Telescope / Arrows (452)</td>
+<td>end</td>
+<td>Place point at earliest end</td>
+<td>Array</td>
+<td>O(n log n)</td>
+<td>Covering points = dual of activity selection</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="14-common-pitfalls">14. Common Pitfalls</h2>
+<ul>
+<li><strong>Wrong sort key.</strong> Sorting by start when the greedy needs earliest-end (Non-overlapping Intervals, Arrows) is the single most common bug. Know which problem wants which.</li>
+<li><strong>Tie-breaking at equal times.</strong> For sweep-line / Meeting Rooms II, an end event must be processed before a start event at the same timestamp, or you over-count rooms. The <code>&lt;=</code> in the heap check and <code>&lt;</code> in the two-array check encode this.</li>
+<li><strong>Closed vs half-open.</strong> LeetCode 56, 57, 435, 986, 759 use closed intervals (<code>[start,end]</code>); 252, 253 use half-open (<code>[start,end)</code>). The overlap test differs by one character: <code>&lt;=</code> vs <code>&lt;</code>.</li>
+<li><strong>Overflow in comparators.</strong> <code>a[0] - b[0]</code> can overflow for large negative values. Always use <code>Integer.compare(a[0], b[0])</code>.</li>
+<li><strong>Forgetting the empty / single-interval base case.</strong> Several solutions are trivially correct on size 0/1, but only if you guard explicitly.</li>
+</ul>
+<hr>
+<h2 id="15-pattern-recognition-table">15. Pattern Recognition Table</h2>
+<p>When you see an interval problem, classify it by what it asks for:</p>
+<table>
+<thead>
+<tr>
+<th>If the problem asks…</th>
+<th>Pattern</th>
+<th>Sort by</th>
+<th>Algorithm skeleton</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Merge overlapping ranges into minimal set</td>
+<td>Merge</td>
+<td>start</td>
+<td>Sort, sweep, extend end on overlap</td>
+</tr>
+<tr>
+<td>Insert one interval into a sorted set</td>
+<td>Insert</td>
+<td>(given sorted)</td>
+<td>Three-phase: before / merge / after</td>
+</tr>
+<tr>
+<td>Can a person attend all meetings?</td>
+<td>Overlap check</td>
+<td>start</td>
+<td>Sort, check adjacent pairs</td>
+</tr>
+<tr>
+<td>Min rooms / min platforms / max concurrency</td>
+<td>Sweep-line</td>
+<td>start</td>
+<td>Min-heap of end times OR two-array event sweep</td>
+</tr>
+<tr>
+<td>Min removals to make non-overlapping</td>
+<td>Activity selection</td>
+<td>end</td>
+<td>Greedy keep earliest-ending, count the rest</td>
+</tr>
+<tr>
+<td>Max non-overlapping set you can keep</td>
+<td>Activity selection</td>
+<td>end</td>
+<td>Same as above; answer = n - removals</td>
+</tr>
+<tr>
+<td>Intersection of two sorted interval lists</td>
+<td>Two-pointer</td>
+<td>(given sorted)</td>
+<td>lo=max(start), hi=min(end), advance earlier end</td>
+</tr>
+<tr>
+<td>Common free time across people</td>
+<td>Merge + gap</td>
+<td>start</td>
+<td>Merge all busy, emit gaps between merged</td>
+</tr>
+<tr>
+<td>Min points to cover all intervals</td>
+<td>Covering</td>
+<td>end</td>
+<td>Greedy: place point at earliest end, skip covered</td>
+</tr>
+<tr>
+<td>Partition so each group is self-contained</td>
+<td>Fusion</td>
+<td>(implicit)</td>
+<td>Extend end to max last-occurrence, cut when closed</td>
+</tr>
+<tr>
+<td>Dynamic add + report disjoint ranges</td>
+<td>Incremental merge</td>
+<td>(TreeMap)</td>
+<td>Floor/ceiling lookup, bridge or extend or insert</td>
+</tr>
+<tr>
+<td>Max concurrent at any instant (general)</td>
+<td>Sweep-line</td>
+<td>event time</td>
+<td>+1 at start, -1 at end, track running max</td>
+</tr>
+</tbody>
+</table>
+<h3 id="decision-shortcut">Decision shortcut</h3>
+<ol>
+<li>Does it ask for a <strong>merged/union</strong> result? → Merge pattern, sort by start.</li>
+<li>Does it ask for <strong>minimum resources / maximum overlap</strong>? → Sweep-line or min-heap of ends, sort by start.</li>
+<li>Does it ask for <strong>minimum removals / maximum kept / minimum covering points</strong>? → Activity selection, sort by end.</li>
+<li>Does it ask for an <strong>intersection</strong> of two lists? → Two-pointer, no sort needed.</li>
+<li>Does it ask for <strong>gaps/free time</strong>? → Merge first, then walk gaps.</li>
+<li>Is the input <strong>dynamic/streaming</strong>? → TreeMap (or balanced BST) for incremental maintenance.</li>
+</ol>
+<p>If none of these fit cleanly, default to <strong>sort by start, then sweep left to right</strong> — that single move solves or bootstraps the vast majority of interval problems.</p>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Sort by start time — the universal first step for almost every interval problem. If you skip this, nothing else works.</li>
+<li>Merge: if current.start &lt;= last.end, merge by updating last.end = max(last.end, current.end). Otherwise append as a new interval.</li>
+<li>Meeting rooms (min concurrency): use a min-heap of end times — push each new meeting’s end, and poll the heap if the earliest-ending room is freed before the next meeting starts.</li>
+<li>Insert interval: find the position, then merge with all overlapping intervals in a single left-to-right pass (three-phase: before / merge / after).</li>
+<li>Sweep line: decompose each interval into events (start = +1, end = -1), sort by time (end before start on ties), and track the running count for peak concurrency.</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li><em>How do you find the maximum number of overlapping intervals?</em> — Sweep line: sort all start and end points together, increment a counter at each start, decrement at each end, and track the maximum value the counter reaches.</li>
+<li><em>What if intervals are dynamic (frequent insertions)?</em> — Use an interval tree or a sorted data structure like a TreeMap (Java) for O(log n) insertions and merges, instead of re-sorting on every update.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<p>Assuming intervals are sorted. ALWAYS sort by start time first — many candidates skip this step and get wrong results. Also watch for edge cases: identical intervals [1,3] vs [1,3], and containment cases where one interval fully contains another [1,4] vs [2,3] — the merge must use max(end), not just the current interval’s end.</p>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/coding-interview/intervals/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Intervals%20%E2%80%94%20Interview%20Prep&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fcoding-interview%2Fintervals%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fcoding-interview%2Fintervals%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/coding-interview/intervals" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/coding-interview/arrays-and-strings/" class="related-card"><div class="related-card-title">Arrays &amp; Strings — Interview Prep Guide</div><div class="related-card-meta">Coding Interview · 47 min</div></a><a href="/notes/coding-interview/backtracking/" class="related-card"><div class="related-card-title">Backtracking — Complete Interview Prep Guide</div><div class="related-card-meta">Coding Interview · 21 min</div></a><a href="/notes/coding-interview/big-o-and-pattern-recognition/" class="related-card"><div class="related-card-title">Big O Complexity &amp; Pattern Recognition</div><div class="related-card-meta">Coding Interview · 30 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/coding-interview/heaps-and-priority-queues" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Heaps &amp; Priority Queues — Interview Prep</span></a><a href="/notes/coding-interview/interview-process-and-strategy" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Interview Process &amp; Strategy Guide</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Intervals — Interview Prep" data-selector=".article-prose" data-article-slug="coding-interview/intervals" data-article-title="Intervals — Interview Prep" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

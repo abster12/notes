@@ -1,0 +1,815 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Twitter / Feed System (Fan-out) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview" class="toc-link" data-toc-link="overview" data-astro-cid-p33bl5ka>Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#requirements" class="toc-link" data-toc-link="requirements" data-astro-cid-p33bl5ka>Requirements</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#functional-requirements" class="toc-link" data-toc-link="functional-requirements" data-astro-cid-p33bl5ka>Functional Requirements</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#non-functional-requirements" class="toc-link" data-toc-link="non-functional-requirements" data-astro-cid-p33bl5ka>Non-Functional Requirements</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-estimation-for-300m-users" class="toc-link" data-toc-link="capacity-estimation-for-300m-users" data-astro-cid-p33bl5ka>Capacity Estimation for 300M Users</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#data-model" class="toc-link" data-toc-link="data-model" data-astro-cid-p33bl5ka>Data Model</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#fan-out-on-write-vs-fan-out-on-read" class="toc-link" data-toc-link="fan-out-on-write-vs-fan-out-on-read" data-astro-cid-p33bl5ka>Fan-Out on Write vs Fan-Out on Read</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#fan-out-strategy-comparison" class="toc-link" data-toc-link="fan-out-strategy-comparison" data-astro-cid-p33bl5ka>Fan-Out Strategy Comparison</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#hybrid-fan-out" class="toc-link" data-toc-link="hybrid-fan-out" data-astro-cid-p33bl5ka>Hybrid Fan-Out</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#timeline-caching-with-redis-sorted-sets" class="toc-link" data-toc-link="timeline-caching-with-redis-sorted-sets" data-astro-cid-p33bl5ka>Timeline Caching with Redis Sorted Sets</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#ranking-algorithms" class="toc-link" data-toc-link="ranking-algorithms" data-astro-cid-p33bl5ka>Ranking Algorithms</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#push-vs-pull-models-in-detail" class="toc-link" data-toc-link="push-vs-pull-models-in-detail" data-astro-cid-p33bl5ka>Push vs Pull Models in Detail</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#celebrity-problem-handling" class="toc-link" data-toc-link="celebrity-problem-handling" data-astro-cid-p33bl5ka>Celebrity Problem Handling</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#deletion-and-edits" class="toc-link" data-toc-link="deletion-and-edits" data-astro-cid-p33bl5ka>Deletion and Edits</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#pagination-and-feed-pagination" class="toc-link" data-toc-link="pagination-and-feed-pagination" data-astro-cid-p33bl5ka>Pagination and Feed Pagination</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#real-time-updates-via-streaming" class="toc-link" data-toc-link="real-time-updates-via-streaming" data-astro-cid-p33bl5ka>Real-Time Updates via Streaming</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#feed-consistency" class="toc-link" data-toc-link="feed-consistency" data-astro-cid-p33bl5ka>Feed Consistency</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#storage-choices-redis-sorted-sets-and-cassandra" class="toc-link" data-toc-link="storage-choices-redis-sorted-sets-and-cassandra" data-astro-cid-p33bl5ka>Storage Choices: Redis Sorted Sets and Cassandra</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#end-to-end-architecture-summary" class="toc-link" data-toc-link="end-to-end-architecture-summary" data-astro-cid-p33bl5ka>End-to-End Architecture Summary</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#sharp-interview-question" class="toc-link" data-toc-link="sharp-interview-question" data-astro-cid-p33bl5ka>Sharp Interview Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Twitter / Feed System (Fan-out)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 26 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 36 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>advanced</span><span class="tag" data-astro-cid-sgg5joot>feed-system</span><span class="tag" data-astro-cid-sgg5joot>twitter</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="twitter--feed-system-fan-out">Twitter / Feed System (Fan-out)</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A system that delivers tweets to followers’ feeds using fan-out-on-write (push to all followers) for normal users and fan-out-on-read (pull on demand) for celebrities.</p>
+<p><strong>How it’s asked:</strong> “Design Twitter’s timeline system for 300M users. Handle the celebrity problem (50M followers), feed ordering, and the hybrid push/pull model.”</p>
+<hr>
+<h2 id="overview">Overview</h2>
+<p>A social media feed system delivers a personalized, reverse-chronological stream of posts from the accounts a user follows. The superficial product description is simple — “show me the latest tweets from people I follow” — but the engineering reality is one of the hardest read-heavy, write-amplified problems in consumer software. The crux is the <strong>fan-out problem</strong>: when a single user posts a tweet, that tweet must, in some form, become visible to every one of their followers. If a user has a hundred million followers, a single keystroke can translate into a hundred million downstream effects. Designing a feed system is fundamentally about choosing <em>where</em> and <em>when</em> that amplification happens — at write time, at read time, or some combination of both — and then making that choice survive at the scale of hundreds of millions of daily active users without violating latency, consistency, or cost budgets.</p>
+<p>This document walks through the full design space: the push and pull models and their hybrid, timeline caching with Redis sorted sets, persistent storage in Cassandra, ranking algorithms that go beyond reverse-chronological ordering, the celebrity problem and its tiered mitigations, cursor-based feed pagination, real-time streaming updates, consistency tradeoffs, and a concrete capacity estimation for a 300M-DAU service. The goal is the depth a senior or staff engineer would be expected to reach in a system design interview.</p>
+<h2 id="requirements">Requirements</h2>
+<h3 id="functional-requirements">Functional Requirements</h3>
+<ul>
+<li>Users can publish short posts (historically 140 characters, now 280, optionally with images, video, or a link card).</li>
+<li>Users can follow or unfollow any other user.</li>
+<li>The home timeline must display posts from all followed accounts in reverse-chronological order by default.</li>
+<li>Engagement actions — likes, retweets, replies — influence ranking in enhanced modes.</li>
+<li>Users must see their own tweets immediately after posting.</li>
+<li>A user who unfollows someone should stop seeing that account’s new tweets in their feed without needing to reload history.</li>
+<li>The system must also support a user timeline (one person’s posts), a search surface, and trending topics, though those are secondary to the home feed.</li>
+</ul>
+<h3 id="non-functional-requirements">Non-Functional Requirements</h3>
+<ul>
+<li><strong>Read latency:</strong> feed loads must return in under 100 milliseconds at the 99th percentile because a slow feed directly tanks engagement.</li>
+<li><strong>Write throughput:</strong> roughly 500 million tweets per day, averaging around 5,800 tweets per second but with peak bursts (breaking news, major events) reaching several times that.</li>
+<li><strong>Fan-out latency:</strong> the time between a tweet being posted and it appearing in the <em>last</em> follower’s feed should be on the order of seconds for pushed content, not minutes.</li>
+<li><strong>Availability:</strong> 99.9% or better, with graceful degradation — a partial Redis outage should not prevent feed rendering, only slow it.</li>
+<li><strong>Cost:</strong> a persistent constraint, so we cannot simply push every tweet to every follower regardless of follower count.</li>
+</ul>
+<h2 id="capacity-estimation-for-300m-users">Capacity Estimation for 300M Users</h2>
+<p>Working from 300 million daily active users, we assume each user opens the app roughly five times per day and scrolls through an average of 150 feed items per session.</p>
+<p><strong>Read volume:</strong></p>
+<ul>
+<li>~225 billion feed item impressions per day</li>
+<li>Sustained read rate of roughly 2.6 million feed reads per second</li>
+<li>Peaks above 1 million concurrent feed requests during evening hours</li>
+<li>Read-to-write ratio is roughly 500:1</li>
+</ul>
+<p><strong>Write and fan-out volume:</strong></p>
+<ul>
+<li>500 million tweets per day</li>
+<li>Average of 500 followers per user (heavy power-law distribution: a tiny fraction of accounts have tens of millions of followers while the vast majority have fewer than a thousand)</li>
+<li>Naive push to every follower = ~250 billion feed-item insertions per day</li>
+<li>This is the number that makes pure push infeasible for celebrities and motivates the hybrid design</li>
+</ul>
+<p><strong>Storage:</strong></p>
+<ul>
+<li>Each tweet averages ~500 bytes of metadata and text (media is stored in object storage and referenced by URL)</li>
+<li>500M tweets/day × 500 bytes = 250 GB/day of raw tweet data</li>
+<li>~7.5 terabytes for a 30-day hot window</li>
+<li>Feed cache (materialized for 300M users, each capped at 800 entries of 8-byte tweet IDs): 300M × 800 × 8 bytes ≈ 1.9 TB logical state</li>
+<li>With Redis memory overhead and only active users cached, resident memory lands closer to 1–1.5 TB</li>
+<li>Follow graph: ~150 billion edges (500 avg followers × 300M users), ~1.5 TB in a relational store with indexes</li>
+<li>Follower-list reads for fan-out are the hot path, so the follower store must serve tens of thousands of paginated reads per second</li>
+</ul>
+<p><strong>Network and CPU:</strong></p>
+<ul>
+<li>Fan-out workers performing Redis <code>ZADD</code> operations can batch pipeline thousands of inserts per round trip.</li>
+<li>A single worker handling 10K ZADDs/sec can clear a million-follower fan-out in ~100 seconds with a hundred parallel workers.</li>
+<li>At peak, the fan-out fleet needs to sustain tens of thousands of pipelined writes per second across the Redis cluster.</li>
+<li>This is comfortably within Redis cluster throughput (100K+ ops/sec per shard) but requires careful sharding by <code>user_id</code> so a single user’s feed always lands on one shard.</li>
+</ul>
+<h2 id="data-model">Data Model</h2>
+<p>The core entities are Users, Tweets, Follow relationships, and FeedItem cache entries.</p>
+<ul>
+<li><strong>User:</strong> a Snowflake or UUID identifier, username, display name, follower count, and creation timestamp.</li>
+<li><strong>Tweet:</strong> a Snowflake ID (which encodes timestamp, so IDs are naturally time-ordered), the author’s user ID, content text, an array of media URLs, optional geolocation, and a created_at timestamp. Snowflake IDs are critical because they make reverse-chronological ordering a simple <code>ORDER BY id DESC</code> without a separate timestamp index.</li>
+<li><strong>Follow edge:</strong> follower_id, followee_id, and a created_at timestamp — the input to every fan-out decision.</li>
+<li><strong>FeedItem:</strong> not a persisted entity in the traditional sense — it is a cache artifact, a per-user ordered list of tweet IDs materialized in Redis.</li>
+</ul>
+<p>The storage split reflects access patterns:</p>
+<ul>
+<li><strong>Tweets</strong> are append-only, write-heavy, time-series data with lookups by ID or by <code>(user_id, time_range)</code> — an excellent fit for Cassandra with a partition key of <code>user_id</code> and clustering column of <code>tweet_id</code> (or <code>created_at</code>).</li>
+<li><strong>The follow graph</strong> needs random access, secondary indexes, and transactional follow/unfollow semantics, so it lives in MySQL or PostgreSQL with read replicas.</li>
+<li><strong>The feed cache</strong> lives in Redis because it demands sub-millisecond reads and high write throughput, and because Redis sorted sets natively model “an ordered, scored, capped list of IDs.”</li>
+<li><strong>User profile data</strong> sits in a relational or document store with a Redis cache in front.</li>
+</ul>
+<h2 id="fan-out-on-write-vs-fan-out-on-read">Fan-Out on Write vs Fan-Out on Read</h2>
+<p>The fundamental architectural fork is whether to do the work of fan-out when a tweet is <em>written</em> or when a feed is <em>read</em>, and each choice has a characteristic cost profile that maps onto different parts of the workload.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                   FAN-OUT ON WRITE (PUSH)              FAN-OUT ON READ (PULL)</span></span>
+<span class="line"><span>                   ---------------------------          ---------------------------</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Author  ──post──► Fan-out worker                    Author  ──post──► Tweet Store</span></span>
+<span class="line"><span>                        │                                  (single write, O(1))</span></span>
+<span class="line"><span>                   read followers                              │</span></span>
+<span class="line"><span>                        │                                      │</span></span>
+<span class="line"><span>              ┌─────────┴─────────┐                       (no pre-computation)</span></span>
+<span class="line"><span>              ▼                   ▼                              │</span></span>
+<span class="line"><span>         feed:{f1}            feed:{fN}                  ┌───────┴────────┐</span></span>
+<span class="line"><span>         ZADD tweet           ZADD tweet                ▼                ▼</span></span>
+<span class="line"><span>         (N writes,           (one per              Reader opens    Reader opens</span></span>
+<span class="line"><span>          amplified)           follower)             feed            feed</span></span>
+<span class="line"><span>              │                   │                      │                │</span></span>
+<span class="line"><span>              └─────────┬─────────┘              scatter-gather    merge + sort</span></span>
+<span class="line"><span>                        │                        500 queries       by timestamp</span></span>
+<span class="line"><span>                  Feeds pre-built                      │                │</span></span>
+<span class="line"><span>                        │                        merge + sort          ▼</span></span>
+<span class="line"><span>                  Reader opens                     top page          return</span></span>
+<span class="line"><span>                  feed                          ◄────────────────  (expensive read,</span></span>
+<span class="line"><span>                        │                                            cheap write)</span></span>
+<span class="line"><span>                  ZRANGE (O(1),</span></span>
+<span class="line"><span>                  microseconds)</span></span>
+<span class="line"><span>                        ▼</span></span>
+<span class="line"><span>                  return</span></span>
+<span class="line"><span>                  (cheap read,</span></span>
+<span class="line"><span>                   expensive write)</span></span></code></pre>
+<p><strong>Fan-out on write</strong> (the push model) materializes each follower’s feed eagerly. When a user posts a tweet, a fan-out worker reads their full follower list, then writes the tweet’s ID into every follower’s feed cache. Reads subsequently become trivial — a feed request is a single <code>ZRANGE</code> against the user’s Redis sorted set, returning pre-assembled results in microseconds. The write path is expensive and amplifies a single tweet into N writes, but the read path is O(1) and extremely cache-friendly. This model is ideal when reads vastly outnumber writes (which they do here, by roughly 500:1) and when the average fan-out is moderate. The fatal weakness is the celebrity: a user with ten million followers turns one tweet into ten million Redis writes, which can saturate the cache cluster and introduce multi-second delays for <em>all</em> other fan-out work queued behind it.</p>
+<p><strong>Fan-out on read</strong> (the pull model) does the opposite. A tweet is written exactly once to the tweet store, with no pre-computation. When a user opens their feed, the system queries the tweet store for recent tweets from every account that user follows, merges the results in memory, sorts by timestamp, and returns the top page. Writes are O(1) and trivially fast regardless of follower count, which makes the celebrity problem vanish. The cost moves to the read path: a user following 500 accounts triggers 500 point queries (or a scatter-gather across Cassandra partitions) on every feed load, and the merge-and-sort must complete within the 100ms latency budget. Caching mitigates this — a per-user “previously seen” cursor avoids re-scanning old tweets — but the first load and any cache miss are expensive. Pure pull also makes real-time feed updates harder because there is no materialized feed to stream from.</p>
+<p>The tradeoff is asymmetric in an important way: push front-loads irreversible work (you cannot un-write a tweet from a feed if the author deletes it), while pull does work only when someone actually reads, which means wasted push work for inactive followers is eliminated. For a service where most users are active daily but a long tail of accounts is dormant, pure push wastes significant work pushing to feeds that will never be read.</p>
+<h3 id="fan-out-strategy-comparison">Fan-Out Strategy Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Fan-out on Write (Push)</th>
+<th>Fan-out on Read (Pull)</th>
+<th>Hybrid</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Write cost</td>
+<td>O(N) — amplified per follower</td>
+<td>O(1) — single write</td>
+<td>O(N) for normal, O(1) for celebrities</td>
+</tr>
+<tr>
+<td>Read cost</td>
+<td>O(1) — single <code>ZRANGE</code></td>
+<td>O(F) — scatter-gather over F follows</td>
+<td>O(1) + small constant celebrity merge</td>
+</tr>
+<tr>
+<td>Celebrity handling</td>
+<td>Fatal — 10M writes per celeb tweet</td>
+<td>Trivial — single write</td>
+<td>Pulled at read time, bounded merge</td>
+</tr>
+<tr>
+<td>Read latency</td>
+<td>Microseconds</td>
+<td>Tens to hundreds of ms</td>
+<td>Near push latency for most users</td>
+</tr>
+<tr>
+<td>Inactive-follower waste</td>
+<td>High — pushes to never-read feeds</td>
+<td>None — work only on read</td>
+<td>Reduced — celebrities pulled, normals pushed</td>
+</tr>
+<tr>
+<td>Deletion cost</td>
+<td>Expensive — fan-out delete to all feeds</td>
+<td>Trivial — gone from store</td>
+<td>Mixed — delete for pushed, trivial for pulled</td>
+</tr>
+<tr>
+<td>Real-time streaming</td>
+<td>Natural — feed is materialized</td>
+<td>Hard — no materialized feed</td>
+<td>Natural for pushed, polling for pulled</td>
+</tr>
+<tr>
+<td>Best fit</td>
+<td>Read-heavy, moderate fan-out</td>
+<td>Write-heavy or celeb-heavy</td>
+<td>Bimodal workload (production)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="hybrid-fan-out">Hybrid Fan-Out</h2>
+<p>Production systems — including Twitter’s own documented architecture — use a <strong>hybrid</strong> that assigns each user to a push or pull path based on follower count. The rule is roughly: users below a follower threshold (commonly cited around 10K, sometimes tuned to a few thousand) have their tweets pushed to all followers’ feeds, because the fan-out cost is bounded and the read-side benefit is large. Users above the threshold — celebrities, brands, large media accounts — have their tweets written only to the tweet store, and their tweets are <em>pulled</em> at read time and merged into each viewer’s feed alongside the pushed content. A Redis set (<code>celebrities</code>) holds the IDs of users whose tweets should not be pushed, and the fan-out worker checks this set before deciding whether to fan out.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                        HYBRID FAN-OUT ARCHITECTURE</span></span>
+<span class="line"><span>                        ============================</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Author ──post──► API ──► Cassandra (tweet store) ──┐</span></span>
+<span class="line"><span>                                                     │</span></span>
+<span class="line"><span>                                  ┌──────────────────┘</span></span>
+<span class="line"><span>                                  ▼</span></span>
+<span class="line"><span>                         Enqueue fan-out task (Kafka)</span></span>
+<span class="line"><span>                                  │</span></span>
+<span class="line"><span>                                  ▼</span></span>
+<span class="line"><span>                         Fan-out worker consumes</span></span>
+<span class="line"><span>                                  │</span></span>
+<span class="line"><span>                          ┌───────┴────────┐</span></span>
+<span class="line"><span>                          │ Check celeb set│</span></span>
+<span class="line"><span>                          │ (Redis SISMEMBER)</span></span>
+<span class="line"><span>                          └───────┬────────┘</span></span>
+<span class="line"><span>                                  │</span></span>
+<span class="line"><span>                    ┌─────────────┴──────────────┐</span></span>
+<span class="line"><span>                    ▼                            ▼</span></span>
+<span class="line"><span>             NORMAL (&#x3C; threshold)          CELEBRITY (>= threshold)</span></span>
+<span class="line"><span>             ────────────────────          ──────────────────────</span></span>
+<span class="line"><span>                    │                            │</span></span>
+<span class="line"><span>           Read follower list            Write only to tweet store</span></span>
+<span class="line"><span>           (paginated batches)          (no feed writes)</span></span>
+<span class="line"><span>                    │                            │</span></span>
+<span class="line"><span>           Pipelined ZADD               Publish lightweight</span></span>
+<span class="line"><span>           to feed:{follower}           "celebrity posted" announce</span></span>
+<span class="line"><span>           for each follower            event to broadcast bus</span></span>
+<span class="line"><span>                    │                            │</span></span>
+<span class="line"><span>                    ▼                            ▼</span></span>
+<span class="line"><span>           Publish per-user              (gateways filter per-user</span></span>
+<span class="line"><span>           feed-update event             and pull tweet on demand)</span></span>
+<span class="line"><span>           to streaming bus</span></span>
+<span class="line"><span>                    │</span></span>
+<span class="line"><span>                    ▼</span></span>
+<span class="line"><span>  ┌──────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>  │                     READ PATH                            │</span></span>
+<span class="line"><span>  │                                                          │</span></span>
+<span class="line"><span>  │  Client ──load feed──► API                               │</span></span>
+<span class="line"><span>  │                          │                               │</span></span>
+<span class="line"><span>  │              ┌───────────┴────────────┐                  │</span></span>
+<span class="line"><span>  │              ▼                        ▼                  │</span></span>
+<span class="line"><span>  │      ZRANGEBYSCORE            Query Cassandra for        │</span></span>
+<span class="line"><span>  │      feed:{user_id}           recent tweets from         │</span></span>
+<span class="line"><span>  │      (pushed content)         followed celebrities       │</span></span>
+<span class="line"><span>  │              │                        │                  │</span></span>
+<span class="line"><span>  │              └──────────┬─────────────┘                  │</span></span>
+<span class="line"><span>  │                         ▼                                │</span></span>
+<span class="line"><span>  │                Merge + deduplicate                       │</span></span>
+<span class="line"><span>  │                by tweet ID                               │</span></span>
+<span class="line"><span>  │                         │                                │</span></span>
+<span class="line"><span>  │                         ▼                                │</span></span>
+<span class="line"><span>  │                Enrich + (optionally) re-rank             │</span></span>
+<span class="line"><span>  │                         │                                │</span></span>
+<span class="line"><span>  │                         ▼                                │</span></span>
+<span class="line"><span>  │                   Return page                            │</span></span>
+<span class="line"><span>  └──────────────────────────────────────────────────────────┘</span></span></code></pre>
+<p>The read path therefore does two things: it fetches the pre-materialized feed from the user’s Redis sorted set (the pushed tweets from normal accounts), <em>and</em> it queries the tweet store for recent tweets from any celebrities the user follows, then merges the two streams by timestamp, deduplicates, and returns the combined page. The celebrity pull is bounded — a user typically follows only a handful of celebrity accounts — so the extra read cost is a small constant rather than the full scatter-gather of pure pull. The threshold is a tunable knob: lowering it reduces fan-out load but increases read-time merge work; raising it does the opposite. In practice the threshold is set so that the top 0.1% of accounts (by follower count) are pulled, which captures the vast majority of the fan-out cost while affecting a tiny fraction of read paths.</p>
+<p>A further refinement is <strong>tiered fan-out buckets</strong>. Instead of a binary celebrity/normal split, accounts are bucketed by follower magnitude:</p>
+<table>
+<thead>
+<tr>
+<th>Bucket</th>
+<th>Follower count</th>
+<th>Fan-out strategy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Micro</td>
+<td>under 1K</td>
+<td>Always pushed</td>
+</tr>
+<tr>
+<td>Mid</td>
+<td>1K – 100K</td>
+<td>Always pushed</td>
+</tr>
+<tr>
+<td>Macro</td>
+<td>100K – 1M</td>
+<td>Pushed with sampled or delayed fan-out</td>
+</tr>
+<tr>
+<td>Mega</td>
+<td>1M+</td>
+<td>Always pulled</td>
+</tr>
+</tbody>
+</table>
+<p>This lets the system shed fan-out load progressively as follower count grows, and it makes the cost curve smoother rather than cliff-edged at a single threshold.</p>
+<h2 id="timeline-caching-with-redis-sorted-sets">Timeline Caching with Redis Sorted Sets</h2>
+<p>The feed cache is the single most important component for hitting the 100ms read SLA, and Redis sorted sets are the canonical data structure for it. Each user’s feed is a sorted set keyed <code>feed:{user_id}</code>, with each member being a tweet ID and the score being the tweet’s timestamp (or Snowflake-derived timestamp). Sorted sets keep members ordered by score, support range queries by score or by rank, and allow O(log N) insertion and O(log N + M) range retrieval — exactly the operations a feed needs.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  REDIS SORTED SET: feed:{user_id}</span></span>
+<span class="line"><span>  =================================</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Key:   feed:42</span></span>
+<span class="line"><span>  Type:  ZSET (sorted set)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  ┌──────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>  │  Score (ts)    │  Member (tweet_id)   │  Rank (by score) │</span></span>
+<span class="line"><span>  ├──────────────────────────────────────────────────────────┤</span></span>
+<span class="line"><span>  │  1718900005    │  1199887766543201    │  0  (newest)     │</span></span>
+<span class="line"><span>  │  1718900004    │  1199887766543188    │  1               │</span></span>
+<span class="line"><span>  │  1718900003    │  1199887766543155    │  2               │</span></span>
+<span class="line"><span>  │  1718900002    │  1199887766543099    │  3               │</span></span>
+<span class="line"><span>  │  ...           │  ...                 │  ...             │</span></span>
+<span class="line"><span>  │  1718890000    │  1199887766510000    │  799 (oldest)    │</span></span>
+<span class="line"><span>  └──────────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span>       ▲                                       ▲</span></span>
+<span class="line"><span>       │ newest (highest score)                │ cap at 800 entries</span></span>
+<span class="line"><span>       │ ZADD inserts here (O log N)           │ ZREMRANGEBYRANK trims here</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  READ (feed load):</span></span>
+<span class="line"><span>    ZRANGEBYSCORE feed:42 &#x3C;max_time> -inf LIMIT 0 20</span></span>
+<span class="line"><span>    ──► returns newest 20 tweet IDs below cursor, microseconds</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  WRITE (fan-out):</span></span>
+<span class="line"><span>    ZADD feed:42 &#x3C;ts> &#x3C;tweet_id>      (insert, O log N)</span></span>
+<span class="line"><span>    ZREMRANGEBYRANK feed:42 0 -801    (trim to 800 cap)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  PAGINATION (cursor-based):</span></span>
+<span class="line"><span>    cursor = last seen tweet's timestamp</span></span>
+<span class="line"><span>    ZRANGEBYSCORE feed:42 &#x3C;cursor_ts> -inf LIMIT 0 20</span></span>
+<span class="line"><span>    ──► next 20 older tweets, stable under new inserts</span></span></code></pre>
+<p>A feed read is a single <code>ZRANGEBYSCORE feed:{user_id} &lt;max_time&gt; +inf LIMIT 0 20</code> (or <code>ZREVRANGEBYSCORE</code> depending on Redis version), returning the newest 20 tweet IDs in microseconds, which the API layer then enriches with tweet bodies and user profiles fetched in batch from their respective caches.</p>
+<p>The cap on feed size — typically 800 entries — serves two purposes. It bounds memory: 300M users × 800 × 8 bytes is the ~1.9 TB figure from the capacity section, which is manageable but not unbounded. And it reflects usage reality: users almost never scroll past a few hundred items, so retaining older entries wastes memory. The cap is enforced with a combination of <code>ZREMRANGEBYRANK</code> (trim the oldest entries after a <code>ZADD</code>) and a periodic background compaction. When a feed exceeds the cap, the oldest entries are evicted; if a user scrolls beyond the cached window, the system falls back to a pull-based reconstruction from the tweet store for older pages, which is rare and acceptable to be slower.</p>
+<p>Cache population on write is pipelined and batched. The fan-out worker, after reading a batch of follower IDs, issues a single pipelined <code>ZADD feed:{f1} &lt;ts&gt; &lt;tweet_id&gt; feed:{f2} &lt;ts&gt; &lt;tweet_id&gt; ...</code> covering thousands of followers per round trip, then follows with pipelined <code>ZREMRANGEBYRANK</code> trims. Pipelining is essential: per-follower round trips would make a million-follower fan-out take minutes, whereas pipelined batches complete in seconds. Redis Cluster shards feeds by <code>user_id</code> so all operations on one user’s feed hit one shard, avoiding cross-slot errors and keeping the sorted set local.</p>
+<p>Cache misses and cold starts deserve attention. A new user has no cached feed, and a user returning after a long absence may have a stale or evicted cache. The fallback is a pull-based reconstruction: query the tweet store for recent tweets from all followed accounts, merge, cache the result, and return it. This is more expensive (hundreds of milliseconds) and is ideally done out-of-band or with a “loading” UX, but it guarantees correctness. For brand-new users with no follows, the system seeds the feed with trending or recommended tweets so the first impression is not empty.</p>
+<h2 id="ranking-algorithms">Ranking Algorithms</h2>
+<p>Pure reverse-chronological ordering is the baseline and the simplest correct behavior, but modern feeds almost always layer a ranking model on top to surface the most relevant or engaging content, especially for users who follow many accounts and would otherwise miss good tweets buried in noise. Ranking transforms the feed from a time-ordered list into a score-ordered list where score is a function of recency <em>and</em> relevance signals.</p>
+<p>A typical ranking score combines several features:</p>
+<ul>
+<li><strong>Recency:</strong> a decaying function of time since posting, so fresh tweets still win unless heavily out-scored.</li>
+<li><strong>Author affinity:</strong> how often the viewer interacts with the author — likes, replies, profile visits.</li>
+<li><strong>Tweet engagement velocity:</strong> likes, retweets, replies in the first minutes, normalized by the author’s baseline.</li>
+<li><strong>Content type signals:</strong> whether the tweet has media, whether it’s a reply or an original post.</li>
+<li><strong>Graph signals:</strong> whether the viewer’s friends also engaged with the tweet.</li>
+</ul>
+<p>The score is computed by a model — historically a logistic regression or GBDT, increasingly a learned neural ranking model — that is trained on engagement logs offline and served via a feature store + model server online.</p>
+<p>The architectural impact of ranking is significant. The pushed feed cache can no longer be a pure reverse-chronological sorted set for ranked feeds, because the final order depends on viewer-specific and time-decayed scores that are not known at write time. Two common patterns handle this:</p>
+<ol>
+<li><strong>Candidate-pool approach (more common):</strong> keep the sorted set as a reverse-chronological candidate pool (say, the newest 800 tweets) and re-rank the top page at read time by querying the model server for scores on the 800 candidates and returning the top 20. This bounds model work to the candidate set and keeps the cache simple.</li>
+<li><strong>Batch recompute approach:</strong> maintain separate per-user ranked caches that are periodically recomputed by a batch or streaming job, accepting some staleness for a cheaper read path.</li>
+</ol>
+<p>The candidate-pool approach is more common because it balances freshness, cost, and personalization.</p>
+<h2 id="push-vs-pull-models-in-detail">Push vs Pull Models in Detail</h2>
+<p>The push/pull distinction is sometimes conflated with fan-out-on-write/read, but it is worth separating as a <em>delivery</em> concern. Push delivery means the server proactively sends new feed items to a connected client (via WebSocket, Server-Sent Events, or a long-lived streaming connection), so the user sees new tweets appear without reloading. Pull delivery means the client polls or reloads to fetch updates. A system can fan out on write but still use pull delivery (the feed is pre-materialized but the client reloads to see it), or fan out on read with push delivery (the server computes the feed on a poll interval and pushes deltas).</p>
+<p>For a real-time feed experience, the typical design combines write-time fan-out (to materialize the feed cache) with <strong>push delivery over a streaming connection</strong>. Each connected client holds an open WebSocket to a streaming gateway. When a fan-out worker writes a tweet to a user’s Redis feed, it also publishes an event to a per-user notification channel (a Redis Pub/Sub channel or a Kafka topic keyed by user_id). The streaming gateway subscribed to that user’s channel receives the event and pushes it down the WebSocket to the client, which prepends it to the visible feed. This gives sub-second update latency for pushed content. For celebrity (pulled) content, the streaming gateway can either poll the tweet store on a short interval for followed celebrities or accept that celebrity tweets appear on the next reload — a reasonable tradeoff given that celebrity tweets are high-volume and polling them for every viewer would be expensive.</p>
+<p>Scaling the streaming layer is its own problem. With millions of concurrent connections, the gateway fleet must be horizontally scalable and stateless per-connection routing must be maintained (a user’s connection lives on one gateway instance, and the fan-out event must be routed to that instance). A common pattern is a consistent-hash mapping of user_id to gateway instance, published to a routing service, so the fan-out worker (or the pub/sub subscriber) can forward events to the correct gateway. Connection lifecycle, reconnection, and backpressure (a user following a celebrity who tweets in a burst must not be flooded) all need handling.</p>
+<h2 id="celebrity-problem-handling">Celebrity Problem Handling</h2>
+<p>The celebrity problem is the canonical failure mode of pure fan-out-on-write and deserves explicit treatment. When a user with tens of millions of followers posts, the naive push generates tens of millions of Redis writes, which (a) takes many seconds even pipelined, (b) saturates the Redis cluster and crowds out fan-out for ordinary users, and (c) wastes work pushing to inactive followers who will never read the tweet. The hybrid model addresses the <em>write</em> side by pulling celebrity tweets at read time, but there are additional refinements.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                    CELEBRITY HANDLING FLOW</span></span>
+<span class="line"><span>                    =======================</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Celebrity posts tweet</span></span>
+<span class="line"><span>          │</span></span>
+<span class="line"><span>          ▼</span></span>
+<span class="line"><span>  ┌──────────────────┐     YES    ┌──────────────────────┐</span></span>
+<span class="line"><span>  │ In celebrities   │───────────►│ WRITE ONLY to tweet   │</span></span>
+<span class="line"><span>  │ Redis set?       │            │ store (Cassandra)     │</span></span>
+<span class="line"><span>  │ (SISMEMBER)      │            │ NO feed fan-out       │</span></span>
+<span class="line"><span>  └────────┬─────────┘            └──────────┬───────────┘</span></span>
+<span class="line"><span>           │ NO                              │</span></span>
+<span class="line"><span>           ▼                                 │</span></span>
+<span class="line"><span>  ┌──────────────────┐                      │</span></span>
+<span class="line"><span>  │ Follower count   │                      │</span></span>
+<span class="line"><span>  │ tier?            │                      │</span></span>
+<span class="line"><span>  └────────┬─────────┘                      │</span></span>
+<span class="line"><span>           │                                │</span></span>
+<span class="line"><span>    ┌──────┴──────┬─────────────┐           │</span></span>
+<span class="line"><span>    ▼             ▼             ▼           │</span></span>
+<span class="line"><span>  MICRO/MID     MACRO         MEGA          │</span></span>
+<span class="line"><span>  (&#x3C; 100K)    (100K–1M)     (1M+)           │</span></span>
+<span class="line"><span>    │             │             │           │</span></span>
+<span class="line"><span>    ▼             ▼             ▼           │</span></span>
+<span class="line"><span>  Full push   Sampled/       Treated as    │</span></span>
+<span class="line"><span>  to all      delayed        celebrity     │</span></span>
+<span class="line"><span>  followers   fan-out        (pull path) ──┤</span></span>
+<span class="line"><span>  (pipelined  (subset of     │             │</span></span>
+<span class="line"><span>  ZADD)       followers)     │             │</span></span>
+<span class="line"><span>    │             │           │             │</span></span>
+<span class="line"><span>    ▼             ▼           ▼             ▼</span></span>
+<span class="line"><span>  ┌──────────────────────────────────────────┐</span></span>
+<span class="line"><span>  │           READ-TIME MERGE                │</span></span>
+<span class="line"><span>  │                                          │</span></span>
+<span class="line"><span>  │  For each reader who follows this author:│</span></span>
+<span class="line"><span>  │    1. ZRANGEBYSCORE on feed:{reader}     │</span></span>
+<span class="line"><span>  │       (pushed content from normals)      │</span></span>
+<span class="line"><span>  │    2. Cassandra range scan for recent    │</span></span>
+<span class="line"><span>  │       tweets from followed celebrities   │</span></span>
+<span class="line"><span>  │    3. Merge + deduplicate by tweet_id    │</span></span>
+<span class="line"><span>  │    4. Enrich + return                    │</span></span>
+<span class="line"><span>  └──────────────────────────────────────────┘</span></span></code></pre>
+<p><strong>Threshold tuning.</strong> The celebrity threshold should be set conservatively enough that the pulled set is small (so read-time merge cost is low) but high enough that the pushed set excludes only the truly expensive accounts. Empirically, pulling tweets from the top 0.05–0.1% of accounts by follower count eliminates the vast majority of fan-out write volume while keeping the per-read celebrity merge to a handful of accounts.</p>
+<p><strong>Rate-limiting and sampling for near-celebrities.</strong> Even within the pushed population, fan-out can be rate-limited or sampled for high-but-not-celebrity accounts: a user with 500K followers might be pushed fully, but a user with 2M followers who is just below the celebrity threshold might be pushed with a small delay or to a sampled subset, with the rest pulled.</p>
+<p><strong>Sharding and prioritization for large accounts.</strong> The fan-out for a single large account should be sharded across workers and prioritized so it does not block the queue: a celebrity tweet is enqueued as many smaller fan-out sub-tasks (one per follower-list page), each handled by an independent worker, and the queue scheduler gives small fan-out tasks priority so ordinary users are not starved.</p>
+<h3 id="deletion-and-edits">Deletion and Edits</h3>
+<p>A subtle issue is deletion and edits:</p>
+<ul>
+<li>If a <strong>celebrity</strong> deletes a tweet that was pulled (never pushed), deletion is trivial — the tweet is gone from the store and read-time merges simply no longer find it.</li>
+<li>If an <strong>ordinary user</strong> deletes a tweet that <em>was</em> pushed to a million feeds, the system must issue a fan-out <em>delete</em> to remove the tweet ID from every affected feed cache, which is another million-write operation.</li>
+<li>This is handled by the same fan-out infrastructure (a delete event triggers <code>ZREM feed:{follower} &lt;tweet_id&gt;</code> pipelined across followers) and by a fallback where the enrichment layer treats a missing tweet body as “this tweet was deleted” and filters it out at read time even if the ID lingers in the cache.</li>
+</ul>
+<h2 id="pagination-and-feed-pagination">Pagination and Feed Pagination</h2>
+<p>Feed pagination is deceptively nuanced. The naive approach — offset-based pagination (<code>LIMIT 20 OFFSET 40</code>) — is broken for feeds because the feed is a live, growing list: between the user’s first and second page load, new tweets arrive and shift every offset, causing duplicated or skipped items. The correct approach is <strong>cursor-based pagination</strong> where the cursor encodes the position of the last item seen.</p>
+<p>For a reverse-chronological feed, the cursor is simply the timestamp (or Snowflake ID, which is monotonic and time-ordered) of the last item on the current page. The next page request is <code>ZRANGEBYSCORE feed:{user_id} &lt;cursor_ts&gt; -inf LIMIT 0 20</code> — give me the 20 tweets older than the cursor. This is stable under insertion: new tweets have higher timestamps and do not affect the older-than-cursor window, so pages never skip or duplicate. The cursor is opaque to the client (base64-encoded, signed) to prevent tampering, and it may also encode the feed version or cache generation to detect when the feed has been rebuilt and pagination should restart.</p>
+<p>For ranked feeds, cursor pagination is harder because the rank order is not a monotonic function of time — a tweet’s score changes as engagement accrues, so “the tweet after this one” is not well-defined across page loads. Common compromises include:</p>
+<ul>
+<li><strong>Rank only the first page</strong> (the top 20) and paginate the rest reverse-chronologically.</li>
+<li><strong>Snapshot the ranked order</strong> at first load and paginate against that snapshot (accepting that the feed is a moment-in-time view) — widely used because it gives a stable, non-duplicating scroll while still presenting a ranked first impression.</li>
+<li><strong>Recompute rank per page</strong> and accept minor duplication, with client-side dedup.</li>
+</ul>
+<p>Deep pagination — a user scrolling thousands of items back — is a path that should be discouraged or capped. Beyond the cached 800-item window, the system falls back to pull-based reconstruction from the tweet store, which is expensive and slow. Most products cap scroll depth or transition to an “explore” or search surface rather than supporting unbounded backward pagination, both for cost and because engagement data shows users rarely go deep.</p>
+<h2 id="real-time-updates-via-streaming">Real-Time Updates via Streaming</h2>
+<p>Real-time feed updates are delivered via a streaming transport layered on top of the materialized feed cache. The design has three parts: a fan-out event bus, a streaming gateway, and the client connection. When a tweet is fanned out to a user’s Redis feed (for pushed content), the fan-out worker additionally publishes a compact event — tweet ID, author ID, timestamp — to a per-user channel. The streaming gateway, which maintains the user’s WebSocket, is subscribed to that user’s channel (directly via Redis Pub/Sub or via a Kafka topic with the user_id as the partition key and the gateway as a consumer group). On receiving the event, the gateway forwards it to the client, which renders the new tweet at the top of the feed without a full reload.</p>
+<p>For pulled (celebrity) content, real-time delivery is harder because there is no fan-out event to publish. Options include:</p>
+<ul>
+<li>A short-interval poll by the gateway for each user’s followed celebrities (expensive at scale).</li>
+<li>A hybrid where celebrity tweets <em>are</em> announced via a lightweight event bus (without the full feed write) so the gateway can fetch and push them — the lightweight-announce approach is a good middle ground: the celebrity’s tweet is written only to the tweet store, but a single “celebrity X posted” event is published to a broadcast channel that gateways filter per-user, so the gateway can pull the tweet and push it to only the users who follow that celebrity and are currently connected. This avoids the million-feed write while still enabling real-time delivery.</li>
+<li>Accepting that celebrity tweets appear on reload.</li>
+</ul>
+<p>Backpressure and connection management are essential:</p>
+<ul>
+<li>A user who follows many high-volume accounts must not be flooded with updates faster than the client can render; the gateway coalesces bursts and applies a client-specific rate limit.</li>
+<li>Connection lifecycle — reconnect on network drop, resume from a last-seen cursor, timeout idle connections — is handled by the gateway with a session store backing the cursor.</li>
+<li>At scale, the gateway fleet is behind a load balancer with sticky routing or a consistent-hash directory so a reconnecting user lands on a gateway that can resume their session.</li>
+</ul>
+<h2 id="feed-consistency">Feed Consistency</h2>
+<p>Feed consistency is inherently eventual because the fan-out is asynchronous: a tweet is written to the tweet store first, then fanned out to follower feeds over the next few seconds. During that window, a follower who loads their feed may not yet see the tweet. This is acceptable for a social feed (users do not expect instant propagation) but has boundaries: the author must always see their <em>own</em> tweet immediately (handled by writing to the author’s own feed synchronously, or by merging the author’s recent tweets at read time), and the staleness should be bounded (seconds, not minutes) to avoid user confusion.</p>
+<p>Stronger consistency applies to the tweet store itself: Cassandra with a replication factor of 3 and quorum reads and writes (R + W &gt; N) gives strong consistency for tweet body fetches, so a tweet that has been fanned out is never a “phantom” — if a feed references a tweet ID, the tweet body is guaranteed to be readable. The feed cache is explicitly eventually consistent: Redis is not transactionally tied to the tweet store, and feeds may briefly contain IDs whose tweets are in the process of being deleted; the enrichment layer treats missing tweet bodies as deleted and filters them, which gives the user a consistent view even if the cache lags.</p>
+<p>The follow/unfollow operation has its own consistency considerations:</p>
+<ul>
+<li><strong>Unfollow:</strong> when a user unfollows an account, future tweets from that account should not enter the user’s feed — for pushed content, the fan-out worker simply checks the current follow graph before pushing, so new tweets naturally stop. Old tweets already in the feed cache remain until they age out or are scrolled past, which is the expected behavior (unfollowing does not retroactively erase history from the feed).</li>
+<li><strong>Follow:</strong> when a user <em>follows</em> a new account, the system can optionally backfill the new account’s recent tweets into the follower’s feed cache via an async job, or simply let future tweets appear on the next fan-out; backfill gives a better first-impression but costs an extra write job.</li>
+<li><strong>Follow graph storage:</strong> stored in a relational database with strong consistency, so follow/unfollow is atomic and the fan-out worker always reads a consistent snapshot.</li>
+</ul>
+<h2 id="storage-choices-redis-sorted-sets-and-cassandra">Storage Choices: Redis Sorted Sets and Cassandra</h2>
+<p>The storage choices are driven by access patterns and scale.</p>
+<p><strong>Redis sorted sets</strong> for the feed cache are chosen because they natively provide an ordered, scored, deduplicated, cap-enforced list with O(log N) writes and O(log N + M) range reads — a near-perfect match for a feed. Alternatives (a plain Redis list, a Cassandra row per user) either lack efficient range-by-score queries or have higher read latency. Redis Cluster provides horizontal scaling by sharding on <code>user_id</code>, and persistence (AOF with fsync-every-second or RDB snapshots) gives recoverability without making Redis the system of record (the tweet store is the source of truth; the cache can be rebuilt). The tradeoff is memory cost — Redis is in-memory, so the ~1.5 TB of feed cache is a significant memory footprint requiring a sizable Redis cluster, but the read-latency benefit justifies it.</p>
+<p><strong>Cassandra</strong> for the tweet store is chosen because tweets are write-heavy, append-only, time-series data with lookups by <code>user_id</code> and time range — exactly Cassandra’s sweet spot. The schema uses <code>user_id</code> as the partition key and <code>tweet_id</code> (Snowflake, time-ordered) as the clustering column, so a user’s tweets are physically stored together in reverse-chronological order and a range scan for “recent tweets by user X” is a single-partition read. Cassandra’s tunable consistency (ONE for writes for throughput, QUORUM for reads when correctness matters) and linear horizontal scalability by adding nodes match the tweet workload’s growth. The tradeoff is no secondary indexes or joins — but the feed system does not need them, since all access is by user_id or by tweet_id (a separate lookup table or a Cassandra row keyed by tweet_id handles random tweet fetches). Tweet bodies are eventually archived to object storage (S3) after the 30-day hot window to control Cassandra cluster size, with a lookup table mapping old tweet IDs to their S3 location for the rare deep-read.</p>
+<p>The follow graph in MySQL/PostgreSQL provides the transactional, indexed, random-access semantics that follow/unfollow and follower-list pagination require, with read replicas handling the heavy fan-out read load. A Redis cache in front of the follower store caches paginated follower lists for the fan-out hot path, with short TTLs to bound staleness. The celebrity set is a small Redis set, cached indefinitely and updated by a batch job that recomputes follower counts and re-buckets accounts.</p>
+<h2 id="end-to-end-architecture-summary">End-to-End Architecture Summary</h2>
+<p><strong>The write path:</strong></p>
+<ol>
+<li>A user posts a tweet.</li>
+<li>The API writes it to Cassandra (tweet store) and to the author’s own feed synchronously.</li>
+<li>The API enqueues a fan-out task to Kafka.</li>
+<li>A fan-out worker consumes the task, reads the author’s follower list in paginated batches from the follower store (via Redis cache).</li>
+<li>The worker checks the celebrity set.</li>
+<li>For each non-celebrity follower batch, the worker issues a pipelined <code>ZADD</code> to the followers’ Redis feed sorted sets, followed by trims.</li>
+<li>For celebrity authors, the worker writes only to the tweet store and publishes a lightweight announce event.</li>
+<li>The worker also publishes per-user feed-update events to the streaming bus for real-time delivery.</li>
+</ol>
+<p><strong>The read path:</strong></p>
+<ol>
+<li>A client requests its feed.</li>
+<li>The API issues a <code>ZRANGEBYSCORE</code> against the user’s Redis feed sorted set with a cursor.</li>
+<li>The API fetches the celebrity tweets from followed celebrity accounts via Cassandra range scans.</li>
+<li>The API merges and deduplicates by tweet ID.</li>
+<li>The API enriches with tweet bodies and user profiles from their caches.</li>
+<li>The API optionally re-ranks the top page via the ranking model.</li>
+<li>The API returns the page.</li>
+<li>The streaming gateway simultaneously pushes any new-tweet events to the connected client.</li>
+</ol>
+<h2 id="sharp-interview-question">Sharp Interview Question</h2>
+<p><strong>Question:</strong> “Our hybrid fan-out pulls celebrity tweets at read time and merges them with the pushed feed. But a user who follows a celebrity and loads their feed gets a 200ms response because of the celebrity scatter-gather, while a user who follows only normal accounts gets 20ms. How do you make the celebrity-following user’s experience fast without pushing celebrity tweets to all their followers?”</p>
+<p><strong>Model Answer:</strong> The key insight is that the celebrity pull is expensive because it is <em>per-read</em> and <em>synchronous</em>. The fix is to <strong>push a lightweight pointer, not the tweet, into the follower’s feed cache</strong> — but only for users who actually follow that celebrity and are likely to read soon, which is a much smaller set than “all followers.” Concretely: when a celebrity tweets, instead of writing the full tweet ID to every follower’s feed (the expensive push), write a single “celebrity bucket” entry per <em>viewer</em> who has recently been active, or maintain a per-user “celebrity follows” small list that the read path checks against a short-TTL celebrity-recent-tweets cache. Even simpler and very effective: maintain a small Redis cache of each celebrity’s last-N tweets (say, last 50, 5-minute TTL) — this cache is written once per celebrity tweet and read by all the celebrity’s followers at read time, turning N scatter-gathers into N cheap cache hits against a single hot key. The read path then merges the user’s pushed feed with the cached celebrity tweets for the few celebrities they follow, and the 200ms drops to near 20ms because the celebrity fetch is now a handful of Redis <code>GET</code>s rather than Cassandra range scans. The cost is one small cache write per celebrity tweet instead of a million-feed fan-out — a 10,000:1 reduction in write work for a mega-celebrity. The tradeoff is a few seconds of potential staleness on celebrity tweets, which is acceptable.</p>
+<p><strong>Common Pitfall:</strong> Reaching for a pure push or pure pull model and not recognizing that the workload is bimodal — a few accounts generate most of the fan-out cost, and the rest generate most of the read volume. A candidate who proposes pure push will be eaten alive by the celebrity write amplification; a candidate who proposes pure pull will blow the read latency budget on the 500-follow scatter-gather. The hybrid is not an optimization, it is the <em>only</em> design that fits both tails of the distribution, and the threshold and tiering are the levers that tune it.</p>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Two approaches: fan-out-on-write (push tweet to all followers’ feeds) vs fan-out-on-read (pull on demand)</li>
+<li>Celebrity problem: a user with 50M followers can’t fan-out-on-write — it would be 50M writes per tweet</li>
+<li>Hybrid: fan-out-on-write for normal users, fan-out-on-read for celebrities (threshold-based)</li>
+<li>Feed is a timeline cache (Redis sorted set by timestamp), not a database query at read time</li>
+<li>Caching is critical: 95%+ of feed reads should be served from cache, not database</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you handle tweets that go viral after posting?” — If a tweet crosses the celebrity threshold after posting, switch it from push to pull dynamically. Pre-compute for existing followers, pull for new followers.</li>
+<li>“How do you maintain feed ordering with clock skew?” — Use a logical timestamp (Twitter Snowflake) that encodes timestamp + machine ID + sequence, not wall clock.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Pure push or pure pull doesn’t work. Pure push breaks on celebrities (write amplification). Pure pull breaks on normal users (read amplification — scatter-gather across 500 followed accounts). The hybrid is not an optimization — it’s the only design that fits both tails of the distribution.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/twitter-feed-system-fan-out/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Twitter%20%2F%20Feed%20System%20(Fan-out)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Ftwitter-feed-system-fan-out%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Ftwitter-feed-system-fan-out%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/twitter-feed-system-fan-out" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/service-mesh-istio-linkerd" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Service Mesh (Istio/Linkerd)</span></a><a href="/notes/system-design/two-phase-commit-and-consensus-raft-paxos" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Two-Phase Commit &amp; Consensus (Raft/Paxos)</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Twitter / Feed System (Fan-out)" data-selector=".article-prose" data-article-slug="system-design/twitter-feed-system-fan-out" data-article-title="Twitter / Feed System (Fan-out)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

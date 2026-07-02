@@ -1,0 +1,864 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Kubernetes Scheduler &amp; Control Plane Internals · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview" class="toc-link" data-toc-link="overview" data-astro-cid-p33bl5ka>Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#the-control-plane--component-map" class="toc-link" data-toc-link="the-control-plane--component-map" data-astro-cid-p33bl5ka>The Control Plane — Component Map</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#control-plane-component-architecture" class="toc-link" data-toc-link="control-plane-component-architecture" data-astro-cid-p33bl5ka>Control Plane Component Architecture</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#etcd-as-the-source-of-truth" class="toc-link" data-toc-link="etcd-as-the-source-of-truth" data-astro-cid-p33bl5ka>etcd as the Source of Truth</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#the-api-server--front-door-and-watch-hub" class="toc-link" data-toc-link="the-api-server--front-door-and-watch-hub" data-astro-cid-p33bl5ka>The API Server — Front Door and Watch Hub</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#api-request-pipeline" class="toc-link" data-toc-link="api-request-pipeline" data-astro-cid-p33bl5ka>API Request Pipeline</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#admission-controllers-and-policy" class="toc-link" data-toc-link="admission-controllers-and-policy" data-astro-cid-p33bl5ka>Admission Controllers and Policy</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#resource-quotas-and-limitranges" class="toc-link" data-toc-link="resource-quotas-and-limitranges" data-astro-cid-p33bl5ka>Resource Quotas and LimitRanges</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#resource-requests-vs-limits" class="toc-link" data-toc-link="resource-requests-vs-limits" data-astro-cid-p33bl5ka>Resource Requests vs Limits</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#the-scheduler--placement-as-an-online-optimization-problem" class="toc-link" data-toc-link="the-scheduler--placement-as-an-online-optimization-problem" data-astro-cid-p33bl5ka>The Scheduler — Placement as an Online Optimization Problem</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#pod-scheduling-pipeline-filter--score--bind" class="toc-link" data-toc-link="pod-scheduling-pipeline-filter--score--bind" data-astro-cid-p33bl5ka>Pod Scheduling Pipeline (Filter → Score → Bind)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#filtering--hard-constraints" class="toc-link" data-toc-link="filtering--hard-constraints" data-astro-cid-p33bl5ka>Filtering — Hard Constraints</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#scoring--soft-preferences" class="toc-link" data-toc-link="scoring--soft-preferences" data-astro-cid-p33bl5ka>Scoring — Soft Preferences</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#scheduling-algorithms-and-strategies" class="toc-link" data-toc-link="scheduling-algorithms-and-strategies" data-astro-cid-p33bl5ka>Scheduling Algorithms and Strategies</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#scheduling-algorithm-comparison" class="toc-link" data-toc-link="scheduling-algorithm-comparison" data-astro-cid-p33bl5ka>Scheduling Algorithm Comparison</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#custom-schedulers-and-scheduling-profiles" class="toc-link" data-toc-link="custom-schedulers-and-scheduling-profiles" data-astro-cid-p33bl5ka>Custom Schedulers and Scheduling Profiles</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#preemption-priorities-and-eviction" class="toc-link" data-toc-link="preemption-priorities-and-eviction" data-astro-cid-p33bl5ka>Preemption, Priorities, and Eviction</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#the-kubelet-and-pod-lifecycle" class="toc-link" data-toc-link="the-kubelet-and-pod-lifecycle" data-astro-cid-p33bl5ka>The Kubelet and Pod Lifecycle</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#kubelet-pod-lifecycle-syncpod" class="toc-link" data-toc-link="kubelet-pod-lifecycle-syncpod" data-astro-cid-p33bl5ka>Kubelet Pod Lifecycle (SyncPod)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#pod-lifecycle-state-machine" class="toc-link" data-toc-link="pod-lifecycle-state-machine" data-astro-cid-p33bl5ka>Pod Lifecycle State Machine</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#cri-cni-and-csi--the-pluggable-node-interfaces" class="toc-link" data-toc-link="cri-cni-and-csi--the-pluggable-node-interfaces" data-astro-cid-p33bl5ka>CRI, CNI, and CSI — The Pluggable Node Interfaces</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#the-controller-manager-and-reconciliation-loops" class="toc-link" data-toc-link="the-controller-manager-and-reconciliation-loops" data-astro-cid-p33bl5ka>The Controller Manager and Reconciliation Loops</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#high-availability-control-plane" class="toc-link" data-toc-link="high-availability-control-plane" data-astro-cid-p33bl5ka>High Availability Control Plane</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ha-control-plane-topology-stacked-etcd-3-nodes" class="toc-link" data-toc-link="ha-control-plane-topology-stacked-etcd-3-nodes" data-astro-cid-p33bl5ka>HA Control Plane Topology (Stacked etcd, 3 nodes)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ha-comparison-stacked-vs-external-etcd" class="toc-link" data-toc-link="ha-comparison-stacked-vs-external-etcd" data-astro-cid-p33bl5ka>HA Comparison: Stacked vs External etcd</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-planning" class="toc-link" data-toc-link="capacity-planning" data-astro-cid-p33bl5ka>Capacity Planning</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-question--model-answer-and-pitfall" class="toc-link" data-toc-link="interview-question--model-answer-and-pitfall" data-astro-cid-p33bl5ka>Interview Question — Model Answer and Pitfall</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#key-takeaways" class="toc-link" data-toc-link="key-takeaways" data-astro-cid-p33bl5ka>Key Takeaways</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Kubernetes Scheduler &amp; Control Plane Internals</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-hard" data-astro-cid-sgg5joot>Hard</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 32 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 45 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>platform</span><span class="tag" data-astro-cid-sgg5joot>kubernetes</span><span class="tag" data-astro-cid-sgg5joot>scheduler</span><span class="tag" data-astro-cid-sgg5joot>control-plane</span><span class="tag" data-astro-cid-sgg5joot>k8s</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="kubernetes-scheduler--control-plane-internals">Kubernetes Scheduler &amp; Control Plane Internals</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>The Kubernetes control plane (API server, etcd, scheduler, controller manager) that manages cluster state, with the scheduler placing pods on nodes via filter-and-score pipeline.</p>
+<p><strong>How it’s asked:</strong> “Walk me through what happens when you run kubectl apply — from API server to etcd to scheduler to kubelet. How does the scheduler place 1000 pods per minute across 500 nodes?”</p>
+<h2 id="overview">Overview</h2>
+<p>Kubernetes is a distributed state machine whose central design idea is <strong>declarative reconciliation</strong>: you express the world you want in YAML, and a set of loosely coupled controllers continuously drive observed state toward that desired state. The control plane is the brain that holds this loop together — it stores state in etcd, exposes it through a RESTful watch API, schedules workloads onto machines, and runs dozens of reconciliation loops that react to drift. The scheduler is the most algorithmically interesting of these loops because it is, at its core, an online bin-packing problem with hard constraints, soft preferences, and adversarial inputs (noisy neighbors, faulty nodes, sudden bursts). Understanding the control plane and scheduler internals is a strong staff-level interview signal because it forces you to reason about distributed consensus, event-driven architectures, optimistic concurrency, and resource optimization under uncertainty — the exact blend of skills that distinguishes someone who has operated Kubernetes at scale from someone who has only <code>kubectl apply</code>’d manifests.</p>
+<p>This document walks the full request path: how a <code>Pod</code> object enters the system, what admission and quota checks gate it, how the scheduler filters and scores nodes, how the kubelet turns a bound pod into running containers through the CRI/CNI/CSI interfaces, how the controller manager reacts to failure, and how etcd and a highly available control plane keep the whole thing consistent. We close with capacity planning heuristics and a sharp interview question with a model answer and the most common pitfall.</p>
+<h2 id="the-control-plane--component-map">The Control Plane — Component Map</h2>
+<p>The control plane is a small set of cooperating processes that can all run on one node (as in <code>kubeadm</code> or managed offerings like EKS/GKE) or be replicated for high availability. The four canonical components are the <strong>API server</strong> (<code>kube-apiserver</code>), the <strong>distributed store</strong> (<code>etcd</code>), the <strong>scheduler</strong> (<code>kube-scheduler</code>), and the <strong>controller manager</strong> (<code>kube-controller-manager</code>). In modern installations the cloud-controller-manager is split out so that cloud-specific logic (node lifecycle, routes, services, volumes) runs out-of-process, and in-cluster add-ons such as <code>kube-proxy</code>, CoreDNS, and a CNI daemonset live on worker nodes rather than the control plane. The critical architectural property is that the API server is the <strong>only</strong> component that talks to etcd directly; every other component is a client of the API server over a watch-based protocol, which means etcd stays small, simple, and hot, while business logic is pushed to the edges where it can scale horizontally.</p>
+<h3 id="control-plane-component-architecture">Control Plane Component Architecture</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>        ┌───────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>        │                    Control Plane                       │</span></span>
+<span class="line"><span>        │                                                        │</span></span>
+<span class="line"><span>        │   ┌─────────┐    ┌──────────────┐    ┌─────────────┐   │</span></span>
+<span class="line"><span>        │   │  etcd   │◄──►│  API Server  │───►│ AuthN/AuthZ │   │</span></span>
+<span class="line"><span>        │   │ (Raft)  │    │ REST + Watch │    │  + Webhooks │   │</span></span>
+<span class="line"><span>        │   └─────────┘    └──────┬───────┘    └─────────────┘   │</span></span>
+<span class="line"><span>        │                       │  ▲                             │</span></span>
+<span class="line"><span>        │           ┌───────────┘  │                             │</span></span>
+<span class="line"><span>        │           ▼              │                             │</span></span>
+<span class="line"><span>        │  ┌────────────┐   ┌──────┴────────┐   ┌────────────┐  │</span></span>
+<span class="line"><span>        │  │ Scheduler  │   │  Controller   │   │   kube-    │  │</span></span>
+<span class="line"><span>        │  │ (bind pod) │   │   Manager     │   │  proxy     │  │</span></span>
+<span class="line"><span>        │  └────────────┘   │  (reconcile)  │   └────────────┘  │</span></span>
+<span class="line"><span>        │                   └───────────────┘                    │</span></span>
+<span class="line"><span>        └──────────────────────┬────────────────────────────────┘</span></span>
+<span class="line"><span>                               │ watch + reconcile</span></span>
+<span class="line"><span>                               ▼</span></span>
+<span class="line"><span>                    ┌───────────────────────┐</span></span>
+<span class="line"><span>                    │   Kubelet (per node)  │──► CRI ──► container runtime</span></span>
+<span class="line"><span>                    │                       │──► CNI ──► pod networking</span></span>
+<span class="line"><span>                    │                       │──► CSI ──► volume mounts</span></span>
+<span class="line"><span>                    └───────────────────────┘</span></span></code></pre>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Role</th>
+<th>Failure Mode</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>API Server</td>
+<td>Front door; validates, persists, serves watches</td>
+<td>Cluster becomes read/write-dead; caches stale but serve reads</td>
+</tr>
+<tr>
+<td>etcd</td>
+<td>Strongly-consistent KV store; the source of truth</td>
+<td>Single-node outage tolerated; quorum loss = write unavailability</td>
+</tr>
+<tr>
+<td>Scheduler</td>
+<td>Assigns unscheduled Pods to Nodes via Bind</td>
+<td>New pods stay Pending; running workloads unaffected</td>
+</tr>
+<tr>
+<td>Controller Mgr</td>
+<td>Reconciles replicas, nodes, endpoints, etc.</td>
+<td>Drift goes unrepaired (no autoscale, no rescheduling of evicted)</td>
+</tr>
+<tr>
+<td>Kubelet</td>
+<td>Per-node agent; drives pod lifecycle via CRI/CNI/CSI</td>
+<td>Node goes NotReady; pods evicted after grace period</td>
+</tr>
+<tr>
+<td>kube-proxy</td>
+<td>Programs iptables/IPVS for Service VIP routing</td>
+<td>New endpoints not programmed; existing flows continue</td>
+</tr>
+</tbody>
+</table>
+<h2 id="etcd-as-the-source-of-truth">etcd as the Source of Truth</h2>
+<p>Everything in Kubernetes — Pods, Services, Deployments, Secrets, ConfigMaps, nodes, leases — is a serialized object stored in etcd under a versioned key like <code>/registry/pods/default/my-app</code>. etcd is a distributed key-value store built on the <strong>Raft consensus algorithm</strong>, which gives linearizable reads and writes as long as a majority of members (the quorum) is reachable. For a 3-member cluster the quorum is 2, so one node can fail without losing write availability; for 5 members the quorum is 3, tolerating two failures. This is why control-plane HA topologies almost always use 3 or 5 etcd members — an even number buys you nothing and makes split-brain more likely. Every write goes through the Raft leader, is replicated to a quorum, and only then is committed; reads can be served locally but are serialized through the leader (or via a read-index) to guarantee linearizability, which is why a saturated etcd leader becomes the cluster’s throughput bottleneck.</p>
+<p>The API server is etcd’s only client, and it presents a clean abstraction over the raw store: it converts between the structured typed objects of the Kubernetes API and the protobuf/JSON blobs etcd holds, it enforces resource versioning for optimistic concurrency, and it serves a <strong>watch</strong> mechanism that lets controllers subscribe to a stream of changes rather than poll. The resource version is an etcd revision (a globally monotonic integer); when two clients race to update the same object, the second write fails with a <code>409 Conflict</code> and must re-read, rebase, and retry — this is the optimistic concurrency control that lets hundreds of controllers edit overlapping objects safely. Because etcd holds the entire world in memory and on disk, operational discipline matters: defragmentation after compaction, periodic backups (the <code>etcdctl snapshot save</code> path), keeping the database under ~2-4 GB, and avoiding large value blobs (base64-encoded images in ConfigMaps are a classic anti-pattern) all protect the cluster’s most precious component.</p>
+<h2 id="the-api-server--front-door-and-watch-hub">The API Server — Front Door and Watch Hub</h2>
+<p>The API server is the single entry point for every external actor: <code>kubectl</code>, controllers, the scheduler, the kubelet, dashboards, CI systems, and admission webhooks all speak to it over mTLS-gated HTTPS. A request flows through a layered pipeline: TLS termination and client certificate validation, <strong>authentication</strong> (one or more authenticator — client certs, bearer tokens, OIDC, service-account tokens), <strong>authorization</strong> (RBAC or ABAC checks against the authenticated user and groups), <strong>admission control</strong> (mutating and validating webhooks plus built-in plugins), and finally persistence to etcd with a freshly minted resource version. The response is then returned, and any component watching the relevant resource receives an event on its watch stream. This layered design is what lets Kubernetes be extensible without forking the core: you add an admission webhook to enforce policy, a CRD-plus-controller to add new resources, or an aggregated API server for custom verbs, and the API server remains the choke point that authenticates and authorizes them all.</p>
+<h3 id="api-request-pipeline">API Request Pipeline</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   External client (kubectl / controller / kubelet / webhook)</span></span>
+<span class="line"><span>              │</span></span>
+<span class="line"><span>              ▼</span></span>
+<span class="line"><span>   ┌──────────────────┐</span></span>
+<span class="line"><span>   │ TLS termination  │  mutual TLS, client cert validation</span></span>
+<span class="line"><span>   └────────┬─────────┘</span></span>
+<span class="line"><span>            ▼</span></span>
+<span class="line"><span>   ┌──────────────────┐</span></span>
+<span class="line"><span>   │ Authentication   │  client cert / bearer token / OIDC / SA token</span></span>
+<span class="line"><span>   └────────┬─────────┘</span></span>
+<span class="line"><span>            ▼</span></span>
+<span class="line"><span>   ┌──────────────────┐</span></span>
+<span class="line"><span>   │ Authorization    │  RBAC / ABAC (user + groups vs verbs on resources)</span></span>
+<span class="line"><span>   └────────┬─────────┘</span></span>
+<span class="line"><span>            ▼</span></span>
+<span class="line"><span>   ┌──────────────────┐</span></span>
+<span class="line"><span>   │ Mutating         │  inject sidecars, set defaults, add labels</span></span>
+<span class="line"><span>   │ admission        │  (may rewrite the object — runs FIRST)</span></span>
+<span class="line"><span>   └────────┬─────────┘</span></span>
+<span class="line"><span>            ▼</span></span>
+<span class="line"><span>   ┌──────────────────┐</span></span>
+<span class="line"><span>   │ Validating       │  accept or reject only (runs on mutated object)</span></span>
+<span class="line"><span>   │ admission        │  built-in plugins + dynamic ValidatingWebhooks</span></span>
+<span class="line"><span>   └────────┬─────────┘</span></span>
+<span class="line"><span>            ▼</span></span>
+<span class="line"><span>   ┌──────────────────┐</span></span>
+<span class="line"><span>   │ Persist to etcd  │  minted resource version; optimistic concurrency</span></span>
+<span class="line"><span>   └────────┬─────────┘</span></span>
+<span class="line"><span>            ▼</span></span>
+<span class="line"><span>   Response returned + watch events fanned out to subscribers</span></span></code></pre>
+<p>The watch protocol deserves special attention because it is the connective tissue of the entire system. A watch is a long-lived chunked HTTP/2 stream that delivers a sequence of <code>ADDED</code>, <code>MODIFIED</code>, and <code>DELETED</code> events for objects matching a selector, starting from a given resource version. If the client falls behind and the server’s event history has been compacted, the watch returns a <code>410 Gone</code> and the client must relist from the current state and re-establish the watch — this is the classic “watch bookmark” pattern that prevents controllers from missing events during reconnects. The API server maintains an in-memory watch cache per resource per namespace (the “cacher”) that serves most watches without touching etcd, which is why etcd can stay small even when thousands of controllers are watching millions of objects; the trade-off is that the cacher must be carefully synchronized with etcd’s revision number to avoid serving stale data, and bugs here manifest as phantom resyncs or missed reconciliations.</p>
+<h2 id="admission-controllers-and-policy">Admission Controllers and Policy</h2>
+<p>Admission controllers run <strong>after</strong> authorization but <strong>before</strong> persistence, giving the cluster a final veto or mutation on every create/update/delete. They come in two phases:</p>
+<ul>
+<li><strong>Mutating admission</strong> (runs first) — can rewrite the object: inject a sidecar, set defaults, add a namespace label.</li>
+<li><strong>Validating admission</strong> (runs second) — can only accept or reject, runs on the now-mutated object.</li>
+</ul>
+<p>The order matters because a mutating webhook that injects an Istio sidecar must run before the validating webhook that requires all pods to have that sidecar. Built-in admission plugins handle concerns like <code>NamespaceLifecycle</code> (reject creates in a namespace being deleted), <code>ServiceAccount</code> (auto-mount a service account token), <code>NodeRestriction</code> (limit what a kubelet can self-report about its node), <code>LimitRanger</code> (enforce default and min/max resource limits per namespace), and <code>ResourceQuota</code> (enforce aggregate consumption ceilings). Modern clusters almost always add <strong>dynamic admission webhooks</strong> — out-of-process services registered via <code>MutatingWebhookConfiguration</code> and <code>ValidatingWebhookConfiguration</code> objects — to implement organization-specific policy: OPA/Gatekeeper for declarative Rego policies, Kyverno for Kubernetes-native YAML policies, or custom services for image provenance checks, label enforcement, and network policy defaults.</p>
+<p>Two operational hazards deserve emphasis:</p>
+<ul>
+<li><strong>Webhooks are on the synchronous critical path of every API write.</strong> A slow or unavailable webhook can stall the entire cluster. Mitigation: configure <code>failurePolicy: Fail</code> for security-critical checks but <code>failurePolicy: Ignore</code> with careful monitoring for non-critical ones, and tune <code>timeoutSeconds</code> aggressively (1-3 seconds).</li>
+<li><strong>Mutating webhooks without <code>reinvocationPolicy: IfNeeded</code> can be invoked multiple times</strong> during a single create when multiple mutating webhooks are chained — the cause of many “why did my sidecar get injected twice” mysteries.</li>
+</ul>
+<p>Understanding this pipeline is essential for designing CRDs and operators that play nicely with the rest of the ecosystem.</p>
+<h2 id="resource-quotas-and-limitranges">Resource Quotas and LimitRanges</h2>
+<p>Resource quotas are an admission-time enforcement mechanism that bounds aggregate resource consumption within a namespace, preventing a single team or tenant from starving the cluster. A <code>ResourceQuota</code> object can cap the total number of objects of a given kind (Pods, Services, ConfigMaps), the total requests and limits of <code>cpu</code>, <code>memory</code>, and <code>ephemeral-storage</code> across all pods, and the total size of PersistentVolumeClaims by storage class. The <code>ResourceQuota</code> admission plugin runs on every create and update, atomically incrementing a per-namespace usage counter stored in the quota object itself; because this is done within the same API transaction the accounting is consistent, but it also means quota checks are a serialization point and can become a bottleneck in namespaces with extremely high pod churn (think a CI namespace running thousands of jobs per hour). A <code>LimitRange</code> complements quotas by setting default request/limit values and per-container min/max bounds, so that a pod without explicit resources still gets a defensible allocation and cannot silently request zero CPU and starve its neighbors.</p>
+<p>The interplay between requests, limits, and quotas is a frequent source of confusion. <strong>Requests</strong> are what the scheduler uses for bin-packing and what the kubelet reserves via cgroups; they are the “guaranteed” floor. <strong>Limits</strong> are the ceiling enforced by the cgroup CPU throttling and OOM killer — a container may burst above its request up to its limit if spare capacity exists, but it cannot exceed the limit. Quotas count both requests and limits, so a namespace whose quota is 10 CPU of requests can be filled by ten pods requesting 1 CPU each, regardless of how high their limits are set.</p>
+<h3 id="resource-requests-vs-limits">Resource Requests vs Limits</h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Requests</th>
+<th>Limits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Used by scheduler for bin-packing</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Kubelet cgroup behavior</td>
+<td>Reserved floor (guaranteed)</td>
+<td>Ceiling (CPU throttle + OOM kill)</td>
+</tr>
+<tr>
+<td>Bursting allowed</td>
+<td>—</td>
+<td>Up to limit if spare capacity exists</td>
+</tr>
+<tr>
+<td>Enforced by</td>
+<td>cgroup reservation</td>
+<td>cgroup CPU throttling + OOM killer</td>
+</tr>
+<tr>
+<td>Counted by <code>ResourceQuota</code></td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>QoS class implication</td>
+<td>requests==limits → Guaranteed; requests&lt;limits → Burstable; none set → BestEffort</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Classic pitfall</td>
+<td>Set too low → neighbor starvation</td>
+<td>Set very high “just in case” → exhausts quota on limits alone, can’t schedule new pods</td>
+</tr>
+</tbody>
+</table>
+<p>The classic failure mode is a team setting limits very high “just in case,” exhausting the quota on limits alone, and then being unable to schedule new pods even though actual usage is low — the fix is to set limits conservatively or to rely on HorizontalPodAutoscalers that scale request-bearing replicas rather than inflating single-container limits.</p>
+<h2 id="the-scheduler--placement-as-an-online-optimization-problem">The Scheduler — Placement as an Online Optimization Problem</h2>
+<p>The scheduler is a controller that watches for Pods with an empty <code>nodeName</code> (i.e., unscheduled) and assigns each one to a Node by writing a <code>Binding</code> object (or, equivalently, patching the pod’s <code>nodeName</code>). Conceptually it solves an online bin-packing problem: pods arrive over time, nodes have finite multidimensional capacity (CPU, memory, GPU, ephemeral storage, extended resources), and the assignment must respect hard constraints while optimizing for soft objectives like availability, affinity, and fragmentation. The scheduler runs the same two-phase pipeline for every pod: <strong>filtering</strong> (also called the “predicate” phase in the older vocabulary) prunes the node set to those that can legally host the pod, and <strong>scoring</strong> (the “priority” phase) ranks the survivors so the best-scoring node wins. In modern Kubernetes (1.x with the scheduling framework) these phases are decomposed into a pipeline of plugin extension points, allowing operators to inject custom logic at every stage without forking the binary.</p>
+<p>The <strong>scheduling framework</strong> (introduced in 1.19 and stable since 1.27) is the plugin architecture that replaced the hard-coded predicate/priority lists. A pod’s journey through the scheduler touches, in order:</p>
+<ul>
+<li><code>QueueSort</code> — orders the pending queue, default by priority and creation timestamp.</li>
+<li><code>PreFilter</code> and <code>Filter</code> — the equivalent of predicates: <code>NodeResourcesFit</code>, <code>PodTopologySpread</code>, <code>NodeAffinity</code>, <code>TaintToleration</code>, <code>VolumeBinding</code>, <code>NodePorts</code>, <code>PodAntiAffinity</code>.</li>
+<li><code>PostFilter</code> — runs only if no node passed filtering; this is where preemption lives.</li>
+<li><code>PreScore</code> and <code>Score</code> — the priorities: <code>NodeResourcesFit</code>’s <code>LeastAllocated</code>/<code>MostAllocated</code> variants, <code>PodTopologySpread</code>, <code>InterPodAffinity</code>, <code>NodeAffinity</code>, <code>ImageLocality</code>, <code>RequestedToCapacityRatio</code>.</li>
+<li><code>NormalizeScore</code> — rescales each scorer’s output to a 0-100 range.</li>
+<li><code>Reserve</code> and <code>Permit</code> — reserve resources and optionally delay binding for gang or cosine scheduling.</li>
+<li><code>PreBind</code> and <code>Bind</code> — attach volumes and write the binding.</li>
+<li><code>PostBind</code> — cleanup and metrics.</li>
+</ul>
+<p>Each plugin implements a Go interface and is registered at startup via a profile; multiple profiles can coexist, which is how a cluster can run the default scheduler and a custom scheduler simultaneously selecting from the same node pool.</p>
+<h3 id="pod-scheduling-pipeline-filter--score--bind">Pod Scheduling Pipeline (Filter → Score → Bind)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   Pending Pod (nodeName="")</span></span>
+<span class="line"><span>        │</span></span>
+<span class="line"><span>        ▼</span></span>
+<span class="line"><span>   ┌────────────────────┐</span></span>
+<span class="line"><span>   │ QueueSort          │  order pending queue by priority + creation ts</span></span>
+<span class="line"><span>   └─────────┬──────────┘</span></span>
+<span class="line"><span>             ▼</span></span>
+<span class="line"><span>   ┌────────────────────┐</span></span>
+<span class="line"><span>   │ PreFilter          │  compute pod's total resource needs; precompute</span></span>
+<span class="line"><span>   └─────────┬──────────┘</span></span>
+<span class="line"><span>             ▼</span></span>
+<span class="line"><span>   ╔════════════════════╗   NodeResourcesFit, NodeAffinity,</span></span>
+<span class="line"><span>   ║ FILTER (predicates)║   TaintToleration, PodAntiAffinity,</span></span>
+<span class="line"><span>   ║ — hard constraints ║   VolumeBinding, NodePorts,</span></span>
+<span class="line"><span>   ╚════════╤═══════════╝   NodeUnschedulable...</span></span>
+<span class="line"><span>            │ survivors (nodes that pass ALL filters)</span></span>
+<span class="line"><span>            ▼</span></span>
+<span class="line"><span>   ┌────────────────────┐</span></span>
+<span class="line"><span>   │ PostFilter         │  runs ONLY if 0 nodes survived → preemption</span></span>
+<span class="line"><span>   └─────────┬──────────┘</span></span>
+<span class="line"><span>             ▼</span></span>
+<span class="line"><span>   ╔════════════════════╗   LeastAllocated / MostAllocated,</span></span>
+<span class="line"><span>   ║ SCORE (priorities) ║   PodTopologySpread, InterPodAffinity,</span></span>
+<span class="line"><span>   ║ — soft preferences  ║   ImageLocality, NodeAffinity, TaintToleration</span></span>
+<span class="line"><span>   ╚════════╤═══════════╝   (each returns 0-100 per node)</span></span>
+<span class="line"><span>            ▼</span></span>
+<span class="line"><span>   ┌────────────────────┐</span></span>
+<span class="line"><span>   │ NormalizeScore     │  rescale to 0-100; weighted sum across plugins</span></span>
+<span class="line"><span>   └─────────┬──────────┘   highest total wins (ties broken deterministically)</span></span>
+<span class="line"><span>             ▼</span></span>
+<span class="line"><span>   ┌────────────────────┐</span></span>
+<span class="line"><span>   │ Reserve + Permit   │  reserve resources on chosen node;</span></span>
+<span class="line"><span>   │                    │  Permit can hold for gang/cosine scheduling</span></span>
+<span class="line"><span>   └─────────┬──────────┘</span></span>
+<span class="line"><span>             ▼</span></span>
+<span class="line"><span>   ┌────────────────────┐</span></span>
+<span class="line"><span>   │ PreBind + Bind     │  attach volumes (CSI); write Binding / patch nodeName</span></span>
+<span class="line"><span>   └─────────┬──────────┘</span></span>
+<span class="line"><span>             ▼</span></span>
+<span class="line"><span>   ┌────────────────────┐</span></span>
+<span class="line"><span>   │ PostBind           │  cleanup + metrics</span></span>
+<span class="line"><span>   └─────────┬──────────┘</span></span>
+<span class="line"><span>             ▼</span></span>
+<span class="line"><span>   Pod is Bound → kubelet picks it up via watch and starts containers</span></span></code></pre>
+<h3 id="filtering--hard-constraints">Filtering — Hard Constraints</h3>
+<p>Filtering eliminates nodes that cannot legally host the pod. The checks are conjunctive — a node must pass all of them — and they encode the non-negotiable requirements:</p>
+<ul>
+<li><code>NodeResourcesFit</code> — verifies the node has at least the pod’s total CPU/memory/device requests available (after accounting for already-scheduled pods).</li>
+<li><code>NodeAffinity</code> — honors <code>requiredDuringSchedulingIgnoredDuringExecution</code> rules that pin pods to nodes with specific labels.</li>
+<li><code>TaintToleration</code> — removes nodes whose taints the pod does not tolerate (a <code>NoSchedule</code> taint on a GPU node keeps non-GPU pods off).</li>
+<li><code>PodAntiAffinity</code> (required rules) — prevents co-locating pods that must be separated.</li>
+<li><code>VolumeBinding</code> — checks that any <code>WaitForFirstConsumer</code> PVC can be satisfied by a volume accessible from the node (defers topology-aware volume provisioning until a node is chosen, avoiding the “volume pinned to wrong zone” trap).</li>
+<li><code>NodePorts</code> — checks HostPort availability.</li>
+<li><code>NodeUnschedulable</code> — skips cordoned nodes.</li>
+</ul>
+<p>The filter phase is cheap relative to scoring because it can short-circuit on the first failure and because most nodes fail for the obvious resource reason, but in clusters with thousands of nodes and complex affinity rules even filtering becomes a meaningful fraction of scheduling latency, which is why the scheduler maintains in-memory node snapshots and indexes affinities rather than re-evaluating every node from scratch.</p>
+<h3 id="scoring--soft-preferences">Scoring — Soft Preferences</h3>
+<p>Scoring ranks the surviving nodes by how well they satisfy soft objectives. Each <code>Score</code> plugin returns a 0-100 integer per node, the scores are weighted (the default profile defines weights like <code>NodeResourcesFit</code> weight 1, <code>PodTopologySpread</code> weight 2, <code>InterPodAffinity</code> weight 2) and summed, and the highest-scoring node wins, with ties broken deterministically. The most important scorers are:</p>
+<ul>
+<li><code>NodeResourcesFit</code> (<code>LeastAllocated</code> mode) — favor nodes with the most remaining capacity, which spreads load and leaves headroom. The default and usually the right choice for general-purpose clusters.</li>
+<li><code>NodeResourcesFit</code> (<code>MostAllocated</code> mode) — favor the fullest nodes, which packs tightly and is better for cost-optimized clusters where you want to empty nodes so they can be scaled down.</li>
+<li><code>RequestedToCapacityRatio</code> — a continuous shape function that lets you tune between spread and pack.</li>
+<li><code>PodTopologySpread</code> — maximize even spread across topology domains like zones or racks for fault tolerance.</li>
+<li><code>InterPodAffinity</code> / <code>PodAntiAffinity</code> — prefer or avoid co-location with pods matching a label selector (pin a cache pod next to its workers, or spread replicas).</li>
+<li><code>NodeAffinity</code> (preferred mode) — soft preference for nodes matching labels.</li>
+<li><code>TaintToleration</code> — lower score for nodes the pod only weakly tolerates.</li>
+<li><code>ImageLocality</code> — prefer nodes that already have the pod’s images pulled, reducing cold-start latency.</li>
+<li><code>NodeLabel</code> / <code>ServiceAffinity</code> — legacy scorers for topology-aware service traffic.</li>
+</ul>
+<p>The art of scheduler tuning is choosing the right weights for your objectives: a latency-sensitive service wants high <code>PodTopologySpread</code> weight, a batch ML workload wants high <code>MostAllocated</code> weight to bin-pack GPUs tightly, and a cost-conscious platform team may switch the whole profile to favor packing so the cluster autoscaler can remove empty nodes.</p>
+<h2 id="scheduling-algorithms-and-strategies">Scheduling Algorithms and Strategies</h2>
+<p>The choice of scoring strategy encodes a deeper choice about what the cluster is optimizing for. <strong>Bin-packing</strong> (the <code>MostAllocated</code> scorer and <code>RequestedToCapacityRatio</code> with a convex shape) treats nodes as bins to be filled to capacity before opening new ones; this minimizes the number of active nodes, which is ideal for cost-driven clusters because it lets the cluster autoscaler scale down idle nodes and reduces the number of nodes you pay for at any moment. The risk is fragmentation and reduced failure isolation: a tightly packed node has no headroom for rescheduling when a neighbor fails, and bin-packing tends to create a few near-full nodes and a few near-empty nodes rather than a smooth distribution. <strong>Spreading</strong> (the <code>LeastAllocated</code> scorer and <code>PodTopologySpread</code>) does the opposite, favoring the least-loaded nodes so that load is evenly distributed; this maximizes headroom and resilience (a node failure affects fewer pods, and surviving pods have somewhere to go) at the cost of running more nodes with lower average utilization. Most production clusters use a hybrid: <code>LeastAllocated</code> as the base for general workloads to keep the cluster resilient, combined with <code>PodTopologySpread</code> across zones for anything with multiple replicas, and then a separate scheduler profile or node pool with <code>MostAllocated</code> for batch jobs that should pack.</p>
+<h3 id="scheduling-algorithm-comparison">Scheduling Algorithm Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Scorer(s)</th>
+<th>Objective</th>
+<th>Pros</th>
+<th>Cons</th>
+<th>Best For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bin-packing</td>
+<td><code>MostAllocated</code>, <code>RequestedToCapacityRatio</code> (convex)</td>
+<td>Fill nodes to capacity before opening new ones</td>
+<td>Minimizes active nodes; cost-efficient; enables autoscaler scale-down</td>
+<td>Fragmentation; reduced failure isolation; no headroom for rescheduling</td>
+<td>Cost-driven clusters; batch/ML workloads</td>
+</tr>
+<tr>
+<td>Spreading</td>
+<td><code>LeastAllocated</code>, <code>PodTopologySpread</code></td>
+<td>Distribute load evenly across nodes/domains</td>
+<td>Maximizes headroom &amp; resilience; node failure affects fewer pods</td>
+<td>More nodes with lower average utilization</td>
+<td>General-purpose services; latency-sensitive workloads</td>
+</tr>
+<tr>
+<td>Hybrid</td>
+<td><code>LeastAllocated</code> base + <code>PodTopologySpread</code> + <code>MostAllocated</code> for batch</td>
+<td>Balance resilience and cost</td>
+<td>Resilience for services, density for batch</td>
+<td>Requires multiple profiles or node pools</td>
+<td>Most production clusters</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Affinity and anti-affinity</strong> let you express topology preferences declaratively. <code>podAffinity</code> attracts a pod to nodes running pods matching a selector (place this cache next to those workers to reduce cross-node traffic); <code>podAntiAffinity</code> repels them (spread these replicas across different nodes or zones so a single failure doesn’t take them all down). The <code>required</code> variants are hard filters, the <code>preferred</code> variants are scorers with a weight. The newer <strong>PodTopologySpread</strong> plugin is a more ergonomic and scalable replacement for anti-affinity across topology domains: you specify <code>maxSkew</code> (the maximum allowed difference in pod count between any two domains), a <code>topologyKey</code> (e.g., <code>topology.kubernetes.io/zone</code>), and <code>whenUnsatisfiable</code> (<code>DoNotSchedule</code> for hard or <code>ScheduleAnyway</code> for soft), and the scheduler ensures even spread without the O(pods × pods) cost of pairwise anti-affinity, which becomes prohibitive for large replica sets. A common pattern for a stateless service with five replicas across three zones is <code>PodTopologySpread</code> with <code>maxSkew: 1</code> and <code>whenUnsatisfiable: DoNotSchedule</code>, which guarantees no zone has more than one replica more than any other — a cheap, powerful availability primitive.</p>
+<p><strong>Taints and tolerations</strong> are the inverse mechanism: a taint on a node repels pods unless they carry a matching toleration. This is how dedicated node pools work (taint all GPU nodes with <code>nvidia.com/gpu=true:NoSchedule</code> and only GPU pods that tolerate it get scheduled there), how special hardware is protected, and how the cluster handles node problems — the node controller applies <code>node.kubernetes.io/not-ready</code> and <code>node.kubernetes.io/unreachable</code> taints with configurable <code>TolerationSeconds</code> so that pods are evicted from a failed node only after a grace period rather than immediately, giving the node time to recover. <strong>Node affinity and the <code>nodeSelector</code></strong> are the attraction-side equivalent: constrain a pod to nodes matching labels, used for topology pinning, OS/arch selection (<code>kubernetes.io/os: linux</code>), and instance-type specialization.</p>
+<h2 id="custom-schedulers-and-scheduling-profiles">Custom Schedulers and Scheduling Profiles</h2>
+<p>For cases the default plugins can’t express — gang scheduling (all-or-nothing placement for distributed training jobs), topology-aware volume scheduling, cosine scheduling for Spark, or capacity-aware scheduling that consults an external capacity service — Kubernetes offers several extension paths:</p>
+<ul>
+<li><strong>Scheduling framework with a compiled-in plugin</strong> (lightest) — write a Go plugin implementing one or more extension points, register it in a custom scheduler profile, and run a <code>kube-scheduler</code> binary that uses that profile. Full access to the scheduler’s node snapshot and is fast, but requires maintaining a fork or a custom container image.</li>
+<li><strong>Custom scheduler entirely</strong> — a separate controller that watches unscheduled pods and binds them itself, identified by setting <code>spec.schedulerName</code> on the pod so the default scheduler ignores it. This is how projects like Volcano (gang scheduling for batch), Kube-scheduler-simulator (research), and various in-house capacity schedulers work; the trade-off is that you lose the battle-tested default plugins and must reimplement filtering, scoring, and preemption yourself unless you carefully reuse the framework library.</li>
+<li><strong>Multiple scheduling profiles in a single scheduler binary</strong> (since 1.18) — the scheduler can run several profiles, each with its own plugin set, and pods select a profile via <code>schedulerName</code>. This lets one scheduler instance serve both a “default” profile (spread, for services) and a “batch” profile (pack, for Spark) without running two processes or duplicating the queue and cache.</li>
+<li><strong>Scheduler extender</strong> (HTTP webhook, deprecated) — still exists for truly external scheduling (e.g., a meta-scheduler that consults a capacity API before delegating to the in-tree scheduler), but is deprecated in favor of the framework’s <code>Filter</code>/<code>Score</code>/<code>Bind</code> extension points and the <code>PreBind</code>/<code>Permit</code> plugins that can gate binding on external approval.</li>
+</ul>
+<p>The <code>Permit</code> plugin in particular enables gang scheduling: it can hold a pod in the “permitted” state until all members of the gang are approved, then release them all to bind atomically, with a timeout that releases the reservations to avoid indefinite holds.</p>
+<h2 id="preemption-priorities-and-eviction">Preemption, Priorities, and Eviction</h2>
+<p>When a high-priority pod cannot be scheduled because lower-priority pods are occupying all viable nodes, the scheduler’s <code>PostFilter</code> phase runs <strong>preemption</strong>: it identifies victims — one or more lower-priority pods whose removal would free enough resources — and initiates their graceful deletion, then schedules the preemptor once the victims have terminated and their resources are reclaimed. Priority is a 32-bit integer (the <code>PriorityClass</code> resource defines named classes like <code>system-cluster-critical</code> at 2 billion and <code>system-node-critical</code> at 2 billion plus); the preemptor must have strictly higher priority than its victims, and the scheduler prefers to preempt fewer victims, victims that don’t disrupt a PodDisruptionBudget, and victims whose deletion is cheapest. Preemption interacts delicately with the kubelet’s graceful eviction and with PDBs: a pod protected by a PDB with <code>minAvailable</code> will not be preempted if doing so would violate the budget, forcing the scheduler to look elsewhere or fail the preemptor outright. This is a deliberate tension between individual pod rights and aggregate availability, and getting it right is a common interview deep-dive.</p>
+<p>The node-side counterpart is <strong>eviction</strong> and <strong>node-pressure</strong> handling. The kubelet watches for resource pressure (memory, disk, PID) and proactively evicts pods to keep the node healthy, choosing victims by priority (lowest first) and then by usage relative to requests (the pod exceeding its requests the most goes first, since it is the least “guaranteed”). The distinction between <strong>preemption</strong> (scheduler-initiated, to make room for a higher-priority pod) and <strong>eviction</strong> (kubelet-initiated, to protect node stability) is a useful mental model, as is the distinction between a <strong>graceful deletion</strong> (the API server deletes the pod, the kubelet finishes finalizers and stops containers) and a <strong>forced</strong> eviction (the kubelet kills the pod and reports it as <code>Failed</code> with reason <code>Evicted</code>). The pod’s <code>terminationGracePeriodSeconds</code> bounds how long the kubelet waits for the container’s SIGTERM handler before sending SIGKILL.</p>
+<h2 id="the-kubelet-and-pod-lifecycle">The Kubelet and Pod Lifecycle</h2>
+<p>The kubelet is the per-node agent that translates a bound Pod object into running containers and keeps them that way. Its main loop syncs each pod on the node: it queries the API server (or its local cache) for the pod spec, ensures the pod’s volumes are attached and mounted (via CSI), ensures the pod’s network namespace and IP are configured (via CNI), and then calls the <strong>CRI</strong> (Container Runtime Interface) to create and start the containers in the right order, respecting <code>initContainers</code> that must complete before the next starts. It then runs a small reconciliation loop per container using <strong>liveness</strong>, <strong>readiness</strong>, and <strong>startup</strong> probes:</p>
+<ul>
+<li><strong>Liveness probe</strong> — a failing liveness probe triggers a container restart.</li>
+<li><strong>Readiness probe</strong> — a failing readiness probe removes the pod’s IP from Service endpoints (so it stops receiving traffic) without restarting it.</li>
+<li><strong>Startup probe</strong> — gates liveness checks until the application has booted, essential for slow-starting JVM or legacy apps that would otherwise be killed by an impatient liveness probe.</li>
+</ul>
+<p>The kubelet reports node status (capacity, allocatable, conditions, addresses) and pod status back to the API server on a heartbeat, using a node lease (<code>coordination.k8s.io/v1 Lease</code>) in modern versions to reduce the update load on etcd — the full node status is posted every 40-50 seconds, while the lease is renewed every 10 seconds and is the lightweight signal the node controller uses to detect liveness.</p>
+<h3 id="kubelet-pod-lifecycle-syncpod">Kubelet Pod Lifecycle (SyncPod)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   Bound Pod arrives via watch (nodeName set)</span></span>
+<span class="line"><span>        │</span></span>
+<span class="line"><span>        ▼</span></span>
+<span class="line"><span>   ┌──────────────────────┐</span></span>
+<span class="line"><span>   │ SyncPod (main loop)  │  query API server / local cache for pod spec</span></span>
+<span class="line"><span>   └──────────┬───────────┘</span></span>
+<span class="line"><span>              ▼</span></span>
+<span class="line"><span>   ┌──────────────────────┐</span></span>
+<span class="line"><span>   │ Volume setup (CSI)   │  attach + mount PersistentVolumes</span></span>
+<span class="line"><span>   └──────────┬───────────┘</span></span>
+<span class="line"><span>              ▼</span></span>
+<span class="line"><span>   ┌──────────────────────┐</span></span>
+<span class="line"><span>   │ Network setup (CNI)  │  pod sandbox: netns, veth pair, pod IP, routes</span></span>
+<span class="line"><span>   └──────────┬───────────┘</span></span>
+<span class="line"><span>              ▼</span></span>
+<span class="line"><span>   ┌──────────────────────┐</span></span>
+<span class="line"><span>   │ CRI: RunPodSandbox   │  create sandbox (shared netns + cgroup hierarchy)</span></span>
+<span class="line"><span>   └──────────┬───────────┘</span></span>
+<span class="line"><span>              ▼</span></span>
+<span class="line"><span>   ┌──────────────────────┐</span></span>
+<span class="line"><span>   │ initContainers       │  run sequentially; each must exit 0</span></span>
+<span class="line"><span>   │ (sequential)         │  before the next starts</span></span>
+<span class="line"><span>   └──────────┬───────────┘</span></span>
+<span class="line"><span>              ▼</span></span>
+<span class="line"><span>   ┌──────────────────────┐</span></span>
+<span class="line"><span>   │ Containers (CRI)     │  CreateContainer → StartContainer</span></span>
+<span class="line"><span>   │ (concurrent)         │  share pod sandbox (localhost networking)</span></span>
+<span class="line"><span>   └──────────┬───────────┘</span></span>
+<span class="line"><span>              ▼</span></span>
+<span class="line"><span>   ┌──────────────────────┐</span></span>
+<span class="line"><span>   │ Probe reconciliation │  liveness   → restart container on failure</span></span>
+<span class="line"><span>   │ (per container loop) │  readiness  → add/remove IP from Service endpoints</span></span>
+<span class="line"><span>   │                      │  startup    → gate liveness until app booted</span></span>
+<span class="line"><span>   └──────────┬───────────┘</span></span>
+<span class="line"><span>              ▼</span></span>
+<span class="line"><span>   Pod status + node status reported to API server</span></span>
+<span class="line"><span>   (node lease renewed every 10s; full status every 40-50s)</span></span></code></pre>
+<h3 id="pod-lifecycle-state-machine">Pod Lifecycle State Machine</h3>
+<p>The pod lifecycle is a state machine: <code>Pending</code> (accepted by the API server, not yet scheduled or volumes not ready), <code>Running</code> (at least one container running), <code>Succeeded</code> (all containers exited 0 and won’t restart), <code>Failed</code> (a container exited non-zero and the restart policy is <code>Never</code>, or the pod was evicted). Containers within a pod go through <code>Waiting</code> → <code>Running</code> → <code>Terminated</code> states, each with a reason and exit code surfaced in <code>containerStatuses</code>. The restart policy (<code>Always</code>, <code>OnFailure</code>, <code>Never</code>) controls the kubelet’s retry behavior with an exponential backoff capped at 5 minutes, and the <code>backOff</code> is reset once the container runs successfully for 10 minutes. Understanding this state machine matters because many “my pod is stuck” incidents are actually a container in <code>CrashLoopBackOff</code> (a <code>Waiting</code> state with reason <code>CrashLoopBackOff</code>), which is the kubelet faithfully applying the backoff to a container that keeps dying — the fix is almost always in the application or its config, not in Kubernetes.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   Pod states:          Container states:</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   ┌─────────┐          ┌─────────┐</span></span>
+<span class="line"><span>   │ Pending │          │ Waiting │  (reason: PullingImage, CrashLoopBackOff...)</span></span>
+<span class="line"><span>   └────┬────┘          └────┬────┘</span></span>
+<span class="line"><span>        │ scheduled          │ started</span></span>
+<span class="line"><span>        ▼                    ▼</span></span>
+<span class="line"><span>   ┌─────────┐          ┌─────────┐</span></span>
+<span class="line"><span>   │ Running │          │ Running │  (restartPolicy: Always/OnFailure/Never)</span></span>
+<span class="line"><span>   └────┬────┘          └────┬────┘</span></span>
+<span class="line"><span>        │ exit 0             │ exited</span></span>
+<span class="line"><span>        ▼                    ▼</span></span>
+<span class="line"><span>   ┌──────────┐        ┌─────────────┐</span></span>
+<span class="line"><span>   │Succeeded │        │ Terminated  │  (exit code + reason surfaced)</span></span>
+<span class="line"><span>   └──────────┘        └─────────────┘</span></span>
+<span class="line"><span>        │ exit≠0 + Never / evicted</span></span>
+<span class="line"><span>        ▼</span></span>
+<span class="line"><span>   ┌────────┐</span></span>
+<span class="line"><span>   │ Failed │  (or Evicted by kubelet)</span></span>
+<span class="line"><span>   └────────┘</span></span></code></pre>
+<h2 id="cri-cni-and-csi--the-pluggable-node-interfaces">CRI, CNI, and CSI — The Pluggable Node Interfaces</h2>
+<p>The kubelet does not run containers, configure networking, or attach storage itself; it speaks three gRPC/HTTP interfaces to pluggable components, which is what allows Kubernetes to be runtime-, network-, and storage-agnostic. The <strong>Container Runtime Interface (CRI)</strong> is a gRPC API between the kubelet and the container runtime (containerd, CRI-O, historically dockershim); the kubelet calls <code>RunPodSandbox</code>, <code>CreateContainer</code>, <code>StartContainer</code>, <code>StopContainer</code>, and <code>RemovePodSandbox</code>, and the runtime handles image pulls, cgroup creation, and the actual process execution. The sandbox is the pod-level isolation unit (a network namespace and cgroup hierarchy shared by all containers in the pod), which is why containers in a pod share <code>localhost</code> networking and can share volumes via <code>emptyDir</code>. The <strong>Container Network Interface (CNI)</strong> is a simpler plugin protocol invoked by the kubelet (or a CNI daemonset) at pod creation: the kubelet calls a CNI plugin binary with <code>ADD</code>/<code>DEL</code>/<code>CHECK</code> commands and a JSON network configuration, and the plugin assigns the pod an IP, configures a veth pair, and programs any required routes or network policy rules. Calico, Cilium, Flannel, and AWS VPC CNI are common implementations, each with different encapsulation (VXLAN, IPIP, native routing, eBPF) and feature sets; the choice of CNI determines pod IP reachability, network policy enforcement, and performance characteristics, and is one of the most consequential cluster-level decisions.</p>
+<p>The <strong>Container Storage Interface (CSI)</strong> is the storage equivalent, exposing volume lifecycle operations — <code>CreateVolume</code>, <code>DeleteVolume</code>, <code>ControllerPublishVolume</code> (attach to a node), <code>NodePublishVolume</code> (mount into the pod), <code>NodeUnpublishVolume</code>, <code>ControllerUnpublishVolume</code> — through sidecar controllers that translate CSI calls into Kubernetes API actions. A CSI driver for, say, EBS, GCE PD, or Portworx runs a controller plugin (handling cloud API calls and volume attach/detach) and a node plugin (running on every node, handling mount/unmount via the kubelet’s CSI client). The crucial scheduling interaction is the <strong><code>WaitForFirstConsumer</code> volume binding mode</strong>: with this mode (the default for most CSI storage classes), the scheduler defers PVC binding until a pod is scheduled, so the volume is created in the same zone as the chosen node — without this, an eager binding could provision a volume in zone A and then fail to schedule the pod because its node ended up in zone B, a classic cross-zone volume trap. The scheduler’s <code>VolumeBinding</code> filter and <code>VolumeRestriction</code> plugin encode this logic, and getting it right is essential for multi-zone clusters.</p>
+<h2 id="the-controller-manager-and-reconciliation-loops">The Controller Manager and Reconciliation Loops</h2>
+<p>The controller manager hosts the dozens of built-in controllers that implement Kubernetes’ declarative semantics:</p>
+<ul>
+<li><strong>ReplicaSet / Deployment</strong> controller — ensures the desired number of pod replicas are running, creating or deleting pods as needed.</li>
+<li><strong>Node</strong> controller — monitors node heartbeats and taints or evicts pods from unresponsive nodes.</li>
+<li><strong>EndpointSlice</strong> controller — populates endpoint objects from pod readiness so <code>kube-proxy</code> can program Service routing.</li>
+<li><strong>ServiceAccount / Token</strong> controllers — provision credentials.</li>
+<li><strong>PersistentVolume / PersistentVolumeClaim</strong> controllers — bind and reclaim storage.</li>
+<li><strong>Garbage Collection</strong> controller — deletes dependents when an owner is removed (cascading deletion via ownerReferences).</li>
+<li><strong>Namespace / ResourceQuota</strong> controllers — manage lifecycle and accounting.</li>
+</ul>
+<p>Each controller is the same shape: watch a resource (and its dependents), compare desired to observed, and issue corrective API calls (create, update, delete) until they converge — the “level-triggered” rather than “edge-triggered” design that makes Kubernetes robust to missed events because the next sync re-derives the correct state.</p>
+<p>This reconciliation pattern is also the basis for <strong>custom controllers and operators</strong>: a CRD defines a new resource, and a controller (often built with <code>controller-runtime</code> or Kubebuilder) watches it and drives some external system toward the desired state — a database operator creates clusters, performs backups, and orchestrates upgrades; a certificate operator issues and rotates certs. The key correctness properties are <strong>idempotency</strong> (issuing the same corrective action twice must be safe), <strong>reconciliation on drift</strong> (the controller should not assume its last action succeeded; it must re-read state each loop), and <strong>graceful handling of transient API errors</strong> (use exponential backoff and re-queue rather than crashing). Because controllers watch the API server and act on changes, a poorly written controller that issues too many updates per sync can saturate the API server — the cardinal sin is a controller that fights itself or another controller, creating a flapping update storm that drives up etcd write QPS and can destabilize the whole cluster. The <code>--kubeconfig</code> and leader-election lease patterns ensure only one instance of each controller is active in an HA deployment.</p>
+<h2 id="high-availability-control-plane">High Availability Control Plane</h2>
+<p>A highly available control plane means no single component failure takes the cluster down. The standard topology for self-managed clusters is <strong>stacked etcd</strong>: three (or five) control-plane nodes, each running the API server, scheduler, controller manager, and an etcd member co-located. The API server is <strong>stateless</strong> (its state is etcd and an in-memory cache), so you simply put a load balancer in front of multiple API servers and clients fail over automatically; the scheduler and controller manager are <strong>active-passive</strong> — all replicas run, but each uses a leader-election lease (<code>coordination.k8s.io/v1 Lease</code>) so only one is actively making decisions, and the others wait to take over if the leader stops renewing the lease (default 15-second renewal, 10-second lease). This avoids the “two schedulers bind the same pod to different nodes” split-brain that would occur if both were active without coordination. The alternative topology is <strong>external etcd</strong>, where the etcd cluster runs on separate dedicated hosts; this isolates etcd’s resource needs (it is the most sensitive component) from the API servers and is preferred for very large clusters or when etcd is shared across multiple Kubernetes clusters.</p>
+<h3 id="ha-control-plane-topology-stacked-etcd-3-nodes">HA Control Plane Topology (Stacked etcd, 3 nodes)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                       ┌──────────────────────────┐</span></span>
+<span class="line"><span>                       │     Load Balancer         │</span></span>
+<span class="line"><span>                       │   (API entry point)       │</span></span>
+<span class="line"><span>                       └────────────┬─────────────┘</span></span>
+<span class="line"><span>            ┌───────────────────────┼───────────────────────┐</span></span>
+<span class="line"><span>            │                       │                       │</span></span>
+<span class="line"><span>            ▼                       ▼                       ▼</span></span>
+<span class="line"><span>   ┌────────────────┐      ┌────────────────┐      ┌────────────────┐</span></span>
+<span class="line"><span>   │  CP Node 1     │      │  CP Node 2     │      │  CP Node 3     │</span></span>
+<span class="line"><span>   │                │      │                │      │                │</span></span>
+<span class="line"><span>   │ kube-apiserver │      │ kube-apiserver │      │ kube-apiserver │</span></span>
+<span class="line"><span>   │  (stateless)   │      │  (stateless)   │      │  (stateless)   │</span></span>
+<span class="line"><span>   │                │      │                │      │                │</span></span>
+<span class="line"><span>   │ kube-scheduler │      │ kube-scheduler │      │ kube-scheduler │</span></span>
+<span class="line"><span>   │  (LEADER)      │      │  (standby)     │      │  (standby)     │</span></span>
+<span class="line"><span>   │                │      │                │      │                │</span></span>
+<span class="line"><span>   │ ctrl-manager   │      │ ctrl-manager   │      │ ctrl-manager   │</span></span>
+<span class="line"><span>   │  (LEADER)      │      │  (standby)     │      │  (standby)     │</span></span>
+<span class="line"><span>   │                │      │                │      │                │</span></span>
+<span class="line"><span>   │  etcd member   │◄────►│  etcd member   │◄────►│  etcd member   │</span></span>
+<span class="line"><span>   │    (Raft)      │      │    (Raft)      │      │    (Raft)      │</span></span>
+<span class="line"><span>   └────────────────┘      └────────────────┘      └────────────────┘</span></span>
+<span class="line"><span>            │                       │                       │</span></span>
+<span class="line"><span>            └───────────────────────┴───────────────────────┘</span></span>
+<span class="line"><span>                     Raft quorum = 2 of 3  (tolerates 1 failure)</span></span>
+<span class="line"><span>                                │</span></span>
+<span class="line"><span>            watch + reconcile   │  (decentralized data plane)</span></span>
+<span class="line"><span>                                ▼</span></span>
+<span class="line"><span>   ┌───────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │  Worker Nodes (kubelet + kube-proxy per node)             │</span></span>
+<span class="line"><span>   │  survive control-plane outage — keep serving traffic      │</span></span>
+<span class="line"><span>   └───────────────────────────────────────────────────────────┘</span></span></code></pre>
+<h3 id="ha-comparison-stacked-vs-external-etcd">HA Comparison: Stacked vs External etcd</h3>
+<table>
+<thead>
+<tr>
+<th>Topology</th>
+<th>etcd placement</th>
+<th>Pros</th>
+<th>Cons</th>
+<th>Best For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stacked etcd</td>
+<td>Co-located on each control-plane node</td>
+<td>Simpler to deploy; fewer hosts; lower latency between API server and etcd</td>
+<td>A control-plane node failure loses an etcd member too (coupled blast radius)</td>
+<td>Most self-managed clusters; small-to-medium</td>
+</tr>
+<tr>
+<td>External etcd</td>
+<td>Dedicated hosts, separate from API servers</td>
+<td>Isolates etcd resource needs; etcd can be shared across clusters; independent scaling</td>
+<td>More hosts to operate; extra network hop; more complex setup</td>
+<td>Very large clusters; shared etcd across multiple clusters</td>
+</tr>
+</tbody>
+</table>
+<p>The operational hazards in an HA control plane revolve around <strong>quorum</strong> and <strong>split-brain</strong>. With three etcd members you tolerate one failure; if two fail, the cluster becomes read-only (no writes) but existing pods keep running because the kubelet and kube-proxy are decentralized and don’t need the API server to keep serving traffic — this is the most important resilience property of Kubernetes, that the data plane survives control-plane outages. With five members you tolerate two failures, which is safer but costs more. An even number of members is strictly worse than the odd number just below it (4 tolerates only 1 failure, same as 3, but adds latency), so always choose 3 or 5. Network partitions between control-plane nodes can cause a split where the minority side cannot reach quorum and stops accepting writes while the majority side continues; client requests that land on the minority side hang until the partition heals or they time out and retry against the load balancer, which is why short client timeouts and retry-on-error are essential. For managed Kubernetes (EKS, GKE, AKS) the provider handles etcd HA and API server scaling, but the same principles apply and you still need to understand them to reason about control-plane incidents.</p>
+<h2 id="capacity-planning">Capacity Planning</h2>
+<p>Capacity planning for Kubernetes is fundamentally about translating application demand (requests and replicas) into node count and node size, while leaving headroom for scheduling jitter, node failures, and upgrades. The core arithmetic starts with the per-namespace and per-workload request totals: sum the CPU and memory requests of all pods, divide by a node’s <strong>allocatable</strong> capacity (total minus system-reserved and kube-reserved), and add a safety margin. The allocatable concept is critical — a node with 8 vCPU and 32 GB might advertise only ~7 vCPU and 28 GB allocatable after reserving resources for the OS, kubelet, and eviction thresholds, and only the allocatable number is available for scheduling. A useful rule of thumb is to plan for <strong>at least 20-30% spare capacity</strong> in each dimension so that a single node failure or a rolling upgrade (which cordons and drains one node at a time) doesn’t trigger a cascading unschedulable state, and to keep the largest single pod’s request well under a single node’s allocatable so that a hot pod can always be rescheduled.</p>
+<p>Beyond raw CPU and memory, capacity planning must account for several additional dimensions:</p>
+<ul>
+<li><strong>Specialized resources</strong> — GPUs, TPUs, local NVMe, hugepages. These are often the binding constraint and should be planned separately.</li>
+<li><strong>Storage</strong> — PVC size and IOPS per storage class, and the fact that <code>WaitForFirstConsumer</code> volumes are pinned to a zone, so a multi-zone cluster needs per-zone storage headroom.</li>
+<li><strong>IP address space</strong> — the CNI’s pod CIDR must have enough addresses for the maximum pod count, and some CNIs like AWS VPC CNI consume a VPC secondary IP per pod, coupling pod density to subnet size.</li>
+<li><strong>Control-plane throughput</strong> — etcd write QPS, API server request rate, and the number of objects (keep etcd under ~2-4 GB and the object count under a few hundred thousand).</li>
+<li><strong>Service mesh / network policy overhead</strong> — sidecars add CPU and memory per pod, and eBPF CNIs add per-node cost.</li>
+</ul>
+<p>The <strong>Cluster Autoscaler</strong> and <strong>Karpenter</strong> are the dynamic counterparts: the Cluster Autoscaler watches for unschedulable pods and adds nodes from a configured node group, then removes empty nodes; Karpenter is a more flexible alternative that provisions from a diverse pool of instance types based on pending pod requirements, consolidating underutilized nodes and reacting in seconds rather than minutes. For batch and ML workloads, the combination of Karpenter (for fast, diverse provisioning) with bin-packing scoring (to keep nodes dense and consolidated) is the modern best practice; for services, LeastAllocated spreading plus topology spread plus the Cluster Autoscaler remains the workhorse.</p>
+<p>A final planning consideration is the <strong>blast radius</strong> of a node: a node running 60 pods is a bigger failure unit than a node running 10, so spreading-sensitive workloads often prefer more, smaller nodes while bin-packing batch workloads prefer fewer, larger nodes (which also reduces per-node overhead and improves the request-to-allocatable ratio). Many mature platforms run <strong>multiple node pools</strong> with different shapes and taints — a small-pool for low-latency services, a dense-pool for batch, a GPU-pool for ML — and use node affinity and tolerations to route workloads to the right pool, getting the benefits of each strategy without compromising the other.</p>
+<h2 id="interview-question--model-answer-and-pitfall">Interview Question — Model Answer and Pitfall</h2>
+<p><strong>Question:</strong> A service with three replicas, deployed across a three-zone cluster, is repeatedly seeing one zone take 100% of the traffic right after a rolling update, even though you’ve set <code>topologySpreadConstraints</code> with <code>maxSkew: 1</code> and <code>whenUnsatisfiable: DoNotSchedule</code>. Walk me through what could be wrong and how you’d diagnose it.</p>
+<p><strong>Model Answer:</strong> The symptom — one zone hoarding traffic after a rollout — points to a mismatch between the pod spread the scheduler enforced and the load distribution the Service endpoints actually serve. First, confirm the pods are in fact spread: <code>kubectl get pods -o wide</code> should show one pod per zone. If they are, the problem is not scheduling but <strong>endpoint readiness</strong>: the new pods in two zones may be passing their startup probe but failing their <strong>readiness probe</strong> (or taking longer to become ready than the old pods they replaced), so <code>kube-proxy</code> has removed their IPs from the Service’s endpoint slices and all traffic funnels to the one zone whose pod became ready first. The fix is to ensure the readiness probe accurately reflects serving capacity, to set a <code>minReadySeconds</code> and a rolling update <code>maxUnavailable</code> that doesn’t drop too many pods at once, and to consider a <code>PodDisruptionBudget</code> so the rolling update can’t voluntarily reduce the ready count below a floor. If the pods are <em>not</em> spread (e.g., two in zone A, one in zone B), the constraint may be unsatisfiable because zone C has no viable node — perhaps it was cordoned, out of the pod’s node affinity, or lacked the requested resources — and the <code>DoNotSchedule</code> policy caused the scheduler to either fail the pod or, with <code>ScheduleAnyway</code>, place it suboptimally. Diagnose with <code>kubectl describe pod</code> and <code>kubectl get events</code>, check node conditions and taints per zone, and verify that the <code>topologySpreadConstraints</code> <code>labelSelector</code> matches the pod’s own labels (a mismatched selector makes the constraint a no-op). A deeper cause is that <code>PodTopologySpread</code> only considers <em>this</em> service’s pods, so if you have two services both spreading across three zones they can stack onto the same nodes and defeat node-level anti-affinity — combine topology spread with <code>podAntiAffinity</code> on a shared label for true cross-service spreading.</p>
+<p><strong>Common Pitfall:</strong> Reaching for <code>podAntiAffinity</code> with <code>requiredDuringSchedulingIgnoredDuringExecution</code> and a <code>topologyKey</code> of <code>kubernetes.io/hostname</code> to “spread replicas across nodes,” then scaling the service past the node count and watching pods go <code>Pending</code> because the hard anti-affinity has nowhere legal to place them. The <code>IgnoredDuringExecution</code> half of the rule name is the trap: the constraint is enforced at scheduling time only, so it doesn’t actively rebalance, but it <em>does</em> block new pods when the topology is full. <code>PodTopologySpread</code> with <code>maxSkew</code> and <code>ScheduleAnyway</code> is almost always the better primitive — it spreads when it can, degrades gracefully when it can’t, and scales linearly rather than quadratically with replica count. The broader lesson: prefer soft, score-based spreading over hard, filter-based anti-affinity unless you have an absolute correctness reason (like a quorum-based stateful workload that must not co-locate a majority on one node).</p>
+<h2 id="key-takeaways">Key Takeaways</h2>
+<ul>
+<li>The Kubernetes control plane is a small set of stateless or leader-elected processes coordinating through an etcd-backed watch API, which gives it the resilience property that the data plane survives control-plane failure.</li>
+<li>The scheduler is an online bin-packing optimizer implemented as a pluggable framework of filter and score plugins, and the right configuration depends on whether you optimize for resilience (spread), cost (pack), or specialized placement (affinity, taints, topology spread).</li>
+<li>Admission controllers, quotas, and LimitRanges are the policy layer that gates writes before persistence.</li>
+<li>The kubelet drives pod lifecycle through the CRI/CNI/CSI interfaces, and the controller manager reconciles desired to observed state through dozens of level-triggered loops.</li>
+<li>HA is achieved by replicating stateless components behind a load balancer and protecting the etcd quorum, and capacity planning is a multidimensional exercise in matching requests to allocatable node capacity while leaving headroom for failure and upgrade.</li>
+</ul>
+<p>Mastery of these internals is what lets you debug a <code>Pending</code> pod, design a scheduler profile for a new workload class, size a cluster for a launch, or answer a staff-level architecture question with confidence rather than guesswork.</p>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Kubernetes is declarative reconciliation: controllers watch desired vs observed state and drive convergence — the design is level-triggered, so missed events are self-healing on the next sync.</li>
+<li>The API server is the only component that talks to etcd directly; everything else (scheduler, controllers, kubelet) is a client over a watch-based protocol, which keeps etcd small and pushes business logic to horizontally-scalable edges.</li>
+<li>The scheduler runs a two-phase pipeline — Filter (hard constraints) then Score (soft preferences) — implemented as a pluggable framework; the scoring strategy encodes whether you optimize for resilience (spread) or cost (pack).</li>
+<li>The data plane survives control-plane failure: the kubelet and kube-proxy are decentralized and keep serving traffic even if etcd loses quorum, so a control-plane outage degrades to read-only, not a full outage.</li>
+<li>Always use 3 or 5 etcd members (odd numbers); an even number buys nothing and increases split-brain risk — 4 members tolerate the same 1 failure as 3 but add latency.</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li><strong>What’s the difference between requests and limits?</strong> Requests are the scheduler’s bin-packing floor and the kubelet’s cgroup reservation; limits are the ceiling enforced by CPU throttling and OOM kill. Quotas count both, so inflated limits exhaust quota without improving actual capacity.</li>
+<li><strong>How do you spread replicas across zones safely?</strong> Use <code>PodTopologySpread</code> with <code>maxSkew: 1</code> rather than hard <code>podAntiAffinity</code> — it spreads when it can, degrades gracefully when it can’t, and scales linearly instead of quadratically with replica count.</li>
+<li><strong>What happens when the scheduler can’t place a pod?</strong> The <code>PostFilter</code> phase runs preemption: it identifies lower-priority victims whose removal would free enough resources, evicts them gracefully, and schedules the preemptor — but PDBs can block eviction, forcing the scheduler to look elsewhere or fail.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li><code>PodTopologySpread</code> only considers <em>this service’s</em> pods, so two services each spreading across three zones can stack onto the same nodes and defeat node-level isolation — combine topology spread with <code>podAntiAffinity</code> on a shared label for true cross-service spreading.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/kubernetes-scheduler-and-control-plane-internals/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Kubernetes%20Scheduler%20%26%20Control%20Plane%20Internals&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fkubernetes-scheduler-and-control-plane-internals%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fkubernetes-scheduler-and-control-plane-internals%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/kubernetes-scheduler-and-control-plane-internals" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/google-search-architecture" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Google Search Architecture</span></a><a href="/notes/system-design/lead-election-and-gossip-protocol" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Lead Election &amp; Gossip Protocol</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Kubernetes Scheduler &amp; Control Plane Internals" data-selector=".article-prose" data-article-slug="system-design/kubernetes-scheduler-and-control-plane-internals" data-article-title="Kubernetes Scheduler &amp; Control Plane Internals" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

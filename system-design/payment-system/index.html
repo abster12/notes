@@ -1,0 +1,617 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Payment System / Ledger Design · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-estimation" class="toc-link" data-toc-link="capacity-estimation" data-astro-cid-p33bl5ka>Capacity Estimation</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#double-entry-ledger-design" class="toc-link" data-toc-link="double-entry-ledger-design" data-astro-cid-p33bl5ka>Double-Entry Ledger Design</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#concurrency-control-and-the-double-spend-problem" class="toc-link" data-toc-link="concurrency-control-and-the-double-spend-problem" data-astro-cid-p33bl5ka>Concurrency Control and the Double-Spend Problem</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#idempotency" class="toc-link" data-toc-link="idempotency" data-astro-cid-p33bl5ka>Idempotency</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#payment-gateway-integration" class="toc-link" data-toc-link="payment-gateway-integration" data-astro-cid-p33bl5ka>Payment Gateway Integration</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#pci-compliance" class="toc-link" data-toc-link="pci-compliance" data-astro-cid-p33bl5ka>PCI Compliance</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#settlement-and-reconciliation" class="toc-link" data-toc-link="settlement-and-reconciliation" data-astro-cid-p33bl5ka>Settlement and Reconciliation</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#retry-strategies" class="toc-link" data-toc-link="retry-strategies" data-astro-cid-p33bl5ka>Retry Strategies</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#fraud-detection" class="toc-link" data-toc-link="fraud-detection" data-astro-cid-p33bl5ka>Fraud Detection</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#multi-currency" class="toc-link" data-toc-link="multi-currency" data-astro-cid-p33bl5ka>Multi-Currency</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#refund-and-chargeback-flows" class="toc-link" data-toc-link="refund-and-chargeback-flows" data-astro-cid-p33bl5ka>Refund and Chargeback Flows</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#event-sourcing-for-audit-trail" class="toc-link" data-toc-link="event-sourcing-for-audit-trail" data-astro-cid-p33bl5ka>Event Sourcing for Audit Trail</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#distributed-transaction-patterns-for-payments" class="toc-link" data-toc-link="distributed-transaction-patterns-for-payments" data-astro-cid-p33bl5ka>Distributed Transaction Patterns for Payments</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#cap-theorem-for-payments" class="toc-link" data-toc-link="cap-theorem-for-payments" data-astro-cid-p33bl5ka>CAP Theorem for Payments</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#sharp-interview-question" class="toc-link" data-toc-link="sharp-interview-question" data-astro-cid-p33bl5ka>Sharp Interview Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Payment System / Ledger Design</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-hard" data-astro-cid-sgg5joot>Hard</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 28 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 39 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>finance</span><span class="tag" data-astro-cid-sgg5joot>payments</span><span class="tag" data-astro-cid-sgg5joot>ledger</span><span class="tag" data-astro-cid-sgg5joot>idempotency</span><span class="tag" data-astro-cid-sgg5joot>transactions</span><span class="tag" data-astro-cid-sgg5joot>outbox-pattern</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="payment-system--ledger-design">Payment System / Ledger Design</h1>
+<p>A payment system is the financial backbone of any commerce platform, and it is the one subsystem where bugs are measured in real money and regulatory fines rather than user irritation. The design forces a collision between two traditionally hostile goals: the mathematical rigor of accounting and the operational reality of distributed systems. Every architectural decision — from isolation levels to retry semantics to idempotency key storage — must be evaluated not just for performance but for whether it can produce an incorrect monetary state that an auditor will eventually find. The sections below walk through the full lifecycle of a payment, from ledger modeling through gateway integration, settlement, fraud, and the distributed-transaction patterns that hold it all together.</p>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A financial backbone using double-entry ledgers, idempotent APIs, and outbox patterns to ensure every transaction is exactly-once, auditable, and reconcilable.</p>
+<p><strong>How it’s asked:</strong> “Design a payment system for an e-commerce platform processing 10K transactions/sec. Handle idempotency, ledger integrity, gateway integration, reconciliation, and fraud detection.”</p>
+<hr>
+<h2 id="capacity-estimation">Capacity Estimation</h2>
+<p>Before diving into design, it is worth grounding the problem in realistic numbers because they drive nearly every downstream choice. A mid-to-large commerce platform might process 10 million payments per day. That is roughly 116 payments per second on average, but traffic is bursty — Black Friday or flash-sale peaks can hit 5–10x the average, so design for 1,000–2,000 payments per second at peak.</p>
+<p>Key capacity drivers:</p>
+<ul>
+<li><strong>Payments:</strong> 10M/day; ~116/s average; 1,000–2,000/s at peak (5–10x burst factor)</li>
+<li><strong>Ledger writes:</strong> each payment produces a handful of entries (debit customer, credit merchant, debit gateway fee, credit settlement suspense) → 4,000–8,000 inserts/s at peak</li>
+<li><strong>Storage:</strong> ~40 bytes/row + indexes; 10M payments/day × 4 entries × 4 years ≈ 58 billion rows → tens of terabytes → “must shard the ledger” territory</li>
+<li><strong>Read traffic:</strong> dominated by balance queries and reconciliation jobs; a balance query scanning the full ledger for an active account is unacceptable → materialized balance snapshots or running-balance columns with periodic verification become necessary, even though the purest design computes balance from entries alone</li>
+<li><strong>Reconciliation:</strong> nightly batch job against the gateway settlement file must complete within a few hours → sets the throughput floor for that pipeline</li>
+</ul>
+<h2 id="double-entry-ledger-design">Double-Entry Ledger Design</h2>
+<p>The foundation of any trustworthy payment system is double-entry bookkeeping, a 700-year-old discipline that predates computers and remains the only correct way to model money movement. The core invariant is that every financial event debits one account and credits another, and the sum of all debits must always equal the sum of all credits — <code>Σ(debits) = Σ(credits)</code>. This is not merely a convention; it is a structural correctness guarantee. If the sums do not balance after a transaction, you know with certainty that something is wrong, and the ledger itself tells you where to look. Single-entry systems (a <code>balance</code> column that gets incremented and decremented) offer no such invariant; a bug that debits without crediting silently loses money and is detectable only by external audit.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>            Double-Entry Ledger — $100 Customer Payment</span></span>
+<span class="line"><span>            ============================================</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  transaction_id = txn_001            Account               Dr ($)   Cr ($)</span></span>
+<span class="line"><span>  ┌──────────────────────────────┐   ┌─────────────────────────────────────┐</span></span>
+<span class="line"><span>  │ ledger_entries (append-only) │   │ Customer funding source │ 100.00  │         │</span></span>
+<span class="line"><span>  │  • Dr Customer funding 100.00│──▶│ Merchant payable        │         │  97.00  │</span></span>
+<span class="line"><span>  │  • Cr Merchant payable  97.00│   │ Platform fee income     │         │   3.00  │</span></span>
+<span class="line"><span>  │  • Cr Platform fee inc   3.00│   │ ───────────────────────────────────  │</span></span>
+<span class="line"><span>  └──────────────────────────────┘   │ Σ debits = Σ credits   │ 100.00  │ 100.00  │</span></span>
+<span class="line"><span>                                     └─────────────────────────────────────┘</span></span>
+<span class="line"><span>  Invariant: Σ(debits) = Σ(credits) → always balanced, always auditable</span></span>
+<span class="line"><span>  Immutability: no UPDATE/DELETE; corrections are negative reversal entries</span></span></code></pre>
+<p>In a ledger-grade schema, every monetary event produces two or more rows in an append-only <code>ledger_entries</code> table, each tagged as a debit or credit against a specific account, all sharing a common <code>transaction_id</code>. The ledger is strictly immutable — you never <code>UPDATE</code> or <code>DELETE</code> a ledger row. Corrections are reversal entries: a new row with a negative amount and a reference to the original transaction. This append-only discipline means the ledger functions as an audit log by construction; every state the system has ever been in can be reconstructed by replaying entries in order, which is the bridge to event sourcing discussed later.</p>
+<p>A key design decision is whether account balance is stored or computed. The purist answer is that balance is always derived: <code>SELECT SUM(CASE WHEN type='CREDIT' THEN amount ELSE -amount END) FROM ledger_entries WHERE account_id=?</code>. This is unimpeachable from an audit standpoint because the balance cannot drift from the ledger — it <em>is</em> the ledger. But for an account with millions of entries, that query is too slow for a real-time balance check on a hot read path. The pragmatic resolution is a hybrid: maintain a <code>current_balance</code> column on the <code>accounts</code> table updated in the same database transaction as the ledger insert, and run a periodic reconciliation job that recomputes the sum from entries and compares it to the stored balance, alerting on any mismatch. This gives you fast reads with a safety net. Some systems go further and maintain periodic balance snapshots (e.g., “balance as of end of each day”) so that a full balance query only needs to sum entries since the last snapshot plus the snapshot value.</p>
+<p>The chart of accounts — the set of logical accounts against which entries are posted — must be designed carefully. A typical commerce ledger has customer liability accounts (money we owe the customer or hold on their behalf), merchant payable accounts (money we owe the merchant pending payout), clearing or suspense accounts (money in flight at the gateway), fee income accounts, and settlement accounts. When a customer pays $100 for an order, the entries might be: debit customer funding source $100, credit merchant payable $97, credit platform fee income $3. When the gateway settles, debit clearing suspense $100, credit settlement bank account $100. Every real-world money movement maps to a balanced set of entries against this chart.</p>
+<h2 id="concurrency-control-and-the-double-spend-problem">Concurrency Control and the Double-Spend Problem</h2>
+<p>Money systems have a concurrency hazard that most other systems do not: the double-spend. Under naive <code>READ COMMITTED</code> isolation (the default in PostgreSQL), two concurrent transactions both read a $100 balance, both see that $100 ≥ $100, both debit $100, and both commit — leaving the account at -$100 and the platform $100 poorer. The database considered each transaction consistent in isolation, but the interleaving is financially wrong.</p>
+<p>There are two main defenses. Pessimistic locking uses <code>SELECT ... FOR UPDATE</code> to acquire an exclusive row lock on the account before checking and mutating the balance. The second concurrent transaction blocks until the first commits or rolls back, at which point it re-reads and sees the updated $0 balance, correctly rejecting the debit. This is simple and bulletproof but serializes access to hot accounts — a high-volume merchant’s account becomes a bottleneck. Optimistic locking instead adds a <code>version</code> column and performs an atomic conditional update: <code>UPDATE accounts SET balance=balance-?, version=version+1 WHERE user_id=? AND balance&gt;=? AND version=?</code>. If <code>rows_affected=0</code>, either the balance was insufficient or someone else modified the row; the application retries with a fresh read. Optimistic locking yields higher throughput under low contention but requires retry logic and can degrade under heavy contention on a single hot row.</p>
+<p>A critical subtlety is deadlock prevention when a transaction locks multiple accounts. If transaction A locks account 1 then waits for account 2, while transaction B locks account 2 then waits for account 1, both deadlock and one is aborted. The fix is to always acquire locks in a deterministic, globally consistent order — typically <code>ORDER BY account_id</code> — so that any two transactions touching overlapping accounts acquire them in the same sequence and never deadlock. This ordering discipline must be enforced in the data access layer, not left to individual developers, because a single non-conforming transaction can reintroduce deadlocks.</p>
+<h2 id="idempotency">Idempotency</h2>
+<p>Idempotency is the property that executing the same operation twice produces the same result as executing it once. In payments this is not a nicety — it is mandatory, because the real world is full of duplicate requests. A user double-clicks the pay button, a mobile client retries after a network timeout, a message queue redelivers a payment event, an upstream service crashes after charging the customer but before receiving the response. Without idempotency, every one of these scenarios can double-charge a customer.</p>
+<p>The standard mechanism is a client-generated idempotency key included with every payment request. The server stores a mapping from <code>(idempotency_key, response)</code> so that a duplicate request with the same key returns the cached original response without reprocessing. The key should be generated by the client (a UUID or a hash of the request intent) and sent as an HTTP header — <code>Idempotency-Key: a4f3c2b1-...</code>. The server’s responsibility is to atomically check-and-insert: if the key is unknown, process the payment and store the response; if known, return the stored response. This check-and-insert must be atomic to avoid a race where two duplicate requests both see “key not found” and both process. In a database this is a <code>INSERT ... ON CONFLICT DO NOTHING</code> against an idempotency table within the same transaction as the payment; in Redis it is a <code>SET NX</code> with a TTL.</p>
+<p>There is a sharp distinction between an idempotency key and a request deduplication cache. A dedup cache prevents the same network request from being processed twice within a short window. An idempotency key is a durable, semantic guarantee: “this business operation, identified by this key, happens exactly once, regardless of how many times the request arrives or how much time passes.” Idempotency keys should be persisted, not stored only in Redis with a short TTL, because a duplicate request can arrive hours or days later (a queued retry, a manually re-submitted batch). The TTL approach is a common pitfall: a 24-hour TTL means a duplicate arriving on day 2 re-processes and double-charges. Store idempotency keys in the database alongside the transaction they produced, with no expiry, and use Redis only as a fast-path cache in front of the DB lookup.</p>
+<p>The idempotency guarantee extends to the response as well. If the server processed the payment but crashed before sending the response, the client retries with the same key, and the server must return the stored successful response — not an error, not a new transaction. This means the idempotency record must be written and committed <em>before</em> the response is sent, and the payment processing and idempotency record creation must be in the same transaction or a carefully ordered saga.</p>
+<h2 id="payment-gateway-integration">Payment Gateway Integration</h2>
+<p>The payment gateway (Stripe, Adyen, Braintree, or a direct processor integration) is the bridge between your ledger and the outside financial network — the card networks, banks, and wallets. Your internal ledger records the intent and the internal accounting; the gateway actually moves the money. The integration pattern that has become standard is the authorize-capture two-phase flow, which mirrors a hold-then-settle pattern in your ledger.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                 Authorize-Capture Payment Flow</span></span>
+<span class="line"><span>                 ==============================</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Customer        API / LedgerSvc        Gateway          Card Network / Bank</span></span>
+<span class="line"><span>     │                 │                    │                   │</span></span>
+<span class="line"><span>     │── pay $100 ───▶│                    │                   │</span></span>
+<span class="line"><span>     │                 │                    │                   │</span></span>
+<span class="line"><span>     │  [1] AUTHORIZE  │── auth $100 ─────▶│                   │</span></span>
+<span class="line"><span>     │                 │   (idempotency-key)│── verify + hold ▶│</span></span>
+<span class="line"><span>     │                 │◀── auth_code ─────│◀── funds held ────│</span></span>
+<span class="line"><span>     │                 │                    │                   │</span></span>
+<span class="line"><span>     │  ledger: Dr Customer funding 100 / Cr Clearing-Suspense 100</span></span>
+<span class="line"><span>     │  (no money moved yet — issuing bank holds funds only)</span></span>
+<span class="line"><span>     │                 │                    │                   │</span></span>
+<span class="line"><span>     │  [2] CAPTURE (triggered when order ships)                │</span></span>
+<span class="line"><span>     │                 │── capture ────────▶│── finalize charge▶│</span></span>
+<span class="line"><span>     │                 │◀── captured ───────│◀── charged ───────│</span></span>
+<span class="line"><span>     │                 │                    │                   │</span></span>
+<span class="line"><span>     │  ledger: Dr Clearing-Suspense 100 / Cr Merchant-Payable 97 / Cr Fee-Income 3</span></span>
+<span class="line"><span>     │                 │                    │                   │</span></span>
+<span class="line"><span>     │  Void option (before capture): no chargeback fee if order unfulfillable</span></span></code></pre>
+<p>In the authorize phase, you send the payment details to the gateway, which contacts the card network and issuing bank to verify funds and place a hold. The gateway returns an authorization code and a balance transaction reference. At this point no money has moved — the issuing bank has reserved the funds. In your ledger, you post entries to a clearing or suspense account reflecting the authorized-but-uncaptured state. In the capture phase, typically triggered when the order ships, you tell the gateway to finalize the authorized amount, converting the hold into a real charge. Only at capture do you move the ledger entries from suspense to the merchant payable and fee income accounts. This two-phase design protects against the scenario where you charge a customer for an order you cannot fulfill — an authorization can be voided at no cost, but a captured charge that must be refunded costs a chargeback fee and hurts your dispute ratio.</p>
+<p>The gateway is an external dependency and must be treated as untrusted and unreliable. Every gateway call must have a timeout (typically 30 seconds), a retry strategy (exponential backoff for transient failures, never retry on definitive failures), and an idempotency key so that a retried capture does not double-charge. Gateway responses must be persisted immutably — the raw API response, status code, and transaction reference — because these are your evidence in any later dispute and your input to reconciliation. You must handle the full state machine of gateway statuses: <code>authorized</code>, <code>captured</code>, <code>failed</code>, <code>declined</code>, <code>voided</code>, <code>refunded</code>, <code>disputed</code>, and the various pending states in between. A common error is treating a gateway timeout as a failure and showing the user an error, when in fact the charge may have succeeded — the gateway processed it but the response was lost. The correct behavior on timeout is to query the gateway by idempotency key to determine the actual state before presenting anything to the user.</p>
+<h2 id="pci-compliance">PCI Compliance</h2>
+<p>The Payment Card Industry Data Security Standard (PCI DSS) is the compliance framework that governs any system that touches card data. The cardinal rule of PCI in modern architecture is: <strong>don’t touch card data</strong>. The entire industry has converged on tokenization as the way to achieve this. The customer enters their card number into a gateway-hosted iframe (Stripe Elements, Adyen Components) or is redirected to a gateway-hosted payment page. The raw card number (PAN) never touches your servers — it goes directly from the browser to the gateway, which returns a token representing that card. Your system stores and uses only the token. Because your servers never see, store, or transmit the PAN, your PCI scope is dramatically reduced — you fall under the much lighter Self-Assessment Questionnaire A (SAQ A) instead of the onerous SAQ D that applies to systems storing card data.</p>
+<p>If for business reasons you must handle card data directly, you enter the full PCI DSS assessment regime, which mandates network segmentation, encryption of card data at rest and in transit, strict access controls, key management procedures, vulnerability scanning, penetration testing, quarterly ASV scans, and an annual audit by a Qualified Security Assessor. This is expensive and risky. The architectural advice is unanimous: engineer your system so that card data never enters your perimeter, and accept the tokenization model even if it means a slightly less seamless UX. The cost of a PCI breach — fines, forensic investigation, card brand penalties, reputational damage — dwarfs the engineering cost of tokenization.</p>
+<p>PCI compliance also touches your logging and observability practices. You must never log full card numbers, CVVs, or track data. Logging middleware must scrub these fields, and you should periodically scan logs for PAN patterns (the Luhn algorithm check) to catch accidental exposure. CVV must never be stored, even encrypted, even transiently, post-authorization — this is a hard PCI DSS requirement. Tokenization sidesteps all of this because the sensitive data lives only in the gateway’s vault.</p>
+<h2 id="settlement-and-reconciliation">Settlement and Reconciliation</h2>
+<p>Settlement is the process by which the gateway actually transfers funds to your merchant bank account, typically on a T+1 or T+2 cycle (transaction day plus one or two business days). The gateway batches your captured transactions and sends an ACH or wire transfer for the net amount, along with a settlement report detailing every transaction included in the batch, the fees deducted, and the net amount. Reconciliation is the process of comparing your internal ledger against this external settlement report to ensure they agree.</p>
+<p>Reconciliation is where silent bugs become loud. If your ledger says you captured $10,000 in a day but the gateway settlement report says $9,850, there is a $150 discrepancy that must be explained. Common causes: a capture that succeeded at the gateway but whose confirmation response was lost and your ledger still shows it as authorized-only; a refund processed at the gateway that failed to post a reversal entry in your ledger; a currency conversion rounding difference; a gateway fee that was charged but not recorded as a ledger entry. The reconciliation job matches each settlement line item to a ledger transaction by gateway transaction ID, flags unmatched items on either side, and routes them to an ops team for manual investigation. Unmatched items are not errors to be silently fixed — they are signals of bugs in the payment pipeline that must be root-caused.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                  Reconciliation Flow</span></span>
+<span class="line"><span>                  ===================</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Gateway Settlement File        Internal Ledger</span></span>
+<span class="line"><span>  (T+1, per-txn + fees)          (ledger_entries)</span></span>
+<span class="line"><span>       │                              │</span></span>
+<span class="line"><span>       └─────────────┬────────────────┘</span></span>
+<span class="line"><span>                     ▼</span></span>
+<span class="line"><span>         ┌─────────────────────┐</span></span>
+<span class="line"><span>         │ Reconciliation Job  │  (match by gateway_txn_id)</span></span>
+<span class="line"><span>         └──────────┬──────────┘</span></span>
+<span class="line"><span>                    │</span></span>
+<span class="line"><span>        ┌───────────┼───────────────┐</span></span>
+<span class="line"><span>        ▼           ▼               ▼</span></span>
+<span class="line"><span>   ┌────────┐  ┌───────────┐   ┌─────────────┐</span></span>
+<span class="line"><span>   │MATCHED │  │INTERNAL-  │   │SETTLEMENT-  │</span></span>
+<span class="line"><span>   │        │  │ONLY       │   │ONLY         │</span></span>
+<span class="line"><span>   │ledger =│  │ledger has │   │settlement   │</span></span>
+<span class="line"><span>   │settlmt │  │txn,       │   │has txn,     │</span></span>
+<span class="line"><span>   │        │  │settl does │   │ledger does  │</span></span>
+<span class="line"><span>   │        │  │not        │   │not          │</span></span>
+<span class="line"><span>   └───┬────┘  └─────┬─────┘   └──────┬──────┘</span></span>
+<span class="line"><span>       │             │                │</span></span>
+<span class="line"><span>       ▼             ▼                ▼</span></span>
+<span class="line"><span>   no action     will-settle-      investigate:</span></span>
+<span class="line"><span>                 tomorrow OR       chargeback,</span></span>
+<span class="line"><span>                 bug (capture     gateway fee,</span></span>
+<span class="line"><span>                 never sent)      lost capture</span></span>
+<span class="line"><span>                 → root-cause     → post missing</span></span>
+<span class="line"><span>                                  ledger entry</span></span></code></pre>
+<p>A well-designed reconciliation system produces three categories of output:</p>
+<ul>
+<li><strong>Matched items</strong> — ledger and settlement agree, no action</li>
+<li><strong>Internal-only items</strong> — ledger has a transaction the settlement report does not (possibly a capture that will settle tomorrow, or a bug where the gateway never received the capture)</li>
+<li><strong>Settlement-only items</strong> — settlement report has a transaction the ledger does not (possibly a chargeback or fee the gateway applied without a corresponding ledger entry)</li>
+</ul>
+<p>The system must be smart enough to distinguish “will settle tomorrow” from “genuinely missing” by looking at settlement dates. Chargebacks, representments, and gateway fees are the most common settlement-only items that catch teams by surprise because they appear in the settlement file without a preceding notification.</p>
+<p>Reconciliation should run at multiple granularities:</p>
+<ul>
+<li><strong>Real-time / near-real-time</strong> — balance check against the gateway’s balance API (catches large discrepancies quickly)</li>
+<li><strong>Daily batch</strong> — reconciliation against the settlement report (the formal audit)</li>
+<li><strong>Monthly accounting close</strong> — ties the ledger to the bank statement</li>
+</ul>
+<p>Each layer catches a different class of error at a different latency.</p>
+<h2 id="retry-strategies">Retry Strategies</h2>
+<p>Retrying failed operations is essential in distributed payments, but naive retries are dangerous. The fundamental tension is that some failures are retryable (network blip, gateway 500, timeout) and some are not (insufficient funds, card declined, invalid card number). Retrying a declined card charges the platform a gateway API fee each time and may trigger fraud alerts at the issuing bank. Retrying a network timeout is safe <em>only if</em> the original operation is idempotent — otherwise the retry may double-charge.</p>
+<p>The correct retry strategy is layered. First, classify the error by type:</p>
+<ul>
+<li><strong>4xx (except 429)</strong> — definitive failure (insufficient funds, declined, invalid card); do not retry, return the error to the caller</li>
+<li><strong>5xx / network timeout</strong> — ambiguous (operation may or may not have succeeded); retry with idempotency protection</li>
+<li><strong>429 rate-limit</strong> — retry after the indicated backoff</li>
+</ul>
+<p>Second, use exponential backoff with jitter to avoid thundering herds:</p>
+<ul>
+<li><code>delay = min(base * 2^attempt, max_delay) + random_jitter</code></li>
+<li>Typical base: 1 second</li>
+<li>Typical max delay: 60 seconds</li>
+<li>Cap on total attempts: 3–5</li>
+</ul>
+<p>Third, for payment-specific operations, apply a circuit breaker: if the gateway is returning 5xxs at a high rate, stop sending it new payments and fail fast rather than queuing up retries that will all fail and then all retry simultaneously when the gateway recovers.</p>
+<p>For asynchronous payment processing (e.g., a queue of payment jobs), the retry strategy is a dead-letter queue pattern. Failed jobs go back on the queue with an incrementing attempt count and a visible-after timestamp implementing backoff. After N attempts, the job moves to a dead-letter queue for manual inspection. The dead-letter queue must be monitored — an unbounded DLQ is a silent failure mode where payments are lost without anyone noticing. A scheduled job should reconcile the DLQ against the original intent to ensure no payment request is permanently stuck.</p>
+<p>A subtle but critical pitfall: retries must use the same idempotency key as the original request. If a capture times out and you retry with a new idempotency key, the gateway sees it as a new capture and may double-charge. The idempotency key must be derived from the business operation (e.g., <code>capture-{order_id}</code>), not generated fresh per HTTP request.</p>
+<h2 id="fraud-detection">Fraud Detection</h2>
+<p>Fraud detection in a payment system operates on a spectrum from simple rule-based filters to real-time machine learning models, and most production systems use both in layers. The first layer is velocity rules: more than N failed payment attempts from the same IP in 10 minutes, more than M distinct cards from the same device fingerprint in an hour, a new account placing a high-value order within minutes of creation. These rules are cheap to evaluate and catch the bulk of obvious fraud. They are typically implemented as a streaming aggregation over a windowed store (Redis sorted sets with timestamps, or a Flink job maintaining rolling counters).</p>
+<p>The second layer is risk scoring using a trained model — a gradient-boosted tree or a neural network that takes features (transaction amount relative to user history, time of day, geo-distance between billing and shipping address, card age, device reputation, email domain age) and outputs a fraud probability score. Transactions above a threshold are blocked, those in a gray zone are challenged with 3D Secure or step-up authentication, and those below are allowed. The model must be retrained regularly because fraud patterns shift; a static model decays within months.</p>
+<p>3D Secure (Verified by Visa, Mastercard SecureCode) is the card network’s fraud liability shift mechanism. When a transaction is authenticated through 3D Secure, liability for certain types of fraud chargebacks shifts from the merchant to the issuing bank. The trade-off is added friction — the customer is redirected to their bank’s authentication page — which reduces conversion rate. The modern 3D Secure 2 protocol reduces this friction through risk-based authentication, where low-risk transactions can be frictionless. The decision of when to invoke 3D Secure is itself a risk-based optimization: invoke it on high-risk transactions to shift liability, let low-risk ones through to maximize conversion.</p>
+<p>Fraud detection must be fast because it runs on the payment critical path. A risk score that takes 500ms to compute adds 500ms to every checkout. The typical architecture precomputes user-level features in a streaming pipeline (so the per-transaction fraud check only needs to look up pre-aggregated values) and uses a low-latency model serving tier. The fraud decision and its features must be logged for every transaction — both for model retraining and for the eventual chargeback dispute where you may need to prove you took reasonable fraud prevention measures.</p>
+<h2 id="multi-currency">Multi-Currency</h2>
+<p>Multi-currency support sounds simple — store an amount and a currency code — but it is rife with precision and conversion pitfalls. The first rule is: never store money as a floating-point number. Use integer minor units (cents, pence) or a fixed-point decimal type. <code>float</code> introduces rounding errors that accumulate across millions of transactions and eventually produce a ledger that does not balance. Store amounts as <code>bigint</code> in minor units (e.g., $10.00 stored as 1000) or as <code>numeric(18, 4)</code> in the database. The choice of minor-unit precision must account for currencies with different subdivisions: some currencies (JPY, KRW) have zero decimal places, some (BHD, IQD) have three, and most have two. A zero-decimal currency stored in a system assuming two decimals will be silently mis-scaled.</p>
+<p>Currency conversion introduces the question of which exchange rate to use and when to lock it. The standard approach is to lock the rate at authorization time and use that same rate for capture, settlement, and reporting — otherwise, FX movement between authorization and settlement creates gains or losses that must be tracked in their own ledger accounts (realized FX gain/loss). The gateway typically provides the rate; you must store it alongside the transaction for auditability. Rounding on conversion must use a defined rule (banker’s rounding to avoid systematic bias) and the rounding remainder — the fraction of a minor unit lost — must be accounted for, typically accumulated in a rounding account that is periodically reconciled to zero.</p>
+<p>A deeper challenge is that a payment in one currency may settle in another. A customer pays in EUR, your merchant account settles in USD, and the gateway applies its own conversion. Your ledger must track the original currency amount, the settlement currency amount, the applied rate, and any FX margin the gateway charged as a separate fee. Multi-currency ledger entries should always store the original currency and amount as the source of truth and the converted amount as a derived, auditable field with the rate that produced it. Reporting (revenue, refunds, fees) must specify which currency it is aggregating in and how conversion was applied, because aggregating converted amounts with different rates produces nonsense totals.</p>
+<h2 id="refund-and-chargeback-flows">Refund and Chargeback Flows</h2>
+<p>Refunds and chargebacks are the two ways money flows back to the customer, and they are operationally and ledger-distinct. A refund is an action you initiate — the customer requests their money back, you call the gateway’s refund API, and the gateway returns the funds to the customer’s card. In the ledger, a refund is a reversal entry set: debit merchant payable, credit customer account, referencing the original transaction. Refunds can be partial (refund $30 of a $100 charge) and can be issued long after the original capture (most gateways allow refunds within 180 days, some up to 365). A critical invariant is that total refunds cannot exceed the original captured amount — the system must check <code>sum(refunds) &lt;= capture_amount</code> before issuing a new refund, using the same concurrency control as the original payment to prevent two concurrent partial refunds from exceeding the total.</p>
+<p>A chargeback is initiated by the customer’s issuing bank, not by you. The customer disputes the charge with their bank (claiming fraud, goods not received, or product not as described), the bank reverses the transaction and pulls the funds back, and the gateway notifies you via a webhook or daily dispute report. You have the option to fight the chargeback by submitting evidence (proof of delivery, signed receipt, terms of service) through a process called representment. If you win, the funds are returned; if you lose, the chargeback stands and you also pay a chargeback fee ($15–$25 typical). Chargebacks must be tracked through their own state machine: <code>dispute_opened</code>, <code>evidence_submitted</code>, <code>dispute_won</code>, <code>dispute_lost</code>, with ledger entries at each state transition. When a dispute is opened, you should post a provisional debit to a chargeback suspense account; when it is resolved, you either reverse that entry (won) or make it permanent and post the chargeback fee (lost).</p>
+<p>A common pitfall is conflating refunds and chargebacks in the ledger. They have different tax implications, different fee structures, different dispute resolution paths, and different accounting treatment. A refund is a reversal of the original sale; a chargeback is a forced reversal by an external party. Mixing them in the same ledger account makes reconciliation and financial reporting ambiguous. Maintain separate accounts or at minimum clear distinguishing metadata on every reversal entry. Also note that a customer who has already been refunded cannot also chargeback the same transaction — your system must detect this and reject or flag the duplicate recovery attempt.</p>
+<h2 id="event-sourcing-for-audit-trail">Event Sourcing for Audit Trail</h2>
+<p>The append-only ledger is a natural fit for event sourcing, and for payment systems this convergence is more than coincidental — it is the correct architecture. In an event-sourced payment system, every state change is captured as an immutable event stored in an append-only event log: <code>PaymentAuthorized</code>, <code>PaymentCaptured</code>, <code>RefundInitiated</code>, <code>RefundCompleted</code>, <code>DisputeOpened</code>, <code>SettlementReceived</code>. The current state of any payment is derived by replaying its event stream from the beginning. The ledger entries are themselves projections of these events — a <code>PaymentCaptured</code> event produces the debit-and-credit ledger entries as a side effect of being processed.</p>
+<p>The value of this architecture is a complete, reconstructable audit trail. Given the event log, you can replay the entire history of any transaction, any account, or the entire system to any point in time. This satisfies financial auditors, supports debugging (“what sequence of events led to this account being $5 off?”), and enables temporal queries (“what was this user’s balance at the end of Q3?”). The event log is the system of record; the ledger, the read-optimized balance projections, and the API-facing state machine are all derived views that can be rebuilt from the log if they are corrupted or if the projection logic changes.</p>
+<p>The trade-off is complexity. Event sourcing requires careful event schema design (events must be backward-compatible because they are immutable and will be replayed by future code versions), a reliable event store (Kafka or a dedicated event store database), and idempotent event handlers (because events can be redelivered during recovery). The projection that builds the ledger from events must be exactly-once in effect — processing the same <code>PaymentCaptured</code> event twice must not produce duplicate ledger entries, which is why the projection handler checks “have I already processed this event ID?” before applying it. This is the same idempotency principle, applied at the event processing layer. CQRS naturally accompanies this: commands (payment requests) write to the event log, queries (balance checks) read from the projections, and the two are decoupled and independently scalable.</p>
+<p>For regulatory reasons, the event log must be retained for years (typically 7 years for financial records in most jurisdictions) and must be tamper-evident. Some systems hash-chain events (each event includes the hash of the previous event) so that any retrospective tampering is detectable, similar to a blockchain but centralized. This is overkill for most platforms but is seen in systems with stringent audit requirements or where multiple parties need cryptographic proof of the log’s integrity.</p>
+<h2 id="distributed-transaction-patterns-for-payments">Distributed Transaction Patterns for Payments</h2>
+<p>Payments are inherently distributed: the request originates at an API gateway, the ledger write happens in a database, the gateway call happens over the network to an external service, and downstream notifications (to the order service, the inventory service, the fraud service) must be triggered. The question is how to keep these in a consistent state without the brittleness of distributed transactions.</p>
+<p>Two-phase commit (2PC) is the textbook distributed transaction protocol: a coordinator asks all participants to prepare, and if all agree, asks them to commit. It provides strong consistency — all participants either commit or abort. But it is almost universally the wrong choice for payments. The fatal flaw is that the coordinator can fail after participants have prepared but before issuing the commit or abort, leaving those participants holding locks and blocking indefinitely until the coordinator recovers. In a payment system where those locks may be on customer accounts, a coordinator failure can freeze the ability to process payments for those customers. The availability cost is unacceptable for a revenue-critical path.</p>
+<p>The Saga pattern is the standard alternative. A saga is a sequence of local transactions, each committing independently, with a defined compensating transaction for each step that can undo its effects if a later step fails. For a payment flow: <code>ReserveInventory → AuthorizePayment → CapturePayment → ConfirmOrder</code>. If <code>CapturePayment</code> fails, the compensation is <code>VoidAuthorization → ReleaseInventory → NotifyCustomerOfFailure</code>. Each step commits its local transaction and publishes an event triggering the next step; a saga orchestrator tracks the state machine and invokes compensations in reverse order on failure. The consistency guarantee is <em>eventual</em> — there is a window during which the system is in an intermediate state (inventory reserved, payment authorized, order not confirmed) — but the system never blocks indefinitely and always converges to a terminal state (completed or fully compensated).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>           Saga + Transactional Outbox Pattern</span></span>
+<span class="line"><span>           ====================================</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  API ──▶ Orchestrator (saga state in DB)</span></span>
+<span class="line"><span>            │</span></span>
+<span class="line"><span>            │  [step 1] ReserveInventory</span></span>
+<span class="line"><span>            │   └─ local txn: InventoryDB write + outbox{InventoryReserved}</span></span>
+<span class="line"><span>            │        │</span></span>
+<span class="line"><span>            │        ▼   outbox reader publishes event to broker</span></span>
+<span class="line"><span>            │  [step 2] AuthorizePayment</span></span>
+<span class="line"><span>            │   └─ local txn: LedgerDB (suspense) + outbox{PaymentAuthorized}</span></span>
+<span class="line"><span>            │        │</span></span>
+<span class="line"><span>            │        ▼</span></span>
+<span class="line"><span>            │  [step 3] CapturePayment</span></span>
+<span class="line"><span>            │   └─ local txn: LedgerDB (payable+fee) + outbox{PaymentCaptured}</span></span>
+<span class="line"><span>            │        │</span></span>
+<span class="line"><span>            │        ▼</span></span>
+<span class="line"><span>            │  [step 4] ConfirmOrder</span></span>
+<span class="line"><span>            │   └─ local txn: OrderDB write + outbox{OrderConfirmed}</span></span>
+<span class="line"><span>            │</span></span>
+<span class="line"><span>            │  ✗ on failure at step 3 → compensate in reverse order:</span></span>
+<span class="line"><span>            │     VoidAuthorization → ReleaseInventory → NotifyCustomerOfFailure</span></span>
+<span class="line"><span>            │</span></span>
+<span class="line"><span>            └─ outbox table = atomic "DB write + event publish" guarantee</span></span>
+<span class="line"><span>               (no 2PC needed; either both happen or neither does)</span></span></code></pre>
+<p>The orchestration vs. choreography decision within sagas matters. In choreography, each service listens for events and reacts independently — <code>OrderService</code> publishes <code>OrderCreated</code>, <code>PaymentService</code> listens and processes payment, publishes <code>PaymentCaptured</code>, <code>InventoryService</code> listens and ships. This is loosely coupled but the flow is implicit and hard to debug — there is no single place that shows the full saga state. In orchestration, a dedicated orchestrator service explicitly commands each step and tracks the saga’s state in a database table. This is more coupled but far more observable and debuggable, and for payments where correctness and auditability matter more than maximal decoupling, orchestration is usually preferred. The orchestrator itself must be highly available (it is a single point of failure for in-flight sagas), typically implemented as a stateless service with saga state in a replicated database and a lock-based or lease-based leader election if only one orchestrator should process a given saga.</p>
+<p>A pattern that sits between 2PC and saga is the transactional outbox. When a service needs to both write to its database and publish an event, it writes the event to an outbox table in the <em>same database transaction</em> as its business write, then a separate process reads the outbox and publishes to the message broker. This guarantees that the database write and the event publication are atomic without a distributed transaction — either both happen or neither does. This is essential for the saga steps themselves: when <code>PaymentService</code> captures a payment, it must both update the ledger and publish <code>PaymentCaptured</code> without the risk of one happening without the other. The outbox pattern is the glue that makes sagas reliable.</p>
+<p>Transaction pattern comparison:</p>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Consistency</th>
+<th>Availability</th>
+<th>Locking</th>
+<th>Failure Handling</th>
+<th>Best For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Two-Phase Commit (2PC)</td>
+<td>Strong (all-or-nothing)</td>
+<td>Low — coordinator failure blocks participants</td>
+<td>Participants hold locks through prepare→commit; blocking</td>
+<td>Coordinator can deadlock participants indefinitely</td>
+<td>Rarely appropriate for payments; only when all resources support XA</td>
+</tr>
+<tr>
+<td>Saga (orchestrated)</td>
+<td>Eventual — intermediate states visible</td>
+<td>High — no cross-resource locks; each step commits locally</td>
+<td>No long-held cross-system locks</td>
+<td>Compensating transactions roll back in reverse order</td>
+<td>Multi-service payment flows where auditability matters</td>
+</tr>
+<tr>
+<td>Saga (choreographed)</td>
+<td>Eventual</td>
+<td>High</td>
+<td>No cross-system locks</td>
+<td>Event-driven compensations; implicit flow</td>
+<td>Maximal decoupling; harder to debug/observe</td>
+</tr>
+<tr>
+<td>Transactional Outbox</td>
+<td>Atomic DB+event (per service)</td>
+<td>High — outbox reader retries publish</td>
+<td>Local DB txn only</td>
+<td>Outbox reader retries until broker acks</td>
+<td>Glue for reliable saga steps; guarantees DB write + event publish</td>
+</tr>
+</tbody>
+</table>
+<h2 id="cap-theorem-for-payments">CAP Theorem for Payments</h2>
+<p>The CAP theorem states that a distributed system can guarantee at most two of consistency, availability, and partition tolerance. For payment systems the answer is clear: payments are CP. When money is at stake, a failed payment is better than a double payment, and an unavailable payment is better than an inconsistent one. If a network partition separates your ledger primary from your gateway integration service, you choose to reject payments (sacrificing availability) rather than process them against a stale or divergent ledger (sacrificing consistency). Design for partition tolerance — partitions will happen — and make the consistency-preserving choice when they do: fail closed, queue the payment for retry, and never process a payment against data you cannot verify is current.</p>
+<p>This CP orientation shows up in concrete choices: synchronous replication for the ledger database (wait for the replica to acknowledge before committing, so a failover never loses a committed transaction), strongly consistent reads for balance checks (read from the primary, not a eventually-consistent replica, when deciding whether to authorize), and fail-closed behavior in the gateway integration (if you cannot confirm a payment’s prior state, do not capture it). The cost is availability — a primary failure means a brief outage while a new primary is promoted — but this is the correct trade for a financial system.</p>
+<h2 id="sharp-interview-question">Sharp Interview Question</h2>
+<p><strong>Q: You process a $100 capture by calling the payment gateway. The gateway charges the card successfully, but your service crashes after the gateway responds and before you commit the ledger entry. The customer is charged but your ledger shows the payment as still authorized. How do you prevent this permanent inconsistency, and what happens when the nightly reconciliation runs?</strong></p>
+<p><strong>Model Answer:</strong> The root cause is a non-atomic cross-system operation: the gateway charge and the ledger update are not in a single transaction (they cannot be, since the gateway is an external HTTP service). The fix is the transactional outbox pattern combined with an idempotent gateway call and a reconciliation safety net. Specifically: before calling the gateway, write a <code>capture_requested</code> event to an outbox table in the same transaction as your state transition to “capturing.” A worker reads the outbox and calls the gateway with an idempotency key derived from the capture intent (<code>capture-{order_id}</code>). When the gateway responds, the worker writes the <code>captured</code> event (with the gateway transaction reference) to the outbox in a transaction that also updates the ledger. If the worker crashes at any point, the outbox entry is still pending and another worker (or the same one on restart) picks it up and retries the gateway call — which is safe because the idempotency key means a duplicate call returns the original success response without re-charging. The ledger is updated from the event, and the system converges.</p>
+<p>In the specific crash scenario described — gateway charged, ledger not updated — the outbox entry for the capture is still in “pending” or “gateway called, response not recorded” state. On restart, the worker re-calls the gateway with the same idempotency key, gets the cached success response, and completes the ledger update. The customer is not double-charged. If the crash also destroyed the outbox entry (e.g., the transaction rolled back entirely), then the reconciliation job catches it that night: the settlement file from the gateway shows a $100 capture with no matching ledger entry, it is flagged as a settlement-only item, and an ops engineer manually posts the missing ledger entry (or an automated remediation job does so). The system is self-healing within 24 hours even in the worst case, and within seconds in the common case.</p>
+<p><strong>Common Pitfall:</strong> A naive implementation writes to the ledger, then calls the gateway, then commits the ledger — putting the external call inside the database transaction. This holds a database transaction (and its row locks) open for the duration of a network call to an external service that may take seconds or hang. Under load, this exhausts the connection pool and cascades into a full outage. Worse, if the gateway call succeeds but the transaction is then rolled back (due to a timeout or a post-gateway-call error), the customer is charged with no ledger record — the exact inconsistency the question describes, but caused by the design rather than a crash. The external call must always be outside the database transaction, coordinated via the outbox pattern, never inline.</p>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Double-entry ledger: every transaction has two entries (debit + credit) that must balance — the foundation of accounting</li>
+<li>Idempotency is non-negotiable: idempotency key + stored response prevents double-charging on retry</li>
+<li>External gateway calls must be OUTSIDE the database transaction — use the outbox pattern</li>
+<li>Reconciliation: periodically compare internal ledger with bank/gateway statements to catch discrepancies</li>
+<li>Saga pattern for distributed payments: each step has a compensating action for rollback</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you handle a payment that’s ‘pending’ for hours?” — Gateway webhook updates the status. Set a timeout — if no webhook in X hours, query the gateway API directly and reconcile.</li>
+<li>“What happens if the gateway accepts the charge but your database commit fails?” — The outbox pattern ensures the ledger write and the gateway call are coordinated. If the DB commit fails after gateway success, a reconciliation job detects the orphaned charge and records it.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Never put an external API call inside a database transaction. The transaction holds row locks open for the duration of the network call — under load, this exhausts the connection pool and cascades into a full outage. The external call must be coordinated via the outbox pattern, never inline.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/payment-system/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Payment%20System%20%2F%20Ledger%20Design&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fpayment-system%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fpayment-system%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/payment-system" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/database-sharding-and-replication" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Database Sharding &amp; Replication</span></a><a href="/notes/system-design/video-image-storage-and-streaming" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Video &amp; Image Storage &amp; Streaming</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Payment System / Ledger Design" data-selector=".article-prose" data-article-slug="system-design/payment-system" data-article-title="Payment System / Ledger Design" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

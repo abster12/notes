@@ -1,0 +1,1188 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Vector Database Internals (HNSW, IVF, Sharding) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-what-problem-vector-databases-actually-solve" class="toc-link" data-toc-link="1-what-problem-vector-databases-actually-solve" data-astro-cid-p33bl5ka>1. What Problem Vector Databases Actually Solve</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#11-the-fundamental-operation-k-nearest-neighbors" class="toc-link" data-toc-link="11-the-fundamental-operation-k-nearest-neighbors" data-astro-cid-p33bl5ka>1.1 The Fundamental Operation: k-Nearest Neighbors</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#12-the-ann-contract" class="toc-link" data-toc-link="12-the-ann-contract" data-astro-cid-p33bl5ka>1.2 The ANN Contract</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#13-distance-metrics" class="toc-link" data-toc-link="13-distance-metrics" data-astro-cid-p33bl5ka>1.3 Distance Metrics</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-inverted-file-index-ivf--the-clustering-approach" class="toc-link" data-toc-link="2-inverted-file-index-ivf--the-clustering-approach" data-astro-cid-p33bl5ka>2. Inverted File Index (IVF) — The Clustering Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#21-how-ivf-works" class="toc-link" data-toc-link="21-how-ivf-works" data-astro-cid-p33bl5ka>2.1 How IVF Works</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#22-the-two-critical-parameters" class="toc-link" data-toc-link="22-the-two-critical-parameters" data-astro-cid-p33bl5ka>2.2 The Two Critical Parameters</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#23-ivf-variants" class="toc-link" data-toc-link="23-ivf-variants" data-astro-cid-p33bl5ka>2.3 IVF Variants</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#24-ivf-weakness-cluster-boundary-misses" class="toc-link" data-toc-link="24-ivf-weakness-cluster-boundary-misses" data-astro-cid-p33bl5ka>2.4 IVF Weakness: Cluster Boundary Misses</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-hierarchical-navigable-small-world-hnsw--the-graph-approach" class="toc-link" data-toc-link="3-hierarchical-navigable-small-world-hnsw--the-graph-approach" data-astro-cid-p33bl5ka>3. Hierarchical Navigable Small World (HNSW) — The Graph Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#31-intuition-skip-lists-for-vector-space" class="toc-link" data-toc-link="31-intuition-skip-lists-for-vector-space" data-astro-cid-p33bl5ka>3.1 Intuition: Skip Lists for Vector Space</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#32-search-algorithm-layer-by-layer-greedy-descent" class="toc-link" data-toc-link="32-search-algorithm-layer-by-layer-greedy-descent" data-astro-cid-p33bl5ka>3.2 Search Algorithm (Layer-by-Layer Greedy Descent)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#33-the-recall-latency-curve" class="toc-link" data-toc-link="33-the-recall-latency-curve" data-astro-cid-p33bl5ka>3.3 The Recall-Latency Curve</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#34-memory-overhead--hnsws-achilles-heel" class="toc-link" data-toc-link="34-memory-overhead--hnsws-achilles-heel" data-astro-cid-p33bl5ka>3.4 Memory Overhead — HNSW’s Achilles’ Heel</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#35-insertion-and-deletion" class="toc-link" data-toc-link="35-insertion-and-deletion" data-astro-cid-p33bl5ka>3.5 Insertion and Deletion</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#36-hnsw-vs-ivf-the-real-trade-off" class="toc-link" data-toc-link="36-hnsw-vs-ivf-the-real-trade-off" data-astro-cid-p33bl5ka>3.6 HNSW vs IVF: The Real Trade-Off</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#4-vector-compression-product-quantization-pq-and-scalar-quantization-sq" class="toc-link" data-toc-link="4-vector-compression-product-quantization-pq-and-scalar-quantization-sq" data-astro-cid-p33bl5ka>4. Vector Compression: Product Quantization (PQ) and Scalar Quantization (SQ)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#41-product-quantization" class="toc-link" data-toc-link="41-product-quantization" data-astro-cid-p33bl5ka>4.1 Product Quantization</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#42-scalar-quantization-sq" class="toc-link" data-toc-link="42-scalar-quantization-sq" data-astro-cid-p33bl5ka>4.2 Scalar Quantization (SQ)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#43-matryoshka-embeddings" class="toc-link" data-toc-link="43-matryoshka-embeddings" data-astro-cid-p33bl5ka>4.3 Matryoshka Embeddings</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#5-glossaryshardingsharding-vector-databases" class="toc-link" data-toc-link="5-glossaryshardingsharding-vector-databases" data-astro-cid-p33bl5ka>5. [[Glossary#Sharding|Sharding]] Vector Databases</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#51-why-shard" class="toc-link" data-toc-link="51-why-shard" data-astro-cid-p33bl5ka>5.1 Why Shard?</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#52-the-critical-design-decision-sharding-strategy" class="toc-link" data-toc-link="52-the-critical-design-decision-sharding-strategy" data-astro-cid-p33bl5ka>5.2 The Critical Design Decision: Sharding Strategy</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#53-the-fan-out-problem" class="toc-link" data-toc-link="53-the-fan-out-problem" data-astro-cid-p33bl5ka>5.3 The Fan-Out Problem</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#54-shard-count-determination" class="toc-link" data-toc-link="54-shard-count-determination" data-astro-cid-p33bl5ka>5.4 Shard Count Determination</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#55-bloom-filters-in-vector-search" class="toc-link" data-toc-link="55-bloom-filters-in-vector-search" data-astro-cid-p33bl5ka>5.5 Bloom Filters in Vector Search</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#6-index-rebuild-the-operational-nightmare" class="toc-link" data-toc-link="6-index-rebuild-the-operational-nightmare" data-astro-cid-p33bl5ka>6. Index Rebuild: The Operational Nightmare</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#61-why-rebuilds-happen" class="toc-link" data-toc-link="61-why-rebuilds-happen" data-astro-cid-p33bl5ka>6.1 Why Rebuilds Happen</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#62-zero-downtime-rebuild-pattern" class="toc-link" data-toc-link="62-zero-downtime-rebuild-pattern" data-astro-cid-p33bl5ka>6.2 Zero-Downtime Rebuild Pattern</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#7-freshness-staleness-and-eventual-consistency" class="toc-link" data-toc-link="7-freshness-staleness-and-eventual-consistency" data-astro-cid-p33bl5ka>7. Freshness, Staleness, and Eventual Consistency</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#71-the-write-path" class="toc-link" data-toc-link="71-the-write-path" data-astro-cid-p33bl5ka>7.1 The Write Path</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#72-read-your-writes-a-hard-problem" class="toc-link" data-toc-link="72-read-your-writes-a-hard-problem" data-astro-cid-p33bl5ka>7.2 Read-Your-Writes: A Hard Problem</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#8-hybrid-search-vectors--keywords" class="toc-link" data-toc-link="8-hybrid-search-vectors--keywords" data-astro-cid-p33bl5ka>8. Hybrid Search: Vectors + Keywords</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#81-why-hybrid" class="toc-link" data-toc-link="81-why-hybrid" data-astro-cid-p33bl5ka>8.1 Why Hybrid?</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#82-reciprocal-rank-fusion-rrf" class="toc-link" data-toc-link="82-reciprocal-rank-fusion-rrf" data-astro-cid-p33bl5ka>8.2 Reciprocal Rank Fusion (RRF)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#83-filtered-vector-search-pre-filtering-vs-post-filtering" class="toc-link" data-toc-link="83-filtered-vector-search-pre-filtering-vs-post-filtering" data-astro-cid-p33bl5ka>8.3 Filtered Vector Search: Pre-Filtering vs Post-Filtering</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#9-monitoring-and-observability" class="toc-link" data-toc-link="9-monitoring-and-observability" data-astro-cid-p33bl5ka>9. Monitoring and Observability</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#91-what-to-monitor" class="toc-link" data-toc-link="91-what-to-monitor" data-astro-cid-p33bl5ka>9.1 What to Monitor</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#92-recall-measurement-in-production" class="toc-link" data-toc-link="92-recall-measurement-in-production" data-astro-cid-p33bl5ka>9.2 Recall Measurement in Production</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#10-interview-question--model-answer" class="toc-link" data-toc-link="10-interview-question--model-answer" data-astro-cid-p33bl5ka>10. Interview Question + Model Answer</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#model-answer" class="toc-link" data-toc-link="model-answer" data-astro-cid-p33bl5ka>Model Answer</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#-common-pitfall" class="toc-link" data-toc-link="-common-pitfall" data-astro-cid-p33bl5ka>❗ Common Pitfall</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#11-key-takeaways" class="toc-link" data-toc-link="11-key-takeaways" data-astro-cid-p33bl5ka>11. Key Takeaways</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#related" class="toc-link" data-toc-link="related" data-astro-cid-p33bl5ka>Related</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Vector Database Internals (HNSW, IVF, Sharding)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-advanced" data-astro-cid-sgg5joot>advanced</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 24 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 34 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>ai-ml</span><span class="tag" data-astro-cid-sgg5joot>vector-database</span><span class="tag" data-astro-cid-sgg5joot>hnsw</span><span class="tag" data-astro-cid-sgg5joot>ivf</span><span class="tag" data-astro-cid-sgg5joot>sharding</span><span class="tag" data-astro-cid-sgg5joot>ann</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="vector-database-internals-hnsw-ivf-sharding">Vector Database Internals (HNSW, IVF, Sharding)</h1>
+<blockquote>
+<p><strong>Staff-Engineer Focus:</strong> “We store embeddings in Pinecone and do similarity search” is the mid-level answer. Understanding that every ANN index is a precision-recall-speed trade-off on a Pareto frontier — and that no single index type dominates across all workloads — that’s the senior answer. <strong>The staff engineer doesn’t ask “which vector DB should we use?” They ask: “What is the recall curve of our index at various ef_search values? At what dataset size does our current IVF clustering degrade because the centroids no longer represent the distribution? How does the HNSW graph’s memory footprint grow with dimensionality, and what’s our per-node memory budget? When we shard, does our fan-out query multiply latency linearly, or can we prune entire shards? And critically — what happens during index rebuild? Do we serve stale results, drop availability, or run a shadow index with zero-downtime cutover?” The interview question isn’t “Explain HNSW.” It’s: “Your vector search system handles 500M embeddings of dimension 1536. You’re migrating from single-node to a 10-shard cluster. P99 latency is 80ms during low traffic, but spikes to 2 seconds during index compaction at 2 AM. A customer reports that the same query returns different top-10 results when run two seconds apart. Walk me through: (a) exactly what compaction is doing under the hood and why it causes latency spikes, (b) why the same query gives different results 2 seconds apart — is this a bug or by design, (c) how you’d eliminate both problems without sacrificing recall below 0.95, and (d) what happens if you naively shard by embedding ID instead of by vector space proximity.”</strong></p>
+</blockquote>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A database optimized for high-dimensional vector search using approximate nearest neighbor algorithms — HNSW (graph-based, fast), IVF (cluster-based, tunable), with sharding for scale.</p>
+<p><strong>How it’s asked:</strong> “Design a vector database for 1B embeddings with &lt;10ms P99 ANN search. Compare HNSW vs IVF, cover sharding, and handle index updates without downtime.”</p>
+<h2 id="1-what-problem-vector-databases-actually-solve">1. What Problem Vector Databases Actually Solve</h2>
+<h3 id="11-the-fundamental-operation-k-nearest-neighbors">1.1 The Fundamental Operation: k-Nearest Neighbors</h3>
+<p>At their core, vector databases answer one question: <strong>Given a query vector <code>q</code> and a collection of <code>N</code> vectors <code>{v₁, v₂, ..., vₙ}</code>, return the <code>k</code> vectors with smallest distance to <code>q</code>.</strong></p>
+<p>The brute-force approach — compute distance from <code>q</code> to every <code>vᵢ</code>, sort, take top <code>k</code> — is <code>O(N·D)</code> where D is dimensionality. For 500M vectors of 1536 dimensions:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Brute force: 500M × 1536 = 768 billion floating-point operations per query</span></span>
+<span class="line"><span>At 100 GFLOPS: 7.68 seconds per query</span></span>
+<span class="line"><span>At 100 QPS: need 768 GFLOPS just for distance computation</span></span></code></pre>
+<p>This is why we need <strong>[[Glossary#Approximate Nearest Neighbor (ANN)|Approximate Nearest Neighbor (ANN)]]</strong> algorithms — they trade a small amount of accuracy for orders-of-magnitude speed improvements.</p>
+<h3 id="12-the-ann-contract">1.2 The ANN Contract</h3>
+<p>Every ANN algorithm makes an explicit trade-off:</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>What It Means</th>
+<th>Good Number</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Recall@k</strong></td>
+<td>Fraction of true nearest neighbors found</td>
+<td>&gt; 0.95</td>
+</tr>
+<tr>
+<td><strong>QPS</strong></td>
+<td>Queries per second per node</td>
+<td>100-10,000+</td>
+</tr>
+<tr>
+<td><strong>Latency (P99)</strong></td>
+<td>Tail latency per query</td>
+<td>&lt; 50ms</td>
+</tr>
+<tr>
+<td><strong>Index Build Time</strong></td>
+<td>Time to construct the index</td>
+<td>Minutes to hours</td>
+</tr>
+<tr>
+<td><strong>Memory Overhead</strong></td>
+<td>Extra memory beyond raw vectors</td>
+<td>20%–300%</td>
+</tr>
+<tr>
+<td><strong>Insertion Speed</strong></td>
+<td>Vectors/second for incremental updates</td>
+<td>1K–100K/sec</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The Pareto Frontier:</strong> You can’t simultaneously maximize recall, minimize latency, and minimize memory. HNSW gives high recall and high QPS but high memory overhead. IVF gives low memory but lower recall at the same speed. Disk-backed IVF gives unlimited scale but higher latency.</p>
+<h3 id="13-distance-metrics">1.3 Distance Metrics</h3>
+<p>The choice of distance metric fundamentally changes which points are “close.” This is NOT a detail — it determines which ANN index structures work and don’t work.</p>
+<table>
+<thead>
+<tr>
+<th>Distance</th>
+<th>Formula</th>
+<th>Index Compatibility</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>L2 (Euclidean)</strong></td>
+<td><code>‖q - v‖₂</code></td>
+<td>HNSW, IVF, PQ, brute-force</td>
+<td>General purpose; rotation-invariant</td>
+</tr>
+<tr>
+<td><strong>Inner Product (IP)</strong></td>
+<td><code>⟨q, v⟩</code></td>
+<td>HNSW (with transformation), IVF</td>
+<td>Maximum inner product search (MIPS); used when embeddings are unnormalized</td>
+</tr>
+<tr>
+<td><strong>Cosine</strong></td>
+<td><code>1 - ⟨q̂, v̂⟩</code></td>
+<td>Normalize vectors → use IP on unit vectors</td>
+<td>Embedding similarity (most common)</td>
+</tr>
+<tr>
+<td><strong>Jaccard</strong></td>
+<td>`</td>
+<td>A ∩ B</td>
+<td>/</td>
+</tr>
+<tr>
+<td><strong>Hamming</strong></td>
+<td>Count differing bits</td>
+<td>Bit-sampled LSH</td>
+<td>Binary codes, image hashing</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Critical Pitfall:</strong> Cosine similarity on unnormalized vectors is NOT equivalent to IP. If your embedding model produces unnormalized vectors and you store them with cosine distance configured, the ANN index will return wrong results. Always verify: divide by norm or pick the right distance metric — don’t assume.</p>
+<hr>
+<h2 id="2-inverted-file-index-ivf--the-clustering-approach">2. Inverted File Index (IVF) — The Clustering Approach</h2>
+<h3 id="21-how-ivf-works">2.1 How IVF Works</h3>
+<p>IVF partitions the vector space into <code>nlist</code> clusters using k-means (a clustering algorithm that iteratively groups data points around k centers by minimizing within-group distance). Each cluster has a centroid. At query time, you only search the <code>nprobe</code> closest clusters.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌───────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                      IVF INDEX STRUCTURE                           │</span></span>
+<span class="line"><span>│                                                                    │</span></span>
+<span class="line"><span>│  Build Phase:                                                      │</span></span>
+<span class="line"><span>│  ┌─────────┐   k-means    ┌──────────────────────────────────┐    │</span></span>
+<span class="line"><span>│  │ N vectors│ ──────────► │ Centroid₁ │ Centroid₂ │ ... │ Cₙ │    │</span></span>
+<span class="line"><span>│  └─────────┘              │  [v₁,v₇]  │ [v₃,v₉]   │     │[]  │    │</span></span>
+<span class="line"><span>│                           └──────────────────────────────────┘    │</span></span>
+<span class="line"><span>│                                                                    │</span></span>
+<span class="line"><span>│  Query Phase:                                                      │</span></span>
+<span class="line"><span>│  ┌──────┐   1. Dist to    ┌──────────────────────────────┐        │</span></span>
+<span class="line"><span>│  │  q   │ ── centroids ─► │ C₂ (nearest)  │ C₇ (2nd)    │        │</span></span>
+<span class="line"><span>│  └──────┘                 │ probe vectors │ ...          │        │</span></span>
+<span class="line"><span>│                           └──────────────────────────────┘        │</span></span>
+<span class="line"><span>│                                     │                              │</span></span>
+<span class="line"><span>│                                     ▼                              │</span></span>
+<span class="line"><span>│                           ┌─────────────────┐                     │</span></span>
+<span class="line"><span>│                           │ Brute-force over │                    │</span></span>
+<span class="line"><span>│                           │ nprobe clusters  │ → top-k             │</span></span>
+<span class="line"><span>│                           │ (nprobe × N/nlist │                    │</span></span>
+<span class="line"><span>│                           │  comparisons)     │                    │</span></span>
+<span class="line"><span>│                           └─────────────────┘                     │</span></span>
+<span class="line"><span>└───────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<h3 id="22-the-two-critical-parameters">2.2 The Two Critical Parameters</h3>
+<p><strong><code>nlist</code></strong> — Number of clusters (set at build time, immutable without rebuild):</p>
+<ul>
+<li>Too small: Each cluster is huge, probe time dominates → degenerates to brute-force</li>
+<li>Too large: Clusters are tiny, but centroid computation is expensive and clusters become imbalanced</li>
+<li><strong>Rule of thumb:</strong> <code>nlist = 4 × sqrt(N)</code> — for 1M vectors, nlist ≈ 4000</li>
+</ul>
+<p><strong><code>nprobe</code></strong> — Number of clusters to search (set at query time, tunable):</p>
+<ul>
+<li>Low nprobe: Fast, low recall (you miss the cluster containing the true nearest neighbor)</li>
+<li>High nprobe: High recall, slow (approaching brute-force)</li>
+<li><strong>The recall cliff:</strong> Recall vs nprobe is NOT linear. Going from nprobe=1 to nprobe=5 might increase recall from 0.65 to 0.92. Going from nprobe=10 to nprobe=20 might only go from 0.97 to 0.98. The curve plateaus — find the knee.</li>
+</ul>
+<h3 id="23-ivf-variants">2.3 IVF Variants</h3>
+<h4 id="ivf-flat">IVF-Flat</h4>
+<p>Stores raw vectors in each cluster. Brute-force within each probed cluster. Highest recall for a given nprobe, but highest memory (stores full vectors) and slowest per-cluster search.</p>
+<h4 id="ivf-pq-product-quantization">IVF-PQ (Product Quantization)</h4>
+<p>Compresses vectors using Product Quantization (covered in §4). Dramatically reduces memory (16x-32x compression), but search uses approximate distance tables → lower recall. <strong>Trade-off:</strong> IVF-PQ is the workhorse for billion-scale — the PQ compression is what makes it possible to hold vectors in RAM.</p>
+<h4 id="ivfflat-vs-ivfpq-decision-matrix">IVFFlat vs IVFPQ Decision Matrix</h4>
+<table>
+<thead>
+<tr>
+<th>Criterion</th>
+<th>IVF-Flat</th>
+<th>IVF-PQ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Memory per vector (1536d)</td>
+<td>6 KB (float32)</td>
+<td>192 bytes (PQ 96×8)</td>
+</tr>
+<tr>
+<td>Recall@10 at nprobe=32</td>
+<td>0.97-0.99</td>
+<td>0.88-0.94</td>
+</tr>
+<tr>
+<td>Query latency (same recall)</td>
+<td>Slower</td>
+<td>Faster (less data to scan)</td>
+</tr>
+<tr>
+<td>Index build time</td>
+<td>Faster</td>
+<td>Slower (needs PQ training)</td>
+</tr>
+<tr>
+<td>Use case</td>
+<td>&lt;10M vectors, max recall</td>
+<td>&gt;10M vectors, memory-constrained</td>
+</tr>
+</tbody>
+</table>
+<h3 id="24-ivf-weakness-cluster-boundary-misses">2.4 IVF Weakness: Cluster Boundary Misses</h3>
+<p>The fundamental failure mode of IVF: <strong>a query vector falls near the boundary between cluster A and cluster B. The true nearest neighbor is in cluster B, but B is just outside the nprobe radius from the query.</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>         Cluster A              │              Cluster B</span></span>
+<span class="line"><span>    •  •     •                  │           •  •    • ★</span></span>
+<span class="line"><span>  •    Cₐ    •       •q         │     ★  C_b  •   •</span></span>
+<span class="line"><span>    •  •     •                  │      •  •    •</span></span>
+<span class="line"><span>                                │</span></span>
+<span class="line"><span>  q is closest to Cₐ → probes A only</span></span>
+<span class="line"><span>  True NN ★ is in B → missed entirely</span></span></code></pre>
+<p><strong>Mitigations:</strong></p>
+<ol>
+<li><strong>Increase nprobe</strong> — but you pay latency</li>
+<li><strong>Overlap clusters during build</strong> — assign each vector to top-2 centroids (doubles storage)</li>
+<li><strong>Multi-pass IVF</strong> — do a coarse probe with high nprobe, then refine with PQ or brute-force</li>
+<li><strong>Hybrid approach:</strong> IVF for coarse filtering → HNSW graph within cluster for precise search</li>
+</ol>
+<hr>
+<h2 id="3-hierarchical-navigable-small-world-hnsw--the-graph-approach">3. Hierarchical Navigable Small World (HNSW) — The Graph Approach</h2>
+<h3 id="31-intuition-skip-lists-for-vector-space">3.1 Intuition: Skip Lists for Vector Space</h3>
+<p>HNSW is essentially a <strong>skip list in high-dimensional space.</strong> In a skip list, each node participates in increasingly sparse layers — long “express lanes” at higher levels, detailed local connections at lower levels. HNSW does the same with neighbor graphs.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌───────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                    HNSW THREE-LEVEL GRAPH                          │</span></span>
+<span class="line"><span>│                                                                    │</span></span>
+<span class="line"><span>│  Level 2 (sparse, long-range):                                    │</span></span>
+<span class="line"><span>│    ● ─────────────────────────────── ●                            │</span></span>
+<span class="line"><span>│                                                                   │</span></span>
+<span class="line"><span>│  Level 1 (medium density):                                        │</span></span>
+<span class="line"><span>│    ● ────── ● ────── ● ────── ● ────── ●                         │</span></span>
+<span class="line"><span>│                                                                   │</span></span>
+<span class="line"><span>│  Level 0 (dense, short-range, contains ALL nodes):                │</span></span>
+<span class="line"><span>│    ●──●──●──●──●──●──●──●──●──●──●──●──●──●──●──●               │</span></span>
+<span class="line"><span>│                                                                   │</span></span>
+<span class="line"><span>│  Search:                                                          │</span></span>
+<span class="line"><span>│    1. Start at entry point (top layer)                            │</span></span>
+<span class="line"><span>│    2. Greedy descent: at each layer, move to neighbor closest to q│</span></span>
+<span class="line"><span>│    3. Drop to next layer when local minimum reached                │</span></span>
+<span class="line"><span>│    4. At layer 0, collect k nearest within the connected component│</span></span>
+<span class="line"><span>│    5. Result: approximate k-NN (not guaranteed exact — graph is   │</span></span>
+<span class="line"><span>│       navigable, not complete)                                    │</span></span>
+<span class="line"><span>└───────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<h3 id="32-search-algorithm-layer-by-layer-greedy-descent">3.2 Search Algorithm (Layer-by-Layer Greedy Descent)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>SEARCH_HNSW(q, entry_point, M, ef_search):</span></span>
+<span class="line"><span>    W = {entry_point}           # candidate set (dynamic size ef)</span></span>
+<span class="line"><span>    visited = {entry_point}</span></span>
+<span class="line"><span>    </span></span>
+<span class="line"><span>    for layer = top_level down to 0:</span></span>
+<span class="line"><span>        W = greedy_search_layer(q, W, M, ef_construction or ef_search)</span></span>
+<span class="line"><span>        # At each step: expand W to neighbors of current closest,</span></span>
+<span class="line"><span>        # keep only the ef closest to q</span></span>
+<span class="line"><span>        # "ef" = exploration factor — trade recall for speed</span></span>
+<span class="line"><span>    </span></span>
+<span class="line"><span>    return top-k from W</span></span></code></pre>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><strong><code>M</code></strong> — Maximum out-degree per node (edges per node). Typical: 16-64. Higher M = higher recall, higher memory, slower build.</li>
+<li><strong><code>ef_construction</code></strong> — Exploration factor during index building. Higher = better graph quality (more edges explored per insertion), slower build. Typical: 100-500.</li>
+<li><strong><code>ef_search</code></strong> — Exploration factor at query time. Higher = higher recall, higher latency. <strong>This is your live recall knob — it’s tunable per-query with no rebuild.</strong></li>
+</ul>
+<h3 id="33-the-recall-latency-curve">3.3 The Recall-Latency Curve</h3>
+<p>This is the most important practical fact about HNSW:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Recall@10 vs ef_search (M=16, 1M vectors, 768d)</span></span>
+<span class="line"><span>──────────────────────────────────────────────────</span></span>
+<span class="line"><span>ef_search=16   → recall=0.78, latency=0.3ms</span></span>
+<span class="line"><span>ef_search=32   → recall=0.92, latency=0.5ms  ← common default</span></span>
+<span class="line"><span>ef_search=64   → recall=0.97, latency=0.9ms</span></span>
+<span class="line"><span>ef_search=128  → recall=0.99, latency=1.6ms</span></span>
+<span class="line"><span>ef_search=256  → recall=0.995, latency=3.0ms</span></span>
+<span class="line"><span>ef_search=512  → recall=0.998, latency=5.5ms  ← diminishing returns</span></span></code></pre>
+<p>The curve is <strong>convex</strong>: early ef_search increases give big recall jumps; later ones give fractions of a percent for 2x latency. Find the ef_search that hits your recall SLA, not the maximum.</p>
+<h3 id="34-memory-overhead--hnsws-achilles-heel">3.4 Memory Overhead — HNSW’s Achilles’ Heel</h3>
+<p>Each edge in the HNSW graph is a pointer to a neighbor. The storage cost:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Memory per node = sizeof(vector) + M * sizeof(edge) * layers_per_node_avg</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>For 1536-d float32, M=16, 4-byte edge IDs:</span></span>
+<span class="line"><span>  Vector: 1536 × 4 = 6,144 bytes</span></span>
+<span class="line"><span>  Edges:  16 × 4 × 1.3 (avg layers) ≈ 83 bytes</span></span>
+<span class="line"><span>  Total per node: ~6.2 KB</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>For 100M nodes: 100M × 6.2 KB = 620 GB</span></span>
+<span class="line"><span>For comparison, raw vectors: 100M × 6 KB = 600 GB</span></span>
+<span class="line"><span>Memory overhead: ~3.3% — manageable</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>BUT for 768-d float32, M=32:</span></span>
+<span class="line"><span>  Vector: 768 × 4 = 3,072 bytes</span></span>
+<span class="line"><span>  Edges: 32 × 4 × 1.3 ≈ 166 bytes</span></span>
+<span class="line"><span>  Overhead: 166 / 3072 = 5.4% — also manageable</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>The dangerous zone: LOW dimensionality + HIGH M</span></span>
+<span class="line"><span>For 128-d, M=64:</span></span>
+<span class="line"><span>  Vector: 512 bytes</span></span>
+<span class="line"><span>  Edges: 64 × 4 × 1.3 ≈ 333 bytes</span></span>
+<span class="line"><span>  Overhead: 65% — significant!</span></span></code></pre>
+<p><strong>Staff-Engineer Insight:</strong> HNSW’s memory overhead gets WORSE as dimensionality decreases (edges are a larger fraction of total storage). At 1536d the overhead is trivial; at 128d it dominates. <strong>The dimension determines whether HNSW is memory-feasible, not just the vector count.</strong></p>
+<h3 id="35-insertion-and-deletion">3.5 Insertion and Deletion</h3>
+<p><strong>Insertion:</strong> New nodes are added incrementally. The algorithm:</p>
+<ol>
+<li>Assigns a random level (exponentially decaying probability: 1/M for each additional level)</li>
+<li>Searches from top to find insertion neighborhood at each layer</li>
+<li>Adds bidirectional edges to M nearest neighbors at each layer</li>
+</ol>
+<p><strong>Deletion:</strong> HNSW doesn’t natively support deletion. The common approaches:</p>
+<ul>
+<li><strong>Tombstone:</strong> Mark deleted, skip during search — cheap but graph degrades over time (edges to deleted nodes waste memory and search steps)</li>
+<li><strong>Periodic rebuild:</strong> Run full rebuild weekly — prevents degradation but is expensive</li>
+<li><strong>Lazy reconnection:</strong> On deletion, reconnect orphaned neighbors to each other — complex, requires checking connectivity</li>
+</ul>
+<p><strong>The Degradation Problem:</strong> Over months of inserts and tombstones, an HNSW graph accumulates dead edges. Recall drops slowly — it’s a silent degradation. Benchmark recall weekly. When recall drops &gt; 2%, trigger a rebuild.</p>
+<h3 id="36-hnsw-vs-ivf-the-real-trade-off">3.6 HNSW vs IVF: The Real Trade-Off</h3>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>HNSW</th>
+<th>IVF</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Recall at same latency</strong></td>
+<td>Higher (0.98 vs 0.92 at 1ms)</td>
+<td>Lower</td>
+</tr>
+<tr>
+<td><strong>Memory</strong></td>
+<td>Higher (graph edges + vectors)</td>
+<td>Lower (vectors only for IVF-Flat)</td>
+</tr>
+<tr>
+<td><strong>Build time</strong></td>
+<td>Slower (O(N·log N) inserts)</td>
+<td>Faster (single-pass k-means)</td>
+</tr>
+<tr>
+<td><strong>Incremental inserts</strong></td>
+<td>✅ Native, fast</td>
+<td>⚠️ Possible but cluster assignment degrades over time</td>
+</tr>
+<tr>
+<td><strong>Deletes</strong></td>
+<td>❌ Not native (tombstones degrade graph)</td>
+<td>✅ Trivial (remove from cluster)</td>
+</tr>
+<tr>
+<td><strong>Dimensionality scaling</strong></td>
+<td>Memory overhead higher at LOW dim</td>
+<td>Agnostic to dimension</td>
+</tr>
+<tr>
+<td><strong>Query-time tuning</strong></td>
+<td>ef_search (per-query, fine-grained)</td>
+<td>nprobe (per-query, coarse)</td>
+</tr>
+<tr>
+<td><strong>Disk-backed</strong></td>
+<td>❌ Requires full graph in RAM</td>
+<td>✅ IVF-PQ can be disk-backed</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Rule of thumb:</strong></p>
+<ul>
+<li><strong>&lt;100M vectors, RAM fits:</strong> HNSW — best recall-latency trade-off</li>
+<li><strong>&gt;100M vectors or memory-constrained:</strong> IVF-PQ — compression enables scale</li>
+<li><strong>High insert/delete rate:</strong> Switch from HNSW to IVF or accept periodic rebuilds</li>
+<li><strong>GPU available:</strong> Both benefit, but IVF’s brute-force per-cluster step parallelizes extremely well</li>
+</ul>
+<hr>
+<h2 id="4-vector-compression-product-quantization-pq-and-scalar-quantization-sq">4. Vector Compression: Product Quantization (PQ) and Scalar Quantization (SQ)</h2>
+<h3 id="41-product-quantization">4.1 Product Quantization</h3>
+<p>PQ splits each vector into <code>M</code> subvectors, clusters each subspace independently, and stores only the cluster IDs.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Original vector (D=128 dimensions, float32 → 512 bytes):</span></span>
+<span class="line"><span>  [0.23, -0.45, 0.67, ..., 0.12]  # 128 floats</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>PQ with M=8 subvectors of 16 dimensions each:</span></span>
+<span class="line"><span>  Subvector 1: [0.23, -0.45, ..., 0.67] → cluster ID 142 (1 byte)</span></span>
+<span class="line"><span>  Subvector 2: [0.34, 0.89, ..., -0.12] → cluster ID 67  (1 byte)</span></span>
+<span class="line"><span>  ...</span></span>
+<span class="line"><span>  Subvector 8: [-0.56, 0.78, ..., 0.12] → cluster ID 201 (1 byte)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Stored: [142, 67, ..., 201] → 8 bytes (64x compression!)</span></span></code></pre>
+<p><strong>Distance computation with PQ:</strong>
+Instead of computing <code>‖q - stored_vector‖₂</code>, you precompute distance from <code>q</code> to every cluster centroid for each subspace (this is small — 256 centroids × 8 subspaces = 2048 distances). Then:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>distance(q, [c1, c2, ..., c8]) = sum(distance_table[i][ci] for i, ci in enumerate(codes))</span></span></code></pre>
+<p>This is an APPROXIMATION — the true distance uses the actual vector, not the centroid. The error comes from quantization: replacing a subvector with its nearest centroid.</p>
+<p><strong>PQ Trade-Off Table:</strong></p>
+<table>
+<thead>
+<tr>
+<th>M (subvectors)</th>
+<th>Bytes/vector</th>
+<th>Compression</th>
+<th>Recall Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8 (D/M=192 for 1536d)</td>
+<td>8</td>
+<td>768:1</td>
+<td>Severe (-20% recall)</td>
+</tr>
+<tr>
+<td>16 (D/M=96)</td>
+<td>16</td>
+<td>384:1</td>
+<td>Significant (-10-15%)</td>
+</tr>
+<tr>
+<td>32 (D/M=48)</td>
+<td>32</td>
+<td>192:1</td>
+<td>Moderate (-5-8%)</td>
+</tr>
+<tr>
+<td>64 (D/M=24)</td>
+<td>64</td>
+<td>96:1</td>
+<td>Small (-2-4%)</td>
+</tr>
+<tr>
+<td>96 (D/M=16)</td>
+<td>96</td>
+<td>64:1</td>
+<td>Minimal (-1-2%)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Staff-Engineer Insight:</strong> PQ recall loss is NOT uniform across the vector space. Dense clusters (regions where many vectors are close) suffer LESS loss — the centroid is a good representative. Sparse regions (outliers) suffer MORE — the centroid is a poor substitute. If your data has heavy tails, PQ will degrade recall for tail queries. Monitor P50 and P99 recall separately — P99 might drop catastrophically while P50 looks fine.</p>
+<h3 id="42-scalar-quantization-sq">4.2 Scalar Quantization (SQ)</h3>
+<p>Simpler than PQ: compress each dimension independently from float32 to int8.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>float32: 4 bytes per dimension → 1536 × 4 = 6144 bytes</span></span>
+<span class="line"><span>int8:    1 byte per dimension  → 1536 × 1 = 1536 bytes (4x compression)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Conversion: v_int8[i] = round((v_float32[i] - min) / (max - min) * 255)</span></span></code></pre>
+<p>SQ loses less recall than PQ at the same compression ratio because it doesn’t split dimensions into unrelated subspaces. But 4x compression is the maximum. For higher compression (8x+), you need PQ.</p>
+<h3 id="43-matryoshka-embeddings">4.3 Matryoshka Embeddings</h3>
+<p>A newer approach: train the embedding model to produce embeddings where the first K dimensions alone give good retrieval. Store full 1536d, but search with truncated 256d to reduce compute and memory.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Matryoshka embedding: first 256d → 90% recall, first 512d → 95%, full 1536d → 99%</span></span></code></pre>
+<p>This is orthogonal to PQ/SQ — you can apply PQ to the truncated dimensions for even more compression.</p>
+<hr>
+<h2 id="5-glossaryshardingsharding-vector-databases">5. [[Glossary#Sharding|Sharding]] Vector Databases</h2>
+<h3 id="51-why-shard">5.1 Why Shard?</h3>
+<p>A single node has limits:</p>
+<ul>
+<li><strong>RAM:</strong> HNSW for 20M × 1536d vectors needs ~124 GB just for vectors (you want them in RAM)</li>
+<li><strong>Throughput:</strong> One CPU can compute ~10K QPS for brute-force, ~1K QPS for HNSW with ef_search=128</li>
+<li><strong>Disk IOPS:</strong> IVF with disk-backed clusters can bottleneck on random reads</li>
+</ul>
+<h3 id="52-the-critical-design-decision-sharding-strategy">5.2 The Critical Design Decision: Sharding Strategy</h3>
+<p>There are two fundamentally different ways to shard vectors, and they have wildly different consequences.</p>
+<h4 id="strategy-a-shard-by-id-hash-based">Strategy A: Shard by ID (Hash-Based)</h4>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>shard_id = hash(vector_id) % num_shards</span></span></code></pre>
+<table>
+<thead>
+<tr>
+<th>Pros</th>
+<th>Cons</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simple, balanced distribution</td>
+<td>Each query must fan out to ALL shards</td>
+</tr>
+<tr>
+<td>ID-based operations (fetch, update, delete) are O(1)</td>
+<td>Latency = max(shard_latencies)</td>
+</tr>
+<tr>
+<td>Shard addition is just rehashing</td>
+<td>No pruning — every shard searched for every query</td>
+</tr>
+</tbody>
+</table>
+<h4 id="strategy-b-shard-by-vector-space-proximity-cluster-based">Strategy B: Shard by Vector Space Proximity (Cluster-Based)</h4>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>shard_id = nearest_centroid(vector)  # among num_shards centroids</span></span></code></pre>
+<table>
+<thead>
+<tr>
+<th>Pros</th>
+<th>Cons</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Query can route to only K nearest shards</td>
+<td>Hotspots — some shards get more vectors</td>
+</tr>
+<tr>
+<td>Latency proportional to K, not total shards</td>
+<td>Imbalanced storage and throughput</td>
+</tr>
+<tr>
+<td>Higher recall for same compute</td>
+<td>Rebalancing requires moving vectors across shards</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-the-fan-out-problem">5.3 The Fan-Out Problem</h3>
+<p>With ID-based sharding, query latency scales with the SLOWEST shard, not the average:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Without sharding: P99 latency = T</span></span>
+<span class="line"><span>10-shard ID-based: P99 latency = max(shard₁_latency, ..., shard₁₀_latency)</span></span>
+<span class="line"><span>                                ≈ T + 3σ  # tail latency amplification</span></span></code></pre>
+<p>If shards have identical hardware and load, P99 goes UP because you’re taking the max of 10 independent latency distributions. This is the <strong>tail latency amplification</strong> problem.</p>
+<p>Mitigations:</p>
+<ol>
+<li><strong>Hedged requests:</strong> Send query to all shards, return results when K of N respond (accept partial results)</li>
+<li><strong>Redundant shards:</strong> Each vector stored on 2+ shards; query can skip one shard if it’s slow</li>
+<li><strong>Approximate shard pruning:</strong> Even with ID-based sharding, maintain per-shard cluster centroids. At query time, skip shards whose centroid is very far from q (introduces recall loss proportional to pruning aggressiveness).</li>
+</ol>
+<h3 id="54-shard-count-determination">5.4 Shard Count Determination</h3>
+<table>
+<thead>
+<tr>
+<th>Scale</th>
+<th>Shards</th>
+<th>Shard Strategy</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&lt;10M vectors</td>
+<td>1</td>
+<td>N/A</td>
+<td>Single node fine</td>
+</tr>
+<tr>
+<td>10-100M</td>
+<td>3-5</td>
+<td>Cluster-based</td>
+<td>Prune to 1-2 shards per query</td>
+</tr>
+<tr>
+<td>100M-1B</td>
+<td>10-32</td>
+<td>Hybrid</td>
+<td>Cluster-based routing + ID-based within shard</td>
+</tr>
+<tr>
+<td>1B+</td>
+<td>32-128</td>
+<td>Cluster-based + hierarchical</td>
+<td>Coarse routing shard → fine-grained shards within</td>
+</tr>
+</tbody>
+</table>
+<h3 id="55-bloom-filters-in-vector-search">5.5 Bloom Filters in Vector Search</h3>
+<p><strong>Inserts:</strong> Before inserting, check if the vector already exists (by hash of content). A Bloom filter gives <code>O(1)</code> “definitely not present” with controllable false positive rate. If Bloom says “might be present,” do a full check (expensive).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Bloom filter for 100M vectors, 1% FPR: ~120 MB</span></span>
+<span class="line"><span>Saves 99% of duplicate checks → massive speedup for high-ingestion pipelines</span></span></code></pre>
+<hr>
+<h2 id="6-index-rebuild-the-operational-nightmare">6. Index Rebuild: The Operational Nightmare</h2>
+<h3 id="61-why-rebuilds-happen">6.1 Why Rebuilds Happen</h3>
+<ul>
+<li><strong>IVF:</strong> Cluster centroids drift as new vectors are inserted. After ~20% new data, recall degrades measurably. Full reclustering needed.</li>
+<li><strong>HNSW:</strong> Graph accumulates dead edges from deletes/tombstones. After months, recall drops 2-5%.</li>
+<li><strong>PQ:</strong> Codebooks become suboptimal for new data distribution (e.g., new document domain for RAG).</li>
+<li><strong>Shard rebalancing:</strong> Adding or removing shards requires redistribution.</li>
+</ul>
+<h3 id="62-zero-downtime-rebuild-pattern">6.2 Zero-Downtime Rebuild Pattern</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Step 1: BUILD SHADOW INDEX</span></span>
+<span class="line"><span>  ┌──────────┐     ┌─────────────────┐</span></span>
+<span class="line"><span>  │ Live Index│     │ Shadow Index     │</span></span>
+<span class="line"><span>  │ (serving) │     │ (building, idle) │</span></span>
+<span class="line"><span>  └──────────┘     └─────────────────┘</span></span>
+<span class="line"><span>       ▲</span></span>
+<span class="line"><span>       │ queries</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 2: CATCH-UP INGESTION</span></span>
+<span class="line"><span>  ┌──────────┐     ┌─────────────────┐</span></span>
+<span class="line"><span>  │ Live Index│ ──►│ Shadow Index     │  ← dual-write new vectors</span></span>
+<span class="line"><span>  │ (serving) │     │ (catching up)   │</span></span>
+<span class="line"><span>  └──────────┘     └─────────────────┘</span></span>
+<span class="line"><span>       ▲</span></span>
+<span class="line"><span>       │ queries</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 3: VALIDATE</span></span>
+<span class="line"><span>  ┌──────────┐     ┌─────────────────┐</span></span>
+<span class="line"><span>  │ Live Index│     │ Shadow Index     │</span></span>
+<span class="line"><span>  │ (serving) │     │ (recall > 0.98?) │  ← run eval</span></span>
+<span class="line"><span>  └──────────┘     └─────────────────┘</span></span>
+<span class="line"><span>       ▲</span></span>
+<span class="line"><span>       │ queries</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 4: CUTOVER</span></span>
+<span class="line"><span>  ┌──────────┐     ┌─────────────────┐</span></span>
+<span class="line"><span>  │ Old Index │     │ New Index        │  ← switch traffic</span></span>
+<span class="line"><span>  │ (keep 24h)│     │ (serving)        │</span></span>
+<span class="line"><span>  └──────────┘     └─────────────────┘</span></span>
+<span class="line"><span>                         ▲</span></span>
+<span class="line"><span>                         │ queries</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 5: DECOMMISSION</span></span>
+<span class="line"><span>  Old index deleted after 24h of healthy new index operation.</span></span></code></pre>
+<p><strong>Cost:</strong> 2x storage during rebuild. <strong>Risk:</strong> If shadow index validation is incomplete, you cut over to a degraded system. Run validation on a representative query sample (not just random queries — the tail matters).</p>
+<hr>
+<h2 id="7-freshness-staleness-and-eventual-consistency">7. Freshness, Staleness, and Eventual Consistency</h2>
+<h3 id="71-the-write-path">7.1 The Write Path</h3>
+<p>Vector databases have a fundamental write-amplification problem: inserting a vector isn’t just storing bytes — it requires index structure modification.</p>
+<table>
+<thead>
+<tr>
+<th>Index Type</th>
+<th>Insert Cost</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IVF-Flat</td>
+<td>Low</td>
+<td>Append to cluster list. Cluster assignment is O(nlist) distance calcs.</td>
+</tr>
+<tr>
+<td>IVF-PQ</td>
+<td>Medium</td>
+<td>Encode with PQ codebook + append.</td>
+</tr>
+<tr>
+<td>HNSW</td>
+<td>High</td>
+<td>Search for insertion neighborhood at multiple layers + edge addition. O(M · log N) distance calcs.</td>
+</tr>
+<tr>
+<td>DiskANN</td>
+<td>Very High</td>
+<td>Must update graph edges on disk — random writes.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="72-read-your-writes-a-hard-problem">7.2 Read-Your-Writes: A Hard Problem</h3>
+<p>User inserts a document → embedding generated → vector inserted → user searches → should find their own document.</p>
+<p>With eventual consistency, this can fail:</p>
+<ul>
+<li>Vector inserted, but index not yet updated (stale read)</li>
+<li>Vector inserted on shard A, query hits shard B (for cluster-based sharding with rebalancing in progress)</li>
+</ul>
+<p>Mitigations:</p>
+<ul>
+<li><strong>Synchronous write to WAL first</strong>, acknowledge after WAL, build index async</li>
+<li><strong>Read-your-writes via doc ID:</strong> For a user searching their own doc, check by doc ID directly (not vector search) to confirm presence</li>
+<li><strong>Sticky routing:</strong> Route queries from the user who inserted to the same shard for a grace period</li>
+</ul>
+<hr>
+<h2 id="8-hybrid-search-vectors--keywords">8. Hybrid Search: Vectors + Keywords</h2>
+<h3 id="81-why-hybrid">8.1 Why Hybrid?</h3>
+<p>Pure vector search fails when:</p>
+<ul>
+<li><strong>Exact match matters:</strong> Searching for “error code E0503” — vector similarity might return “error code E0504” (similar embedding) but the user wants exact string match</li>
+<li><strong>Rare terms:</strong> A product name that appears 3 times in your corpus — its embedding is poorly learned</li>
+<li><strong>Booleans/filters:</strong> “Documents from 2023 about Kubernetes pods” — date is a filter, not a similarity concept</li>
+</ul>
+<h3 id="82-reciprocal-rank-fusion-rrf">8.2 Reciprocal Rank Fusion (RRF)</h3>
+<p>The simplest fusion algorithm that works well in practice:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>RRF(doc) = Σ (1 / (k + rank_in_shard(doc))) for each shard</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>For shard 1 (dense): doc A ranked 1st, doc B 3rd</span></span>
+<span class="line"><span>For shard 2 (sparse/BM25): doc A ranked 5th, doc B 1st</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>RRF(A) = 1/(60+1) + 1/(60+5) = 0.0164 + 0.0154 = 0.0318</span></span>
+<span class="line"><span>RRF(B) = 1/(60+3) + 1/(60+1) = 0.0159 + 0.0164 = 0.0323  ← B wins despite lower dense rank</span></span></code></pre>
+<p><code>k=60</code> is the standard constant — it dampens the effect of very high ranks. RRF doesn’t require score normalization between shards — it only uses ranks, making it plug-and-play across arbitrary retrieval methods.</p>
+<h3 id="83-filtered-vector-search-pre-filtering-vs-post-filtering">8.3 Filtered Vector Search: Pre-Filtering vs Post-Filtering</h3>
+<p><strong>Pre-filtering:</strong> Apply metadata filters FIRST, then vector search over the reduced set.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Pre-filter (WHERE date > '2024-01-01' AND category = 'engineering')</span></span>
+<span class="line"><span>  → 50K vectors pass filter</span></span>
+<span class="line"><span>  → Vector search over 50K → top-10</span></span></code></pre>
+<p><strong>Post-filtering:</strong> Vector search FIRST (k=100), then apply metadata filters.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Vector search over 10M → top-100</span></span>
+<span class="line"><span>  → Apply filter → only 2 vectors pass</span></span>
+<span class="line"><span>  → Return top-2 (but might miss vectors ranked #101-200 that WOULD pass the filter)</span></span></code></pre>
+<p><strong>Pre-filtering is correct; post-filtering is fast but lossy.</strong> The right approach: pre-filter when the filter is selective (&lt;1% of corpus). Pre-filter + ANN when the filter is broad — you can build a separate HNSW index per common filter value (e.g., per-category indexes) but this explodes memory. “Filtered HNSW” implementations modify the search to skip filtered-out nodes — correct but slower than unfiltered search.</p>
+<hr>
+<h2 id="9-monitoring-and-observability">9. Monitoring and Observability</h2>
+<h3 id="91-what-to-monitor">9.1 What to Monitor</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Why</th>
+<th>Alert Threshold</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Recall@k</strong></td>
+<td>Is your ANN still finding true neighbors?</td>
+<td>Drop &gt; 2% from baseline</td>
+</tr>
+<tr>
+<td><strong>P50/P99 query latency</strong></td>
+<td>Are users waiting?</td>
+<td>P99 &gt; 3x baseline</td>
+</tr>
+<tr>
+<td><strong>Index memory usage</strong></td>
+<td>Is HNSW graph bloating?</td>
+<td>&gt;90% node RAM</td>
+</tr>
+<tr>
+<td><strong>Index build time</strong></td>
+<td>Is your rebuild pipeline healthy?</td>
+<td>&gt;2x previous build</td>
+</tr>
+<tr>
+<td><strong>Insertion rate vs query rate</strong></td>
+<td>Is ingestion keeping up?</td>
+<td>Insert lag &gt; 60s</td>
+</tr>
+<tr>
+<td><strong>Shard imbalance</strong></td>
+<td>Are some shards overloaded?</td>
+<td>Max/min ratio &gt; 2x</td>
+</tr>
+<tr>
+<td><strong>Per-shard recall</strong></td>
+<td>Is one shard silently degraded?</td>
+<td>Any shard &lt; 0.90</td>
+</tr>
+<tr>
+<td><strong>Cache hit rate</strong></td>
+<td>Are cached results meaningful?</td>
+<td>Query cache hit rate &lt; 30%</td>
+</tr>
+<tr>
+<td><strong>Tombstone ratio</strong></td>
+<td>How much dead data in the index?</td>
+<td>Tombstones &gt; 5% of vectors</td>
+</tr>
+</tbody>
+</table>
+<h3 id="92-recall-measurement-in-production">9.2 Recall Measurement in Production</h3>
+<p>This is HARD — you don’t have ground truth for user queries.</p>
+<p><strong>Approach 1: Golden Query Set</strong>
+Maintain 500-2000 labeled queries with known relevant documents. Run periodically (hourly/daily) and compare results.</p>
+<p><strong>Approach 2: Brute-Force Comparison</strong>
+For a random 1% of queries, also run brute-force k-NN in the background. Compare ANN results to brute-force. This is expensive but gives ground-truth recall.</p>
+<p><strong>Approach 3: Click-Through Rate (Proxy)</strong>
+If your search serves a UI, track whether users click results. Degrading recall → lower CTR. This is a noisy proxy but it’s free and continuous.</p>
+<hr>
+<h2 id="10-interview-question--model-answer">10. Interview Question + Model Answer</h2>
+<blockquote>
+<p><strong>Question:</strong> “You’re building a semantic search system for 500 million scientific papers, each with a 1536-dimensional embedding. The index must serve 1000 QPS with P99 latency &lt; 50ms and recall@10 &gt; 0.95. Total vector storage is ~3 TB. Walk me through your index architecture, explain why you chose your specific ANN algorithm and sharding strategy, and identify the three operational risks you’d lose sleep over.”</p>
+</blockquote>
+<h3 id="model-answer">Model Answer</h3>
+<p><strong>Architecture:</strong></p>
+<p><strong>Index choice: IVF-PQ with cluster-based sharding.</strong></p>
+<p>Why NOT HNSW: At 500M × 1536d, raw vectors are 3 TB. HNSW with M=16 adds ~3% overhead for edges → ~3.1 TB total. This can fit across 10 nodes (310 GB/node), but HNSW requires full graph in RAM — each node needs 310 GB which is expensive but not impossible. However, the killer is insertion: 500M HNSW inserts with ef_construction=200 takes days per node. With a weekly corpus refresh (new papers), you need faster rebuilds.</p>
+<p>Why IVF-PQ: PQ with M=96 subvectors compresses 500M vectors from 3 TB → ~48 GB. This fits in RAM on a SINGLE high-memory node for the codebook, with vectors on SSD. 10-shard cluster-based sharding means each shard handles ~30 GB. With nprobe=3 (query routes to 3 nearest shards), latency is 3x single-shard latency. IVFPQ search over 50M vectors in RAM completes in &lt;10ms per shard, comfortably under 50ms budget.</p>
+<p><strong>Sharding strategy: Cluster-based routing with 32 shards.</strong></p>
+<ol>
+<li>Run k-means (k=32) on a sample of 10M vectors to establish shard centroids.</li>
+<li>Assign each paper to its nearest centroid.</li>
+<li>At query time, compute distance to all 32 centroids (32 × 1536 ≈ 49K operations — negligible relative to query). Route to nprobe=3 nearest shards.</li>
+<li>Merge and re-rank top results from 3 shards.</li>
+</ol>
+<p>Why not ID-based: Fan-out to all 32 shards would make P99 = max(P99_shard₁ … P99_shard₃₂). With tail latency amplification, this could push P99 from 15ms to 60ms.</p>
+<p><strong>Risk 1: PQ Recall Degradation for Outliers</strong></p>
+<p>Papers in niche subfields (rare topics, non-English) have embeddings far from cluster centroids. PQ will badly approximate their vectors. Querying for “Finnish phonology in endangered Uralic languages” might get 0.75 recall instead of 0.95 because every quantization dimension introduces error that compounds for unusual embeddings.</p>
+<p>Mitigation: Monitor recall@10 stratified by topic/popularity quintile. If P5 recall &lt; 0.85, increase M (use fewer subvectors, less compression) for outlier-heavy shards — you can use different PQ configs per shard.</p>
+<p><strong>Risk 2: Shard Imbalance Under Cluster-Based Assignment</strong></p>
+<p>K-means minimizes within-cluster variance, NOT cluster size. A natural distribution like “machine learning papers” (huge cluster) vs “paleontology papers” (small cluster) creates uneven shards. If one shard holds 80M vectors while others hold 20M, query latency will be 4x higher when routed to the large shard.</p>
+<p>Mitigation: Use k-means with size constraints, or post-process assignment: for the largest clusters, split into sub-clusters and assign to separate shards. This breaks the “exact nearest centroid” property but recall only degrades if papers naturally belong in that shard (they don’t — they just happen to be in a dense region of vector space).</p>
+<p><strong>Risk 3: Index Staleness During Rebuild</strong></p>
+<p>The system indexes new papers daily (arXiv releases ~15K new papers/day). Over months, cluster centroids drift — papers from 2026 use different terminology than 2020 papers. Recall degrades slowly due to stale cluster assignments.</p>
+<p>Mitigation: Shadow rebuild (see §6.2) every 90 days. The 3 TB of raw vectors takes ~2 hours to recluster and ~4 hours to build new PQ codebooks and indices. During the 6-hour window, dual-write new papers to old and new indices. Cut over after validation on 10K golden queries (recall must match or exceed current index). Keep old index hot for 24 hours as rollback.</p>
+<h3 id="-common-pitfall">❗ Common Pitfall</h3>
+<p><strong>“We’ll use HNSW because it has the best recall-latency tradeoff, and we’ll just add more RAM.”</strong></p>
+<p>This is the most expensive vector search mistake. HNSW has the best single-node recall-latency curve, but it imposes three hidden costs at scale:</p>
+<ol>
+<li>
+<p><strong>RAM is not linearly scalable.</strong> A single node with 512 GB RAM costs 4-8x more per GB than 8 nodes with 64 GB each. At billion-scale, you’re paying for the privilege of keeping a perfect graph in memory.</p>
+</li>
+<li>
+<p><strong>HNSW insert time grows with dataset size.</strong> Inserting the 500-millionth vector requires traversing a graph with 500M nodes. Each insertion does O(M · log N) distance computations. For M=16, N=500M: ~400 distance calcs per insert. At 100K inserts/sec: 40M distance calcs/sec — saturates a CPU. IVF cluster append is constant-time (add to list).</p>
+</li>
+<li>
+<p><strong>The recall advantage shrinks at scale.</strong> At 1M vectors, HNSW beats IVF by 5-8% recall. At 500M vectors, with PQ compression and tuned nprobe for IVF, that gap shrinks to 1-2%. You’re paying 5x hardware cost for a 2% recall improvement. The staff-engineer move: spend that budget on a better embedding model (10-20% recall gain) instead of fancier indexing.</p>
+</li>
+</ol>
+<p><strong>When HNSW IS the right choice:</strong> (1) &lt;50M vectors, (2) RAM is cheap for your budget, (3) high insert/delete churn is NOT expected, (4) recall@10 &gt; 0.98 is a hard requirement. If any of these isn’t true, IVF-PQ or DiskANN deserves a serious look.</p>
+<hr>
+<h2 id="11-key-takeaways">11. Key Takeaways</h2>
+<ol>
+<li>
+<p><strong>No index dominates the Pareto frontier.</strong> HNSW wins recall-latency. IVF-PQ wins scale-per-dollar. DiskANN wins cost at rest. The question isn’t “which is best?” — it’s “which trade-offs match my constraints?”</p>
+</li>
+<li>
+<p><strong>HNSW’s hidden cost is memory at low dimensions.</strong> The graph edge overhead as a fraction of total storage INCREASES as dimensionality decreases. At 1536d, M=16 HNSW overhead is ~3%. At 128d, it’s 65%. Don’t just count vectors — count dimensions when sizing.</p>
+</li>
+<li>
+<p><strong>IVF recall cliff is real and sharp.</strong> Below nprobe=4<em>sqrt(N), recall drops geometrically. Above ~10</em>sqrt(N), recall gains are microscopic. Find the knee for your data — it’s not in any paper, you must measure it on your corpus.</p>
+</li>
+<li>
+<p><strong>PQ recall loss hits the tail hardest.</strong> Dense clusters compress well. Sparse regions (outliers, rare topics) lose 10-20% recall. Monitor P5 and P1 recall separately from P50. If your critical use case involves niche/rare queries, PQ may be the wrong choice for those queries even if aggregate recall looks fine.</p>
+</li>
+<li>
+<p><strong>Shard by vector space, not by ID.</strong> ID-based sharding forces fan-out to all shards, amplifying tail latency. Cluster-based routing prunes shards but requires vigilance against imbalance. The hybrid: coarse cluster routing with ID-based sharding within each cluster group.</p>
+</li>
+<li>
+<p><strong>The rebuild is the product.</strong> Designing the index is 20% of the work. Designing the zero-downtime rebuild — with validation, catch-up, cutover, and rollback — is 80%. Every vector DB at scale rebuilds. If your rebuild takes 12 hours and blocks writes, your system has 12 hours of planned downtime per rebuild cycle. This is a design failure, not an ops detail.</p>
+</li>
+<li>
+<p><strong>Hybrid search is table stakes now.</strong> Pure vector search fails on exact-match queries, rare terms, and filtered queries. RRF is simple enough to implement and good enough to ship. The engineering cost of hybrid search is low; the user experience cost of pure vector-only is high for any real-world application.</p>
+</li>
+<li>
+<p><strong>Monitor recall, not just latency.</strong> Latency is easy to measure — Prometheus gives it for free. Recall requires golden query sets, brute-force baselines, or proxy metrics. Vector search systems that only monitor latency are flying blind. You cannot tune an ANN index without recall data. Every day you don’t measure recall, your system is probably degrading and you don’t know it.</p>
+</li>
+<li>
+<p><strong>Staff-level reframe:</strong> Don’t ask “HNSW or IVF?” Ask: <strong>“What is the recall budget for this system? What’s the cost of a missed result vs. a slow result? How does our data distribution (cluster density, dimensionality, tail behavior) interact with each index type’s failure modes? And what’s the operational cost — not just hardware, but rebuild frequency, on-call burden, and migration path when we grow 10x?”</strong> The index choice, sharding strategy, and compression scheme all follow from those answers.</p>
+</li>
+</ol>
+<hr>
+<h2 id="related">Related</h2>
+<ul>
+<li>[[topic-queue]]</li>
+<li>[[RAG Pipeline (Chunking, Embeddings, Retrieval, Reranking)]]</li>
+<li>[[LLM Serving at Scale (vLLM, Quantization, Batching, KV cache)]]</li>
+<li>[[Bloom Filters &amp; Probabilistic Data Structures]]</li>
+<li>[[Database Sharding &amp; Replication]]</li>
+<li>[[Search Engine (Elasticsearch)]]</li>
+<li>[[Metrics &amp; Monitoring (Prometheus-Grafana)]]</li>
+<li>[[Weakness Vault/Day-46-Vector-Database-Internals]]</li>
+</ul>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Every ANN index is a precision-recall-speed trade-off on a Pareto frontier — no single index dominates. HNSW wins recall-latency (&lt;100M, RAM-resident); IVF-PQ wins scale-per-dollar (billion-scale, compressed, disk-backed).</li>
+<li>HNSW’s memory overhead gets WORSE at low dimensionality (graph edges dominate storage at 128d, trivial at 1536d) and it cannot delete natively (tombstones silently degrade recall over months). <code>ef_search</code> is your live per-query recall knob — no rebuild needed.</li>
+<li>IVF’s recall depends on <code>nprobe</code> and has a sharp “recall cliff” — find the knee for your data, don’t just max it out. Cluster centroids drift as data grows; plan for periodic re-clustering.</li>
+<li>Shard by vector space proximity (cluster-based), NOT by ID — ID-based sharding forces fan-out to all shards and amplifies tail latency (P99 = max of all shard latencies).</li>
+<li>The rebuild is 80% of the operational work: use a shadow-index pattern (build → catch-up → validate → cutover → keep old for rollback) to achieve zero-downtime. Always monitor recall, not just latency.</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li><strong>“How do you keep recall high as new data arrives and the index drifts?”</strong> — Centroids drift and HNSW graphs accumulate dead edges; set a recall budget, benchmark weekly against a golden query set, and trigger a shadow rebuild when recall drops &gt;2% from baseline.</li>
+<li><strong>“Why might the same query return different results two seconds apart?”</strong> — By design, not a bug: ANN is approximate, and concurrent inserts/deletes/tombstones change the index structure between queries. If determinism is required, cache results or snapshot the index.</li>
+<li><strong>“When is HNSW the wrong choice despite its great recall-latency curve?”</strong> — At billion scale (RAM cost), high insert/delete churn (graph degrades), low dimensionality (edge overhead dominates), or when the recall advantage over tuned IVF-PQ shrinks to 1-2% — spend the budget on a better embedding model instead.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Assuming HNSW’s recall advantage holds at scale. At 1M vectors HNSW beats IVF by 5-8% recall; at 500M with tuned PQ compression and nprobe, that gap shrinks to 1-2% — while HNSW costs 5x more in RAM and has insert time that grows with O(M·log N). The staff move is to spend the hardware budget on a better embedding model (10-20% recall gain) rather than fancier indexing.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/vector-database-internals-hnsw-ivf-sharding/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Vector%20Database%20Internals%20(HNSW%2C%20IVF%2C%20Sharding)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fvector-database-internals-hnsw-ivf-sharding%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fvector-database-internals-hnsw-ivf-sharding%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/vector-database-internals-hnsw-ivf-sharding" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/url-shortener" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>URL Shortener</span></a><a href="/notes/system-design/whatsapp-architecture" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>WhatsApp Architecture</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Vector Database Internals (HNSW, IVF, Sharding)" data-selector=".article-prose" data-article-slug="system-design/vector-database-internals-hnsw-ivf-sharding" data-article-title="Vector Database Internals (HNSW, IVF, Sharding)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

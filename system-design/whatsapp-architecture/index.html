@@ -1,0 +1,689 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>WhatsApp Architecture · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview--engineering-philosophy" class="toc-link" data-toc-link="overview--engineering-philosophy" data-astro-cid-p33bl5ka>Overview &amp; Engineering Philosophy</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#requirements-at-a-glance" class="toc-link" data-toc-link="requirements-at-a-glance" data-astro-cid-p33bl5ka>Requirements at a Glance</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-estimation-for-2-billion-users" class="toc-link" data-toc-link="capacity-estimation-for-2-billion-users" data-astro-cid-p33bl5ka>Capacity Estimation for 2 Billion Users</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#why-erlangbeam--the-concurrency-story" class="toc-link" data-toc-link="why-erlangbeam--the-concurrency-story" data-astro-cid-p33bl5ka>Why Erlang/BEAM — The Concurrency Story</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#beam-process-model-per-chat-server-node" class="toc-link" data-toc-link="beam-process-model-per-chat-server-node" data-astro-cid-p33bl5ka>BEAM Process Model (per chat-server node)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#connection--routing-layer" class="toc-link" data-toc-link="connection--routing-layer" data-astro-cid-p33bl5ka>Connection &amp; Routing Layer</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#connection-layer-approach-comparison" class="toc-link" data-toc-link="connection-layer-approach-comparison" data-astro-cid-p33bl5ka>Connection-Layer Approach Comparison</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#message-storage--cassandra" class="toc-link" data-toc-link="message-storage--cassandra" data-astro-cid-p33bl5ka>Message Storage — Cassandra</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#message-inbox-schema-conceptual" class="toc-link" data-toc-link="message-inbox-schema-conceptual" data-astro-cid-p33bl5ka>Message Inbox Schema (conceptual)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#media-storage--s3--cdn" class="toc-link" data-toc-link="media-storage--s3--cdn" data-astro-cid-p33bl5ka>Media Storage — S3 + CDN</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#end-to-end-encryption--the-signal-protocol" class="toc-link" data-toc-link="end-to-end-encryption--the-signal-protocol" data-astro-cid-p33bl5ka>End-to-End Encryption — The Signal Protocol</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#signal-protocol--x3dh--double-ratchet-flow" class="toc-link" data-toc-link="signal-protocol--x3dh--double-ratchet-flow" data-astro-cid-p33bl5ka>Signal Protocol — X3DH + Double Ratchet Flow</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#group-chat-at-scale" class="toc-link" data-toc-link="group-chat-at-scale" data-astro-cid-p33bl5ka>Group Chat at Scale</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#group-chat-fan-out-architecture" class="toc-link" data-toc-link="group-chat-fan-out-architecture" data-astro-cid-p33bl5ka>Group Chat Fan-Out Architecture</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#presence--last-seen" class="toc-link" data-toc-link="presence--last-seen" data-astro-cid-p33bl5ka>Presence &amp; Last-Seen</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#message-delivery-status-sent-delivered-read" class="toc-link" data-toc-link="message-delivery-status-sent-delivered-read" data-astro-cid-p33bl5ka>Message Delivery Status (Sent, Delivered, Read)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#message-delivery-flow-with-receipts" class="toc-link" data-toc-link="message-delivery-flow-with-receipts" data-astro-cid-p33bl5ka>Message Delivery Flow (with receipts)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#offline-message-sync" class="toc-link" data-toc-link="offline-message-sync" data-astro-cid-p33bl5ka>Offline Message Sync</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#push-notifications" class="toc-link" data-toc-link="push-notifications" data-astro-cid-p33bl5ka>Push Notifications</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#voice--video-calls--webrtc" class="toc-link" data-toc-link="voice--video-calls--webrtc" data-astro-cid-p33bl5ka>Voice &amp; Video Calls — WebRTC</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#multi-device-sync" class="toc-link" data-toc-link="multi-device-sync" data-astro-cid-p33bl5ka>Multi-Device Sync</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#failure-handling--reliability" class="toc-link" data-toc-link="failure-handling--reliability" data-astro-cid-p33bl5ka>Failure Handling &amp; Reliability</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#sharp-interview-question" class="toc-link" data-toc-link="sharp-interview-question" data-astro-cid-p33bl5ka>Sharp Interview Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>WhatsApp Architecture</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 27 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 38 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>whatsapp</span><span class="tag" data-astro-cid-sgg5joot>messaging</span><span class="tag" data-astro-cid-sgg5joot>erlang</span><span class="tag" data-astro-cid-sgg5joot>cassandra</span><span class="tag" data-astro-cid-sgg5joot>end-to-end-encryption</span><span class="tag" data-astro-cid-sgg5joot>signal-protocol</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="whatsapp-architecture">WhatsApp Architecture</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A messaging system built on Erlang’s actor model with per-recipient mailboxes, end-to-end encryption (server is a blind relay), and per-sender sequence numbers for ordering.</p>
+<p><strong>How it’s asked:</strong> “Design a messaging system for 2B users with 50 engineers. Cover the actor model, E2E encryption, message ordering, delivery guarantees, and how simplicity enables scale.”</p>
+<hr>
+<h2 id="overview--engineering-philosophy">Overview &amp; Engineering Philosophy</h2>
+<p>WhatsApp is the world’s largest end-to-end encrypted messaging platform, serving more than two billion monthly active users who exchange over one hundred billion messages every day. What makes the architecture remarkable is not merely the scale but the radical efficiency behind it: at the time of its nineteen-billion-dollar acquisition by Facebook in 2014, WhatsApp served roughly 450 million users with just 35 engineers and on the order of 50 servers. That ratio is not an accident of luck — it is the downstream consequence of a deliberate technology bet on Erlang/OTP, a store-and-forward delivery model, and a fanatically minimal protocol surface. Understanding WhatsApp’s design means understanding how a single language runtime and a handful of storage primitives can absorb the entire planet’s casual conversation.</p>
+<p>The architecture rests on three structural pillars:</p>
+<ul>
+<li><strong>Erlang/OTP on the BEAM virtual machine</strong> — gives the system millions of lightweight concurrent processes, preemptive scheduling, and supervisor trees that restart failed components without taking down a connection.</li>
+<li><strong>The Signal Protocol</strong> (originally the Axolotl ratchet) — provides end-to-end encryption with forward secrecy and post-compromise security by default; the server never holds a plaintext message and never holds the keys to decrypt one.</li>
+<li><strong>A store-and-forward delivery model</strong> — every message is persisted to a durable queue on write, acknowledged to the sender, and replayed to the recipient whenever they next appear online, whether that is milliseconds or weeks later. This is fundamentally different from a pub/sub system like Discord or a broker like Kafka; WhatsApp is point-to-point delivery with per-message server acknowledgements, and the persistence layer is the contract that makes delivery guarantees tractable.</li>
+</ul>
+<h2 id="requirements-at-a-glance">Requirements at a Glance</h2>
+<p>The functional surface is deceptively small:</p>
+<ul>
+<li>Send and receive text, media, and location in real time.</li>
+<li>Track three delivery states — sent (single check), delivered (double check), read (blue double check).</li>
+<li>Support group chats of up to 1,024 participants with consistent ordering.</li>
+<li>Carry voice and video calls over WebRTC with the Signal protocol carrying the key exchange.</li>
+<li>Queue messages for offline recipients and drain that queue on reconnect.</li>
+<li>Sync across up to four linked devices per account with independent key material.</li>
+<li>Do all of this encrypted end-to-end by default with no opt-in.</li>
+</ul>
+<p>The non-functional targets are where the engineering pressure lives:</p>
+<ul>
+<li>Delivery latency for an online recipient must stay under 500 milliseconds at the 95th percentile.</li>
+<li>Each chat server must hold on the order of one to two million persistent TCP connections.</li>
+<li>Availability targets four nines (99.99 percent).</li>
+<li>Durability is at-least-once: once the server acknowledges a message, it must not be lost.</li>
+<li>The offline queue must retain undelivered messages for weeks.</li>
+<li>The cost-per-user must stay low enough that the service can run profitably at planetary scale without a per-message charge to the end user.</li>
+</ul>
+<h2 id="capacity-estimation-for-2-billion-users">Capacity Estimation for 2 Billion Users</h2>
+<p>Working through the numbers is how a candidate demonstrates they can reason about the machine footprint, not just the boxes on a diagram. Assume two billion monthly active users. The key capacity figures break down as follows:</p>
+<ul>
+<li><strong>Concurrent connections:</strong> ~600 million users (≈30 percent of 2B MAU) are concurrently connected during peak hours.</li>
+<li><strong>Message volume:</strong> ~100 billion messages/day; each user sends an average of 50 messages/day and receives somewhat more in groups.</li>
+<li><strong>Sustained rate:</strong> ~1.16 million messages/second spread evenly; peak bursts reach 5–10 million messages/second due to geographic concentration.</li>
+<li><strong>Stored footprint per recipient:</strong> ~200 bytes (100-byte ciphertext payload + envelope, routing metadata, per-recipient queue entries).</li>
+<li><strong>Raw message data/day:</strong> ~30 TB before replication (100B messages × ~1.5 avg fan-out × 200 bytes).</li>
+<li><strong>Chat server fleet:</strong> at ~1M connections/server, the fleet needs ~600 chat servers for the connection layer; with headroom and failover, closer to 1,000–1,500.</li>
+<li><strong>Memory per server:</strong> ~10–20 GB aggregate for 1M connections with their per-connection state — fits comfortably on a modern box (each BEAM process holding a socket is a few kilobytes).</li>
+<li><strong>Media volume:</strong> ~5 percent of messages carry media; average media object ~500 KB after compression → ~5 billion media objects/day → ~2.5 petabytes/day.</li>
+<li><strong>Hot media storage:</strong> with 30-day retention → ~75 petabytes hot on the object store, plus CDN cache.</li>
+</ul>
+<p>These numbers are what force the S3-plus-CDN split and the Cassandra cluster topology described below; they are not afterthoughts.</p>
+<h2 id="why-erlangbeam--the-concurrency-story">Why Erlang/BEAM — The Concurrency Story</h2>
+<p>The single most important architectural decision in WhatsApp’s history was choosing Erlang. Erlang was built by Ericsson in the 1980s for telecom switches, where the requirements are eerily similar to a chat platform: millions of concurrent connections, soft real-time latency, fault tolerance as a first-class concern, and hot code upgrades without dropping calls. The BEAM virtual machine implements its own scheduler that runs across all CPU cores and uses preemptive reduction-counting, so no single process can starve the system the way a long-running goroutine or OS thread can. Each connection is modeled as its own Erlang process — not an OS thread — and Erlang processes are extraordinarily cheap: a fresh process is roughly 300 bytes of memory and the system routinely runs tens of millions of them per node. This is why a single WhatsApp server can hold over a million persistent TCP sockets without the thread-per-connection explosion that would sink a JVM or a C10K-era server.</p>
+<p>OTP, the middleware layer on top of Erlang, provides supervisor trees that implement “let it crash” semantics. Instead of writing defensive code that catches every exception and tries to limp along, an Erlang chat process simply dies when it hits an unexpected state, and its supervisor restarts it from a known-good init. The supervisor itself has a restart intensity policy (the classic <code>one_for_one</code>, <code>rest_for_one</code>, or <code>one_for_all</code>) that prevents crash loops from taking down the node. This philosophy composes beautifully with connection handling: if a socket process dies, the supervisor restarts it, the client reconnects, and the offline queue replays anything missed. The result is a system that achieves four nines not by never failing but by failing constantly and invisibly. WhatsApp also relies on Erlang’s distributed message passing (<code>gen_server</code> calls and casts between nodes) and its <code>mnesia</code>-era patterns for in-memory replicated state, though the durable storage tier has long since moved to Cassandra and other stores. Hot code loading — swapping a module on a live node without dropping connections — is how WhatsApp deploys multiple times a day across thousands of nodes with no user-visible disruption.</p>
+<h3 id="beam-process-model-per-chat-server-node">BEAM Process Model (per chat-server node)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                    BEAM VM  (single chat-server node)</span></span>
+<span class="line"><span>  ┌───────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>  │  Scheduler  (preemptive, reduction-counted, spans all cores)   │</span></span>
+<span class="line"><span>  │                                                                │</span></span>
+<span class="line"><span>  │    ┌────────┐   ┌────────┐   ┌────────┐   ┌────────┐          │</span></span>
+<span class="line"><span>  │    │ Core 0 │   │ Core 1 │   │ Core 2 │   │ Core N │          │</span></span>
+<span class="line"><span>  │    └───┬────┘   └───┬────┘   └───┬────┘   └───┬────┘          │</span></span>
+<span class="line"><span>  │        └────────────┴────────────┴─────────────┘               │</span></span>
+<span class="line"><span>  │                          │                                     │</span></span>
+<span class="line"><span>  │                 ┌────────▼────────┐                            │</span></span>
+<span class="line"><span>  │                 │   Run Queue     │  millions of processes     │</span></span>
+<span class="line"><span>  │                 │   (processes)   │  ~300 B each when fresh    │</span></span>
+<span class="line"><span>  │                 └──┬────┬────┬───┘                            │</span></span>
+<span class="line"><span>  │          ┌─────────┘    │    └──────────┐                      │</span></span>
+<span class="line"><span>  │     ┌────▼────┐   ┌─────▼─────┐    ┌─────▼─────┐               │</span></span>
+<span class="line"><span>  │     │ socket  │   │  socket   │    │  socket   │   ... ~1M     │</span></span>
+<span class="line"><span>  │     │ proc #1 │   │  proc #2  │    │  proc #N  │   conns/node  │</span></span>
+<span class="line"><span>  │     └────┬────┘   └─────┬─────┘    └─────┬─────┘               │</span></span>
+<span class="line"><span>  │          │              │                │                      │</span></span>
+<span class="line"><span>  │     ┌────▼──────────────▼────────────────▼─────┐               │</span></span>
+<span class="line"><span>  │     │       OTP Supervisor Tree                 │              │</span></span>
+<span class="line"><span>  │     │  one_for_one | rest_for_one | one_for_all │              │</span></span>
+<span class="line"><span>  │     │  crash → restart from known-good init     │              │</span></span>
+<span class="line"><span>  │     └───────────────────────────────────────────┘              │</span></span>
+<span class="line"><span>  │                                                                │</span></span>
+<span class="line"><span>  │  Hot code loading: swap a module on a live node, no conn drop   │</span></span>
+<span class="line"><span>  └────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<h2 id="connection--routing-layer">Connection &amp; Routing Layer</h2>
+<p>When a client opens WhatsApp, it establishes a single long-lived TCP (or TLS-over-443) connection to a chat server selected by the load balancer, typically after a DNS resolution that returns an anycast or geographically nearby address. The connection carries a custom binary protocol, not HTTP or JSON; the wire format is compact protobuf-like framing that keeps per-message overhead to a handful of bytes. Each connection is fronted by an Erlang process that owns the socket, parses incoming frames, and dispatches them to the appropriate message-handling process. A separate registry maps each user ID to the node currently holding that user’s connection, so when a message arrives addressed to a user, the routing layer can look up which chat server owns the recipient’s socket and forward the payload via inter-node Erlang messaging.</p>
+<p>The routing registry is the subtle part. At WhatsApp’s scale you cannot broadcast “who has user X” to a thousand nodes, so the registry is itself a sharded, replicated structure — conceptually a consistent-hash ring mapping user IDs to the node responsible for tracking their connection. When a user connects, their home node writes the mapping; when they disconnect or migrate (say, switching from Wi-Fi to cellular), the mapping updates. If the recipient is offline, the registry returns “no connection” and the message is routed to the persistence tier instead. This split between the ephemeral connection layer and the durable storage layer is what makes the store-and-forward guarantee clean: the chat server is stateless with respect to message durability, and the storage tier is stateless with respect to live sockets.</p>
+<h3 id="connection-layer-approach-comparison">Connection-Layer Approach Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Conns / box</th>
+<th>Memory / conn</th>
+<th>Fault isolation</th>
+<th>Hot upgrade</th>
+<th>Verdict at WhatsApp scale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Thread-per-conn (JVM / OS)</td>
+<td>~10K (C10K wall)</td>
+<td>~1 MB stack</td>
+<td>one thread crash can destabilize the JVM</td>
+<td>requires restart</td>
+<td>cannot hold 1M sockets</td>
+</tr>
+<tr>
+<td>Goroutine-per-conn (Go)</td>
+<td>~100K+</td>
+<td>~8 KB stack, growable</td>
+<td>cooperative-ish; long task can block scheduler</td>
+<td>binary swap, drops conns</td>
+<td>better, but no supervisor trees, no “let it crash” semantics</td>
+</tr>
+<tr>
+<td>Erlang process-per-conn (BEAM)</td>
+<td>~1M+</td>
+<td>~300 B fresh, few KB live</td>
+<td>process crash → supervisor restarts</td>
+<td>hot code load, no conn drop</td>
+<td>WhatsApp’s choice</td>
+</tr>
+</tbody>
+</table>
+<h2 id="message-storage--cassandra">Message Storage — Cassandra</h2>
+<p>WhatsApp’s durable message store is Apache Cassandra, chosen because it provides write-heavy throughput, linear horizontal scalability, and tunable consistency — all of which match a chat workload that is overwhelmingly writes (every message is a write to the sender’s outbox and each recipient’s inbox), naturally partitioned by user, and must remain available during network partitions. Cassandra’s log-structured storage engine (LSM-tree based) turns random writes into sequential appends, which is ideal for a system absorbing millions of messages per second. The data model leverages Cassandra’s wide-row design: the partition key is the user ID, and the clustering key is a time-ordered message ID, so an inbox lookup for “give me the next 50 undelivered messages for user X” is a single partition read with a range scan — the most efficient access pattern Cassandra offers.</p>
+<p>The schema conceptually has a per-recipient inbox table where each row is <code>(recipient_id, message_id, sender_id, ciphertext, timestamp, status)</code>, and the message ID is a timeUUID so messages sort chronologically within a partition. Because Cassandra partitions by recipient, all of a user’s undelivered messages live on a known set of nodes (the replicas for that partition key), which makes the “drain the offline queue” operation a localized read rather than a global scatter.</p>
+<h3 id="message-inbox-schema-conceptual">Message Inbox Schema (conceptual)</h3>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>recipient_id</code></td>
+<td>UUID / text</td>
+<td><strong>Partition key</strong> — routes all of a user’s messages to a known replica set</td>
+</tr>
+<tr>
+<td><code>message_id</code></td>
+<td>timeUUID</td>
+<td><strong>Clustering key</strong> — chronological ordering within the partition</td>
+</tr>
+<tr>
+<td><code>sender_id</code></td>
+<td>UUID / text</td>
+<td>Originator, used for receipts and UI grouping</td>
+</tr>
+<tr>
+<td><code>ciphertext</code></td>
+<td>blob</td>
+<td>E2E-encrypted payload; the server never reads it</td>
+</tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>bigint</td>
+<td>Server receipt time, drives retention / TTL</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>int</td>
+<td>0 = sent, 1 = delivered, 2 = read; updated via lightweight transaction</td>
+</tr>
+</tbody>
+</table>
+<p>Replication factor is typically three with a quorum read and quorum write (<code>LOCAL_QUORUM</code> in practice for latency), giving strong consistency for any single key while tolerating a replica failure. Compaction and tombstones are the operational pain points: when a message is delivered and acknowledged, it is either marked delivered (a lightweight update) or eventually tombstoned after the retention window, and the ops team tunes compaction strategies (<code>SizeTieredCompactionStrategy</code> for write-heavy, <code>LeveledCompactionStrategy</code> for read-heavy) per table. A common production concern is tombstone warnings during offline-queue drains if messages expire faster than they are read, which is mitigated by setting <code>gc_grace_seconds</code> appropriately and monitoring tombstone sweep rates.</p>
+<h2 id="media-storage--s3--cdn">Media Storage — S3 + CDN</h2>
+<p>Text messages are tiny, but images, videos, voice notes, and documents dominate the storage and bandwidth budget. WhatsApp does not stream media through the chat servers; instead, the uploading client encrypts the media with a symmetric key, uploads the ciphertext to object storage, and sends the recipient a message containing a pointer (a URL or object key) plus the decryption key wrapped in the Signal session. The object store is S3 (or an equivalent large-scale object store) fronted by a CDN that caches hot objects at edge locations close to the recipient. This split is essential: the chat servers stay lightweight because they never touch the bytes, and the CDN absorbs the bursty, geographically skewed read traffic that a viral video or a widely forwarded image generates.</p>
+<p>The upload flow is: the sender generates a random AES-256 key, encrypts the media, requests a pre-signed upload URL from a media service, PUTs the ciphertext to S3, and embeds the S3 key and the AES key (the latter protected by the Signal double ratchet) into the message envelope. The recipient, on receiving the pointer, fetches the object from the CDN edge — which pulls from S3 on a cache miss — decrypts locally, and renders. Retention is bounded: media objects are deleted from S3 after the recipient has downloaded them and acknowledged, or after a fixed TTL (commonly 30 days for undelivered media) to keep the storage footprint finite. The CDN cache is governed by TTL and admission policies so that a single viral media object does not evict the working set of frequently accessed content. Thumbnails and transcoded variants (e.g., lower-resolution previews) are generated server-side — but note that because the media is encrypted, any server-side processing requires either client-supplied derived keys or a convention where the client uploads a separately encrypted thumbnail alongside the original, which is what WhatsApp does in practice to preserve the end-to-end encryption guarantee.</p>
+<h2 id="end-to-end-encryption--the-signal-protocol">End-to-End Encryption — The Signal Protocol</h2>
+<p>Every WhatsApp message is end-to-end encrypted by default, and the server is structurally incapable of reading the content. This is achieved with the Signal Protocol, which combines three cryptographic primitives:</p>
+<ul>
+<li><strong>X3DH (Extended Triple Diffie-Hellman)</strong> — for initial key agreement.</li>
+<li><strong>The Double Ratchet algorithm</strong> — for per-message forward secrecy and post-compromise security.</li>
+<li><strong>Sesame</strong> — for session management across multiple devices.</li>
+</ul>
+<p>When two users first message each other, the initiator fetches the recipient’s public prekey bundle (signed prekey, one-time prekeys, and identity key) from the server — these are uploaded by the recipient in advance and consumed one at a time. The initiator performs an X3DH handshake to derive a shared root key, then initializes the Double Ratchet. From that point, every message advances a symmetric ratchet that derives a fresh message key from the previous one, so compromising one message key does not reveal past or future messages. Additionally, a Diffie-Hellman ratchet triggers whenever a new ephemeral key is received from the other party, giving post-compromise security: even if an attacker records all ciphertext and later steals a session key, they cannot decrypt messages sent after the next DH ratchet step.</p>
+<p>The server’s role is deliberately minimal: it stores public prekeys, forwards ciphertext, and maintains session state references, but it never sees plaintext or the symmetric keys derived from the handshake. Key verification is offered via a safety number — a short fingerprint of both parties’ identity keys — that users can compare out-of-band to detect a man-in-the-middle attack. Group chats extend the protocol with the Sender Keys mechanism: instead of pairwise encrypting a message N times for N members (an O(N) cost per message), each participant distributes a chain key to the group once, and thereafter sends a single ciphertext that any member can decrypt with their copy of the evolving sender key. This reduces group encryption from quadratic to linear and is what makes 1,024-member groups feasible. The common pitfall in interviews is assuming the server holds session keys or performs encryption on behalf of clients — it does not; the server is a blind relay, and the entire security model collapses if it ever did.</p>
+<h3 id="signal-protocol--x3dh--double-ratchet-flow">Signal Protocol — X3DH + Double Ratchet Flow</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  Alice (client)                 Server (blind relay)                 Bob (client)</span></span>
+<span class="line"><span>      │                                │                                  │</span></span>
+<span class="line"><span>      │  ── X3DH Key Agreement ──       │                                  │</span></span>
+<span class="line"><span>      │  fetch Bob's prekey bundle:     │  (Bob uploaded prekeys in        │</span></span>
+<span class="line"><span>      │   signed prekey, one-time       │   advance; consumed one at a     │</span></span>
+<span class="line"><span>      │   prekeys, identity key         │   time)                          │</span></span>
+<span class="line"><span>      │───────────────────────────────>│                                  │</span></span>
+<span class="line"><span>      │&#x3C;───────────────────────────────│                                  │</span></span>
+<span class="line"><span>      │  derive shared root key (X3DH) │                                  │</span></span>
+<span class="line"><span>      │  initialize Double Ratchet     │                                  │</span></span>
+<span class="line"><span>      │                                │                                  │</span></span>
+<span class="line"><span>      │  ── Per-Message: Double Ratchet ──                                │</span></span>
+<span class="line"><span>      │  symmetric ratchet:            │                                  │</span></span>
+<span class="line"><span>      │   msg_key = HKDF(root_key, n)  │                                  │</span></span>
+<span class="line"><span>      │   cipher = AEAD(msg_key, msg)  │                                  │</span></span>
+<span class="line"><span>      │───────────────────────────────>│────────────────────────────────>│</span></span>
+<span class="line"><span>      │                                │  forwards ciphertext ONLY        │</span></span>
+<span class="line"><span>      │                                │  (no plaintext, no keys)         │  DH ratchet fires</span></span>
+<span class="line"><span>      │                                │                                  │  on new ephemeral</span></span>
+<span class="line"><span>      │                                │                                  │  key → post-</span></span>
+<span class="line"><span>      │                                │                                  │  compromise security</span></span>
+<span class="line"><span>      │                                │                                  │  decrypt via</span></span>
+<span class="line"><span>      │                                │                                  │  reverse ratchet</span></span>
+<span class="line"><span>      │                                │                                  │&#x3C;────────</span></span>
+<span class="line"><span>      │                                                                  │</span></span>
+<span class="line"><span>      │  safety number = fingerprint(A_id_key, B_id_key)                 │</span></span>
+<span class="line"><span>      │  ← compare out-of-band to detect MITM                            │</span></span></code></pre>
+<h2 id="group-chat-at-scale">Group Chat at Scale</h2>
+<p>Group chat is where naive architectures break, because a single send becomes a fan-out to up to 1,024 recipients, each potentially on a different chat server, each with their own online/offline state, and each needing their own delivery and read receipts. WhatsApp handles this by treating the group as a logical entity with its own identifier but distributing the fan-out across the routing layer rather than centralizing it. When a member sends a group message, their chat server looks up the group membership (cached and periodically refreshed from a group metadata store) and, rather than the sender’s node individually contacting every recipient’s node, it writes the message to each recipient’s inbox in Cassandra and notifies the recipient’s home chat server — which then pushes to the live socket if connected or leaves the message in the offline queue. The Sender Keys scheme means only one ciphertext is produced per message, so the encryption cost is constant regardless of group size; the fan-out cost is in storage writes and routing lookups, which scale linearly with membership.</p>
+<h3 id="group-chat-fan-out-architecture">Group Chat Fan-Out Architecture</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                       Group G  (up to 1,024 members)</span></span>
+<span class="line"><span>                                  │</span></span>
+<span class="line"><span>                       a member sends a message</span></span>
+<span class="line"><span>                                  │</span></span>
+<span class="line"><span>                                  ▼</span></span>
+<span class="line"><span>  ┌──────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>  │  Sender's Chat Server                                             │</span></span>
+<span class="line"><span>  │   1. encrypt ONCE with Sender Key  →  O(1) encryption cost        │</span></span>
+<span class="line"><span>  │   2. lookup group membership (cached, periodically refreshed)     │</span></span>
+<span class="line"><span>  │   3. fan-out = N inbox writes + N routing lookups (O(N))          │</span></span>
+<span class="line"><span>  └──────┬──────────────┬──────────────┬──────────────┬───────────────┘</span></span>
+<span class="line"><span>         │              │              │              │</span></span>
+<span class="line"><span>         ▼              ▼              ▼              ▼</span></span>
+<span class="line"><span>  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐</span></span>
+<span class="line"><span>  │ recip. 1   │  │ recip. 2   │  │ recip. 3   │  │ recip. N   │</span></span>
+<span class="line"><span>  │ inbox      │  │ inbox      │  │ inbox      │  │ inbox      │</span></span>
+<span class="line"><span>  │ write      │  │ write      │  │ write      │  │ write      │</span></span>
+<span class="line"><span>  │ (Cassandra)│  │ (Cassandra)│  │ (Cassandra)│  │ (Cassandra)│</span></span>
+<span class="line"><span>  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘</span></span>
+<span class="line"><span>        │               │               │               │</span></span>
+<span class="line"><span>        ▼               ▼               ▼               ▼</span></span>
+<span class="line"><span>  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐</span></span>
+<span class="line"><span>  │ home node  │  │ home node  │  │ home node  │  │ home node  │</span></span>
+<span class="line"><span>  │ online? →  │  │ online? →  │  │ offline? → │  │ online? →  │</span></span>
+<span class="line"><span>  │ push socket│  │ push socket│  │ leave queue│  │ push socket│</span></span>
+<span class="line"><span>  │            │  │            │  │ + push wake│  │            │</span></span>
+<span class="line"><span>  └────────────┘  └────────────┘  └────────────┘  └────────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Encryption cost:    O(1) per message (Sender Keys — single ciphertext)</span></span>
+<span class="line"><span>  Fan-out cost:       O(N) storage writes + routing lookups (linear in membership)</span></span>
+<span class="line"><span>  Per-recipient order: timeUUID clustering preserves per-sender stream order</span></span>
+<span class="line"><span>  Read receipts:      aggregated ("read by N") past a size threshold to prevent receipt storms</span></span></code></pre>
+<p>Consistency in groups is deliberately relaxed: there is no global total order across recipients, only a per-recipient order guaranteed by the timeUUID clustering in Cassandra and the sequential delivery from the offline queue. This means two members might see messages in slightly different interleavings if messages arrive from different senders nearly simultaneously, but within a single sender’s stream the order is preserved — which is what users actually care about. Read receipts in a group are aggregated: the sender sees “read by N” rather than per-individual receipts once the group exceeds a size threshold, both for privacy and to avoid a receipt storm. The group metadata store (membership, name, admin list) is kept separate from the message store and is cached aggressively on the chat servers because it is read on every send but mutated rarely.</p>
+<h2 id="presence--last-seen">Presence &amp; Last-Seen</h2>
+<p>Presence — the green dot that tells you someone is online — and last-seen timestamps are surprisingly hard at scale because the naive approach (a central registry updated on every connect/disconnect and queried on every chat open) becomes a write and read hotspot immediately. WhatsApp treats presence as a per-user ephemeral state stored on the user’s home chat server and propagated sparingly. When a user connects, their home node marks them online; when the socket drops or a heartbeat times out, they are marked offline with a last-seen timestamp. A subscriber to that user’s presence (someone who has the contact open or has recently messaged them) receives a presence push only if they are currently subscribed, and subscriptions are time-bounded to avoid a permanent fan-out graph. The system uses a publish-subscribe pattern scoped to the routing layer: the home node publishes presence changes, and only nodes with actively subscribed connections receive the update.</p>
+<p>Last-seen is eventually consistent by design. If a user’s home node crashes, their presence may briefly show online when they are not, or stale last-seen until the heartbeat reconciliation runs. WhatsApp deliberately does not guarantee real-time accuracy of last-seen for privacy reasons as well — users can hide it, and the system errs on the side of under-reporting rather than over-reporting. The heartbeat mechanism is a lightweight keepalive on the long-lived socket (often riding on the same TCP connection as message traffic) with a timeout tuned to detect a dead socket within 30 to 60 seconds without imposing excessive traffic on mobile networks. On mobile, the connection is often suspended when the app is backgrounded, so presence transitions to “offline” via the push notification channel rather than a clean TCP FIN, which is why WhatsApp relies on the push infrastructure as a backup liveness signal.</p>
+<h2 id="message-delivery-status-sent-delivered-read">Message Delivery Status (Sent, Delivered, Read)</h2>
+<p>The three-state receipt system — a single grey check for “the server accepted your message,” double grey checks for “the recipient’s client received it,” and double blue checks for “the recipient read it” — maps onto three distinct protocol events with different durability guarantees.</p>
+<ul>
+<li><strong>Sent (✓)</strong> — the server acknowledgement returned to the sender the instant the message is durably written to Cassandra; this is the at-least-once contract.</li>
+<li><strong>Delivered (✓✓ grey)</strong> — a reverse-direction message sent by the recipient’s client when it pulls the message from its inbox (either via a live push or an offline-queue drain) and writes it to its local store; the recipient’s home node forwards this receipt back to the sender, who updates the UI and persists the state.</li>
+<li><strong>Read (✓✓ blue)</strong> — an explicit user action (the recipient opened the conversation); handled identically in transport but semantically distinct.</li>
+</ul>
+<h3 id="message-delivery-flow-with-receipts">Message Delivery Flow (with receipts)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span> Sender        Sender's Home     Cassandra       Recipient's Home     Recipient</span></span>
+<span class="line"><span>  Client         Chat Server       (inbox)         Chat Server          Client</span></span>
+<span class="line"><span>   │                │                 │                  │                 │</span></span>
+<span class="line"><span>   │ encrypt(Signal)│                 │                  │                 │</span></span>
+<span class="line"><span>   │ send ciphertext│                 │                  │                 │</span></span>
+<span class="line"><span>   │───────────────>│                 │                  │                 │</span></span>
+<span class="line"><span>   │                │ quorum write    │                  │                 │</span></span>
+<span class="line"><span>   │                │ (recipient_id,  │                  │                 │</span></span>
+<span class="line"><span>   │                │  timeUUID, ...) │                  │                 │</span></span>
+<span class="line"><span>   │                │────────────────>│  RF=3 replicated │                 │</span></span>
+<span class="line"><span>   │ server ACK     │                 │                  │                 │</span></span>
+<span class="line"><span>   │&#x3C;───────────────│                 │                  │                 │</span></span>
+<span class="line"><span>   │ ✓ single tick  │                 │                  │                 │</span></span>
+<span class="line"><span>   │                │ if recipient offline → enqueue content-free push     │</span></span>
+<span class="line"><span>   │                │ routing lookup: which node owns recipient socket?   │</span></span>
+<span class="line"><span>   │                │────────────────────────────────────>│                 │</span></span>
+<span class="line"><span>   │                │                 │                  │ online? → push  │</span></span>
+<span class="line"><span>   │                │                 │                  │────────────────>│</span></span>
+<span class="line"><span>   │                │                 │                  │ offline? →      │</span></span>
+<span class="line"><span>   │                │                 │  range scan on   │ leave in queue  │</span></span>
+<span class="line"><span>   │                │                 │  reconnect       │                 │</span></span>
+<span class="line"><span>   │                │                 │&#x3C;─────────────────│ sync from       │</span></span>
+<span class="line"><span>   │                │                 │  stream queued   │ watermark       │</span></span>
+<span class="line"><span>   │                │                 │  messages        │                 │</span></span>
+<span class="line"><span>   │                │                 │─────────────────>│────────────────>│ decrypt</span></span>
+<span class="line"><span>   │                │                 │                  │                 │ + local store</span></span>
+<span class="line"><span>   │                │ delivered       │                  │ ACK watermark   │</span></span>
+<span class="line"><span>   │                │ receipt         │                  │&#x3C;────────────────│</span></span>
+<span class="line"><span>   │ ✓✓ double tick │&#x3C;────────────────────────────────────│                 │</span></span>
+<span class="line"><span>   │&#x3C;───────────────│                 │                  │                 │</span></span>
+<span class="line"><span>   │                │                 │                  │ read receipt    │</span></span>
+<span class="line"><span>   │ ✓✓ blue tick   │&#x3C;────────────────────────────────────│&#x3C;────────────────│</span></span>
+<span class="line"><span>   │&#x3C;───────────────│                 │                  │                 │</span></span></code></pre>
+<p>The subtlety is that receipts are themselves messages and must be idempotent and ordered. If the network flaps, a “delivered” receipt might be sent twice; the sender’s client must treat the second as a no-op, which it does by keying receipt state on the original message ID. Read receipts in groups are throttled and aggregated to prevent a thousand clients from each sending a read receipt that floods the sender. A production concern is that receipts can arrive out of order with the message they refer to (the message is still in the offline queue, but the receipt for a later message arrives first via a different path); the client reconciles by monotonic watermark tracking — a receipt for message N implies all messages before N from that sender are also delivered, so the client advances the watermark rather than tracking per-message state. This watermark approach is far cheaper than per-message bookkeeping and is the standard pattern in chat systems from WhatsApp to iMessage.</p>
+<h2 id="offline-message-sync">Offline Message Sync</h2>
+<p>When a recipient is offline, every message addressed to them lands in their Cassandra inbox and stays there until they reconnect. This is the store-and-forward core. On reconnect, the client opens its connection, authenticates, and requests a sync starting from the last message ID it has acknowledged (a per-sender or per-group sequence number stored client-side). The server reads the recipient’s inbox partition starting after that cursor and streams the queued messages in order. Because Cassandra’s clustering key is time-ordered, this is an efficient range scan on a single partition. The client processes messages, writes them to its local encrypted store, and sends back an acknowledgement watermark; the server uses that watermark to decide which messages can be expired or tombstoned from the inbox.</p>
+<p>The offline queue has a retention policy — typically 30 days — after which undelivered messages are garbage-collected from Cassandra. This bounds the storage footprint and aligns with user expectations (if you are offline for a month, you may not get every message). The queue is not a FIFO in the Kafka sense; it is a per-recipient table that supports random access by message ID, which matters for read receipts and for the case where a client acknowledges messages out of order. A critical operational detail is that the inbox partition for a very popular user (a celebrity with millions of followers in a broadcast channel) can become a hot partition and exceed Cassandra’s per-partition throughput; WhatsApp mitigates this with bucketing — splitting a single logical inbox into N sub-partitions keyed by <code>(user_id, bucket)</code> — and by treating broadcast channels differently from normal chats, often routing them through a dedicated fan-out pipeline.</p>
+<h2 id="push-notifications">Push Notifications</h2>
+<p>When a message lands in an offline user’s inbox, the server cannot simply wait for them to reconnect — it must prod the device to wake the app. WhatsApp relies on the platform push gateways: Apple Push Notification service (APNs) for iOS, Firebase Cloud Messaging (FCM) for Android, and the Unified Push or manufacturer-specific channels for other platforms. The chat server, after writing the message to Cassandra, enqueues a push task containing a minimal, encrypted payload (often just “you have a new message from X” with no content, because the content is end-to-end encrypted and the push server cannot decrypt it). A push service consumes the task, fans out to APNs/FCM, and the device OS wakes the WhatsApp app, which then opens its socket and drains the inbox.</p>
+<p>The design challenge is that push is a black box controlled by Apple and Google, with latency variance from milliseconds to minutes and with throttling policies that WhatsApp cannot directly control. To keep push traffic efficient, WhatsApp batches notifications for a user who has multiple pending messages into a single push, and it coalesces pushes within a short window (a few seconds) to avoid hammering the gateway during a group conversation. The push payload is intentionally content-free for privacy — the real message is fetched only after the app is awake and has established its encrypted session — which means the push channel carries no sensitive data and a compromised push gateway learns only metadata (that a message arrived). A failure mode is push storms during large group broadcasts; WhatsApp rate-limits push per recipient and degrades gracefully to “you have N new messages” rather than N individual notifications.</p>
+<h2 id="voice--video-calls--webrtc">Voice &amp; Video Calls — WebRTC</h2>
+<p>WhatsApp’s voice and video calls use WebRTC for the media path and the Signal Protocol for the key exchange that bootstraps each call. WebRTC provides the browser-grade media engine — codecs (Opus for audio, H.264/VP8/AV1 for video), echo cancellation, jitter buffering, bandwidth estimation, and secure RTP (SRTP) for transport encryption — but the call setup requires a signaling channel, and that signaling rides over the existing WhatsApp chat connection. The initiator sends a call-offer message (an SDP description encrypted with the Signal session) to the recipient through the normal message path; the recipient responds with an answer; ICE candidates are exchanged through the same channel to establish the best network path. Once the DTLS-SRTP handshake completes over WebRTC, media flows directly peer-to-peer when possible, or through a TURN relay server when NAT or firewall symmetry prevents a direct connection.</p>
+<p>At WhatsApp’s scale, most calls are one-to-one and can be peer-to-peer, but group calls (up to 32 participants) require a Selective Forwarding Unit (SFU) topology rather than a full mesh, because a 32-way mesh is 992 media flows per participant and is untenable. The SFU, running on WhatsApp’s media infrastructure, receives each participant’s encoded streams and forwards only the relevant subset to each receiver, dramatically reducing client bandwidth. The SFU never sees plaintext media because SRTP is end-to-end between participants (with per-participant keys derived via the Sender Keys group protocol extended to real-time media). TURN servers are deployed globally and are a significant cost center; they relay traffic only when needed, and the ICE negotiation prefers host and server-reflexive candidates before falling back to relay. A subtle reliability point is that the signaling channel (the chat socket) and the media channel (WebRTC) are decoupled — if the chat socket drops mid-call, the call continues because media is on a separate transport, and signaling can resume on reconnect.</p>
+<h2 id="multi-device-sync">Multi-Device Sync</h2>
+<p>WhatsApp originally required the phone to be the single source of truth, with companion devices (web, desktop) acting as mirrors that only worked while the phone was online. The 2021 multi-device rewrite changed this fundamentally: each linked device now has its own identity key pair, its own Signal sessions with every contact, and can send and receive messages independently while the phone is offline. The server maintains a per-user, per-device message queue, and each device syncs from its own cursor. The architecture is essentially a per-device inbox layered on top of the per-user inbox — a message addressed to the user is fanned out to all of their linked devices’ queues, and each device drains independently and maintains its own acknowledgement watermark.</p>
+<p>The hard problem is consistency across devices: if you send a message from your phone and then open your laptop, the laptop must show the message you sent, even though it originated on a different device. WhatsApp solves this with a sender-side log that is itself synced: every outgoing message is written to a per-sender, per-device-synced log (conceptually the “sent messages” table), and each companion device catches up on that log as part of its sync. Conflicts are rare because messages are append-only and identified by client-generated, monotonic-per-sender IDs, but message ordering across devices is eventually consistent — a message sent from the phone may appear on the laptop a few seconds later as the sync catches up. Key management is the real complexity: each device has its own identity key, and every contact must establish a separate Signal session with each of your devices, which means the prekey consumption and session-count multiply by the number of linked devices (capped at four to keep this bounded). The security property preserved is that compromising one device does not compromise the others — each device’s keys are independent, and revoking a linked device invalidates only its sessions.</p>
+<h2 id="failure-handling--reliability">Failure Handling &amp; Reliability</h2>
+<p>WhatsApp’s reliability story is less “we never fail” and more “we fail in small, recoverable ways constantly and you never notice.” The Erlang supervisor tree is the first line: a chat process that hits a bad state crashes and restarts; the client reconnects and resumes from its last-acknowledged watermark, losing at most a few in-flight messages that the store-and-forward layer re-delivers. Node failures are handled by the routing registry: when a chat server dies, the load balancer stops sending new connections to it, the affected clients reconnect to other nodes, and their undelivered messages are still safe in Cassandra because the chat servers are stateless with respect to durability. Cassandra itself tolerates node loss via its replication factor of three and gossip-based failure detection; losing one replica is transparent, and losing two is survivable for the remaining replica with <code>LOCAL_QUORUM</code> degraded to read-repair.</p>
+<p>Network partitions are the classic distributed-systems trap, and WhatsApp’s choice of eventual consistency for presence, last-seen, and group ordering is what lets the system stay available during a partition rather than blocking. The only strongly consistent operations are the per-recipient inbox writes (quorum on a single partition key), which is a narrow enough consistency scope to hold during most partitions. Push notification failures are handled by retry with exponential backoff and by falling back to the platform’s own retry semantics; if push is entirely unavailable, the messages simply wait in the offline queue and are delivered when the user next opens the app organically. Media upload failures use a resumable, chunked upload protocol so a dropped connection mid-upload does not restart the whole object. At the higher level, WhatsApp practices progressive, region-by-region deployments with canarying, and the hot code upgrade capability of BEAM means a bad deploy can be rolled back without dropping connections. The overarching principle is that every component is designed to be disposable and replayable: if in doubt, throw it away and rebuild state from the durable tier, because the durable tier is the single source of truth.</p>
+<h2 id="sharp-interview-question">Sharp Interview Question</h2>
+<p><strong>Question:</strong> <em>You send a message to a friend who is offline. They come online three days later. Walk me through every system component that touches that message from the moment you hit send to the moment the blue read ticks appear, and tell me where the message could be lost and how the architecture prevents that.</em></p>
+<p><strong>Model Answer:</strong> When you hit send, your client encrypts the message with the Signal session established for that recipient, wraps it in the binary protocol envelope, and sends it over your long-lived TCP connection to your home chat server. That server does two things: it writes the ciphertext to the recipient’s inbox partition in Cassandra (keyed by recipient ID, clustered by timeUUID) and, on a successful quorum write, returns a server ACK to you — this is the single grey tick, and it is the at-least-once durability contract. The message now lives in Cassandra, replicated to three nodes. Because the recipient is offline, the chat server also enqueues a push task, but the push is content-free; the real bytes stay in Cassandra. Your connection could drop right after you see the single tick — it does not matter, the message is durable.</p>
+<p>Three days later, the recipient’s phone wakes, the app opens, establishes a TCP connection to a chat server, and authenticates. It then requests a sync starting from its last-acknowledged message watermark. The server does a range scan on the recipient’s inbox partition in Cassandra starting after that cursor and streams all queued messages — including yours — in chronological order. The client decrypts each with the Signal session, writes it to its local encrypted store, and sends back an updated acknowledgement watermark; the server receives this and advances the delivered state, sending a “delivered” receipt back through the routing layer to your home chat server, which pushes it to you — that is the double grey tick. When the recipient actually opens the conversation, the client sends a “read” receipt the same way, which reaches you as the blue ticks. The message could be lost in three places:</p>
+<ol>
+<li><strong>Between your client and the server before the write</strong> — prevented because you do not see the single tick until the Cassandra quorum write succeeds, and your client retries on no-ACK.</li>
+<li><strong>In Cassandra</strong> — prevented by replication factor three and quorum writes, with read-repair covering inconsistencies.</li>
+<li><strong>Between the recipient’s server and the recipient’s client</strong> — prevented because the message stays in the inbox until the client explicitly acknowledges it, so a dropped connection mid-sync just means the next sync resumes from the same cursor and re-delivers (idempotent because the client deduplicates by message ID).</li>
+</ol>
+<p>The only genuine data-loss window is after the 30-day retention TTL, but that is a policy choice, not a bug.</p>
+<p><strong>Common Pitfall:</strong> Candidates often say “the message is stored in a queue like Kafka and consumed by the recipient.” That is wrong on two counts. First, WhatsApp’s inbox is not a log that is consumed and discarded; it is a per-recipient table that supports random access by message ID and is retained until acknowledged and then tombstoned — it is a mailbox, not a stream. Second, treating it as Kafka conflates the durability layer with a streaming broker and implies the recipient “subscribes,” when in reality the recipient pulls from a cursor on reconnect. Another common mistake is assuming the server can read the message to route it — it cannot, because the content is end-to-end encrypted and the routing is done on the envelope’s recipient ID, not the ciphertext. Saying the server decrypts to inspect content for spam or routing is an instant red flag in an interview; WhatsApp’s server is a blind relay by design, and any answer that requires server-side plaintext misunderstands the entire security model.</p>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>WhatsApp uses Erlang + Ejabberd (XMPP-inspired) — the actor model maps perfectly to per-user message routing</li>
+<li>End-to-end encryption: server is a blind relay — it routes by envelope recipient ID, not by decrypting content</li>
+<li>Message delivery: per-recipient inbox (mailbox), not a Kafka log — supports random access by message ID</li>
+<li>Ordering: per-sender sequence numbers, not global ordering — each chat has its own monotonic counter</li>
+<li>2 billion users, ~50 engineers — ruthless simplicity over feature richness</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How does E2E encryption work with group messages?” — Sender encrypts once per recipient (not once per group) using the sender key protocol (Signal Protocol extension). Each recipient has their own session key.</li>
+<li>“How do you handle message delivery when both sender and recipient are offline?” — Message is stored in the recipient’s inbox on the server (encrypted, server can’t read it). Delivered via push notification when recipient comes online. Inbox entries are deleted after delivery acknowledgment.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Candidates often say “the message is stored in a queue like Kafka and consumed by the recipient.” This is wrong on two counts: WhatsApp’s inbox is a per-recipient mailbox table (not a consumed-and-discarded log), and the server can’t read the message to route it (E2E encrypted — routing is by envelope metadata, not content). Saying the server decrypts to inspect content is an instant red flag.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/whatsapp-architecture/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=WhatsApp%20Architecture&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fwhatsapp-architecture%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fwhatsapp-architecture%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/whatsapp-architecture" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/vector-database-internals-hnsw-ivf-sharding" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Vector Database Internals (HNSW, IVF, Sharding)</span></a><a href="/notes/system-design/notification-system-push-email-sms" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Notification System (Push, Email, SMS)</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="WhatsApp Architecture" data-selector=".article-prose" data-article-slug="system-design/whatsapp-architecture" data-article-title="WhatsApp Architecture" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

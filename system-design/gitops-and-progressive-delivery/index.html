@@ -1,0 +1,787 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>GitOps &amp; Progressive Delivery (Argo, Flux, Flagger) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-what-problem-does-gitops-solve" class="toc-link" data-toc-link="1-what-problem-does-gitops-solve" data-astro-cid-p33bl5ka>1. What Problem Does GitOps Solve?</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-the-four-principles-of-gitops" class="toc-link" data-toc-link="2-the-four-principles-of-gitops" data-astro-cid-p33bl5ka>2. The Four Principles of GitOps</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-architecture-pull-model-vs-push-model" class="toc-link" data-toc-link="3-architecture-pull-model-vs-push-model" data-astro-cid-p33bl5ka>3. Architecture: Pull Model vs Push Model</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#4-argocd-vs-flux-architecture-and-trade-offs" class="toc-link" data-toc-link="4-argocd-vs-flux-architecture-and-trade-offs" data-astro-cid-p33bl5ka>4. ArgoCD vs Flux: Architecture and Trade-offs</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#argocd-vs-flux-side-by-side-comparison" class="toc-link" data-toc-link="argocd-vs-flux-side-by-side-comparison" data-astro-cid-p33bl5ka>ArgoCD vs Flux: Side-by-Side Comparison</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#5-helm-and-kustomize-for-templating" class="toc-link" data-toc-link="5-helm-and-kustomize-for-templating" data-astro-cid-p33bl5ka>5. Helm and Kustomize for Templating</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#6-progressive-delivery-canary-blue-green-rolling" class="toc-link" data-toc-link="6-progressive-delivery-canary-blue-green-rolling" data-astro-cid-p33bl5ka>6. Progressive Delivery: Canary, Blue-Green, Rolling</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#progressive-delivery-strategy-comparison" class="toc-link" data-toc-link="progressive-delivery-strategy-comparison" data-astro-cid-p33bl5ka>Progressive Delivery Strategy Comparison</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#7-flagger-for-automated-promotion" class="toc-link" data-toc-link="7-flagger-for-automated-promotion" data-astro-cid-p33bl5ka>7. Flagger for Automated Promotion</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#8-metrics-based-rollback-and-analysis" class="toc-link" data-toc-link="8-metrics-based-rollback-and-analysis" data-astro-cid-p33bl5ka>8. Metrics-Based Rollback and Analysis</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#9-sealed-secrets-and-secret-management" class="toc-link" data-toc-link="9-sealed-secrets-and-secret-management" data-astro-cid-p33bl5ka>9. Sealed Secrets and Secret Management</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#10-multi-cluster-management" class="toc-link" data-toc-link="10-multi-cluster-management" data-astro-cid-p33bl5ka>10. Multi-Cluster Management</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#11-drift-detection" class="toc-link" data-toc-link="11-drift-detection" data-astro-cid-p33bl5ka>11. Drift Detection</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#12-capacity-planning-in-a-gitops-world" class="toc-link" data-toc-link="12-capacity-planning-in-a-gitops-world" data-astro-cid-p33bl5ka>12. Capacity Planning in a GitOps World</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#13-end-to-end-a-pr-merged-a-canary-promoted" class="toc-link" data-toc-link="13-end-to-end-a-pr-merged-a-canary-promoted" data-astro-cid-p33bl5ka>13. End-to-End: A PR Merged, a Canary Promoted</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#14-interview-question" class="toc-link" data-toc-link="14-interview-question" data-astro-cid-p33bl5ka>14. Interview Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>GitOps &amp; Progressive Delivery (Argo, Flux, Flagger)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 31 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 43 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>platform</span><span class="tag" data-astro-cid-sgg5joot>gitops</span><span class="tag" data-astro-cid-sgg5joot>kubernetes</span><span class="tag" data-astro-cid-sgg5joot>argo</span><span class="tag" data-astro-cid-sgg5joot>flux</span><span class="tag" data-astro-cid-sgg5joot>delivery</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="gitops--progressive-delivery-argo-flux-flagger">GitOps &amp; Progressive Delivery (Argo, Flux, Flagger)</h1>
+<blockquote>
+<p><strong>Staff-Engineer Focus:</strong> This is about the <em>platform engineering philosophy</em> of making Git the single source of truth for both desired state AND the process by which that state reaches production. Interviewers want to see you connect the dots from PR merge → canary → full rollout — not just recite tool names. The strongest answers treat GitOps as an operating model (a control loop applied to the org), and progressive delivery as the safety layer that lets you ship continuously without a pager going off.</p>
+</blockquote>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>An operating model where Git is the single source of truth for cluster state, with automated controllers (ArgoCD/Flux) reconciling the cluster and progressive delivery (canary, blue-green) for safe rollouts.</p>
+<p><strong>How it’s asked:</strong> “Design a GitOps deployment pipeline for 300 microservices on Kubernetes with automated canary analysis, rollback, and audit trails.”</p>
+<hr>
+<h2 id="1-what-problem-does-gitops-solve">1. What Problem Does GitOps Solve?</h2>
+<p>Before GitOps, the delivery pipeline was a fragile chain of imperative scripts: a developer pushes code, CI builds an image, an operator runs <code>kubectl apply -f deploy.yaml</code>, everyone hopes nothing drifts, and the same manual ritual is repeated across staging and production until someone asks why staging no longer matches production. This push model accumulates failure modes that compound under load:</p>
+<ul>
+<li><strong>Configuration drift</strong> is the most insidious: someone runs <code>kubectl edit deployment</code> at 2 a.m. to mitigate an incident, never commits the change, and Git silently diverges from the cluster — so the next <code>apply</code> reverts the mitigation and re-triggers the outage.</li>
+<li><strong>Push-based fragility</strong> is the second, because CI pushing to the cluster means the CI runner holds cluster credentials, which is a massive blast radius if the runner is compromised (a single stolen token can poison every environment).</li>
+<li><strong>Missing audit trails</strong> are the third: there is no canonical record of who changed the replica count, when, or why, because the cluster state lives in etcd, not in a versioned, reviewable artifact.</li>
+<li><strong>No self-healing</strong> is the fourth: if a deployment is accidentally deleted, nothing brings it back, because nothing is continuously comparing desired to actual.</li>
+</ul>
+<p>The GitOps answer is to invert the direction of control. Declare desired state in Git, run a reconciliation loop <em>inside</em> the cluster that continuously pulls Git and makes reality match the declaration, and treat every change to production as a Git commit that went through review. Git becomes the single source of truth, and the cluster becomes a continuously reconciled artifact of that truth. The mental shift matters more than the tooling: you stop asking “how do I deploy this?” and start asking “what commit should the cluster be at?” — the same mental model Kubernetes already applies to pods, now applied to the cluster itself.</p>
+<hr>
+<h2 id="2-the-four-principles-of-gitops">2. The Four Principles of GitOps</h2>
+<p>The CNCF OpenGitOps working group codified four principles that any system must satisfy to legitimately call itself GitOps. Understanding them as <em>principles</em> rather than feature lists is what separates a senior answer from a junior one, because they explain why the architecture looks the way it does.</p>
+<ul>
+<li><strong>Declarative.</strong> The entire desired state — workloads, configs, policies, networking, even the platform’s own configuration — must be expressed declaratively rather than imperatively. You describe <em>what</em> you want (“three replicas of this image at this tag, with this CPU limit”), not <em>how</em> to get there (“run these six kubectl commands in order”). Declarative state is diffable, replayable, and idempotent, which is what makes reconciliation possible at all. If any part of your system relies on an imperative script that must run exactly once in a specific order, you have a GitOps hole that will eventually bite you during disaster recovery.</li>
+<li><strong>Versioned and immutable.</strong> The desired state is stored in a version control system that retains history and is the single source of truth. This is what gives you the audit trail, the ability to roll back by checking out an older commit, and the ability to answer “what changed and who changed it” with <code>git log</code>. Immutability is enforced by review (PRs) and by treating the Git repo as the only legitimate mutation path — direct cluster writes are policy violations, not conveniences.</li>
+<li><strong>Pulled automatically.</strong> The cluster pulls state from Git rather than having state pushed to it. This is the single most important architectural decision in GitOps, because it inverts the credential flow: instead of CI holding a kubeconfig that can write to prod, the cluster holds a read-only Git credential and pulls its own desired state. A compromised CI runner can no longer nuke production; at worst it can merge a bad PR, which still has to pass review and reconciliation. This is why GitOps dramatically reduces blast radius even though it does not eliminate human error.</li>
+<li><strong>Continuously reconciled.</strong> A controller inside the cluster continuously compares the declared state in Git to the actual state in the cluster and applies corrections when they diverge. This is the self-healing property: a manual <code>kubectl delete</code> is not permanent, because the reconciler will recreate the resource on the next loop. Continuous reconciliation is also what makes drift detection possible, because the same loop that fixes drift can also <em>report</em> it. The reconciliation interval and the handling of manual changes (auto-correct vs. alert-only) is one of the most important policy decisions a platform team makes.</li>
+</ul>
+<hr>
+<h2 id="3-architecture-pull-model-vs-push-model">3. Architecture: Pull Model vs Push Model</h2>
+<p>The distinction between push and pull is the architectural heart of GitOps, and it determines where credentials live, how blast radius is bounded, and how multi-environment promotion works.</p>
+<p>In the <strong>push model</strong>, CI/CD runs outside the cluster, holds credentials for every target environment, and issues <code>kubectl apply</code> or Helm installs against the cluster API. The advantage is simplicity and tight coupling to the build pipeline — you can deploy the instant a build passes. The disadvantage is that CI becomes a privileged, long-lived credential holder that must be reachable from the cluster’s network (or vice versa), and there is no continuous reconciliation: if someone edits a resource after the push, nothing notices.</p>
+<p>In the <strong>pull model</strong>, an agent (ArgoCD’s application controller, Flux’s source controller + kustomize/helm controller) runs <em>inside</em> the target cluster, authenticates to Git with read-only credentials, and applies manifests locally via the in-cluster Kubernetes API. Because the agent is inside the cluster, it uses a short-lived, scoped token and never exposes cluster credentials externally. Reconciliation is continuous by construction — the agent polls Git (or receives webhooks) every few minutes and corrects drift automatically. The cost is that you now run and operate the agent, and that the agent must be bootstrapped (a chicken-and-egg problem usually solved with a tiny imperative bootstrap step or a platform install like Cluster API).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                     PUSH MODEL</span></span>
+<span class="line"><span>   ┌─────────┐      kubeconfig (write)       ┌──────────┐</span></span>
+<span class="line"><span>   │   CI    │ ─────────────────────────────▶│ Cluster  │</span></span>
+<span class="line"><span>   │ Runner  │   kubectl apply / helm install│  (etcd)  │</span></span>
+<span class="line"><span>   └────┬────┘                               └──────────┘</span></span>
+<span class="line"><span>        │ holds long-lived prod creds</span></span>
+<span class="line"><span>        │ (blast radius if compromised)</span></span>
+<span class="line"><span>        ▼</span></span>
+<span class="line"><span>   No continuous reconciliation — drift goes unnoticed</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>                     PULL MODEL</span></span>
+<span class="line"><span>   ┌─────────┐   read-only Git creds          ┌───────────────┐</span></span>
+<span class="line"><span>   │   Git   │◀───────────────────────────────│  In-cluster   │</span></span>
+<span class="line"><span>   │  Repo   │   poll / webhook every N min   │   Agent       │</span></span>
+<span class="line"><span>   │ (truth) │───────────────────────────────▶│ (Argo/Flux)   │</span></span>
+<span class="line"><span>   └─────────┘   desired state (manifests)    └───────┬───────┘</span></span>
+<span class="line"><span>                                                        │ local apply</span></span>
+<span class="line"><span>                                                        ▼</span></span>
+<span class="line"><span>                                                 ┌───────────────┐</span></span>
+<span class="line"><span>                                                 │   Cluster     │</span></span>
+<span class="line"><span>                                                 │   (etcd)      │</span></span>
+<span class="line"><span>                                                 └───────────────┘</span></span>
+<span class="line"><span>   Continuous reconciliation: drift auto-corrected on next loop</span></span></code></pre>
+<p>A hybrid pattern is common at scale: CI builds images and runs tests, then <em>writes a manifest commit</em> to the Git repo (updating an image tag in a values file); the in-cluster agent picks up the commit and reconciles. CI never touches the cluster API directly — it only touches Git, which it already had credentials for. This cleanly separates “build and attest” from “deploy and reconcile,” and it lets you put policy gates (PR review, OPA/Conftest checks, signed commits) on the commit that triggers the deploy, rather than on the deploy itself.</p>
+<hr>
+<h2 id="4-argocd-vs-flux-architecture-and-trade-offs">4. ArgoCD vs Flux: Architecture and Trade-offs</h2>
+<p>ArgoCD and Flux are the two dominant GitOps engines, and they embody subtly different philosophies. Both implement pull-based reconciliation, but their mental models, UIs, and extension points diverge in ways that matter for platform design.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                    ARGOCD ARCHITECTURE</span></span>
+<span class="line"><span>   ┌─────────┐    ┌──────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │   Git   │    │  ArgoCD Control Plane (in-cluster)       │</span></span>
+<span class="line"><span>   │  Repo   │───▶│ ┌────────────┐  ┌────────────────────┐  │</span></span>
+<span class="line"><span>   └─────────┘    │ │ API Server │  │ Application        │  │</span></span>
+<span class="line"><span>        ▲         │ │  + Web UI  │  │ Controller (sync)  │  │</span></span>
+<span class="line"><span>        │         │ └─────┬──────┘  └─────────┬──────────┘  │</span></span>
+<span class="line"><span>        │         │       │                   │ desired     │</span></span>
+<span class="line"><span>        │         │ ┌─────▼──────┐  ┌─────────▼──────────┐  │</span></span>
+<span class="line"><span>        │         │ │   Redis    │  │ Repo Server        │  │</span></span>
+<span class="line"><span>        │         │ │  (cache)   │  │ (clone+render Helm/│  │</span></span>
+<span class="line"><span>        │         │ └────────────┘  │  Kustomize)        │  │</span></span>
+<span class="line"><span>        │         │                 └────────────────────┘  │</span></span>
+<span class="line"><span>        │         └──────────────────────────────────────────┘</span></span>
+<span class="line"><span>        │                            │ applies via in-cluster API</span></span>
+<span class="line"><span>        │                            ▼</span></span>
+<span class="line"><span>        │                   ┌────────────────┐</span></span>
+<span class="line"><span>        └───────────────────│   Kubernetes    │</span></span>
+<span class="line"><span>                            │  Application/   │</span></span>
+<span class="line"><span>                            │  ApplicationSet │</span></span>
+<span class="line"><span>                            └────────────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>                  FLUX (v2 / GITOPS TOOLKIT) ARCHITECTURE</span></span>
+<span class="line"><span>   ┌─────────┐    ┌─────────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │   Git   │    │  Flux Controllers (in-cluster)              │</span></span>
+<span class="line"><span>   │  Repo   │───▶│ ┌────────────────┐  ┌────────────────────┐ │</span></span>
+<span class="line"><span>   │ /Helm/  │    │ │    Source       │  │  Kustomize         │ │</span></span>
+<span class="line"><span>   │  OCI    │    │ │   Controller    │──│  Controller        │ │</span></span>
+<span class="line"><span>   └─────────┘    │ │ (GitRepo/Helm/  │  │  Helm Controller   │ │</span></span>
+<span class="line"><span>        ▲         │ │  Bucket sources)│  └─────────┬──────────┘ │</span></span>
+<span class="line"><span>        │         │ └────────────────┘            │ apply       │</span></span>
+<span class="line"><span>        │         │ ┌────────────────┐  ┌─────────▼──────────┐ │</span></span>
+<span class="line"><span>        │         │ │ Notification    │  │  Kubernetes API    │ │</span></span>
+<span class="line"><span>        │         │ │ Controller      │◀─│  (managed CRs)     │ │</span></span>
+<span class="line"><span>        │         │ └────────────────┘  └────────────────────┘ │</span></span>
+<span class="line"><span>        │         │ ┌──────────────────────────────────────┐   │</span></span>
+<span class="line"><span>        │         │ │ Image-Reflector + Image-Automation   │   │</span></span>
+<span class="line"><span>        │         │ │ (scan registry → write tag to Git)   │───┼──▶ Git</span></span>
+<span class="line"><span>        │         │ └──────────────────────────────────────┘   │</span></span>
+<span class="line"><span>        │         └─────────────────────────────────────────────┘</span></span>
+<span class="line"><span>        │  no built-in UI; events → Slack/Grafana via notif. controller</span></span></code></pre>
+<p><strong>ArgoCD</strong> is an application-centric, UI-first system. Its core objects are <code>Application</code> (a single deployment unit mapping a Git path to a cluster namespace) and <code>ApplicationSet</code> (a generator that templatizes Applications across clusters/environments). The architecture has several controllers: the API server (the gRPC/REST front end and UI), the application controller (the reconciler that diffs desired vs. live and applies changes), the repo server (a stateless pod that clones Git and renders Helm/Kustomize on demand, isolating credential handling), and the Redis cache. ArgoCD’s signature strength is its rich web UI and the live tree view that shows every managed resource’s sync and health status — which makes it the default choice for organizations that want a visual “what’s in prod right now” dashboard and where developers self-service deployments through the UI. Its weakness is that the Application/ApplicationSet model can sprawl: a large org ends up with thousands of Application resources that are themselves config, and managing that config (often with ApplicationSets generating Applications from Git directories) becomes a meta-GitOps problem. ArgoCD also tends to be heavier operationally — multiple controllers, Redis, the repo server pool — and its RBAC and project model is powerful but has a learning curve.</p>
+<p><strong>Flux</strong> (specifically the v2 rewrite, which is a set of specialized controllers under the GitOps Toolkit umbrella) is a controller-first, CLI-first system with no first-party UI. Its core controllers are the source controller (handles GitRepository, HelmRepository, Bucket sources and exposes them as tarballs/OCI artifacts), the Kustomize controller and Helm controller (apply those sources), the notification controller (sends events to Slack/MS Teams/webhooks and receives webhook triggers), and the image-reflector and image-automation controllers (which scan a registry and automatically write image tag updates back to Git — Flux’s built-in answer to “automate the manifest bump”). Flux’s strength is its composable, CRD-driven design: every source and every release is a typed Kubernetes object, which makes Flux itself fully reconcilable and amenable to being installed and managed <em>by</em> GitOps (Flux can manage its own configuration). This makes Flux the preferred choice for pure-infrastructure teams that want a CLI-driven, headless, deeply declarative system that scales to many clusters with minimal UI investment. Its weakness is exactly its strength’s flip side: there is no built-in UI, so observability of “what’s deployed where” requires integrating Flux’s notification events into an external dashboard (e.g., FluxCD + a Grafana board built from notification events), which is more setup work.</p>
+<h3 id="argocd-vs-flux-side-by-side-comparison">ArgoCD vs Flux: Side-by-Side Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>ArgoCD</th>
+<th>Flux (v2 / GitOps Toolkit)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Mental model</strong></td>
+<td>Application-centric (<code>Application</code>, <code>ApplicationSet</code>)</td>
+<td>Controller-first, CRD-driven (each source/release is a typed object)</td>
+</tr>
+<tr>
+<td><strong>UI</strong></td>
+<td>Rich first-party web UI, live tree view of sync/health</td>
+<td>No first-party UI; events via notification controller to external dashboards</td>
+</tr>
+<tr>
+<td><strong>Primary workflow</strong></td>
+<td>UI-first, self-service deploy via dashboard</td>
+<td>CLI-first (<code>flux</code> CLI), headless</td>
+</tr>
+<tr>
+<td><strong>Core controllers</strong></td>
+<td>API server, application controller, repo server, Redis cache</td>
+<td>Source, Kustomize, Helm, notification, image-reflector, image-automation</td>
+</tr>
+<tr>
+<td><strong>Multi-cluster</strong></td>
+<td>ApplicationSet generator templates across clusters by label</td>
+<td>One Flux install per cluster; Flux can manage its own config via GitOps</td>
+</tr>
+<tr>
+<td><strong>Self-management</strong></td>
+<td>Config is itself config (meta-GitOps via ApplicationSets)</td>
+<td>Flux can be GitOps-managed (bootstrapped from Git)</td>
+</tr>
+<tr>
+<td><strong>Image tag automation</strong></td>
+<td>External (CI writes commit) or Argo CD Image Updater</td>
+<td>Built-in (image-reflector + image-automation controllers)</td>
+</tr>
+<tr>
+<td><strong>Operational weight</strong></td>
+<td>Heavier (multiple controllers, Redis, repo server pool)</td>
+<td>Lighter (focused controllers, no stateful cache by default)</td>
+</tr>
+<tr>
+<td><strong>Multi-tenancy</strong></td>
+<td>Projects + RBAC model</td>
+<td>Namespace-scoped CRs + RBAC</td>
+</tr>
+<tr>
+<td><strong>Progressive delivery</strong></td>
+<td>Argo Rollouts (<code>Rollout</code> CR)</td>
+<td>Flagger (<code>Canary</code> CR; can also work with ArgoCD)</td>
+</tr>
+<tr>
+<td><strong>Secret management</strong></td>
+<td>Sealed Secrets, ESO, SOPS supported</td>
+<td>SOPS native in source controller; ESO, Sealed Secrets supported</td>
+</tr>
+<tr>
+<td><strong>Best fit</strong></td>
+<td>Many app teams self-serving into shared clusters, want a visual dashboard</td>
+<td>Platform team managing many clusters programmatically, headless/CLI-driven</td>
+</tr>
+<tr>
+<td><strong>Auditability of “what’s in prod”</strong></td>
+<td>Built-in tree view</td>
+<td>Requires external dashboard built from notification events</td>
+</tr>
+</tbody>
+</table>
+<p>The practical decision often comes down to organizational shape. <strong>Choose ArgoCD</strong> when you have many application teams self-service deploying into shared clusters and they benefit from a visual sync/health dashboard and a project-based multi-tenancy model. <strong>Choose Flux</strong> when you are a platform team managing many clusters programmatically, you want the engine itself to be GitOps-managed, and you prefer a headless, CLI-driven workflow that integrates with your existing observability stack. Both support Helm, Kustomize, multi-cluster, and progressive delivery (Argo Rollouts for ArgoCD, Flagger for Flux — though Flagger can work with ArgoCD too). It is worth knowing that ArgoCD and Flux are converging in capability; the durable difference is the UI-first vs. controller-first philosophy, and that choice propagates into how you structure teams and dashboards.</p>
+<hr>
+<h2 id="5-helm-and-kustomize-for-templating">5. Helm and Kustomize for Templating</h2>
+<p>GitOps needs a way to go from “one canonical declaration” to “many slightly different deployments” (dev/staging/prod, or many identical tenants). The two dominant templating approaches are Helm and Kustomize, and they solve the problem with opposite philosophies.</p>
+<p><strong>Helm</strong> is a templating engine: you write Go templates inside YAML, parameterize them with a <code>values.yaml</code>, and <code>helm template</code> renders them into raw manifests. Helm is excellent when you have many parameters that vary across environments (image tags, replica counts, resource limits, ingress hosts, feature flags) and you want one chart that bends to many shapes. The Helm chart ecosystem is huge — most major OSS projects ship a Helm chart — so using Helm often means you adopt someone else’s well-maintained chart rather than writing your own. The cost is that Helm templates can become opaque: a heavily templated chart is hard to read, hard to validate without rendering, and the rendered output is what the cluster sees, not what’s in Git, which can muddy “Git is the source of truth” (you end up committing <em>templates plus values</em>, and the truth is the <em>rendered</em> result). Helm also has its own release-tracking secrets in the cluster (the Helm secrets in the release namespace), which interact awkwardly with GitOps controllers that manage the same resources — the standard fix is to use <code>helm template | kubectl apply</code> (pure rendering, no Helm release objects) rather than <code>helm install/upgrade</code>, so the GitOps controller owns the resources and Helm is just a renderer.</p>
+<p><strong>Kustomize</strong> is a patching engine, not a templating engine: you write a <code>base/</code> directory of plain YAML and a series of <code>overlays/</code> (dev, staging, prod) each containing a <code>kustomization.yaml</code> that references the base and applies targeted patches (e.g., “set replicas to 5 for prod,” “change the image tag,” “add a prod-only ingress”). No templating, no variables — just patches on top of a base. Kustomize’s strength is that the final manifests are always a transparent, diffable composition of base plus patches, so what’s in Git is genuinely close to what the cluster sees, and you can <code>kustomize build</code> to inspect the rendered output at any time. It is built into <code>kubectl</code>, so there is no extra binary to install. Kustomize is the better fit when your variations are structural (different resources per environment) rather than parameter-heavy, and when you value readability and auditability over parameterization flexibility. Its weakness is that complex parameterization (many values, conditional resources) gets ugly fast — Kustomize patches are not a programming language, and pushing them too far produces verbose, brittle overlay trees.</p>
+<p>The platform-engineering answer is usually “both, with a rule.” A common pattern is to use <strong>Helm charts as the unit of distribution</strong> (so third-party software and shared internal services ship as versioned Helm charts in an OCI registry) and <strong>Kustomize overlays as the unit of deployment</strong> (so each environment’s specific configuration lives in a Kustomize patch in the GitOps repo, applied on top of the chart). ArgoCD and Flux both natively support this hybrid — ArgoCD via the <code>helm</code> and <code>kustomize</code> source types, Flux via its dedicated Helm and Kustomize controllers. The key discipline is to keep the <em>values</em> (the per-environment parameters) in the GitOps repo under review, while the <em>charts</em> can be vendored or pulled from a registry — so that the thing under human review is always the delta that makes this environment different, not a thousand-line chart you didn’t write.</p>
+<hr>
+<h2 id="6-progressive-delivery-canary-blue-green-rolling">6. Progressive Delivery: Canary, Blue-Green, Rolling</h2>
+<p>Once GitOps gives you a reliable “make the cluster match Git” loop, progressive delivery is the safety layer on top: it controls <em>how fast</em> a new version takes over traffic and <em>whether</em> it gets to finish. There are three fundamental strategies, and choosing among them is one of the most common interview topics.</p>
+<p><strong>Rolling updates</strong> are the Kubernetes default: the deployment controller replaces old pods with new ones a few at a time, governed by <code>maxSurge</code> and <code>maxUnavailable</code>. Rolling is simple, uses no extra capacity, and is appropriate for stateless services where a brief mixed-version window is harmless. Its limitation is that it has no traffic-shaping granularity — traffic flows to whatever pods are Ready, so a bad version gets traffic the moment its pods pass a readiness check, and the only signal to stop is a human noticing. There is also no automated rollback on metrics; you roll back manually with <code>kubectl rollout undo</code>.</p>
+<p><strong>Blue-green deployments</strong> run two complete environments (blue = current, green = new) simultaneously and switch a router (an ingress, a service selector, a load balancer) to flip 100% of traffic from blue to green in one move. The advantage is instant cutover and instant rollback (flip the router back), with no mixed-version window. The disadvantage is cost — you must provision twice the production capacity during the swap — and the switch is all-or-nothing, so if the green version has a subtle bug that only manifests at full traffic, you discover it the hard way. Blue-green is the right choice when the cost of a mixed-version window exceeds the cost of double capacity (e.g., database schema migrations where old and new code can’t coexist) or when you need the ability to switch back instantly for compliance reasons.</p>
+<p><strong>Canary deployments</strong> shift traffic to the new version incrementally — 1%, 5%, 25%, 50%, 100% — pausing at each step to observe metrics (error rate, latency, business KPIs) and automatically rolling back if a threshold is breached. Canary is the gold standard for stateless services at scale because it bounds the blast radius of a bad deploy to a single-digit percentage of traffic, it catches problems that only appear under real load (not the trivial load of a staging environment), and it provides a measurable, automated go/no-go gate. The cost is operational complexity: you need a traffic-shaping layer (Istio, Linkerd, NGINX Ingress with weighted routes, or a service mesh that supports traffic splitting), a metrics provider (Prometheus, Datadog) feeding an analysis loop, and a controller (Flagger, Argo Rollouts) orchestrating the steps. Canary is overkill for low-traffic services (a 1% canary is one request) and for services where the mixed-version window is unsafe (e.g., a consumer that assumes a single backend schema).</p>
+<h3 id="progressive-delivery-strategy-comparison">Progressive Delivery Strategy Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Traffic Shift</th>
+<th>Capacity Cost</th>
+<th>Rollback Speed</th>
+<th>Mixed-Version Window</th>
+<th>Automated Metric Gate</th>
+<th>Best For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Rolling</strong></td>
+<td>Gradual (maxSurge/maxUnavailable); flows to Ready pods</td>
+<td>None extra</td>
+<td>Manual (<code>kubectl rollout undo</code>)</td>
+<td>Yes (brief)</td>
+<td>No</td>
+<td>Stateless services, low/medium traffic, simple deploys</td>
+</tr>
+<tr>
+<td><strong>Blue-Green</strong></td>
+<td>Instant 100% flip via router/selector</td>
+<td>~2× during swap</td>
+<td>Instant (flip router back)</td>
+<td>No</td>
+<td>No (all-or-nothing)</td>
+<td>Schema migrations, compliance needs, when mixed versions are unsafe</td>
+</tr>
+<tr>
+<td><strong>Canary</strong></td>
+<td>Incremental (1%→5%→25%→50%→100%)</td>
+<td>~10–25% (maxSurge)</td>
+<td>Auto, within rollout window (minutes)</td>
+<td>Yes (controlled)</td>
+<td>Yes (metrics-based)</td>
+<td>High-traffic user-facing services where 1% = meaningful signal</td>
+</tr>
+</tbody>
+</table>
+<p>The staff-level insight is that these strategies are not interchangeable and the choice is a function of traffic volume, cost tolerance, statefulness, and the cost of failure. A common mistake is defaulting to canary everywhere — for a 100 RPS internal service, the canary’s signal-to-noise ratio is too low to be meaningful, and the operational burden outweighs the safety benefit; a rolling update with a good health check is the right call. Reserve canary for high-traffic, user-facing services where a 1% shift is thousands of requests per minute and the metrics genuinely carry signal.</p>
+<hr>
+<h2 id="7-flagger-for-automated-promotion">7. Flagger for Automated Promotion</h2>
+<p>Flagger is a progressive delivery controller that integrates with Flux (and can work with ArgoCD) to automate canary and blue-green rollouts driven entirely by Kubernetes custom resources, with no human-in-the-loop during the promotion itself. The model is elegant: you define a <code>Canary</code> custom resource that points at your Deployment, specifies a service mesh / ingress provider for traffic shaping, lists a set of metric thresholds to evaluate, and defines a rollout schedule (e.g., “shift 20%, wait 5m, evaluate; shift 40%, wait 5m, evaluate; … shift 100%”). When the GitOps controller updates the Deployment’s image tag (because a new commit landed in Git), Flagger detects the new pod template, spins up the new ReplicaSet, and begins shifting traffic to it according to the schedule, querying Prometheus at each step to check that error rate, p99 latency, and custom business metrics stay within thresholds.</p>
+<p>If every step passes, Flagger promotes the new version to 100% traffic and scales down the old ReplicaSet — fully automated, no <code>kubectl rollout</code> commands, no human approval gate in the steady state. If any metric breaches its threshold during a step, Flagger automatically shifts traffic back to the old version and marks the canary as failed, often sending a notification (via the Flux notification controller or a direct webhook) so the team learns the deploy was auto-rolled-back. This is the heart of <strong>metrics-based rollback</strong>: the decision to roll back is made by a query against your observability stack, not by a human staring at a dashboard, and it happens within the rollout window (typically 30-60 minutes) rather than after an incident is paged.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                 FLAGGER CANARY DEPLOYMENT FLOW</span></span>
+<span class="line"><span>   ┌─────────┐  commit (new image tag)   ┌────────────────┐</span></span>
+<span class="line"><span>   │   Git   │──────────────────────────▶│ GitOps Engine  │</span></span>
+<span class="line"><span>   │  Repo   │                           │ (Flux/ArgoCD)  │</span></span>
+<span class="line"><span>   └─────────┘                           └───────┬────────┘</span></span>
+<span class="line"><span>                                                 │ apply Deployment</span></span>
+<span class="line"><span>                                                 ▼</span></span>
+<span class="line"><span>                                         ┌────────────────┐</span></span>
+<span class="line"><span>                                         │  New ReplicaSet│</span></span>
+<span class="line"><span>                                         │  (canary pods) │</span></span>
+<span class="line"><span>                                         └───────┬────────┘</span></span>
+<span class="line"><span>                                                 │ Flagger detects new pod template</span></span>
+<span class="line"><span>                                                 ▼</span></span>
+<span class="line"><span>          ┌─────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>          │                  FLAGGER RECONCILIATION LOOP                │</span></span>
+<span class="line"><span>          │                                                             │</span></span>
+<span class="line"><span>          │  Step 1: shift 5%  ──▶ wait ──▶ query Prometheus ──▶ PASS?  │</span></span>
+<span class="line"><span>          │                                             │                │</span></span>
+<span class="line"><span>          │        ┌────────────────────────────────────┴──────┐         │</span></span>
+<span class="line"><span>          │        ▼ (pass)                          ▼ (fail)  │         │</span></span>
+<span class="line"><span>          │  Step 2: shift 25%                  ROLLBACK:      │         │</span></span>
+<span class="line"><span>          │  Step 3: shift 50%                  shift 0%→old    │         │</span></span>
+<span class="line"><span>          │  Step 4: shift 100%                 mark failed     │         │</span></span>
+<span class="line"><span>          │        │                            notify Slack     │         │</span></span>
+<span class="line"><span>          │        ▼                                             │         │</span></span>
+<span class="line"><span>          │  scale down old ReplicaSet                           │         │</span></span>
+<span class="line"><span>          │  notify "promoted"                                   │         │</span></span>
+<span class="line"><span>          └──────────────────────────────────────────────────────┘─────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Traffic shaping via: Istio VirtualService / Linkerd / NGINX weighted routes / AppMesh</span></span>
+<span class="line"><span>   Metrics source:      Prometheus / Datadog / CloudWatch</span></span>
+<span class="line"><span>   Analysis modes:      threshold-based (fail if err > 1%)</span></span>
+<span class="line"><span>                        ratio-based (fail if canary err > 1.5x primary err)</span></span></code></pre>
+<p>The power of Flagger is that it composes cleanly with GitOps: the <em>intent</em> to deploy a new version comes from a Git commit (which the GitOps controller applies), but the <em>decision to fully promote it</em> comes from Flagger’s metric analysis. The Git commit does not say “deploy to 100%”; it says “make this the desired version,” and Flagger decides whether reality reaches 100% or rolls back. This cleanly separates authorization (the commit, which is reviewed) from verification (the metrics, which are objective), which is exactly the separation of concerns that makes continuous delivery safe. The trade-off is that Flagger requires a real metrics pipeline and a service mesh or traffic-splitting ingress — it is not a drop-in for a cluster without Istio/Linkerd/AppMesh/NGINX-weighted-routing — and the metric thresholds must be tuned per service, which is real engineering work. A common failure mode is setting thresholds so loose that nothing ever rolls back (defeating the purpose) or so tight that normal variance triggers false rollbacks (training the team to ignore or disable the system).</p>
+<p>Argo Rollouts is the ArgoCD-native equivalent and follows the same conceptual model (a <code>Rollout</code> CR replaces a <code>Deployment</code>, with analysis steps and traffic shifting); the choice between Flagger and Argo Rollouts is usually driven by whether you standardized on Flux or ArgoCD as your GitOps engine, since each integrates most naturally with its own ecosystem.</p>
+<hr>
+<h2 id="8-metrics-based-rollback-and-analysis">8. Metrics-Based Rollback and Analysis</h2>
+<p>The decision logic behind progressive delivery is the analysis step, and designing it well is where most teams get progressive delivery wrong. An analysis step runs one or more queries against a metrics provider (Prometheus is the default; Datadog, CloudWatch, and other providers are supported) and compares the result to a threshold. The two analysis modes are <strong>threshold-based</strong> (fail if error rate &gt; 1%) and <strong>counter-based / ratio-based</strong> (fail if the canary’s error rate is more than 1.5× the primary’s error rate). Ratio-based analysis is almost always better than absolute thresholds, because it self-calibrates to the day’s traffic conditions: if the baseline error rate is 0.3% due to upstream flakiness, an absolute 1% threshold will let a canary with 0.9% errors pass even though the canary tripled the error rate, whereas a ratio threshold will catch it.</p>
+<p>The metrics you choose determine what your progressive delivery actually protects against. The minimum viable set is <strong>error rate</strong> (HTTP 5xx, or gRPC error codes) and <strong>latency</strong> (p99 or p95, compared as a ratio). But the most valuable signals are often <strong>business metrics</strong>: cart additions, checkout completions, sign-up conversions, payment authorization rates. A canary that has fine error rate and latency but silently breaks the checkout funnel will pass a naive analysis and ship to 100%, which is worse than no canary at all because it gives false confidence. The mature pattern is to layer business metrics on top of infra metrics, accepting that business metrics have more variance and need wider windows (you may need a 15-minute step rather than a 5-minute step to get a statistically meaningful sample). Another subtlety is <strong>sample size</strong>: at 1% canary traffic on a low-volume service, you may see only a handful of requests per minute, and a single failed request can look like a 20% error rate — which is why canary is most valuable on high-traffic services and why you should compute confidence intervals or require a minimum request count before evaluating, rather than evaluating on a tiny sample.</p>
+<hr>
+<h2 id="9-sealed-secrets-and-secret-management">9. Sealed Secrets and Secret Management</h2>
+<p>GitOps has an awkward relationship with secrets: Git is the source of truth, but you cannot commit plaintext secrets to Git (they are credentials, they rotate, and leaking them via a repo is a security incident). This tension has produced several patterns, each with trade-offs.</p>
+<p><strong>Sealed Secrets</strong> (Bitnami’s SealedSecrets controller) is the most GitOps-native approach for low-complexity environments. You run <code>kubeseal</code> locally with the cluster’s public key to encrypt a Secret into a <code>SealedSecret</code> custom resource, which is safe to commit to Git. The in-cluster controller has the private key and decrypts the SealedSecret into a real Secret in the target namespace. The encryption is scoped to a namespace and name, so a SealedSecret encrypted for <code>prod/checkout-db</code> cannot be decrypted into <code>dev/checkout-db</code>, which prevents secret leakage across environments from a single repo. The operational challenge is key management: the controller’s private key is itself a secret that must be backed up (if you lose it, every SealedSecret in Git becomes undecryptable and you must re-seal everything), and key rotation is a manual process. Sealed Secrets is best for teams that want a simple, Git-centric flow and can accept the operational responsibility of backing up the private key.</p>
+<p><strong>External Secrets Operator (ESO)</strong> is the preferred pattern at scale: secrets live in an external vault (AWS Secrets Manager, HashiCorp Vault, GCP Secret Manager, Azure Key Vault), and ESO syncs them into Kubernetes Secrets on a schedule based on <code>ExternalSecret</code> custom resources in Git. Git then contains <em>references</em> to secrets (“fetch the secret named <code>checkout-db</code> from AWS Secrets Manager into this namespace”), not the secret values themselves. This delegates rotation, audit, and access control to the vault (which already has IAM integration, rotation lambdas, and audit logs) and keeps Git free of any secret material. The cost is that you now operate a vault and an IAM integration, and that the GitOps repo no longer contains the full truth — you need the vault to fully materialize the cluster, which complicates disaster recovery (the vault becomes a critical dependency that must itself be backed up and restorable). For most production platform teams, ESO + a managed vault is the right answer because it separates the secret <em>values</em> (rotated by the vault, governed by IAM) from the secret <em>bindings</em> (reviewed in Git, applied by GitOps).</p>
+<p><strong>SOPS</strong> (Mozilla SOPS, often with age or GPG/KMS) is a third option that encrypts the secret <em>values</em> in-place in YAML files, with per-key encryption and a KMS-managed key. SOPS files can be committed to Git and decrypted by the GitOps controller (Flux supports SOPS natively via its source controller). SOPS sits between Sealed Secrets (cluster-keyed) and ESO (external vault): the encryption keys live in KMS (so rotation is managed), but the encrypted values live in Git (so the repo is still self-contained). The trade-off is per-file encryption overhead and the need to manage KMS key access for the GitOps controller. A common pitfall with all three approaches is forgetting that the <em>decrypted</em> Secret in the cluster is the actual runtime credential and still needs rotation — encrypting a stale secret just gives you a stale secret, safely committed.</p>
+<hr>
+<h2 id="10-multi-cluster-management">10. Multi-Cluster Management</h2>
+<p>Real organizations run many clusters — dev, staging, prod, often multiple prod clusters per region for fault isolation, plus ephemeral clusters for testing. GitOps scales to this naturally because the Git repo is a single source of truth that any cluster can pull from, but the management patterns differ in maturity and operational burden.</p>
+<p><strong>One repo, directory-per-cluster</strong> is the simplest pattern: the repo has <code>clusters/dev/</code>, <code>clusters/prod-us-east/</code>, <code>clusters/prod-us-west/</code>, and each cluster’s GitOps agent is configured to sync only its own directory. This is easy to reason about and gives per-cluster overrides via Kustomize, but it does not scale gracefully to dozens of clusters (the repo becomes a sprawling directory tree) and it does not provide a unified control plane — each cluster is independently reconciled, with no aggregate view of fleet state.</p>
+<p><strong>Hub-and-spoke with a control plane</strong> (ArgoCD ApplicationSets across clusters, or Cluster API + Flux installed per cluster) centralizes management in one hub cluster that orchestrates many spoke clusters. ArgoCD ApplicationSets are particularly powerful here: a single ApplicationSet template can generate Applications across all clusters matching a label, so adding a new cluster is “label it and commit,” and the hub automatically begins managing it. The trade-off is that the hub is now a critical failure domain — if the hub goes down, no cluster receives updates (existing deployments keep running, since each spoke’s state is local, but new commits don’t propagate). Mitigations include running the hub in a highly available configuration and keeping a documented break-glass path for applying directly to a spoke.</p>
+<p><strong>Fleet management tools</strong> (Cluster API for cluster lifecycle, plus a GitOps engine for workload lifecycle) compose the full answer: Cluster API declaratively provisions and upgrades the clusters themselves (also from Git), and the GitOps engine declaratively provisions the workloads on those clusters. This is the most mature pattern and the one a staff engineer should describe: the entire fleet — clusters <em>and</em> workloads — is reconciled from Git, so a new regional cluster is “commit a Cluster API manifest, let the infrastructure provider provision it, let Flux bootstrap itself on the new cluster, let it pull its workload manifests” — a fully automated bring-up. The operational complexity is significant, and the bootstrapping step (how the first GitOps agent gets onto a brand-new cluster) is a famous chicken-and-egg problem usually solved with a tiny imperative bootstrap job or a Cluster API bootstrap provider that injects the agent as part of cluster creation.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>              MULTI-CLUSTER MANAGEMENT TOPOLOGY</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  PATTERN A: One repo, directory-per-cluster (no control plane)</span></span>
+<span class="line"><span>  ┌──────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>  │                       Git Repo                           │</span></span>
+<span class="line"><span>  │  clusters/dev/   clusters/prod-us-east/  clusters/prod-… │</span></span>
+<span class="line"><span>  └────┬─────────────────────┬──────────────────────┬────────┘</span></span>
+<span class="line"><span>       │ pulls own dir       │ pulls own dir        │ pulls own dir</span></span>
+<span class="line"><span>       ▼                     ▼                      ▼</span></span>
+<span class="line"><span>  ┌─────────┐          ┌──────────┐          ┌──────────┐</span></span>
+<span class="line"><span>  │ dev     │          │ prod-east│          │ prod-west│</span></span>
+<span class="line"><span>  │ cluster │          │ cluster  │          │ cluster  │</span></span>
+<span class="line"><span>  └─────────┘          └──────────┘          └──────────┘</span></span>
+<span class="line"><span>  (independent reconciliation; no aggregate fleet view)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  PATTERN B: Hub-and-spoke control plane (ArgoCD ApplicationSets)</span></span>
+<span class="line"><span>                                ┌───────────────────────┐</span></span>
+<span class="line"><span>                                │   HUB CLUSTER         │</span></span>
+<span class="line"><span>                                │  (ArgoCD / Flux hub)  │</span></span>
+<span class="line"><span>                                │  ApplicationSet       │</span></span>
+<span class="line"><span>                                │  generates per-spoke  │</span></span>
+<span class="line"><span>                                │  Applications by label│</span></span>
+<span class="line"><span>                                └───────────┬───────────┘</span></span>
+<span class="line"><span>                  ┌─────────────────┼─────────────────┐</span></span>
+<span class="line"><span>                  ▼                 ▼                 ▼</span></span>
+<span class="line"><span>            ┌──────────┐      ┌──────────┐      ┌──────────┐</span></span>
+<span class="line"><span>            │ spoke 1  │      │ spoke 2  │      │ spoke 3  │</span></span>
+<span class="line"><span>            │ prod-east│      │ prod-west│      │   dev    │</span></span>
+<span class="line"><span>            └──────────┘      └──────────┘      └──────────┘</span></span>
+<span class="line"><span>  (hub is critical failure domain; HA + break-glass path required)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  PATTERN C: Fleet management (Cluster API + GitOps engine)</span></span>
+<span class="line"><span>  ┌──────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>  │  Git Repo (source of truth for clusters AND workloads)   │</span></span>
+<span class="line"><span>  │   ├── cluster-api/  (Cluster API manifests: clusters)    │</span></span>
+<span class="line"><span>  │   └── workloads/    (Flux/Kustomize manifests: apps)     │</span></span>
+<span class="line"><span>  └──────────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span>                  │ commit new Cluster API manifest</span></span>
+<span class="line"><span>                  ▼</span></span>
+<span class="line"><span>          ┌──────────────────┐    provisions cluster</span></span>
+<span class="line"><span>          │  Management      │──────────────────────┐</span></span>
+<span class="line"><span>          │  Cluster         │                      │</span></span>
+<span class="line"><span>          │ (Cluster API)    │   bootstraps Flux    │</span></span>
+<span class="line"><span>          └──────────────────┘   on new cluster     │</span></span>
+<span class="line"><span>                                      ▼             │</span></span>
+<span class="line"><span>                              ┌──────────────────┐  │</span></span>
+<span class="line"><span>                              │ New Regional     │◀─┘</span></span>
+<span class="line"><span>                              │ Cluster (spoke)  │</span></span>
+<span class="line"><span>                              │ Flux pulls       │</span></span>
+<span class="line"><span>                              │ workloads/ dir   │</span></span>
+<span class="line"><span>                              └──────────────────┘</span></span>
+<span class="line"><span>  (fully automated bring-up: cluster lifecycle + workload lifecycle from Git)</span></span></code></pre>
+<hr>
+<h2 id="11-drift-detection">11. Drift Detection</h2>
+<p>Drift — the cluster diverging from Git — is the failure mode GitOps exists to prevent, and drift detection is how you know it is being prevented. There are two modes of drift handling, and the choice between them is a platform policy decision. <strong>Auto-prune / auto-sync</strong> means the reconciler corrects drift automatically: a manual <code>kubectl edit</code> is reverted on the next loop, and a manually deleted resource is recreated. This gives the strongest “Git is truth” guarantee and is the right default for most resources, but it can be dangerous for resources that legitimately need manual intervention during an incident (e.g., scaling up a Deployment to absorb traffic that you haven’t yet committed — the reconciler will scale it back down). <strong>Detect-and-alert</strong> means the reconciler reports drift without correcting it, paging the team to reconcile manually; this is safer during incidents but weaker as a self-healing mechanism and can accumulate unaddressed drift.</p>
+<p>A nuanced policy layers these: auto-sync for stable workloads, alert-only for critical workloads during business hours, with a “prune disabled” annotation on resources that must never be auto-deleted. The implementation detail that matters is the <strong>prune vs. no-prune</strong> distinction: prune means the reconciler deletes resources that exist in the cluster but not in Git (a manual <code>kubectl apply</code> of an extra resource gets cleaned up); disabling prune preserves manually-added resources, which is sometimes needed (e.g., a debugging pod) but undermines the “Git is truth” guarantee. Most mature setups enable prune with a <code>PruneLast</code> and <code>ApplyOutOfSyncOnly</code> optimization, and use <code>IgnoreDifferences</code> fields to tolerate unavoidable runtime differences (e.g., a HorizontalPodAutoscaler mutating the replica count — you don’t want the reconciler fighting the HPA). The HPA-vs-GitOps conflict is a classic interview gotcha: if Git says replicas=3 and the HPA scales to 10, a naive reconciler will see drift and fight the HPA; the fix is to tell the reconciler to ignore the replica field for HPA-managed Deployments.</p>
+<hr>
+<h2 id="12-capacity-planning-in-a-gitops-world">12. Capacity Planning in a GitOps World</h2>
+<p>GitOps changes capacity planning in two ways, and both are worth articulating. First, because the entire desired state is in Git and versioned, you have a historical record of resource requests, limits, and replica counts over time — which means you can correlate capacity changes with incidents and with cost, and you can answer “what was the resource footprint of this service a year ago?” with <code>git log</code>. This is a genuine advantage over pre-GitOps environments where capacity lived in imperative scripts that were overwritten. Treat the GitOps repo as a capacity dataset: tooling that diffs resource requests over time, flags services whose requests grew without a corresponding traffic increase, and identifies the long tail of over-provisioned services becomes possible because the data is structured and versioned.</p>
+<p>Second, progressive delivery interacts with capacity in a way that is often missed. A blue-green deploy requires <em>double</em> the production capacity during the swap — if you run blue-green regularly, your steady-state capacity must be at least 2× the service’s actual need, which is a real cost line item. A canary deploy only needs <code>maxSurge</code> extra capacity (typically 10-25%), which is why canary is the more capacity-efficient strategy for frequent deploys. The staff-level point is that your deployment strategy is also a capacity planning decision: a team that wants blue-green for instant rollback is implicitly asking the platform to provision and pay for double capacity, and that trade-off should be made consciously, not by accident. HorizontalPodAutoscalers complicate this further, because an HPA can scale a canary’s pods based on traffic — but if the canary only receives 5% of traffic, the HPA may scale it down to its minimum, starving the canary of the load it needs to produce a meaningful metric signal. The fix is to either disable the HPA during canaries, set a higher minReplicas for the canary, or use a weighted load metric that accounts for the traffic split.</p>
+<hr>
+<h2 id="13-end-to-end-a-pr-merged-a-canary-promoted">13. End-to-End: A PR Merged, a Canary Promoted</h2>
+<p>To make this concrete, trace a single change end to end. A developer opens a PR bumping the checkout service image tag from <code>v1.4.2</code> to <code>v1.4.3</code> in the <code>clusters/prod/</code> Kustomize overlay. CI runs: it builds the image (already built), runs unit and integration tests, scans the image, and on merge the manifest commit lands in Git. Flux’s source controller polls Git (or receives a webhook), detects the new commit, and the Kustomize controller applies the updated Deployment manifest — which changes the pod template’s image tag. This is the point where progressive delivery takes over: Flagger sees the new ReplicaSet, spins it up, and begins the canary, shifting 5% of traffic (via Istio’s VirtualService weighted routing) to the new pods. At each step, Flagger queries Prometheus: “is the canary’s 5xx rate less than 1.5× the primary’s? Is the canary’s p99 latency within 1.2× of the primary’s? Is the checkout-conversion business metric within 5% of baseline?” Every step passes; Flagger shifts 10%, 25%, 50%, 100% over ~40 minutes; the old ReplicaSet scales to zero; a notification lands in Slack saying “checkout canary promoted to v1.4.3.”</p>
+<p>Now trace a failure. The same PR merges, the canary starts at 5%, and within the first window Prometheus reports the canary’s 5xx rate is 4× the primary’s (a regression in the new code path). Flagger immediately shifts traffic back to the primary, marks the canary failed, and sends a “canary rolled back” notification — all automatically, within minutes of the deploy, having affected only 5% of traffic. The developer sees the rollback notification, investigates, pushes a fix, opens a new PR, and the cycle repeats. At no point did a human run <code>kubectl</code>, at no point did CI hold prod credentials, and at no point was more than 5% of production exposed to the bad version. This is the payoff of GitOps plus progressive delivery: the path from “code merged” to “safely in production or safely rolled back” is fully automated, auditable (every step is a Git commit or a controller event), and bounded in blast radius.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   END-TO-END: PR MERGED → CANARY PROMOTED (success path)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   ┌──────────┐  PR: bump image v1.4.2 → v1.4.3</span></span>
+<span class="line"><span>   │ Developer│─────────────────────────────┐</span></span>
+<span class="line"><span>   └──────────┘                             ▼</span></span>
+<span class="line"><span>                                   ┌────────────────┐</span></span>
+<span class="line"><span>   ┌──────────┐   build, test, scan│      CI        │</span></span>
+<span class="line"><span>   │   Git    │◀──────────────────│  (no prod creds)│</span></span>
+<span class="line"><span>   │  Repo    │  manifest commit   └────────────────┘</span></span>
+<span class="line"><span>   └────┬─────┘   on merge</span></span>
+<span class="line"><span>        │ poll / webhook</span></span>
+<span class="line"><span>        ▼</span></span>
+<span class="line"><span>   ┌──────────────────┐  apply Deployment (new image tag)</span></span>
+<span class="line"><span>   │ Flux Source +    │──────────────────────────────┐</span></span>
+<span class="line"><span>   │ Kustomize Ctrl   │                              │</span></span>
+<span class="line"><span>   └──────────────────┘                              ▼</span></span>
+<span class="line"><span>                                          ┌───────────────────┐</span></span>
+<span class="line"><span>   ┌──────────────────┐  detects new      │ New ReplicaSet    │</span></span>
+<span class="line"><span>   │     Flagger      │◀───ReplicaSet─────│ (canary pods)     │</span></span>
+<span class="line"><span>   │  Canary CR +     │                   └───────────────────┘</span></span>
+<span class="line"><span>   │  analysis loop   │</span></span>
+<span class="line"><span>   └────────┬─────────┘</span></span>
+<span class="line"><span>            │ shift traffic 5%→10%→25%→50%→100% (Istio VirtualService)</span></span>
+<span class="line"><span>            │ query Prometheus each step (5xx ratio, p99 ratio, conversion)</span></span>
+<span class="line"><span>            ▼</span></span>
+<span class="line"><span>   ┌─────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │  All steps PASS → promote to 100%, scale down old   │</span></span>
+<span class="line"><span>   │  Slack: "checkout canary promoted to v1.4.3"        │</span></span>
+<span class="line"><span>   └─────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   END-TO-END: CANARY ROLLED BACK (failure path)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   ... same up to Flagger detecting new ReplicaSet ...</span></span>
+<span class="line"><span>            │</span></span>
+<span class="line"><span>            │ shift 5%, query Prometheus</span></span>
+<span class="line"><span>            │ → canary 5xx = 4× primary  (THRESHOLD BREACHED)</span></span>
+<span class="line"><span>            ▼</span></span>
+<span class="line"><span>   ┌─────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │  AUTO-ROLLBACK: shift 0% → primary, mark canary fail│</span></span>
+<span class="line"><span>   │  Slack: "canary rolled back"  (within minutes)      │</span></span>
+<span class="line"><span>   │  only 5% of production was ever exposed             │</span></span>
+<span class="line"><span>   └─────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span>            │</span></span>
+<span class="line"><span>            ▼</span></span>
+<span class="line"><span>   developer investigates → fixes → new PR → cycle repeats</span></span>
+<span class="line"><span>   (no human ran kubectl; CI never held prod creds)</span></span></code></pre>
+<hr>
+<h2 id="14-interview-question">14. Interview Question</h2>
+<p><strong>Q:</strong> You run a high-traffic e-commerce checkout service with Flagger canaries on Istio. A canary that looks healthy on error rate and latency gets promoted to 100%, and within ten minutes checkout conversions drop 30%. Walk me through what likely went wrong and how you would redesign the analysis to prevent it.</p>
+<p><strong>Model Answer:</strong> The canary passed on infra metrics but failed on a business metric, which means my analysis was missing the signal that actually mattered. The likely cause is that the new version had a subtle bug in the checkout flow (a payment tokenization path, a coupon validation, a redirect) that returned HTTP 200 with an empty or error body, so error rate looked fine while the funnel silently broke. Latency was fine because the broken path was <em>faster</em> than the working one. The redesign is to add a <strong>business-metric analysis step</strong> that queries the checkout-conversion rate (or a more specific signal like “successful authorizations per minute”) and gates promotion on it, with a ratio comparison against the primary to self-calibrate for the day’s traffic. Because business metrics are noisier and have lower sample volume at low canary percentages, I would widen the early canary window (e.g., hold at 5% for 15 minutes rather than 5) and require a minimum sample size before evaluating, to avoid both false positives (rolling back a healthy version on noise) and false negatives (passing on a tiny sample). I would also add a <strong>post-promotion analysis window</strong> — Flagger supports running analysis <em>after</em> reaching 100% — so that if the conversion drop only appears at full traffic (e.g., due to a cache-warming or concurrency effect invisible at 5%), the rollout still auto-rolls back within minutes rather than waiting for a human to notice. Finally, I would treat this incident as a signal that infra metrics are necessary but not sufficient, and audit other services’ canary analyses to confirm they include the business metric that actually defines “healthy” for that service.</p>
+<p><strong>Common Pitfall:</strong> “I’d just lower the error rate threshold from 1% to 0.1% so the canary is stricter.” This is wrong because the problem was never the error rate — the error rate was genuinely fine. Tightening an infra-only threshold makes the canary more brittle (false rollbacks on normal variance) without addressing the actual failure mode, which was a missing <em>category</em> of metric, not a too-loose <em>threshold</em>. The fix is to add the business metric, not to tighten the infra metric.</p>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>GitOps = Git is the single source of truth for cluster state; controllers (ArgoCD/Flux) reconcile cluster to match Git</li>
+<li>Progressive delivery: canary (gradual traffic shift), blue-green (instant switch), A/B (feature-flag based)</li>
+<li>Rollback = <code>git revert</code> — the same mechanism that deployed the change undoes it</li>
+<li>Canary analysis must include business metrics (conversion, revenue), not just infra metrics (error rate, latency)</li>
+<li>Drift detection: alert when cluster state diverges from Git (someone made manual changes)</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you handle secrets in GitOps?” — Don’t put secrets in Git. Use Sealed Secrets, SOPS, or external secret managers (Vault, AWS Secrets Manager) referenced by Git.</li>
+<li>“What’s the blast radius of a bad Git commit?” — Potentially the entire cluster. Mitigate with PR reviews, automated validation (OPA policies), and staged rollouts (dev → staging → prod).</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Automated rollback based only on error rate is dangerous. A deployment might have zero errors but silently degrade a business metric (e.g., checkout conversion drops 10% with no error). Always include business metrics in canary analysis, or you’ll ship regressions that pass your safety checks.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/gitops-and-progressive-delivery/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=GitOps%20%26%20Progressive%20Delivery%20(Argo%2C%20Flux%2C%20Flagger)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fgitops-and-progressive-delivery%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fgitops-and-progressive-delivery%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/gitops-and-progressive-delivery" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/geo-distributed-databases" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Geo-Distributed Databases (CockroachDB, Spanner, Fauna)</span></a><a href="/notes/system-design/google-search-architecture" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Google Search Architecture</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="GitOps &amp; Progressive Delivery (Argo, Flux, Flagger)" data-selector=".article-prose" data-article-slug="system-design/gitops-and-progressive-delivery" data-article-title="GitOps &amp; Progressive Delivery (Argo, Flux, Flagger)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

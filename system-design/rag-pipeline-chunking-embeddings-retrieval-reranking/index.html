@@ -1,0 +1,1229 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>RAG Pipeline (Chunking, Embeddings, Retrieval, Reranking) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-what-is-rag-and-why-it-exists" class="toc-link" data-toc-link="1-what-is-rag-and-why-it-exists" data-astro-cid-p33bl5ka>1. What Is RAG and Why It Exists</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#11-the-llm-limitation" class="toc-link" data-toc-link="11-the-llm-limitation" data-astro-cid-p33bl5ka>1.1 The LLM Limitation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#12-the-rag-solution" class="toc-link" data-toc-link="12-the-rag-solution" data-astro-cid-p33bl5ka>1.2 The RAG Solution</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-chunking-the-foundation-everything-else-depends-on" class="toc-link" data-toc-link="2-chunking-the-foundation-everything-else-depends-on" data-astro-cid-p33bl5ka>2. Chunking: The Foundation Everything Else Depends On</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#21-the-chunking-trade-off" class="toc-link" data-toc-link="21-the-chunking-trade-off" data-astro-cid-p33bl5ka>2.1 The Chunking Trade-Off</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#22-chunking-strategies" class="toc-link" data-toc-link="22-chunking-strategies" data-astro-cid-p33bl5ka>2.2 Chunking Strategies</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#23-overlap--context-windows" class="toc-link" data-toc-link="23-overlap--context-windows" data-astro-cid-p33bl5ka>2.3 Overlap &amp; Context Windows</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#24-the-lost-in-the-middle-phenomenon" class="toc-link" data-toc-link="24-the-lost-in-the-middle-phenomenon" data-astro-cid-p33bl5ka>2.4 The “Lost in the Middle” Phenomenon</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-embeddings-turning-text-into-numbers" class="toc-link" data-toc-link="3-embeddings-turning-text-into-numbers" data-astro-cid-p33bl5ka>3. Embeddings: Turning Text Into Numbers</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#31-what-an-embedding-model-does" class="toc-link" data-toc-link="31-what-an-embedding-model-does" data-astro-cid-p33bl5ka>3.1 What an Embedding Model Does</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#32-embedding-model-selection" class="toc-link" data-toc-link="32-embedding-model-selection" data-astro-cid-p33bl5ka>3.2 Embedding Model Selection</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#33-dense-vs-sparse-embeddings" class="toc-link" data-toc-link="33-dense-vs-sparse-embeddings" data-astro-cid-p33bl5ka>3.3 Dense vs. Sparse Embeddings</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#4-retrieval-finding-the-right-needles" class="toc-link" data-toc-link="4-retrieval-finding-the-right-needles" data-astro-cid-p33bl5ka>4. Retrieval: Finding the Right Needles</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#41-vector-search-basics" class="toc-link" data-toc-link="41-vector-search-basics" data-astro-cid-p33bl5ka>4.1 Vector Search Basics</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#42-ann-indexes-speed-at-scale" class="toc-link" data-toc-link="42-ann-indexes-speed-at-scale" data-astro-cid-p33bl5ka>4.2 ANN Indexes: Speed at Scale</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#43-hybrid-search-dense--sparse" class="toc-link" data-toc-link="43-hybrid-search-dense--sparse" data-astro-cid-p33bl5ka>4.3 Hybrid Search: Dense + Sparse</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#44-multi-stage-retrieval" class="toc-link" data-toc-link="44-multi-stage-retrieval" data-astro-cid-p33bl5ka>4.4 Multi-Stage Retrieval</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#45-query-transformations" class="toc-link" data-toc-link="45-query-transformations" data-astro-cid-p33bl5ka>4.5 Query Transformations</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#5-reranking-precision-on-top-of-recall" class="toc-link" data-toc-link="5-reranking-precision-on-top-of-recall" data-astro-cid-p33bl5ka>5. Reranking: Precision on Top of Recall</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#51-why-reranking-is-necessary" class="toc-link" data-toc-link="51-why-reranking-is-necessary" data-astro-cid-p33bl5ka>5.1 Why Reranking Is Necessary</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#52-reranker-models" class="toc-link" data-toc-link="52-reranker-models" data-astro-cid-p33bl5ka>5.2 Reranker Models</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#53-reranking-strategies" class="toc-link" data-toc-link="53-reranking-strategies" data-astro-cid-p33bl5ka>5.3 Reranking Strategies</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#54-the-reranker-hallucination-paradox" class="toc-link" data-toc-link="54-the-reranker-hallucination-paradox" data-astro-cid-p33bl5ka>5.4 The Reranker-Hallucination Paradox</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#6-metrics-that-actually-matter" class="toc-link" data-toc-link="6-metrics-that-actually-matter" data-astro-cid-p33bl5ka>6. Metrics That Actually Matter</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#61-retrieval-metrics" class="toc-link" data-toc-link="61-retrieval-metrics" data-astro-cid-p33bl5ka>6.1 Retrieval Metrics</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#62-generation-metrics" class="toc-link" data-toc-link="62-generation-metrics" data-astro-cid-p33bl5ka>6.2 Generation Metrics</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#63-the-ground-truth-problem" class="toc-link" data-toc-link="63-the-ground-truth-problem" data-astro-cid-p33bl5ka>6.3 The Ground Truth Problem</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#7-production-architecture-patterns" class="toc-link" data-toc-link="7-production-architecture-patterns" data-astro-cid-p33bl5ka>7. Production Architecture Patterns</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#71-the-ingestion-pipeline" class="toc-link" data-toc-link="71-the-ingestion-pipeline" data-astro-cid-p33bl5ka>7.1 The Ingestion Pipeline</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#72-the-query-pipeline" class="toc-link" data-toc-link="72-the-query-pipeline" data-astro-cid-p33bl5ka>7.2 The Query Pipeline</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#73-caching-strategy" class="toc-link" data-toc-link="73-caching-strategy" data-astro-cid-p33bl5ka>7.3 Caching Strategy</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#8-failure-modes-and-diagnosis" class="toc-link" data-toc-link="8-failure-modes-and-diagnosis" data-astro-cid-p33bl5ka>8. Failure Modes and Diagnosis</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#81-when-retrieval-returns-wrong-chunks" class="toc-link" data-toc-link="81-when-retrieval-returns-wrong-chunks" data-astro-cid-p33bl5ka>8.1 When Retrieval Returns Wrong Chunks</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#82-when-the-llm-ignores-retrieved-context" class="toc-link" data-toc-link="82-when-the-llm-ignores-retrieved-context" data-astro-cid-p33bl5ka>8.2 When the LLM Ignores Retrieved Context</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#83-when-reranking-amplifies-errors" class="toc-link" data-toc-link="83-when-reranking-amplifies-errors" data-astro-cid-p33bl5ka>8.3 When Reranking Amplifies Errors</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#9-scaling-the-pipeline" class="toc-link" data-toc-link="9-scaling-the-pipeline" data-astro-cid-p33bl5ka>9. Scaling the Pipeline</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#91-ingestion-scale" class="toc-link" data-toc-link="91-ingestion-scale" data-astro-cid-p33bl5ka>9.1 Ingestion Scale</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#92-query-scale" class="toc-link" data-toc-link="92-query-scale" data-astro-cid-p33bl5ka>9.2 Query Scale</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#93-cost-breakdown" class="toc-link" data-toc-link="93-cost-breakdown" data-astro-cid-p33bl5ka>9.3 Cost Breakdown</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#10-interview-question--model-answer" class="toc-link" data-toc-link="10-interview-question--model-answer" data-astro-cid-p33bl5ka>10. Interview Question + Model Answer</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#model-answer" class="toc-link" data-toc-link="model-answer" data-astro-cid-p33bl5ka>Model Answer</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#-common-pitfall" class="toc-link" data-toc-link="-common-pitfall" data-astro-cid-p33bl5ka>❗ Common Pitfall</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#11-key-takeaways" class="toc-link" data-toc-link="11-key-takeaways" data-astro-cid-p33bl5ka>11. Key Takeaways</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#related" class="toc-link" data-toc-link="related" data-astro-cid-p33bl5ka>Related</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>RAG Pipeline (Chunking, Embeddings, Retrieval, Reranking)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 22 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 31 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>ai-ml</span><span class="tag" data-astro-cid-sgg5joot>rag</span><span class="tag" data-astro-cid-sgg5joot>retrieval-augmented-generation</span><span class="tag" data-astro-cid-sgg5joot>embeddings</span><span class="tag" data-astro-cid-sgg5joot>chunking</span><span class="tag" data-astro-cid-sgg5joot>vector-search</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="rag-pipeline-chunking-embeddings-retrieval-reranking">RAG Pipeline (Chunking, Embeddings, Retrieval, Reranking)</h1>
+<blockquote>
+<p><strong>Staff-Engineer Focus:</strong> “We use RAG to ground LLM responses in our documents” is the mid-level answer. Understanding that RAG isn’t one pipeline but a composition of independently tunable stages — and that each stage has a distinct failure mode that silently degrades quality — that’s the senior answer. <strong>The staff engineer doesn’t ask “should I use RAG?” They ask: “What accuracy threshold does this use case require? What is the cost of a retrieval miss vs. a hallucination? How do you measure recall when there’s no ground truth? And what happens when the underlying documents change — does the pipeline stale out, or does it self-correct?” A retrieval system that returns the wrong chunk with 99% confidence is more dangerous than one that returns nothing at all. The interview question isn’t “Explain RAG.” It’s: “Your RAG pipeline serves a customer support chatbot with 50K product docs. Users report that answers sometimes reference outdated product specs and occasionally fabricate details not in any document. Walk me through: (a) how you’d diagnose whether the failure is in chunking, embedding, retrieval, reranking, or generation, (b) how you’d detect document staleness without manual review, (c) what metrics you’d monitor to catch retrieval degradation before users complain, and (d) why adding a reranker with higher precision can paradoxically increase hallucination rate if your chunking strategy doesn’t preserve context boundaries.”</strong></p>
+</blockquote>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A pipeline that grounds LLM responses in real documents — chunking text, embedding chunks into vectors, retrieving relevant chunks via ANN search, and optionally reranking for precision.</p>
+<p><strong>How it’s asked:</strong> “Design a RAG pipeline for a customer support chatbot with 50K product docs. Cover chunking strategy, embedding model selection, vector search, reranking, and hallucination detection.”</p>
+<hr>
+<h2 id="1-what-is-rag-and-why-it-exists">1. What Is RAG and Why It Exists</h2>
+<h3 id="11-the-llm-limitation">1.1 The LLM Limitation</h3>
+<p>LLMs are trained on static corpora with a knowledge cutoff. They:</p>
+<ul>
+<li><strong>Hallucinate</strong> when asked about facts not in training data</li>
+<li><strong>Can’t access private/proprietary documents</strong> (your company’s internal wiki, product specs, legal contracts)</li>
+<li><strong>Don’t know about events after training cutoff</strong></li>
+<li><strong>Struggle with precise, verifiable answers</strong> — they’re optimized for plausibility, not accuracy</li>
+</ul>
+<p>Fine-tuning on domain data helps, but:</p>
+<ul>
+<li>New documents require re-fine-tuning</li>
+<li>Fine-tuning bakes knowledge into weights — hard to audit, update, or remove</li>
+<li>No way to cite sources (“where did you get that from?”)</li>
+</ul>
+<h3 id="12-the-rag-solution">1.2 The RAG Solution</h3>
+<p><strong>Retrieval-Augmented Generation (RAG)</strong> splits the problem into two parts:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌─────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                         RAG PIPELINE                             │</span></span>
+<span class="line"><span>│                                                                  │</span></span>
+<span class="line"><span>│  ┌──────────┐   ┌───────────┐   ┌──────────┐   ┌────────────┐  │</span></span>
+<span class="line"><span>│  │ Document │ → │ Chunking  │ → │ Embedding │ → │  Vector DB  │  │</span></span>
+<span class="line"><span>│  │ Ingest   │   │ Strategy  │   │  Model    │   │  (Index)    │  │</span></span>
+<span class="line"><span>│  └──────────┘   └───────────┘   └──────────┘   └─────┬──────┘  │</span></span>
+<span class="line"><span>│                                                       │         │</span></span>
+<span class="line"><span>│  ┌──────────┐   ┌───────────┐   ┌──────────┐   ┌─────▼──────┐  │</span></span>
+<span class="line"><span>│  │  Answer  │ ← │    LLM    │ ← │  Prompt  │ ← │ Retrieval  │  │</span></span>
+<span class="line"><span>│  │  (cited) │   │ Generation│   │ Assembly │   │ + Rerank   │  │</span></span>
+<span class="line"><span>│  └──────────┘   └───────────┘   └──────────┘   └────────────┘  │</span></span>
+<span class="line"><span>│                                                                  │</span></span>
+<span class="line"><span>│  User Query ──────────────────────────────────────────────────► │</span></span>
+<span class="line"><span>└─────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<ol>
+<li><strong>Ingest:</strong> Documents are split into chunks, embedded into vectors, and stored in a vector database.</li>
+<li><strong>Query:</strong> User query is embedded, similar chunks are retrieved, optionally reranked, and injected into the LLM prompt.</li>
+<li><strong>Generate:</strong> LLM produces an answer grounded in the retrieved context, often with citations.</li>
+</ol>
+<p>The key insight: <strong>The LLM is no longer the source of truth — the retrieval system is.</strong> If retrieval returns wrong chunks, the LLM will confidently produce a wrong answer. The LLM can’t tell you “hey, these chunks are about a different product.”</p>
+<hr>
+<h2 id="2-chunking-the-foundation-everything-else-depends-on">2. Chunking: The Foundation Everything Else Depends On</h2>
+<p>Chunking is the most underappreciated part of RAG. Every downstream stage — embedding quality, retrieval accuracy, reranking precision — depends on how you split documents.</p>
+<h3 id="21-the-chunking-trade-off">2.1 The Chunking Trade-Off</h3>
+<table>
+<thead>
+<tr>
+<th>Chunk Size</th>
+<th>Pros</th>
+<th>Cons</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Small (128-256 tokens)</strong></td>
+<td>High precision; exact match for specific facts</td>
+<td>Loses surrounding context; one chunk may not contain full answer</td>
+</tr>
+<tr>
+<td><strong>Medium (512-1024 tokens)</strong></td>
+<td>Good balance; captures paragraph-level context</td>
+<td>May split a concept across chunk boundaries</td>
+</tr>
+<tr>
+<td><strong>Large (2048-4096 tokens)</strong></td>
+<td>Rich context; answer likely in single chunk</td>
+<td>Dilutes embedding signal; “needle in haystack” problem; hits LLM context limits when assembling prompt</td>
+</tr>
+</tbody>
+</table>
+<h3 id="22-chunking-strategies">2.2 Chunking Strategies</h3>
+<p><strong>A. Fixed-Size Chunking (Character/Token-Based)</strong></p>
+<p>The simplest approach: split every N characters or tokens.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>def chunk_by_tokens(text, chunk_size=512, overlap=50):</span></span>
+<span class="line"><span>    tokens = tokenizer.encode(text)</span></span>
+<span class="line"><span>    chunks = []</span></span>
+<span class="line"><span>    for i in range(0, len(tokens), chunk_size - overlap):</span></span>
+<span class="line"><span>        chunk = tokens[i:i + chunk_size]</span></span>
+<span class="line"><span>        chunks.append(tokenizer.decode(chunk))</span></span>
+<span class="line"><span>    return chunks</span></span></code></pre>
+<p><strong>Problem:</strong> Splits sentences mid-thought. A chunk might contain “The revenue for Q3 was” and the next chunk contains “$4.2 million, a 15% increase.” Neither chunk alone answers “What was Q3 revenue?”</p>
+<p><strong>B. Semantic Chunking (Sentence/Paragraph-Based)</strong></p>
+<p>Split on natural boundaries: sentences, paragraphs, sections. Use NLP to detect topic shifts.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># Split on sentence boundaries, then merge until chunk_size reached</span></span>
+<span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> nltk.tokenize </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> sent_tokenize</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> semantic_chunk</span><span style="color:#E1E4E8">(text, max_chunk_size</span><span style="color:#F97583">=</span><span style="color:#79B8FF">512</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#E1E4E8">    sentences </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> sent_tokenize(text)</span></span>
+<span class="line"><span style="color:#E1E4E8">    chunks </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> []</span></span>
+<span class="line"><span style="color:#E1E4E8">    current_chunk </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> []</span></span>
+<span class="line"><span style="color:#E1E4E8">    current_size </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span></span>
+<span class="line"><span style="color:#E1E4E8">    </span></span>
+<span class="line"><span style="color:#F97583">    for</span><span style="color:#E1E4E8"> sentence </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> sentences:</span></span>
+<span class="line"><span style="color:#E1E4E8">        sentence_tokens </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> len</span><span style="color:#E1E4E8">(tokenizer.encode(sentence))</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> current_size </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> sentence_tokens </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> max_chunk_size </span><span style="color:#F97583">and</span><span style="color:#E1E4E8"> current_chunk:</span></span>
+<span class="line"><span style="color:#E1E4E8">            chunks.append(</span><span style="color:#9ECBFF">" "</span><span style="color:#E1E4E8">.join(current_chunk))</span></span>
+<span class="line"><span style="color:#E1E4E8">            current_chunk </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [sentence]</span></span>
+<span class="line"><span style="color:#E1E4E8">            current_size </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> sentence_tokens</span></span>
+<span class="line"><span style="color:#F97583">        else</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#E1E4E8">            current_chunk.append(sentence)</span></span>
+<span class="line"><span style="color:#E1E4E8">            current_size </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> sentence_tokens</span></span>
+<span class="line"><span style="color:#E1E4E8">    </span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> current_chunk:</span></span>
+<span class="line"><span style="color:#E1E4E8">        chunks.append(</span><span style="color:#9ECBFF">" "</span><span style="color:#E1E4E8">.join(current_chunk))</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> chunks</span></span></code></pre>
+<p><strong>Problem:</strong> Can still split related concepts if the document has long sections.</p>
+<p><strong>C. Recursive Character Splitting (LangChain Default)</strong></p>
+<p>Split by increasingly granular separators: <code>\n\n</code> (paragraphs) → <code>\n</code> (lines) → <code>.</code> (sentences) → <code> </code> (words). Falls back to character-level only when necessary.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Separators: ["\n\n", "\n", ". ", " ", ""]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Try "\n\n" → chunks too large? → Try "\n" → still too large? → Try ". " → ...</span></span></code></pre>
+<p>This is the most widely used strategy out of the box but still doesn’t understand document structure.</p>
+<p><strong>D. Document-Aware Chunking (Structure-Preserving)</strong></p>
+<p>Parse the document’s actual structure — Markdown headings, HTML tags, PDF sections — and chunk accordingly.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Markdown:</span></span>
+<span class="line"><span># Product Spec: Widget Pro 3000        ← Chunk boundary</span></span>
+<span class="line"><span>## Technical Specifications             ← Chunk boundary</span></span>
+<span class="line"><span>| Feature | Value |                    ← This table stays together</span></span>
+<span class="line"><span>| Weight  | 2.3kg |</span></span>
+<span class="line"><span>| Battery | 5000mAh |</span></span>
+<span class="line"><span>## Pricing                             ← Chunk boundary</span></span>
+<span class="line"><span>$299 retail, $249 enterprise</span></span></code></pre>
+<p><strong>Why this matters:</strong> A query about “Widget Pro 3000 battery” should retrieve a chunk containing the full specifications table, not just the row with “5000mAh.” Context matters.</p>
+<p><strong>E. Agentic Chunking (LLM-Powered)</strong></p>
+<p>Use an LLM to decide chunk boundaries: “Split this document into self-contained sections where each section fully answers a likely question.” Most accurate, but slow and expensive for ingestion.</p>
+<h3 id="23-overlap--context-windows">2.3 Overlap &amp; Context Windows</h3>
+<p><strong>Overlap</strong> (sliding window between chunks) prevents information loss at chunk boundaries:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Chunk 1:  [The Q3 revenue was $4.2M, a 15% increase over Q2. The growth...]</span></span>
+<span class="line"><span>                              ← overlap = 50 tokens →</span></span>
+<span class="line"><span>Chunk 2:             [...15% increase over Q2. The growth was driven by...]</span></span></code></pre>
+<p><strong>Advanced: Sentence-Boundary Window Retrieval.</strong> Store chunks normally but at retrieval time, fetch each chunk PLUS its N preceding and following sentences. This gives you fixed-size storage with dynamic context windows.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> retrieve_with_context</span><span style="color:#E1E4E8">(chunk_id, window</span><span style="color:#F97583">=</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#E1E4E8">    chunk </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> vector_db.get(chunk_id)</span></span>
+<span class="line"><span style="color:#E1E4E8">    preceding </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> document.get_sentences_before(chunk_id, </span><span style="color:#FFAB70">n</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">window)</span></span>
+<span class="line"><span style="color:#E1E4E8">    following </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> document.get_sentences_after(chunk_id, </span><span style="color:#FFAB70">n</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">window)</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> preceding </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> chunk </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> following</span></span></code></pre>
+<h3 id="24-the-lost-in-the-middle-phenomenon">2.4 The “Lost in the Middle” Phenomenon</h3>
+<p>LLMs pay most attention to the beginning and end of the prompt context. Chunks placed in the middle of the assembled context are more likely to be ignored. This means:</p>
+<ul>
+<li><strong>Reranker ordering matters:</strong> Top-ranked chunks go first and last, not in the middle</li>
+<li><strong>Chunk count matters:</strong> 3-5 chunks is often better than 10 — more chunks can actually reduce accuracy</li>
+<li><strong>Strategic placement:</strong> Put the most relevant chunk at the very end of the context, just before the question</li>
+</ul>
+<hr>
+<h2 id="3-embeddings-turning-text-into-numbers">3. Embeddings: Turning Text Into Numbers</h2>
+<h3 id="31-what-an-embedding-model-does">3.1 What an Embedding Model Does</h3>
+<p>An embedding model converts text into a fixed-length vector (e.g., 768, 1024, or 1536 dimensions). The key property: <strong>semantically similar texts have vectors that are close together in vector space.</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>"cat"         → [0.12, -0.45, 0.78, ...]</span></span>
+<span class="line"><span>"kitten"      → [0.11, -0.43, 0.79, ...]  ← close to "cat"</span></span>
+<span class="line"><span>"automobile"  → [-0.89, 0.23, -0.12, ...] ← far from "cat"</span></span></code></pre>
+<h3 id="32-embedding-model-selection">3.2 Embedding Model Selection</h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Dimensions</th>
+<th>Max Tokens</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>OpenAI text-embedding-3-small</strong></td>
+<td>512/1536</td>
+<td>8191</td>
+<td>Cost-effective; good general-purpose</td>
+</tr>
+<tr>
+<td><strong>OpenAI text-embedding-3-large</strong></td>
+<td>256/1024/3072</td>
+<td>8191</td>
+<td>Best quality; Matryoshka — can truncate dims without full recomputation</td>
+</tr>
+<tr>
+<td><strong>Cohere Embed v3</strong></td>
+<td>1024</td>
+<td>512</td>
+<td>Strong on multilingual; supports input_type parameter for query vs. doc</td>
+</tr>
+<tr>
+<td><strong>BGE-M3 (BAAI)</strong></td>
+<td>1024</td>
+<td>8192</td>
+<td>Open-source; supports dense + sparse (hybrid) in one model</td>
+</tr>
+<tr>
+<td><strong>E5 Mistral</strong></td>
+<td>4096</td>
+<td>32768</td>
+<td>Very long context window; good for large chunks</td>
+</tr>
+<tr>
+<td><strong>Jina AI v3</strong></td>
+<td>1024</td>
+<td>8192</td>
+<td>Task-specific (retrieval, clustering, classification)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Staff-Engineer Considerations:</strong></p>
+<ul>
+<li><strong>Matryoshka embeddings</strong> (OpenAI, some open models): you can truncate the vector and keep semantic meaning. A 1536-dim vector truncated to 256-dim still works at ~95% quality. This lets you trade recall for storage/memory. Truncate at index time, not query time, so you only store what you need.</li>
+<li><strong>Task-specific prefixes:</strong> BGE and E5 models expect prefixes: <code>"Represent this sentence for searching relevant passages: {query}"</code> for queries and <code>"{passage}"</code> for documents. Forgetting the prefix silently degrades quality by 5-10%.</li>
+<li><strong>Fine-tuning embeddings:</strong> If your domain has specialized vocabulary (legal, medical, engineering), fine-tune an embedding model on your domain’s query-document pairs. A 1% recall improvement at retrieval cascades into much larger gains after reranking and generation.</li>
+<li><strong>Re-embedding cost:</strong> When you upgrade embedding models, you must re-embed your entire corpus. For 100M chunks at $0.02/1M tokens, that’s a significant cost. Design your pipeline so the vector DB stores the raw text alongside the embedding — you’ll need it.</li>
+</ul>
+<h3 id="33-dense-vs-sparse-embeddings">3.3 Dense vs. Sparse Embeddings</h3>
+<p><strong>Dense embeddings</strong> (the ones above): every dimension is a non-zero float. Captures semantic similarity. “car” and “automobile” are close even with zero word overlap.</p>
+<p><strong>Sparse embeddings</strong> (BM25, SPLADE): most dimensions are zero. Captures keyword/token-level matching. “cat” matches “cat” exactly.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Dense</th>
+<th>Sparse</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Strength</strong></td>
+<td>Semantic similarity, paraphrasing</td>
+<td>Exact keyword matching, rare terms</td>
+</tr>
+<tr>
+<td><strong>Weakness</strong></td>
+<td>Misses exact codes (<code>ERR_TIMEOUT_429</code>), product SKUs</td>
+<td>Misses “automobile” when searching “car”</td>
+</tr>
+<tr>
+<td><strong>Storage</strong></td>
+<td>768-4096 floats per vector</td>
+<td>Sparse vector (few non-zero entries)</td>
+</tr>
+<tr>
+<td><strong>Best for</strong></td>
+<td>Natural language questions</td>
+<td>Error codes, IDs, legal citations</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The insight: You need both.</strong> A user searching “how to fix ERR_BATTERY_DRAIN_005” needs the exact error code. A user searching “phone dies too fast” needs semantic matching for the same document.</p>
+<hr>
+<h2 id="4-retrieval-finding-the-right-needles">4. Retrieval: Finding the Right Needles</h2>
+<h3 id="41-vector-search-basics">4.1 Vector Search Basics</h3>
+<p>The vector database stores embeddings and finds the k-nearest neighbors (k-NN) to a query embedding using a distance metric:</p>
+<ul>
+<li><strong>Cosine similarity:</strong> measures angle between vectors. Most common for text embeddings.</li>
+<li><strong>Euclidean distance:</strong> measures straight-line distance. Sensitive to vector magnitude.</li>
+<li><strong>Dot product:</strong> measures projection. Equivalent to cosine when vectors are normalized.</li>
+</ul>
+<h3 id="42-ann-indexes-speed-at-scale">4.2 ANN Indexes: Speed at Scale</h3>
+<p>Exact k-NN is O(N × D) — too slow for millions of vectors. Approximate Nearest Neighbor (ANN) indexes trade a small accuracy loss for massive speed gains:</p>
+<p><strong>HNSW (Hierarchical Navigable Small World) — most common:</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Layer 2:  ●────●        ← Long-range jumps (few nodes)</span></span>
+<span class="line"><span>          │    │</span></span>
+<span class="line"><span>Layer 1:  ●─●──●─●      ← Medium-range</span></span>
+<span class="line"><span>          │╲ │ ╱│ ╲│</span></span>
+<span class="line"><span>Layer 0:  ●●●●●●●●●●    ← All nodes, local connections</span></span></code></pre>
+<ul>
+<li>Search starts at the top layer, greedily moves to nearest neighbor</li>
+<li>Each layer down increases granularity</li>
+<li>O(log N) search time</li>
+<li><strong>Trade-off:</strong> Higher <code>M</code> (connections per node) = better recall but more memory and slower build time</li>
+</ul>
+<p><strong>IVF (Inverted File Index):</strong></p>
+<ul>
+<li>Cluster vectors into N centroids (like k-means)</li>
+<li>At query time, search only the nearest centroid(s)</li>
+<li>Pro: fast index build; Con: lower recall if query falls between clusters</li>
+</ul>
+<h3 id="43-hybrid-search-dense--sparse">4.3 Hybrid Search: Dense + Sparse</h3>
+<p>Combine dense (semantic) and sparse (keyword) retrieval for best results:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Score(chunk, query) = α × dense_score + (1-α) × sparse_score</span></span></code></pre>
+<p>Two implementation approaches:</p>
+<p><strong>A. Reciprocal Rank Fusion (RRF):</strong> Rank chunks separately by dense and sparse scores, then merge:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>RRF_score(chunk) = 1/(k + rank_dense) + 1/(k + rank_sparse)</span></span></code></pre>
+<p><code>k</code> (typically 60) controls the penalty for rank differences. RRF doesn’t require normalized scores — it only cares about ranking position. This is the simpler approach and works surprisingly well.</p>
+<p><strong>B. Linear Combination:</strong> Normalize both scores to [0,1] and take weighted average. Requires score calibration — some models output scores in [0.7, 1.0] while others span [0.01, 0.99]. Without calibration, the wider-ranging model dominates.</p>
+<p><strong>Hybrid Search Architecture:</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>       ┌──────────┐       ┌──────────┐</span></span>
+<span class="line"><span>       │  Dense   │       │  Sparse  │</span></span>
+<span class="line"><span>       │ Embedding │       │  (BM25)  │</span></span>
+<span class="line"><span>       └────┬─────┘       └────┬─────┘</span></span>
+<span class="line"><span>            │                  │</span></span>
+<span class="line"><span>    ┌───────▼───────┐  ┌──────▼──────┐</span></span>
+<span class="line"><span>    │  Vector DB    │  │  Inverted   │</span></span>
+<span class="line"><span>    │  (Qdrant/     │  │  Index      │</span></span>
+<span class="line"><span>    │   Pinecone/   │  │  (Lucene/   │</span></span>
+<span class="line"><span>    │   Weaviate)   │  │  Elastic)   │</span></span>
+<span class="line"><span>    └───────┬───────┘  └──────┬──────┘</span></span>
+<span class="line"><span>            │                  │</span></span>
+<span class="line"><span>            └────┬─────────────┘</span></span>
+<span class="line"><span>                 │</span></span>
+<span class="line"><span>         ┌───────▼───────┐</span></span>
+<span class="line"><span>         │  Fusion       │</span></span>
+<span class="line"><span>         │  (RRF or      │</span></span>
+<span class="line"><span>         │   Linear)     │</span></span>
+<span class="line"><span>         └───────┬───────┘</span></span>
+<span class="line"><span>                 │</span></span>
+<span class="line"><span>         ┌───────▼───────┐</span></span>
+<span class="line"><span>         │  Top-K merged │</span></span>
+<span class="line"><span>         │  candidates   │</span></span>
+<span class="line"><span>         └───────────────┘</span></span></code></pre>
+<h3 id="44-multi-stage-retrieval">4.4 Multi-Stage Retrieval</h3>
+<p>The most performant systems use a funnel approach:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Query → [Fast, High-Recall Retrieval] → [Slower, High-Precision Reranking] → LLM</span></span>
+<span class="line"><span>              (k=100 candidates)              (k=5-10 final chunks)</span></span></code></pre>
+<ul>
+<li><strong>Stage 1:</strong> Cheap retrieval (BM25 or coarse ANN) gets broad coverage → 50-200 candidates</li>
+<li><strong>Stage 2:</strong> Reranker (cross-encoder) scores each (query, chunk) pair → select top 5-10</li>
+<li><strong>Stage 3 (optional):</strong> LLM-based compression or selection</li>
+</ul>
+<p><strong>Why multi-stage?</strong> Vector search optimizes for recall at scale. Reranking optimizes for precision with expensive pairwise computation. You can’t afford to run a cross-encoder on 1M chunks per query — but you can afford it on 100.</p>
+<h3 id="45-query-transformations">4.5 Query Transformations</h3>
+<p>The user’s raw query is often suboptimal for retrieval. Transform it:</p>
+<table>
+<thead>
+<tr>
+<th>Technique</th>
+<th>What It Does</th>
+<th>When to Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Query Rewriting</strong></td>
+<td>LLM rephrases query for better retrieval: “how do I fix the thing” → “troubleshooting steps for device error”</td>
+<td>User queries are conversational</td>
+</tr>
+<tr>
+<td><strong>HyDE</strong> (Hypothetical Document Embeddings)</td>
+<td>LLM generates a hypothetical answer, embed THAT instead of the query</td>
+<td>Query and documents are in different domains/registers</td>
+</tr>
+<tr>
+<td><strong>Multi-Query</strong></td>
+<td>Generate 3-5 variations of the query, retrieve for all, union results</td>
+<td>Ambiguous queries; improves recall</td>
+</tr>
+<tr>
+<td><strong>Step-Back Prompting</strong></td>
+<td>“What is the broader concept?” → retrieve general info first, then specific</td>
+<td>Complex, multi-hop questions</td>
+</tr>
+<tr>
+<td><strong>Query Decomposition</strong></td>
+<td>“Compare X and Y on metric Z” → retrieve for X, retrieve for Y, compare</td>
+<td>Multi-entity comparisons</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The staff-engineer litmus test:</strong> If you’re using the user’s raw query as the embedding input without any transformation, you’re leaving 10-30% recall on the table.</p>
+<hr>
+<h2 id="5-reranking-precision-on-top-of-recall">5. Reranking: Precision on Top of Recall</h2>
+<h3 id="51-why-reranking-is-necessary">5.1 Why Reranking Is Necessary</h3>
+<p>Vector similarity is a weak proxy for relevance. A chunk embedding might be close to the query embedding but not actually contain the answer. Reranking replaces the embedding-based similarity score with a <strong>cross-encoder</strong> that processes (query, chunk) pairs directly.</p>
+<p><strong>Bi-encoder (embedding model):</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>score = cosine(embed(query), embed(chunk))</span></span></code></pre>
+<ul>
+<li>Query and chunk are encoded independently</li>
+<li>Fast: embed chunk once, store; embed query once, compare</li>
+<li>Shallow: “closeness in vector space” ≠ “answers the question”</li>
+</ul>
+<p><strong>Cross-encoder (reranker):</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>score = model(query, chunk)  # Processes the pair jointly</span></span></code></pre>
+<ul>
+<li>Query and chunk are processed TOGETHER through full attention</li>
+<li>Slow: O(N) forward passes for N candidates</li>
+<li>Deep: full cross-attention captures whether chunk actually answers the query</li>
+</ul>
+<h3 id="52-reranker-models">5.2 Reranker Models</h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Cohere Rerank v3</strong></td>
+<td>API-based; strong general-purpose; supports multilingual</td>
+</tr>
+<tr>
+<td><strong>BGE-Reranker-v2</strong></td>
+<td>Open-source; cross-encoder; good for technical domains</td>
+</tr>
+<tr>
+<td><strong>Jina Reranker v2</strong></td>
+<td>Open-source; multilingual; supports long context (8K tokens)</td>
+</tr>
+<tr>
+<td><strong>MixedBread Reranker</strong></td>
+<td>Lightweight; good for low-latency requirements</td>
+</tr>
+<tr>
+<td><strong>MS Marco Cross-Encoders</strong></td>
+<td>Classic; fine-tuned on Bing search data</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-reranking-strategies">5.3 Reranking Strategies</h3>
+<p><strong>A. Basic: Re-rank top-K from vector search</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>candidates = vector_search(query, k=100)   # or 200</span></span>
+<span class="line"><span>reranked = cross_encoder.rerank(query, candidates)[:10]  # top 10</span></span></code></pre>
+<p><strong>B. Diversity-Aware Reranking (MMR)</strong>
+Problem: top-10 vector search results might all be from the same document section, giving the LLM redundant context. MMR (Maximal Marginal Relevance) penalizes chunks similar to already-selected ones:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>MMR(chunk) = λ × relevance(chunk, query) - (1-λ) × max_sim(chunk, already_selected)</span></span></code></pre>
+<p>This ensures the final set covers diverse aspects of the query.</p>
+<p><strong>C. Recursive Reranking</strong>
+For very large candidate sets, chunk the candidates into batches, rerank within each batch, then rerank the winners:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Batch 1 (top-100): rerank → top 20</span></span>
+<span class="line"><span>Batch 2 (101-200): rerank → top 20</span></span>
+<span class="line"><span>Final: rerank(40 winners) → top 10</span></span></code></pre>
+<h3 id="54-the-reranker-hallucination-paradox">5.4 The Reranker-Hallucination Paradox</h3>
+<p>Here’s a counterintuitive failure mode: <strong>A highly precise reranker can increase hallucination.</strong></p>
+<p>Scenario: Your chunking strategy creates chunks that don’t preserve context boundaries. A product spec has:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Chunk A (Specs): "The Widget Pro has a 5000mAh battery."</span></span>
+<span class="line"><span>Chunk B (Warning): "...do not expose to temperatures above 60°C. The Widget Lite has..."</span></span></code></pre>
+<p>User asks: “What’s the battery capacity of Widget Pro?”</p>
+<p>If the reranker scores Chunk A very high and Chunk B very low, the LLM only sees Chunk A and generates the correct answer. Good.</p>
+<p>But if the user asks: “Is Widget Pro waterproof?” and NO chunk explicitly says “waterproof” but Chunk C says “IP68 rated,” the reranker might suppress Chunk C because “IP68” ≠ “waterproof” in cross-attention. The LLM sees no relevant chunk and hallucinates: “The Widget Pro is not waterproof.”</p>
+<p><strong>The fix:</strong> Reranking precision is only as good as chunking recall. If your chunks don’t preserve the relationship between “IP68” and “waterproof,” no reranker can recover. Design chunking and retrieval as a joint system, not independent stages.</p>
+<hr>
+<h2 id="6-metrics-that-actually-matter">6. Metrics That Actually Matter</h2>
+<h3 id="61-retrieval-metrics">6.1 Retrieval Metrics</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>What It Measures</th>
+<th>Formula</th>
+<th>When to Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Recall@K</strong></td>
+<td>Are relevant docs in the top K?</td>
+<td></td>
+<td>{relevant} ∩ {retrieved@K}</td>
+</tr>
+<tr>
+<td><strong>Precision@K</strong></td>
+<td>Are the top K results relevant?</td>
+<td></td>
+<td>{relevant} ∩ {retrieved@K}</td>
+</tr>
+<tr>
+<td><strong>MRR</strong> (Mean Reciprocal Rank)</td>
+<td>Where is the first relevant result?</td>
+<td>1/rank_of_first_relevant</td>
+<td>Single-answer questions</td>
+</tr>
+<tr>
+<td><strong>NDCG</strong> (Normalized Discounted Cumulative Gain)</td>
+<td>Are relevant results ranked high (with graded relevance)?</td>
+<td>Weighted by position</td>
+<td>Multi-relevance grading (highly/partially/not relevant)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62-generation-metrics">6.2 Generation Metrics</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>What It Measures</th>
+<th>Limitation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Faithfulness</strong></td>
+<td>Is the answer supported by retrieved chunks?</td>
+<td>Requires LLM-as-judge or human eval</td>
+</tr>
+<tr>
+<td><strong>Answer Relevance</strong></td>
+<td>Does the answer address the question?</td>
+<td>Doesn’t catch off-topic but factual answers</td>
+</tr>
+<tr>
+<td><strong>Context Relevancy</strong></td>
+<td>How much of the retrieved context was actually used?</td>
+<td>Wasted context = wasted LLM tokens, worse answers</td>
+</tr>
+</tbody>
+</table>
+<h3 id="63-the-ground-truth-problem">6.3 The Ground Truth Problem</h3>
+<p><strong>The hardest problem in RAG evaluation:</strong> You typically don’t have labeled (query, relevant_chunks) pairs for your proprietary corpus. Solutions:</p>
+<ol>
+<li><strong>Synthetic data generation:</strong> LLM generates (question, answer) pairs from your documents. Use the source document chunks as “ground truth” relevant chunks. Imperfect but scalable.</li>
+<li><strong>User feedback signals:</strong> clicks, copy-paste, thumbs up/down, dwell time. Noisy but real.</li>
+<li><strong>LLM-as-judge:</strong> GPT-4 evaluates whether the answer is supported by the retrieved chunks. Expensive, but the best scalable option.</li>
+<li><strong>Golden set:</strong> Hand-label 200-500 queries. Not scalable but essential as a North Star.</li>
+</ol>
+<p><strong>Staff-Engineer Rule:</strong> Never deploy a RAG pipeline without a fixed evaluation set. If you can’t measure whether a change improved or degraded quality, you’re flying blind. The eval set pays for itself the first time it catches a regression.</p>
+<hr>
+<h2 id="7-production-architecture-patterns">7. Production Architecture Patterns</h2>
+<h3 id="71-the-ingestion-pipeline">7.1 The Ingestion Pipeline</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌─────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐</span></span>
+<span class="line"><span>│ Sources │ →  │  Parse   │ →  │  Chunk   │ →  │  Embed   │ →  │  Index   │</span></span>
+<span class="line"><span>│ (S3,    │    │ (PDF,    │    │ (strategy│    │ (model)  │    │ (vector  │</span></span>
+<span class="line"><span>│  GCS,   │    │  HTML,   │    │  engine) │    │          │    │  DB)     │</span></span>
+<span class="line"><span>│  DB,    │    │  MD, txt)│    │          │    │          │    │          │</span></span>
+<span class="line"><span>│  API)   │    └──────────┘    └──────────┘    └──────────┘    └──────────┘</span></span>
+<span class="line"><span>└─────────┘                                                          │</span></span>
+<span class="line"><span>     ▲                                                               │</span></span>
+<span class="line"><span>     │                                                     ┌─────────▼─────────┐</span></span>
+<span class="line"><span>     │                                                     │  Metadata Store   │</span></span>
+<span class="line"><span>     └─────────────────────────────────────────────────────┤  (doc_id, version,│</span></span>
+<span class="line"><span>           Change Detection (webhooks, polling, CDC)       │   timestamp,      │</span></span>
+<span class="line"><span>                                                           │   chunk_map)      │</span></span>
+<span class="line"><span>                                                           └───────────────────┘</span></span></code></pre>
+<p><strong>Key design decisions:</strong></p>
+<ul>
+<li><strong>Incremental updates:</strong> When Document X changes, do you re-embed all chunks or only the changed ones? If your chunking is fixed-size, insertion of one sentence shifts ALL subsequent chunk boundaries — you re-embed everything. Document-aware chunking localizes changes.</li>
+<li><strong>Staleness detection:</strong> Store document hash/timestamp with chunks. At query time, check if source doc has been updated. If yes, either (a) flag the answer as potentially stale, or (b) trigger re-ingestion synchronously (slow but correct).</li>
+<li><strong>Metadata filtering:</strong> Store metadata (document_id, date, author, category, language) alongside vectors. Many queries need filtering before vector search: “search only documents from 2024,” “only English docs.” Hybrid filtering (pre-filter + vector search) avoids scanning irrelevant vectors.</li>
+</ul>
+<h3 id="72-the-query-pipeline">7.2 The Query Pipeline</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>User Query</span></span>
+<span class="line"><span>    │</span></span>
+<span class="line"><span>    ▼</span></span>
+<span class="line"><span>┌───────────────┐</span></span>
+<span class="line"><span>│  Guardrails    │ ← Detect: PII in query? Harmful content? Out-of-domain?</span></span>
+<span class="line"><span>└───────┬───────┘</span></span>
+<span class="line"><span>        │</span></span>
+<span class="line"><span>        ▼</span></span>
+<span class="line"><span>┌───────────────┐</span></span>
+<span class="line"><span>│  Query         │ ← Rewrite, HyDE, multi-query decomposition</span></span>
+<span class="line"><span>│  Transformation│</span></span>
+<span class="line"><span>└───────┬───────┘</span></span>
+<span class="line"><span>        │</span></span>
+<span class="line"><span>        ▼</span></span>
+<span class="line"><span>┌───────────────┐</span></span>
+<span class="line"><span>│  Retrieval     │ ← Hybrid search (dense + sparse), metadata filters</span></span>
+<span class="line"><span>│  (Recall)      │    Retrieve 50-200 candidates</span></span>
+<span class="line"><span>└───────┬───────┘</span></span>
+<span class="line"><span>        │</span></span>
+<span class="line"><span>        ▼</span></span>
+<span class="line"><span>┌───────────────┐</span></span>
+<span class="line"><span>│  Reranking     │ ← Cross-encoder scores (query, chunk) pairs</span></span>
+<span class="line"><span>│  (Precision)   │    Select top 5-10</span></span>
+<span class="line"><span>└───────┬───────┘</span></span>
+<span class="line"><span>        │</span></span>
+<span class="line"><span>        ▼</span></span>
+<span class="line"><span>┌───────────────┐</span></span>
+<span class="line"><span>│  Context       │ ← Assemble prompt: system message + chunks + query</span></span>
+<span class="line"><span>│  Assembly      │    Apply "Lost in the Middle" ordering</span></span>
+<span class="line"><span>└───────┬───────┘</span></span>
+<span class="line"><span>        │</span></span>
+<span class="line"><span>        ▼</span></span>
+<span class="line"><span>┌───────────────┐</span></span>
+<span class="line"><span>│  LLM           │ ← Generate answer with citations</span></span>
+<span class="line"><span>│  Generation    │    Structured output: answer + [source_ids]</span></span>
+<span class="line"><span>└───────┬───────┘</span></span>
+<span class="line"><span>        │</span></span>
+<span class="line"><span>        ▼</span></span>
+<span class="line"><span>┌───────────────┐</span></span>
+<span class="line"><span>│  Post-Process  │ ← Verify citations? Check faithfulness? Filter?</span></span>
+<span class="line"><span>└───────┬───────┘</span></span>
+<span class="line"><span>        │</span></span>
+<span class="line"><span>        ▼</span></span>
+<span class="line"><span>    Response</span></span></code></pre>
+<h3 id="73-caching-strategy">7.3 Caching Strategy</h3>
+<p>RAG queries can be expensive: embedding + vector search + reranking + LLM generation. Caching at multiple levels:</p>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>What to Cache</th>
+<th>Key</th>
+<th>TTL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Query → Answer</strong></td>
+<td>Full response</td>
+<td>Normalized query</td>
+<td>Short (documents change)</td>
+</tr>
+<tr>
+<td><strong>Query → Chunks</strong></td>
+<td>Retrieved + reranked chunks</td>
+<td>Normalized query</td>
+<td>Short</td>
+</tr>
+<tr>
+<td><strong>Embedding</strong></td>
+<td>Query embedding</td>
+<td>Normalized query</td>
+<td>Medium (embedding model is stable)</td>
+</tr>
+<tr>
+<td><strong>Chunk → Embedding</strong></td>
+<td>Document chunk embedding</td>
+<td>chunk_hash</td>
+<td>Long (until document changes)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Cache invalidation:</strong> When a document is updated, invalidate all cache entries for queries that retrieved chunks from that document. This requires tracking which documents contributed to each cached query’s results — a non-trivial metadata problem.</p>
+<hr>
+<h2 id="8-failure-modes-and-diagnosis">8. Failure Modes and Diagnosis</h2>
+<h3 id="81-when-retrieval-returns-wrong-chunks">8.1 When Retrieval Returns Wrong Chunks</h3>
+<p><strong>Symptoms:</strong> Answers are plausible but factually wrong. Citations point to irrelevant documents.</p>
+<p><strong>Diagnosis:</strong></p>
+<ol>
+<li>Log (query, retrieved_chunks, final_answer) tuples</li>
+<li>Check: Are the top-K chunks actually relevant? If not → retrieval failure</li>
+<li>If chunks are relevant but answers wrong → generation failure</li>
+</ol>
+<p><strong>Root causes:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Likely Cause</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No relevant chunks in top-20</td>
+<td>Embedding model doesn’t capture domain semantics</td>
+<td>Fine-tune embeddings or add sparse/hybrid retrieval</td>
+</tr>
+<tr>
+<td>Relevant chunk at rank 35</td>
+<td>Vector search recall issue</td>
+<td>Increase k for retrieval, add query transformation</td>
+</tr>
+<tr>
+<td>Irrelevant chunks scored high</td>
+<td>Outdated chunks with high keyword overlap</td>
+<td>Add metadata freshness filtering</td>
+</tr>
+<tr>
+<td>Right document, wrong chunk</td>
+<td>Chunking splits answer across boundaries</td>
+<td>Increase chunk size or add context windows</td>
+</tr>
+</tbody>
+</table>
+<h3 id="82-when-the-llm-ignores-retrieved-context">8.2 When the LLM Ignores Retrieved Context</h3>
+<p><strong>Symptoms:</strong> Answers are generic, don’t reference retrieved chunks, fabricate details.</p>
+<p><strong>Causes:</strong></p>
+<ul>
+<li><strong>Context is too long:</strong> LLM loses track of middle chunks. Fix: reduce chunks to 3-5, place best last.</li>
+<li><strong>Contradictory chunks:</strong> Two retrieved chunks disagree. LLM picks one or fabricates a compromise. Fix: detect conflicts, ask clarifying question, or present both views.</li>
+<li><strong>Prompt engineering failure:</strong> The LLM isn’t instructed strongly enough to ONLY use provided context. Fix: “If the answer cannot be found in the provided context, say ‘I don’t have enough information.’ Do not use outside knowledge.”</li>
+</ul>
+<h3 id="83-when-reranking-amplifies-errors">8.3 When Reranking Amplifies Errors</h3>
+<p><strong>Scenario:</strong> Chunking produces poor-quality chunks (split mid-thought, missing context). Vector search returns mediocre candidates. Reranker scores them — and confidently ranks the “least bad” one highest. The LLM generates from a flawed chunk.</p>
+<p><strong>The fix:</strong> Measure chunk quality independently (completeness, coherence, standalone readability) and use it as a reranking feature, not just relevance. A perfectly relevant but incomplete chunk is worse than a slightly less relevant but self-contained chunk.</p>
+<hr>
+<h2 id="9-scaling-the-pipeline">9. Scaling the Pipeline</h2>
+<h3 id="91-ingestion-scale">9.1 Ingestion Scale</h3>
+<table>
+<thead>
+<tr>
+<th>Scale</th>
+<th>Challenge</th>
+<th>Solution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1M docs</strong></td>
+<td>Embedding throughput</td>
+<td>Batch embedding with rate limits; async workers</td>
+</tr>
+<tr>
+<td><strong>10M docs</strong></td>
+<td>Vector DB storage</td>
+<td>Quantization (PQ, SQ), dimension reduction (Matryoshka)</td>
+</tr>
+<tr>
+<td><strong>100M docs</strong></td>
+<td>Index build time</td>
+<td>Distributed index build (IVF partitions across shards)</td>
+</tr>
+<tr>
+<td><strong>1B docs</strong></td>
+<td>Cost</td>
+<td>Sparse-first retrieval → only embed top sparse results</td>
+</tr>
+</tbody>
+</table>
+<h3 id="92-query-scale">9.2 Query Scale</h3>
+<table>
+<thead>
+<tr>
+<th>Scale</th>
+<th>Challenge</th>
+<th>Solution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>10 QPS</strong></td>
+<td>Single instance fine</td>
+<td>Standard setup</td>
+</tr>
+<tr>
+<td><strong>100 QPS</strong></td>
+<td>Embedding API rate limits</td>
+<td>Pooled embedding cache; local embedding model for common queries</td>
+</tr>
+<tr>
+<td><strong>1000 QPS</strong></td>
+<td>Vector DB throughput</td>
+<td>Read replicas; approximate search with lower precision for non-critical queries</td>
+</tr>
+<tr>
+<td><strong>10K QPS</strong></td>
+<td>Cost of reranker × 10K queries</td>
+<td>Cached retrieval results; skip reranker for cached/simple queries</td>
+</tr>
+</tbody>
+</table>
+<h3 id="93-cost-breakdown">9.3 Cost Breakdown</h3>
+<p>For a typical enterprise RAG pipeline at 100 QPS:</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Cost Driver</th>
+<th>~% of Total</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>LLM Generation</strong></td>
+<td>Output tokens</td>
+<td>50-60%</td>
+</tr>
+<tr>
+<td><strong>Embedding (ingestion)</strong></td>
+<td>Initial corpus size</td>
+<td>15-20% (amortized)</td>
+</tr>
+<tr>
+<td><strong>Embedding (query)</strong></td>
+<td>Per-query embedding</td>
+<td>5-10%</td>
+</tr>
+<tr>
+<td><strong>Reranking</strong></td>
+<td>Per-query cross-encoder</td>
+<td>10-15%</td>
+</tr>
+<tr>
+<td><strong>Vector DB</strong></td>
+<td>Storage + compute</td>
+<td>10-15%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Staff-Engineer Insight:</strong> The LLM generation dominates cost, but the retrieval/reranking pipeline determines whether those expensive tokens produce correct or incorrect answers. Penny-pinching on retrieval quality to save 10% of pipeline cost can waste 50% of your LLM budget on hallucinated responses. Optimize the full system, not individual components.</p>
+<hr>
+<h2 id="10-interview-question--model-answer">10. Interview Question + Model Answer</h2>
+<blockquote>
+<p><strong>Question:</strong> “Design a RAG pipeline for a legal research platform with 2 million case law documents. Lawyers need to find relevant precedents and get cited summaries. The documents are long (50-100 pages each), highly domain-specific, and answers MUST be verifiable. Walk me through your architecture and highlight the three riskiest design decisions.”</p>
+</blockquote>
+<h3 id="model-answer">Model Answer</h3>
+<p><strong>Architecture Overview:</strong></p>
+<ol>
+<li>
+<p><strong>Ingestion:</strong> Document-aware chunking by section headers (Facts, Issue, Holding, Reasoning, Dissent). Each section becomes one chunk — this preserves legal argument structure. Store both chunks and parent document metadata (court, date, jurisdiction, citations).</p>
+</li>
+<li>
+<p><strong>Embedding:</strong> Fine-tune a legal-domain embedding model (fine-tune BGE-base on case law query-passage pairs). Use task-specific prefixes. Generate both dense and sparse (SPLADE) embeddings for hybrid retrieval.</p>
+</li>
+<li>
+<p><strong>Storage:</strong> Qdrant with metadata filtering by jurisdiction, date range, and court level. Hybrid search with RRF fusion.</p>
+</li>
+<li>
+<p><strong>Query Pipeline:</strong> Query decomposition — “Has California adopted the ‘reasonable expectation of privacy’ test for digital devices in the workplace?” → decompose into sub-questions, retrieve for each, merge. Cross-encoder reranker with legal-domain fine-tuning. 5 chunks max to avoid overwhelming context.</p>
+</li>
+<li>
+<p><strong>Generation:</strong> Structured output with mandatory citations. Post-generation verification: LLM checks each claim against the cited chunk. If mismatch, flag for human review.</p>
+</li>
+</ol>
+<p><strong>The Three Riskiest Decisions:</strong></p>
+<ol>
+<li>
+<p><strong>Chunking by section headers.</strong> Risk: Some judicial opinions have non-standard formatting or merge Reasoning and Holding into one narrative section. If the parser misses boundaries, a chunk might contain mixed content from different cases. Mitigation: Fallback to recursive character splitting for documents where section parsing confidence is low. Log all fallbacks and manually review a sample weekly.</p>
+</li>
+<li>
+<p><strong>Fine-tuning the embedding model.</strong> Risk: If the fine-tuning data has bias (over-represents certain courts or time periods), retrieval will be biased. A query about “digital privacy” might only return recent cases even if landmark older cases are more relevant. Mitigation: Stratified evaluation set covering all courts, decades, and legal domains. Monitor recall by jurisdiction monthly.</p>
+</li>
+<li>
+<p><strong>Limiting to 5 chunks.</strong> Risk: Complex legal questions genuinely require synthesizing 10+ precedents. With only 5 chunks, the LLM may miss a critical precedent. Mitigation: For queries flagged as complex (by a classifier), increase to 10 chunks. Also implement a “show more” follow-up that retrieves additional chunks on demand. Track the rate at which users request expansions — rising rates signal the limit is too aggressive.</p>
+</li>
+</ol>
+<h3 id="-common-pitfall">❗ Common Pitfall</h3>
+<p><strong>“We’ll just use cosine similarity on the user’s query — it works fine out of the box.”</strong></p>
+<p>This is the #1 mistake in RAG systems. Raw cosine similarity on off-the-shelf embeddings produces superficially plausible results that fail under scrutiny. For a legal platform:</p>
+<ul>
+<li>“assault” and “battery” are legally distinct but semantically similar → dense embeddings conflate them</li>
+<li>Case citation “347 U.S. 483” has zero semantic overlap with “Brown v. Board of Education” → dense embeddings miss this</li>
+<li>A query about “attractive nuisance doctrine” might retrieve general negligence cases → no keyword overlap signal</li>
+</ul>
+<p>Without hybrid search (dense + sparse) and domain-specific tuning, retrieval precision for legal text drops below 60%. Given the cost of a wrong legal citation (malpractice), you cannot deploy without these safeguards.</p>
+<hr>
+<h2 id="11-key-takeaways">11. Key Takeaways</h2>
+<ol>
+<li>
+<p><strong>RAG quality flows upstream.</strong> The best LLM prompt in the world can’t compensate for bad chunking. If your chunks don’t preserve semantic completeness, every downstream stage inherits the degradation.</p>
+</li>
+<li>
+<p><strong>Chunking is a design problem, not a constant.</strong> Fixed-size 512-token chunks with 50-token overlap is the “hello world” of RAG. Production systems need document-aware chunking that respects the document’s intrinsic structure. A legal document and a product manual need different chunking strategies.</p>
+</li>
+<li>
+<p><strong>Hybrid search is table stakes.</strong> Dense embeddings for semantic similarity + sparse (BM25/SPLADE) for exact matching. Either alone is insufficient. The fusion mechanism (RRF is simplest and works) is a detail — the decision to combine both signals is the architecture.</p>
+</li>
+<li>
+<p><strong>Reranking is a precision multiplier, not a recall fix.</strong> A reranker can only select among the candidates retrieval provides. If retrieval misses the right chunk entirely (recall failure), reranking is powerless. Measure recall@K BEFORE measuring reranker precision.</p>
+</li>
+<li>
+<p><strong>Query transformation is free recall.</strong> Rewriting the user’s conversational query into a retrieval-optimized form, generating HyDE embeddings, or decomposing multi-hop questions can recover 10-30% of missed documents with no pipeline changes. This is the highest-ROI optimization in most RAG systems.</p>
+</li>
+<li>
+<p><strong>Evaluation is the hardest part.</strong> You don’t have ground truth for your proprietary corpus. Build a synthetic eval set with LLM-generated questions, maintain a golden set of 200-500 hand-labeled queries, and NEVER deploy a change without running both. If your eval set doesn’t catch a regression, improve the eval set — it’s your only safety net.</p>
+</li>
+<li>
+<p><strong>The chunking-reranker coupling is a silent killer.</strong> A high-precision reranker selecting the “best” chunk from a set of poorly-chunked candidates produces confident-looking but incomplete context. The LLM then hallucinates to fill gaps. The fix is NOT to lower reranker precision — it’s to fix chunking so each chunk is self-contained enough to support an answer on its own.</p>
+</li>
+<li>
+<p><strong>Staff-level reframe:</strong> Don’t ask “What’s the best chunking strategy?” Ask: “<strong>What does a ‘correct answer’ mean for this use case? What information does a chunk need to contain to fully support that answer? And how do we verify, at scale and over time, that our retrieval pipeline is returning those chunks?</strong>” The chunking strategy, embedding model, and retrieval approach all follow from the answer to those questions.</p>
+</li>
+</ol>
+<hr>
+<h2 id="related">Related</h2>
+<ul>
+<li>[[topic-queue]]</li>
+<li>[[Vector Database Internals (HNSW, IVF, Sharding)]]</li>
+<li>[[LLM Serving at Scale (vLLM, Quantization, Batching, KV cache)]]</li>
+<li>[[Fine-Tuning Infrastructure (LoRA, QLoRA, Distributed Training)]]</li>
+<li>[[Multi-Agent Orchestration (Planning, Tool Use, Memory, Routing)]]</li>
+<li>[[Search Engine (Elasticsearch)]]</li>
+</ul>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>RAG = retrieve relevant documents from a knowledge base, then feed them as context to an LLM to ground its response</li>
+<li>Pipeline stages: chunk documents → embed chunks → store in vector DB → retrieve top-k → (optional) rerank → generate with LLM</li>
+<li>Chunking strategy has outsized impact: too small = lost context, too large = diluted relevance. 256-512 tokens is a common range</li>
+<li>Hybrid search (keyword + vector) outperforms either alone — vector search captures semantics, keyword search catches exact matches</li>
+<li>Reranking with a cross-encoder improves precision but adds 50-100ms latency — use it as a second stage on top-k candidates</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you evaluate RAG quality?” — Use RAGAS or similar: measure faithfulness (answer grounded in retrieved docs), answer relevance, and context precision/recall.</li>
+<li>“What happens when documents change?” — Re-embed and re-index the changed documents. For real-time updates, use an incremental indexing pipeline. Detect staleness via document hash comparison.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Adding more retrieved documents does NOT always improve quality. Past 5-10 chunks, the LLM suffers from “lost in the middle” — it pays more attention to the beginning and end of the context window, ignoring documents in the middle. Fewer, more relevant chunks often outperform many chunks.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/rag-pipeline-chunking-embeddings-retrieval-reranking/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=RAG%20Pipeline%20(Chunking%2C%20Embeddings%2C%20Retrieval%2C%20Reranking)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Frag-pipeline-chunking-embeddings-retrieval-reranking%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Frag-pipeline-chunking-embeddings-retrieval-reranking%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/rag-pipeline-chunking-embeddings-retrieval-reranking" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/privacy-and-compliance-systems" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Privacy &amp; Compliance Systems (PII, GDPR, Audit, Data Residency)</span></a><a href="/notes/system-design/rate-limiter" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Rate Limiter</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="RAG Pipeline (Chunking, Embeddings, Retrieval, Reranking)" data-selector=".article-prose" data-article-slug="system-design/rag-pipeline-chunking-embeddings-retrieval-reranking" data-article-title="RAG Pipeline (Chunking, Embeddings, Retrieval, Reranking)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

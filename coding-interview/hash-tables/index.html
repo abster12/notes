@@ -1,0 +1,903 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Hash Tables — Interview Prep Guide · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link active" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-hashmap-and-hashset-basics" class="toc-link" data-toc-link="1-hashmap-and-hashset-basics" data-astro-cid-p33bl5ka>1. HashMap and HashSet Basics</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-frequency-maps" class="toc-link" data-toc-link="2-frequency-maps" data-astro-cid-p33bl5ka>2. Frequency Maps</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leetcode-347--top-k-frequent-elements" class="toc-link" data-toc-link="leetcode-347--top-k-frequent-elements" data-astro-cid-p33bl5ka>LeetCode 347 — Top K Frequent Elements</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leetcode-387--first-unique-character-in-a-string" class="toc-link" data-toc-link="leetcode-387--first-unique-character-in-a-string" data-astro-cid-p33bl5ka>LeetCode 387 — First Unique Character in a String</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-the-two-sum-complement-lookup-pattern" class="toc-link" data-toc-link="3-the-two-sum-complement-lookup-pattern" data-astro-cid-p33bl5ka>3. The Two-Sum Complement Lookup Pattern</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leetcode-1--two-sum" class="toc-link" data-toc-link="leetcode-1--two-sum" data-astro-cid-p33bl5ka>LeetCode 1 — Two Sum</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leetcode-454--4sum-ii" class="toc-link" data-toc-link="leetcode-454--4sum-ii" data-astro-cid-p33bl5ka>LeetCode 454 — 4Sum II</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#4-grouping-by-computed-key-anagram-grouping" class="toc-link" data-toc-link="4-grouping-by-computed-key-anagram-grouping" data-astro-cid-p33bl5ka>4. Grouping by Computed Key (Anagram Grouping)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leetcode-49--group-anagrams" class="toc-link" data-toc-link="leetcode-49--group-anagrams" data-astro-cid-p33bl5ka>LeetCode 49 — Group Anagrams</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leetcode-128--longest-consecutive-sequence" class="toc-link" data-toc-link="leetcode-128--longest-consecutive-sequence" data-astro-cid-p33bl5ka>LeetCode 128 — Longest Consecutive Sequence</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#5-prefix-sum-plus-hash-map--o1-subarray-queries" class="toc-link" data-toc-link="5-prefix-sum-plus-hash-map--o1-subarray-queries" data-astro-cid-p33bl5ka>5. Prefix Sum Plus Hash Map — O(1) Subarray Queries</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leetcode-560--subarray-sum-equals-k" class="toc-link" data-toc-link="leetcode-560--subarray-sum-equals-k" data-astro-cid-p33bl5ka>LeetCode 560 — Subarray Sum Equals K</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leetcode-525--contiguous-array" class="toc-link" data-toc-link="leetcode-525--contiguous-array" data-astro-cid-p33bl5ka>LeetCode 525 — Contiguous Array</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leetcode-523--continuous-subarray-sum" class="toc-link" data-toc-link="leetcode-523--continuous-subarray-sum" data-astro-cid-p33bl5ka>LeetCode 523 — Continuous Subarray Sum</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#6-sliding-window-with-hash-map" class="toc-link" data-toc-link="6-sliding-window-with-hash-map" data-astro-cid-p33bl5ka>6. Sliding Window with Hash Map</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leetcode-3--longest-substring-without-repeating-characters" class="toc-link" data-toc-link="leetcode-3--longest-substring-without-repeating-characters" data-astro-cid-p33bl5ka>LeetCode 3 — Longest Substring Without Repeating Characters</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leetcode-76--minimum-window-substring" class="toc-link" data-toc-link="leetcode-76--minimum-window-substring" data-astro-cid-p33bl5ka>LeetCode 76 — Minimum Window Substring</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leetcode-438--find-all-anagrams-in-a-string" class="toc-link" data-toc-link="leetcode-438--find-all-anagrams-in-a-string" data-astro-cid-p33bl5ka>LeetCode 438 — Find All Anagrams in a String</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#7-hash-map-for-caching-and-memoization" class="toc-link" data-toc-link="7-hash-map-for-caching-and-memoization" data-astro-cid-p33bl5ka>7. Hash Map for Caching and Memoization</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leetcode-198--house-robber-memoized" class="toc-link" data-toc-link="leetcode-198--house-robber-memoized" data-astro-cid-p33bl5ka>LeetCode 198 — House Robber (memoized)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#9-ordered-hash-map--treemap-for-range-queries" class="toc-link" data-toc-link="9-ordered-hash-map--treemap-for-range-queries" data-astro-cid-p33bl5ka>9. Ordered Hash Map — TreeMap for Range Queries</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leetcode-220--contains-duplicate-iii" class="toc-link" data-toc-link="leetcode-220--contains-duplicate-iii" data-astro-cid-p33bl5ka>LeetCode 220 — Contains Duplicate III</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leetcode-846--hand-of-straights" class="toc-link" data-toc-link="leetcode-846--hand-of-straights" data-astro-cid-p33bl5ka>LeetCode 846 — Hand of Straights</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#10-counting-sort-with-a-hash-map" class="toc-link" data-toc-link="10-counting-sort-with-a-hash-map" data-astro-cid-p33bl5ka>10. Counting Sort with a Hash Map</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leetcode-274--h-index" class="toc-link" data-toc-link="leetcode-274--h-index" data-astro-cid-p33bl5ka>LeetCode 274 — H-Index</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leetcode-133--clone-graph" class="toc-link" data-toc-link="leetcode-133--clone-graph" data-astro-cid-p33bl5ka>LeetCode 133 — Clone Graph</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leetcode-207--course-schedule" class="toc-link" data-toc-link="leetcode-207--course-schedule" data-astro-cid-p33bl5ka>LeetCode 207 — Course Schedule</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#pattern-recognition-table" class="toc-link" data-toc-link="pattern-recognition-table" data-astro-cid-p33bl5ka>Pattern Recognition Table</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#quick-reference--when-to-reach-for-each-pattern" class="toc-link" data-toc-link="quick-reference--when-to-reach-for-each-pattern" data-astro-cid-p33bl5ka>Quick Reference — When to Reach for Each Pattern</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/coding-interview/" class="article-category" data-astro-cid-sgg5joot>Coding Interview</a><h1 class="article-title" data-astro-cid-sgg5joot>Hash Tables — Interview Prep Guide</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-medium to hard" data-astro-cid-sgg5joot>Medium to Hard</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 18 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 25 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>hash-table</span><span class="tag" data-astro-cid-sgg5joot>hash-map</span><span class="tag" data-astro-cid-sgg5joot>hash-set</span><span class="tag" data-astro-cid-sgg5joot>frequency-map</span><span class="tag" data-astro-cid-sgg5joot>two-sum</span><span class="tag" data-astro-cid-sgg5joot>prefix-sum</span><span class="tag" data-astro-cid-sgg5joot>sliding-window</span><span class="tag" data-astro-cid-sgg5joot>anagram</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="hash-tables--the-complete-interview-prep-guide">Hash Tables — The Complete Interview Prep Guide</h1>
+<p>Hash tables are the most important data structure for coding interviews. Their O(1) average insert, lookup, and delete collapses O(n²) brute-force solutions into O(n) single passes. This guide covers every major pattern — frequency maps, two-sum complement lookup, grouping by computed key, prefix-sum plus hash map, sliding window with hash map, memoization, custom HashMap design, TreeMap for range queries, counting sort, and graph adjacency — with Java templates and full solutions to classic LeetCode problems.</p>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A data structure providing O(1) average insert/lookup/delete by mapping keys to array indices via a hash function, resolving collisions via chaining or open addressing.</p>
+<p><strong>How it’s asked:</strong> “Two sum, group anagrams, longest substring without repeating characters, top K frequent elements — any problem requiring O(1) lookup, counting, grouping, or deduplication.”</p>
+<hr>
+<h2 id="1-hashmap-and-hashset-basics">1. HashMap and HashSet Basics</h2>
+<p>A HashMap stores key-value pairs with average O(1) operations. A HashSet stores unique elements — it is a HashMap where every key maps to a sentinel. The O(1) comes from hashing the key, taking it modulo the bucket count, and storing in that bucket. Java 8+ uses a balanced-tree fallback for buckets over 8 entries, giving O(log n) worst case.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Key → hashCode() → mod N → bucket index</span></span>
+<span class="line"><span>Bucket 0:  [K10:V10] → [K25:V25]</span></span>
+<span class="line"><span>Bucket 1:  [K11:V11]</span></span>
+<span class="line"><span>Bucket 2:  [K02:V02] → [K17:V17]</span></span>
+<span class="line"><span>Bucket 3:  (empty)</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#6A737D">// Template: HashMap / HashSet core operations</span></span>
+<span class="line"><span style="color:#E1E4E8">Map&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> map </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">map.</span><span style="color:#B392F0">put</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"apple"</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">map.</span><span style="color:#B392F0">getOrDefault</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"banana"</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">);   </span><span style="color:#6A737D">// → 0 (absent key returns default)</span></span>
+<span class="line"><span style="color:#E1E4E8">map.</span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"key"</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, Integer</span><span style="color:#F97583">::</span><span style="color:#E1E4E8">sum); </span><span style="color:#6A737D">// insert-or-accumulate (frequency idiom)</span></span>
+<span class="line"><span style="color:#E1E4E8">map.</span><span style="color:#B392F0">computeIfAbsent</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"k"</span><span style="color:#E1E4E8">, k </span><span style="color:#F97583">-></span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>()).</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(x); </span><span style="color:#6A737D">// lazy list creation</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">Set&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> set </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashSet&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">set.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">); set.</span><span style="color:#B392F0">contains</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">); </span><span style="color:#6A737D">// O(1) membership check</span></span></code></pre>
+<p><code>getOrDefault</code> and <code>merge</code> are the two idioms you will use most — <code>getOrDefault</code> for frequency maps, <code>merge</code> for insert-or-accumulate. <code>computeIfAbsent</code> is the idiom for grouping (creates a list lazily, then returns it for <code>.add()</code>).</p>
+<hr>
+<h2 id="2-frequency-maps">2. Frequency Maps</h2>
+<p>Iterate over a collection, count occurrences in a HashMap, then query the map. Turns “how many times does X appear” into O(n).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#6A737D">// Template: Frequency Map</span></span>
+<span class="line"><span style="color:#E1E4E8">Map&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> freq </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> nums) freq.</span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(n, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, Integer</span><span style="color:#F97583">::</span><span style="color:#E1E4E8">sum);</span></span></code></pre>
+<h3 id="leetcode-347--top-k-frequent-elements">LeetCode 347 — Top K Frequent Elements</h3>
+<p>Return the <code>k</code> most frequent elements. Combine a frequency map with bucket sort: place each element in a bucket indexed by its frequency, then collect from the top down. O(n).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#6A737D">// Time: O(n)  |  Space: O(n)</span></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[] </span><span style="color:#B392F0">topKFrequent</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> k</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Map&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> freq </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> nums) freq.</span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(n, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, Integer</span><span style="color:#F97583">::</span><span style="color:#E1E4E8">sum);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>[] bucket </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> List</span><span style="color:#E1E4E8">[nums.length </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> key </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> freq.</span><span style="color:#B392F0">keySet</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> freq.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(key);</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (bucket[c] </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">) bucket[c] </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">            bucket[c].</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(key);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[] res </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[k];</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> idx </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> bucket.length </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">>=</span><span style="color:#79B8FF"> 0</span><span style="color:#F97583"> &#x26;&#x26;</span><span style="color:#E1E4E8"> idx </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> k; i</span><span style="color:#F97583">--</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (bucket[i] </span><span style="color:#F97583">!=</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">                for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> e </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> bucket[i]) </span><span style="color:#F97583">if</span><span style="color:#E1E4E8"> (idx </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> k) res[idx</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> e;</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> res;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="leetcode-387--first-unique-character-in-a-string">LeetCode 387 — First Unique Character in a String</h3>
+<p>Find the first non-repeating character’s index. Build a frequency map, then scan for the first character with count 1.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> firstUniqChar</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Map&#x3C;</span><span style="color:#F97583">Character</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> freq </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">toCharArray</span><span style="color:#E1E4E8">()) freq.</span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(c, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, Integer</span><span style="color:#F97583">::</span><span style="color:#E1E4E8">sum);</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">(); i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (freq.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(s.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(i)) </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#E1E4E8"> i;</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#F97583"> -</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<hr>
+<h2 id="3-the-two-sum-complement-lookup-pattern">3. The Two-Sum Complement Lookup Pattern</h2>
+<p>For each element <code>x</code>, check whether <code>target - x</code> (the complement) already exists in a map of seen elements — an O(1) lookup replacing the O(n) inner scan. Generalises to any pair-satisfies-relation problem.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#6A737D">// Template: Two-Sum Complement Lookup (one pass)</span></span>
+<span class="line"><span style="color:#E1E4E8">Map&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> seen </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> nums.length; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">    int</span><span style="color:#E1E4E8"> complement </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> target </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> nums[i];</span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> (seen.</span><span style="color:#B392F0">containsKey</span><span style="color:#E1E4E8">(complement)) </span><span style="color:#F97583">return</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{seen.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(complement), i};</span></span>
+<span class="line"><span style="color:#E1E4E8">    seen.</span><span style="color:#B392F0">put</span><span style="color:#E1E4E8">(nums[i], i);</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="leetcode-1--two-sum">LeetCode 1 — Two Sum</h3>
+<p>Return indices of two numbers summing to <code>target</code>. Store each value and its index; for each element, check if its complement was seen. Insert after checking to avoid using the same element twice.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[] </span><span style="color:#B392F0">twoSum</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> target</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Map&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> map </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> nums.length; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> comp </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> target </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> nums[i];</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (map.</span><span style="color:#B392F0">containsKey</span><span style="color:#E1E4E8">(comp)) </span><span style="color:#F97583">return</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{map.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(comp), i};</span></span>
+<span class="line"><span style="color:#E1E4E8">            map.</span><span style="color:#B392F0">put</span><span style="color:#E1E4E8">(nums[i], i);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        throw</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> IllegalArgumentException</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"No solution"</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="leetcode-454--4sum-ii">LeetCode 454 — 4Sum II</h3>
+<p>Count tuples <code>(i,j,k,l)</code> across four arrays with <code>A[i]+B[j]+C[k]+D[l]==0</code>. Precompute all <code>A+B</code> sums into a frequency map, then for each <code>C+D</code> pair look up the negation. O(n²).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> fourSumCount</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">A</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">B</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">C</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">D</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Map&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> ab </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> a </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> A) </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> b </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> B) ab.</span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(a </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> b, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, Integer</span><span style="color:#F97583">::</span><span style="color:#E1E4E8">sum);</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> count </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> C) </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> d </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> D) count </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> ab.</span><span style="color:#B392F0">getOrDefault</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">(c </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> d), </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> count;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<hr>
+<h2 id="4-grouping-by-computed-key-anagram-grouping">4. Grouping by Computed Key (Anagram Grouping)</h2>
+<p>Use a HashMap where the key is a computed signature and the value is a list of elements sharing it. For anagrams, the signature is the sorted string (O(k log k)) or a character-count tuple (O(k)).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#6A737D">// Template: Group by computed key</span></span>
+<span class="line"><span style="color:#E1E4E8">Map&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">, List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">>> groups </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> (String s </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> strs) {</span></span>
+<span class="line"><span style="color:#E1E4E8">    String key </span><span style="color:#F97583">=</span><span style="color:#B392F0"> computeSignature</span><span style="color:#E1E4E8">(s); </span><span style="color:#6A737D">// sorted chars or count tuple</span></span>
+<span class="line"><span style="color:#E1E4E8">    groups.</span><span style="color:#B392F0">computeIfAbsent</span><span style="color:#E1E4E8">(key, k </span><span style="color:#F97583">-></span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>()).</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(s);</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="leetcode-49--group-anagrams">LeetCode 49 — Group Anagrams</h3>
+<p>Group strings so anagrams are together. Sort each string’s characters as the key; all anagrams produce the same sorted string.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#6A737D">// Time: O(n·k log k)  |  Space: O(n·k)</span></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> List&#x3C;List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">>> </span><span style="color:#B392F0">groupAnagrams</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">strs</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Map&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">, List&#x3C;</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">>> map </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (String s </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> strs) {</span></span>
+<span class="line"><span style="color:#F97583">            char</span><span style="color:#E1E4E8">[] c </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">toCharArray</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">            Arrays.</span><span style="color:#B392F0">sort</span><span style="color:#E1E4E8">(c);</span></span>
+<span class="line"><span style="color:#E1E4E8">            map.</span><span style="color:#B392F0">computeIfAbsent</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#B392F0"> String</span><span style="color:#E1E4E8">(c), k </span><span style="color:#F97583">-></span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>()).</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(s);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(map.</span><span style="color:#B392F0">values</span><span style="color:#E1E4E8">());</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>O(n·k) variant using character-count keys:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#6A737D">// O(n·k) — count tuple key, '#' delimiter prevents collisions</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> (String s </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> strs) {</span></span>
+<span class="line"><span style="color:#F97583">    int</span><span style="color:#E1E4E8">[] cnt </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[</span><span style="color:#79B8FF">26</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#F97583">    for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">toCharArray</span><span style="color:#E1E4E8">()) cnt[c </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'a'</span><span style="color:#E1E4E8">]</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    StringBuilder key </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> StringBuilder</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">    for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> cnt) key.</span><span style="color:#B392F0">append</span><span style="color:#E1E4E8">(i).</span><span style="color:#B392F0">append</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'#'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">    map.</span><span style="color:#B392F0">computeIfAbsent</span><span style="color:#E1E4E8">(key.</span><span style="color:#B392F0">toString</span><span style="color:#E1E4E8">(), k </span><span style="color:#F97583">-></span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>()).</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(s);</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="leetcode-128--longest-consecutive-sequence">LeetCode 128 — Longest Consecutive Sequence</h3>
+<p>Find the longest consecutive elements sequence in O(n). Put all numbers in a HashSet. A sequence can only start where <code>n-1</code> is absent; from each start, count upward. Each number is visited at most twice.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> longestConsecutive</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Set&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> set </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashSet&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> nums) set.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(n);</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> longest </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> set) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">set.</span><span style="color:#B392F0">contains</span><span style="color:#E1E4E8">(n </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">)) {  </span><span style="color:#6A737D">// only start at sequence beginnings</span></span>
+<span class="line"><span style="color:#F97583">                int</span><span style="color:#E1E4E8"> cur </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> n, streak </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">                while</span><span style="color:#E1E4E8"> (set.</span><span style="color:#B392F0">contains</span><span style="color:#E1E4E8">(cur </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">)) { cur</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">; streak</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">; }</span></span>
+<span class="line"><span style="color:#E1E4E8">                longest </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(longest, streak);</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> longest;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<hr>
+<h2 id="5-prefix-sum-plus-hash-map--o1-subarray-queries">5. Prefix Sum Plus Hash Map — O(1) Subarray Queries</h2>
+<p>When counting or measuring subarrays whose sum equals a target, maintain a running prefix sum. For current sum <code>P</code>, any earlier prefix sum <code>P'</code> where <code>P - P' = target</code> starts a valid subarray. Store prefix sums in a map and look up <code>P - target</code>. Seed with <code>{0: 1}</code> to catch subarrays starting at index 0.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Array: [1, 1, 1], target=2    Prefix: 0, 1, 2, 3</span></span>
+<span class="line"><span>At i=1: P=2, need 2-2=0, found 1 → subarray [1,1]</span></span>
+<span class="line"><span>At i=2: P=3, need 3-2=1, found 1 → subarray [1,1]  Total=2</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#6A737D">// Template: count subarrays with sum K</span></span>
+<span class="line"><span style="color:#E1E4E8">Map&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> prefixCount </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">prefixCount.</span><span style="color:#B392F0">put</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">);  </span><span style="color:#6A737D">// seed</span></span>
+<span class="line"><span style="color:#F97583">int</span><span style="color:#E1E4E8"> sum </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, count </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> nums) {</span></span>
+<span class="line"><span style="color:#E1E4E8">    sum </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> n;</span></span>
+<span class="line"><span style="color:#E1E4E8">    count </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> prefixCount.</span><span style="color:#B392F0">getOrDefault</span><span style="color:#E1E4E8">(sum </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> k, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">    prefixCount.</span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(sum, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, Integer</span><span style="color:#F97583">::</span><span style="color:#E1E4E8">sum);</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="leetcode-560--subarray-sum-equals-k">LeetCode 560 — Subarray Sum Equals K</h3>
+<p>Count contiguous subarrays summing to <code>k</code>. At each step, valid subarrays ending here equal the count of earlier prefix sums equal to <code>sum - k</code>.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> subarraySum</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> k</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Map&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> pc </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">        pc.</span><span style="color:#B392F0">put</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">);  </span><span style="color:#6A737D">// seed: prefix 0 before array starts</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> sum </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, count </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> num </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> nums) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            sum </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> num;</span></span>
+<span class="line"><span style="color:#E1E4E8">            count </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> pc.</span><span style="color:#B392F0">getOrDefault</span><span style="color:#E1E4E8">(sum </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> k, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">            pc.</span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(sum, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, Integer</span><span style="color:#F97583">::</span><span style="color:#E1E4E8">sum);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> count;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>The seed <code>pc.put(0, 1)</code> is the detail most candidates miss — without it, subarrays starting at index 0 with sum exactly <code>k</code> are lost.</p>
+<h3 id="leetcode-525--contiguous-array">LeetCode 525 — Contiguous Array</h3>
+<p>Find the max-length subarray with equal 0s and 1s. Treat 0 as -1; the problem becomes “longest subarray with sum 0.” Store the first occurrence of each prefix sum; when a sum reappears, the subarray between has sum 0.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> findMaxLength</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Map&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> firstIdx </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">        firstIdx.</span><span style="color:#B392F0">put</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> sum </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, max </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> nums.length; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            sum </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> (nums[i] </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">?</span><span style="color:#F97583"> -</span><span style="color:#79B8FF">1</span><span style="color:#F97583"> :</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (firstIdx.</span><span style="color:#B392F0">containsKey</span><span style="color:#E1E4E8">(sum)) max </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(max, i </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> firstIdx.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(sum));</span></span>
+<span class="line"><span style="color:#F97583">            else</span><span style="color:#E1E4E8"> firstIdx.</span><span style="color:#B392F0">put</span><span style="color:#E1E4E8">(sum, i);  </span><span style="color:#6A737D">// store first occurrence only</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> max;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>Contrast with 560: there we want count (store frequencies); here we want length (store first indices). Same pattern, different aggregation.</p>
+<h3 id="leetcode-523--continuous-subarray-sum">LeetCode 523 — Continuous Subarray Sum</h3>
+<p>Check for a subarray of size ≥ 2 with sum divisible by <code>k</code>. Store prefix sums mod k; if the same remainder appears at indices ≥ 2 apart, the subarray between is divisible by k.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> checkSubarraySum</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> k</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Map&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> remIdx </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">        remIdx.</span><span style="color:#B392F0">put</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> sum </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> nums.length; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            sum </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> nums[i];</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> rem </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> sum </span><span style="color:#F97583">%</span><span style="color:#E1E4E8"> k;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (rem </span><span style="color:#F97583">&#x3C;</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) rem </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> k;  </span><span style="color:#6A737D">// Java % can be negative</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (remIdx.</span><span style="color:#B392F0">containsKey</span><span style="color:#E1E4E8">(rem)) {</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> remIdx.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(rem) </span><span style="color:#F97583">>=</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> remIdx.</span><span style="color:#B392F0">put</span><span style="color:#E1E4E8">(rem, i);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<hr>
+<h2 id="6-sliding-window-with-hash-map">6. Sliding Window with Hash Map</h2>
+<p>Maintain a window <code>[left, right]</code> that expands and contracts. When the constraint involves frequencies or membership, a hash map tracks window contents with O(1) updates as elements enter and leave.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  [  a  b  c  a  b  c  b  b  ]</span></span>
+<span class="line"><span>     L           R</span></span>
+<span class="line"><span>  Expand R → add to map → check constraint</span></span>
+<span class="line"><span>  If violated → shrink L → remove from map</span></span></code></pre>
+<h3 id="leetcode-3--longest-substring-without-repeating-characters">LeetCode 3 — Longest Substring Without Repeating Characters</h3>
+<p>Store each character’s most recent index. As <code>right</code> advances, if the current char is in the map at index ≥ <code>left</code>, it is a duplicate — jump <code>left</code> past it.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> lengthOfLongestSubstring</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Map&#x3C;</span><span style="color:#F97583">Character</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> last </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> left </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, max </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> right </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; right </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">(); right</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(right);</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (last.</span><span style="color:#B392F0">containsKey</span><span style="color:#E1E4E8">(c) </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> last.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(c) </span><span style="color:#F97583">>=</span><span style="color:#E1E4E8"> left)</span></span>
+<span class="line"><span style="color:#E1E4E8">                left </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> last.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(c) </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;  </span><span style="color:#6A737D">// jump past duplicate</span></span>
+<span class="line"><span style="color:#E1E4E8">            last.</span><span style="color:#B392F0">put</span><span style="color:#E1E4E8">(c, right);</span></span>
+<span class="line"><span style="color:#E1E4E8">            max </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(max, right </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> left </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> max;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>The <code>last.get(c) &gt;= left</code> check ignores stale entries from before the current window. Without it, you get false duplicate detections — the most common bug in this problem.</p>
+<h3 id="leetcode-76--minimum-window-substring">LeetCode 76 — Minimum Window Substring</h3>
+<p>Find the minimum substring of <code>s</code> containing every character of <code>t</code>. Use two frequency maps: <code>need</code> (required) and <code>window</code> (current). A <code>formed</code> counter tracks how many unique chars have met their quota. When <code>formed == need.size()</code>, shrink from the left.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#6A737D">// Time: O(|s|+|t|)  |  Space: O(|s|+|t|)</span></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> String </span><span style="color:#B392F0">minWindow</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">, String </span><span style="color:#FFAB70">t</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> t.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">()) </span><span style="color:#F97583">return</span><span style="color:#9ECBFF"> ""</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        Map&#x3C;</span><span style="color:#F97583">Character</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> need </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> t.</span><span style="color:#B392F0">toCharArray</span><span style="color:#E1E4E8">()) need.</span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(c, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, Integer</span><span style="color:#F97583">::</span><span style="color:#E1E4E8">sum);</span></span>
+<span class="line"><span style="color:#E1E4E8">        Map&#x3C;</span><span style="color:#F97583">Character</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> win </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> left </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, formed </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, required </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> need.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> minLen </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Integer.MAX_VALUE, minStart </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> right </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; right </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">(); right</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(right);</span></span>
+<span class="line"><span style="color:#E1E4E8">            win.</span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(c, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, Integer</span><span style="color:#F97583">::</span><span style="color:#E1E4E8">sum);</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (need.</span><span style="color:#B392F0">containsKey</span><span style="color:#E1E4E8">(c) </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> win.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(c).</span><span style="color:#B392F0">intValue</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> need.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(c).</span><span style="color:#B392F0">intValue</span><span style="color:#E1E4E8">())</span></span>
+<span class="line"><span style="color:#E1E4E8">                formed</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            while</span><span style="color:#E1E4E8"> (left </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> right </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> formed </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> required) {</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (right </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> left </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#F97583"> &#x3C;</span><span style="color:#E1E4E8"> minLen) { minLen </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> right </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> left </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">; minStart </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> left; }</span></span>
+<span class="line"><span style="color:#F97583">                char</span><span style="color:#E1E4E8"> d </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(left);</span></span>
+<span class="line"><span style="color:#E1E4E8">                win.</span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(d, </span><span style="color:#F97583">-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, Integer</span><span style="color:#F97583">::</span><span style="color:#E1E4E8">sum);</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (need.</span><span style="color:#B392F0">containsKey</span><span style="color:#E1E4E8">(d) </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> win.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(d) </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> need.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(d)) formed</span><span style="color:#F97583">--</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">                left</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> minLen </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> Integer.MAX_VALUE </span><span style="color:#F97583">?</span><span style="color:#9ECBFF"> ""</span><span style="color:#F97583"> :</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">substring</span><span style="color:#E1E4E8">(minStart, minStart </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> minLen);</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>The <code>.intValue()</code> comparison avoids the Integer-cache trap (boxed <code>==</code> fails above 127). The <code>formed</code> counter tracks unique chars meeting their quota, not total chars, making validity checks O(1).</p>
+<h3 id="leetcode-438--find-all-anagrams-in-a-string">LeetCode 438 — Find All Anagrams in a String</h3>
+<p>Find all start indices of <code>p</code>’s anagrams in <code>s</code>. Fixed-size window of <code>p.length()</code>; maintain a frequency array and compare against <code>p</code>’s counts at each position.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> </span><span style="color:#B392F0">findAnagrams</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">, String </span><span style="color:#FFAB70">p</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> res </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> p.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">()) </span><span style="color:#F97583">return</span><span style="color:#E1E4E8"> res;</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[] pc </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[</span><span style="color:#79B8FF">26</span><span style="color:#E1E4E8">], sc </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[</span><span style="color:#79B8FF">26</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> p.</span><span style="color:#B392F0">toCharArray</span><span style="color:#E1E4E8">()) pc[c </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'a'</span><span style="color:#E1E4E8">]</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> w </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> p.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">(); i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            sc[s.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(i) </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'a'</span><span style="color:#E1E4E8">]</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">>=</span><span style="color:#E1E4E8"> w) sc[s.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(i </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> w) </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> 'a'</span><span style="color:#E1E4E8">]</span><span style="color:#F97583">--</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">>=</span><span style="color:#E1E4E8"> w </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#F97583"> &#x26;&#x26;</span><span style="color:#E1E4E8"> Arrays.</span><span style="color:#B392F0">equals</span><span style="color:#E1E4E8">(sc, pc)) res.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(i </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> w </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> res;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<hr>
+<h2 id="7-hash-map-for-caching-and-memoization">7. Hash Map for Caching and Memoization</h2>
+<p>Store results of expensive function calls; return the cached result when the same inputs recur. In recursive problems with overlapping subproblems, a HashMap keyed by subproblem identity turns exponential recursion into polynomial time.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#6A737D">// Template: Memoization</span></span>
+<span class="line"><span style="color:#E1E4E8">Map&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> memo </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> solve</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> n) {</span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> (</span><span style="color:#B392F0">isBase</span><span style="color:#E1E4E8">(n)) </span><span style="color:#F97583">return</span><span style="color:#B392F0"> baseVal</span><span style="color:#E1E4E8">(n);</span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> (memo.</span><span style="color:#B392F0">containsKey</span><span style="color:#E1E4E8">(n)) </span><span style="color:#F97583">return</span><span style="color:#E1E4E8"> memo.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(n);  </span><span style="color:#6A737D">// cache hit</span></span>
+<span class="line"><span style="color:#F97583">    int</span><span style="color:#E1E4E8"> res </span><span style="color:#F97583">=</span><span style="color:#6A737D"> /* recursive computation */</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    memo.</span><span style="color:#B392F0">put</span><span style="color:#E1E4E8">(n, res);  </span><span style="color:#6A737D">// cache store</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> res;</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="leetcode-198--house-robber-memoized">LeetCode 198 — House Robber (memoized)</h3>
+<p>At each house, skip it or rob it and skip the next. Overlapping subproblems make naive recursion O(2ⁿ); memoization gives O(n).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">    Map&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> memo </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> rob</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">) { </span><span style="color:#F97583">return</span><span style="color:#B392F0"> robFrom</span><span style="color:#E1E4E8">(nums, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">); }</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> robFrom</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> i</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">>=</span><span style="color:#E1E4E8"> nums.length) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (memo.</span><span style="color:#B392F0">containsKey</span><span style="color:#E1E4E8">(i)) </span><span style="color:#F97583">return</span><span style="color:#E1E4E8"> memo.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(i);</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> best </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(</span><span style="color:#B392F0">robFrom</span><span style="color:#E1E4E8">(nums, i </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">), nums[i] </span><span style="color:#F97583">+</span><span style="color:#B392F0"> robFrom</span><span style="color:#E1E4E8">(nums, i </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">));</span></span>
+<span class="line"><span style="color:#E1E4E8">        memo.</span><span style="color:#B392F0">put</span><span style="color:#E1E4E8">(i, best);</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> best;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span></span></span>
+<span class="line"><span>---</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>## 8. Custom Hash Objects — Design HashMap</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Design a hash map from scratch: bucket array with separate chaining (linked lists per bucket). On `put`, compute the bucket index, walk the chain to find or insert. Add resizing when the load factor exceeds a threshold.</span></span></code></pre>
+<p>Buckets:  [0]→null  [1]→(k1,v1)→(k5,v5)  [2]→(k2,v2)  [3]→null
+put(k5,v5): hash(k5)%N=1 → prepend to bucket 1’s chain</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span></span></span>
+<span class="line"><span>### LeetCode 706 — Design HashMap</span></span>
+<span class="line"><span>Implement `put`, `get`, `remove` without built-in libraries. Use separate chaining with 1000 buckets.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>```java</span></span>
+<span class="line"><span>class MyHashMap {</span></span>
+<span class="line"><span>    private static class Entry { int key, value; Entry next; Entry(int k, int v){key=k;value=v;} }</span></span>
+<span class="line"><span>    private Entry[] buckets = new Entry[1000];</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    private int hash(int key) { return key % 1000; }</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    public void put(int key, int value) {</span></span>
+<span class="line"><span>        int i = hash(key);</span></span>
+<span class="line"><span>        for (Entry e = buckets[i]; e != null; e = e.next)</span></span>
+<span class="line"><span>            if (e.key == key) { e.value = value; return; }</span></span>
+<span class="line"><span>        Entry n = new Entry(key, value);</span></span>
+<span class="line"><span>        n.next = buckets[i];</span></span>
+<span class="line"><span>        buckets[i] = n;</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    public int get(int key) {</span></span>
+<span class="line"><span>        for (Entry e = buckets[hash(key)]; e != null; e = e.next)</span></span>
+<span class="line"><span>            if (e.key == key) return e.value;</span></span>
+<span class="line"><span>        return -1;</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    public void remove(int key) {</span></span>
+<span class="line"><span>        int i = hash(key);</span></span>
+<span class="line"><span>        Entry prev = null, curr = buckets[i];</span></span>
+<span class="line"><span>        while (curr != null) {</span></span>
+<span class="line"><span>            if (curr.key == key) {</span></span>
+<span class="line"><span>                if (prev == null) buckets[i] = curr.next;</span></span>
+<span class="line"><span>                else prev.next = curr.next;</span></span>
+<span class="line"><span>                return;</span></span>
+<span class="line"><span>            }</span></span>
+<span class="line"><span>            prev = curr; curr = curr.next;</span></span>
+<span class="line"><span>        }</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>}</span></span></code></pre>
+<p>For small known key ranges (e.g., <code>[0, 10⁶]</code>), a direct-address <code>int[]</code> initialised to -1 is simpler. The chaining approach is more space-efficient for sparse usage and demonstrates hash-table internals.</p>
+<hr>
+<h2 id="9-ordered-hash-map--treemap-for-range-queries">9. Ordered Hash Map — TreeMap for Range Queries</h2>
+<p>A <code>HashMap</code> has no iteration order. For nearest key, predecessor/successor, or range queries, use a <code>TreeMap</code> (red-black tree) with O(log n) operations and ordered methods.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>              20</span></span>
+<span class="line"><span>             /  \</span></span>
+<span class="line"><span>           10    30</span></span>
+<span class="line"><span>           /       \</span></span>
+<span class="line"><span>          5        40</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>ceilingKey(15)→20  floorKey(15)→10</span></span>
+<span class="line"><span>higherKey(20)→30   lowerKey(20)→10</span></span>
+<span class="line"><span>subMap(10,30)→keys in [10,30)</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#E1E4E8">TreeMap&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">String</span><span style="color:#E1E4E8">> tm </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> TreeMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">tm.</span><span style="color:#B392F0">ceilingKey</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">15</span><span style="color:#E1E4E8">); </span><span style="color:#6A737D">// smallest key ≥ 15</span></span>
+<span class="line"><span style="color:#E1E4E8">tm.</span><span style="color:#B392F0">floorKey</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">15</span><span style="color:#E1E4E8">);   </span><span style="color:#6A737D">// largest key ≤ 15</span></span>
+<span class="line"><span style="color:#E1E4E8">tm.</span><span style="color:#B392F0">higherKey</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">20</span><span style="color:#E1E4E8">);  </span><span style="color:#6A737D">// smallest key > 20</span></span>
+<span class="line"><span style="color:#E1E4E8">tm.</span><span style="color:#B392F0">lowerKey</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">20</span><span style="color:#E1E4E8">);   </span><span style="color:#6A737D">// largest key &#x3C; 20</span></span>
+<span class="line"><span style="color:#E1E4E8">tm.</span><span style="color:#B392F0">subMap</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">10</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">30</span><span style="color:#E1E4E8">); </span><span style="color:#6A737D">// entries with keys in [10, 30)</span></span></code></pre>
+<h3 id="leetcode-220--contains-duplicate-iii">LeetCode 220 — Contains Duplicate III</h3>
+<p>Check for indices <code>i,j</code> with <code>|i-j| ≤ indexDiff</code> and <code>|nums[i]-nums[j]| ≤ valueDiff</code>. Sliding window + TreeSet: for each element, check if a window value falls within <code>[num - valueDiff, num + valueDiff]</code> using <code>ceiling</code>.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> containsNearbyAlmostDuplicate</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> indexDiff</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> valueDiff</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        TreeSet&#x3C;</span><span style="color:#F97583">Long</span><span style="color:#E1E4E8">> win </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> TreeSet&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> nums.length; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> indexDiff) win.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">((</span><span style="color:#F97583">long</span><span style="color:#E1E4E8">) nums[i </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> indexDiff </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">]);</span></span>
+<span class="line"><span style="color:#F97583">            long</span><span style="color:#E1E4E8"> num </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nums[i];</span></span>
+<span class="line"><span style="color:#E1E4E8">            Long ceil </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> win.</span><span style="color:#B392F0">ceiling</span><span style="color:#E1E4E8">(num </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> valueDiff);</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (ceil </span><span style="color:#F97583">!=</span><span style="color:#79B8FF"> null</span><span style="color:#F97583"> &#x26;&#x26;</span><span style="color:#E1E4E8"> ceil </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> num </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> valueDiff) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            win.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(num);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span>
+<span class="line"><span style="color:#6A737D">// Long casts prevent overflow when valueDiff is Integer.MAX_VALUE.</span></span></code></pre>
+<h3 id="leetcode-846--hand-of-straights">LeetCode 846 — Hand of Straights</h3>
+<p>Arrange cards into groups of <code>groupSize</code> consecutive cards. TreeMap of counts: repeatedly take the smallest key, check for the next <code>groupSize-1</code> consecutive values.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> isNStraightHand</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">hand</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> groupSize</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (hand.length </span><span style="color:#F97583">%</span><span style="color:#E1E4E8"> groupSize </span><span style="color:#F97583">!=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        TreeMap&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> cnt </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> TreeMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> hand) cnt.</span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(c, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, Integer</span><span style="color:#F97583">::</span><span style="color:#E1E4E8">sum);</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">cnt.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> first </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> cnt.</span><span style="color:#B392F0">firstKey</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">            for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> first; c </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> first </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> groupSize; c</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">cnt.</span><span style="color:#B392F0">containsKey</span><span style="color:#E1E4E8">(c)) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">                cnt.</span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(c, </span><span style="color:#F97583">-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, Integer</span><span style="color:#F97583">::</span><span style="color:#E1E4E8">sum);</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (cnt.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(c) </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) cnt.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">(c);</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<hr>
+<h2 id="10-counting-sort-with-a-hash-map">10. Counting Sort with a Hash Map</h2>
+<p>Counting sort uses an array indexed by value to count occurrences. A hash map replaces the array for sparse or non-integer values, trading O(range) space for O(distinct values).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#6A737D">// Template: Counting Sort with TreeMap</span></span>
+<span class="line"><span style="color:#E1E4E8">Map&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> cnt </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> TreeMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> nums) cnt.</span><span style="color:#B392F0">merge</span><span style="color:#E1E4E8">(n, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, Integer</span><span style="color:#F97583">::</span><span style="color:#E1E4E8">sum);</span></span>
+<span class="line"><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] res </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[nums.length]; </span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> idx </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> (Map.Entry&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> e </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> cnt.</span><span style="color:#B392F0">entrySet</span><span style="color:#E1E4E8">())</span></span>
+<span class="line"><span style="color:#F97583">    for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> e.</span><span style="color:#B392F0">getValue</span><span style="color:#E1E4E8">(); i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) res[idx</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> e.</span><span style="color:#B392F0">getKey</span><span style="color:#E1E4E8">();</span></span></code></pre>
+<h3 id="leetcode-274--h-index">LeetCode 274 — H-Index</h3>
+<p>Find the largest <code>h</code> with at least <code>h</code> papers having ≥ <code>h</code> citations. Counting sort with a cap at <code>n</code> (no h-index can exceed <code>n</code>): <code>count[n]</code> accumulates all papers with ≥ <code>n</code> citations.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> hIndex</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">citations</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> citations.length;</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[] cnt </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[n </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> citations) { </span><span style="color:#F97583">if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">>=</span><span style="color:#E1E4E8"> n) cnt[n]</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">; </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> cnt[c]</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">; }</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> total </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> h </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> n; h </span><span style="color:#F97583">>=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; h</span><span style="color:#F97583">--</span><span style="color:#E1E4E8">) { total </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> cnt[h]; </span><span style="color:#F97583">if</span><span style="color:#E1E4E8"> (total </span><span style="color:#F97583">>=</span><span style="color:#E1E4E8"> h) </span><span style="color:#F97583">return</span><span style="color:#E1E4E8"> h; }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span></span></span>
+<span class="line"><span>---</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>## 11. Hash Map for Graph Adjacency</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>A `HashMap&#x3C;Node, List&#x3C;Neighbour>>` is the most flexible adjacency representation — handles sparse graphs, non-integer labels, and dynamic nodes. `computeIfAbsent` creates lists lazily; `getOrDefault` handles nodes with no outgoing edges.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>```java</span></span>
+<span class="line"><span>// Template: Graph adjacency with a HashMap</span></span>
+<span class="line"><span>Map&#x3C;Integer, List&#x3C;Integer>> adj = new HashMap&#x3C;>();</span></span>
+<span class="line"><span>for (int[] e : edges) {</span></span>
+<span class="line"><span>    adj.computeIfAbsent(e[0], k -> new ArrayList&#x3C;>()).add(e[1]);</span></span>
+<span class="line"><span>    adj.computeIfAbsent(e[1], k -> new ArrayList&#x3C;>()).add(e[0]); // undirected</span></span>
+<span class="line"><span>}</span></span></code></pre>
+<h3 id="leetcode-133--clone-graph">LeetCode 133 — Clone Graph</h3>
+<p>Deep-copy a connected undirected graph. The HashMap serves as both visited set and clone cache (original → clone). DFS: create clone, mark visited before recursing (cycle safety), then clone all neighbours.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    static</span><span style="color:#F97583"> class</span><span style="color:#B392F0"> Node</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> val; List&#x3C;</span><span style="color:#F97583">Node</span><span style="color:#E1E4E8">> neighbors;</span></span>
+<span class="line"><span style="color:#B392F0">        Node</span><span style="color:#E1E4E8">() { val </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; neighbors </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(); }</span></span>
+<span class="line"><span style="color:#B392F0">        Node</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> v</span><span style="color:#E1E4E8">) { val </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> v; neighbors </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>(); }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#E1E4E8"> Map&#x3C;</span><span style="color:#F97583">Node</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">Node</span><span style="color:#E1E4E8">> visited </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> Node </span><span style="color:#B392F0">cloneGraph</span><span style="color:#E1E4E8">(Node </span><span style="color:#FFAB70">node</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (node </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (visited.</span><span style="color:#B392F0">containsKey</span><span style="color:#E1E4E8">(node)) </span><span style="color:#F97583">return</span><span style="color:#E1E4E8"> visited.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(node);</span></span>
+<span class="line"><span style="color:#E1E4E8">        Node clone </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> Node</span><span style="color:#E1E4E8">(node.val);</span></span>
+<span class="line"><span style="color:#E1E4E8">        visited.</span><span style="color:#B392F0">put</span><span style="color:#E1E4E8">(node, clone);  </span><span style="color:#6A737D">// mark before recursing — breaks cycles</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (Node nb </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> node.neighbors) clone.neighbors.</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(</span><span style="color:#B392F0">cloneGraph</span><span style="color:#E1E4E8">(nb));</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> clone;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="leetcode-207--course-schedule">LeetCode 207 — Course Schedule</h3>
+<p>Check if all courses can be finished (no cycle in prerequisites). Build adjacency map + in-degree array, run Kahn’s algorithm (BFS topological sort). If all courses are processed, no cycle.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> canFinish</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> n</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">prereqs</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Map&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, List&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">>> adj </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> HashMap&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[] indeg </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[n];</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] p </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> prereqs) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            adj.</span><span style="color:#B392F0">computeIfAbsent</span><span style="color:#E1E4E8">(p[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">], k </span><span style="color:#F97583">-></span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>()).</span><span style="color:#B392F0">add</span><span style="color:#E1E4E8">(p[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]);</span></span>
+<span class="line"><span style="color:#E1E4E8">            indeg[p[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]]</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">        Queue&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> q </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> LinkedList&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> n; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">if</span><span style="color:#E1E4E8"> (indeg[i] </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) q.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(i);</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> done </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">q.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> q.</span><span style="color:#B392F0">poll</span><span style="color:#E1E4E8">(); done</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> next </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> adj.</span><span style="color:#B392F0">getOrDefault</span><span style="color:#E1E4E8">(c, </span><span style="color:#F97583">new</span><span style="color:#E1E4E8"> ArrayList&#x3C;>()))</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">--</span><span style="color:#E1E4E8">indeg[next] </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) q.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(next);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> done </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> n;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<hr>
+<h2 id="pattern-recognition-table">Pattern Recognition Table</h2>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────────────────────────────────────┬─────────────────────────────────────────────┬───────────────┐</span></span>
+<span class="line"><span>│ Problem Keyword / Phrase                     │ Pattern to Use                              │ Complexity    │</span></span>
+<span class="line"><span>├──────────────────────────────────────────────┼─────────────────────────────────────────────┼───────────────┤</span></span>
+<span class="line"><span>│ "two sum" / "pair sums to target" (unsorted) │ HashMap complement lookup                   │ O(n)          │</span></span>
+<span class="line"><span>│ "4Sum II" / "count tuples across arrays"     │ HashMap on half + complement on other half  │ O(n²)         │</span></span>
+<span class="line"><span>│ "count occurrences" / "frequency"            │ Frequency Map (HashMap)                     │ O(n)          │</span></span>
+<span class="line"><span>│ "top k frequent"                             │ Frequency Map + Bucket Sort or Min-Heap     │ O(n) / O(n log k)│</span></span>
+<span class="line"><span>│ "first unique character"                     │ Frequency Map + second pass                 │ O(n)          │</span></span>
+<span class="line"><span>│ "group anagrams"                             │ HashMap with sorted/count key               │ O(n·k log k)  │</span></span>
+<span class="line"><span>│ "group by shared property"                   │ HashMap with computed signature key         │ O(n·k)        │</span></span>
+<span class="line"><span>│ "longest consecutive sequence"               │ HashSet + sequence-start detection          │ O(n)          │</span></span>
+<span class="line"><span>│ "subarray sum equals K"                      │ Prefix Sum + HashMap (count of prefix sums) │ O(n)          │</span></span>
+<span class="line"><span>│ "contiguous array / equal 0s and 1s"         │ Prefix Sum (+1/-1) + HashMap (first index)  │ O(n)          │</span></span>
+<span class="line"><span>│ "continuous subarray sum (multiple of k)"    │ Prefix Sum mod k + HashMap (first index)    │ O(n)          │</span></span>
+<span class="line"><span>│ "longest substring without repeating"        │ Sliding Window + HashMap (char → last index)│ O(n)          │</span></span>
+<span class="line"><span>│ "minimum window substring"                   │ Sliding Window + two frequency maps         │ O(|s|+|t|)    │</span></span>
+<span class="line"><span>│ "find all anagrams in string"                │ Fixed sliding window + frequency array/map  │ O(|s|)        │</span></span>
+<span class="line"><span>│ "contains nearby almost duplicate"           │ Sliding Window + TreeSet (floor/ceiling)    │ O(n log k)    │</span></span>
+<span class="line"><span>│ "memoization" / "overlapping subproblems"    │ HashMap cache keyed by subproblem identity  │ varies        │</span></span>
+<span class="line"><span>│ "design HashMap" / "implement hash table"    │ Bucket array + separate chaining            │ O(1) avg      │</span></span>
+<span class="line"><span>│ "hand of straights / consecutive groups"     │ TreeMap (sorted counts, firstKey)           │ O(n log n)    │</span></span>
+<span class="line"><span>│ "nearest value / predecessor / successor"    │ TreeMap (floor/ceiling/higher/lower)        │ O(log n)      │</span></span>
+<span class="line"><span>│ "range query on keys"                        │ TreeMap (subMap/headMap/tailMap)            │ O(log n + k)  │</span></span>
+<span class="line"><span>│ "h-index / sort by count"                    │ Counting Sort (array or HashMap)            │ O(n)          │</span></span>
+<span class="line"><span>│ "clone graph / copy graph"                   │ HashMap (original → clone, visited + cache)│ O(V + E)      │</span></span>
+<span class="line"><span>│ "course schedule / topological sort"         │ HashMap adjacency + in-degree BFS (Kahn's)  │ O(V + E)      │</span></span>
+<span class="line"><span>│ "build graph from edges"                     │ HashMap adjacency (computeIfAbsent)         │ O(E)          │</span></span>
+<span class="line"><span>│ "find duplicate / missing number"            │ HashSet membership or frequency map         │ O(n)          │</span></span>
+<span class="line"><span>│ "intersection / union of arrays"             │ HashSet membership                          │ O(n + m)      │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────┴─────────────────────────────────────────────┴───────────────┘</span></span></code></pre>
+<hr>
+<h2 id="quick-reference--when-to-reach-for-each-pattern">Quick Reference — When to Reach for Each Pattern</h2>
+<ul>
+<li><strong>Frequency Map:</strong> “How many times does X appear” or “are there duplicates.” Build <code>HashMap&lt;Element, Integer&gt;</code>, query.</li>
+<li><strong>Two-Sum Complement:</strong> “Find a pair satisfying a relation” in an unsorted collection. Store seen elements, look up complement. O(n²) → O(n).</li>
+<li><strong>Grouping by Computed Key:</strong> “Group elements sharing a property.” Compute a signature, use as HashMap key, collect with <code>computeIfAbsent</code>.</li>
+<li><strong>Prefix Sum + HashMap:</strong> “Count/length of subarrays with given sum or modular condition.” Track prefix sums in a map, look up <code>current - target</code>. Seed with <code>{0: 1}</code> or <code>{0: -1}</code>.</li>
+<li><strong>Sliding Window + HashMap:</strong> “Longest/shortest substring with frequency constraint.” Expand right, shrink left when violated, track window in a map.</li>
+<li><strong>Memoization:</strong> Recursive overlapping subproblems. Cache results in a HashMap keyed by subproblem identity.</li>
+<li><strong>Design HashMap:</strong> Implement from scratch. Bucket array + separate chaining + resizing. Mask hash codes to avoid negative indices.</li>
+<li><strong>TreeMap:</strong> Nearest key, predecessor/successor, range queries. <code>ceilingKey</code>, <code>floorKey</code>, <code>subMap</code>. O(log n) per op.</li>
+<li><strong>Counting Sort with HashMap:</strong> Sort/count by value with large range or non-integer values. TreeMap or HashMap + sorted keys.</li>
+<li><strong>Graph Adjacency:</strong> Build graph from edges. <code>HashMap&lt;Node, List&lt;Neighbour&gt;&gt;</code> with <code>computeIfAbsent</code>. Doubles as visited set or clone cache.</li>
+</ul>
+<p>Three bugs cause most hash-table solution failures: (1) forgetting the seed entry — missing subarrays starting at index 0 in prefix-sum problems; (2) forgetting to remove elements from the map when the sliding window’s left pointer advances — causing false duplicate detections; (3) using <code>==</code> to compare boxed <code>Integer</code> values above 127 — Java caches only -128 to 127, so use <code>.equals()</code> or <code>.intValue()</code>. Drill these until automatic.</p>
+<p>LeetCode problems referenced: #1 Two Sum, #3 Longest Substring Without Repeating Characters, #49 Group Anagrams, #76 Minimum Window Substring, #128 Longest Consecutive Sequence, #133 Clone Graph, #198 House Robber, #207 Course Schedule, #220 Contains Duplicate III, #274 H-Index, #347 Top K Frequent Elements, #387 First Unique Character, #438 Find All Anagrams, #454 4Sum II, #523 Continuous Subarray Sum, #525 Contiguous Array, #560 Subarray Sum Equals K, #706 Design HashMap, #846 Hand of Straights. Work through them in order — each builds on the previous pattern.</p>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>O(1) average insert/lookup/delete. Use for: counting, grouping, deduplication, complement lookup (two-sum).</li>
+<li>Java: HashMap (unordered), TreeMap (sorted, O(log n)), LinkedHashMap (insertion order).</li>
+<li>Load factor: when entries/buckets &gt; 0.75, resize (double buckets, rehash).</li>
+<li>Collision: chaining (linked list per bucket) or open addressing (probe for next slot).</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“HashMap vs TreeMap — when to use which?” — HashMap for O(1) lookups. TreeMap when you need ordered keys, range queries, or ceiling/floor operations.</li>
+<li>“What happens during rehashing?” — All entries are redistributed to new buckets. This is O(n) but amortized O(1) per operation. Concurrent rehashing can cause issues (Java 8+ uses treeified buckets for long chains).</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Using a hash map when the key space is small and known. If keys are integers 0-N, use a plain array — it’s faster (no hashing) and uses less memory (no Entry objects).</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/coding-interview/hash-tables/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Hash%20Tables%20%E2%80%94%20Interview%20Prep%20Guide&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fcoding-interview%2Fhash-tables%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fcoding-interview%2Fhash-tables%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/coding-interview/hash-tables" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/coding-interview/arrays-and-strings/" class="related-card"><div class="related-card-title">Arrays &amp; Strings — Interview Prep Guide</div><div class="related-card-meta">Coding Interview · 47 min</div></a><a href="/notes/coding-interview/backtracking/" class="related-card"><div class="related-card-title">Backtracking — Complete Interview Prep Guide</div><div class="related-card-meta">Coding Interview · 21 min</div></a><a href="/notes/coding-interview/big-o-and-pattern-recognition/" class="related-card"><div class="related-card-title">Big O Complexity &amp; Pattern Recognition</div><div class="related-card-meta">Coding Interview · 30 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/coding-interview/greedy" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Greedy Algorithms — Coding Interview Prep</span></a><a href="/notes/coding-interview/heaps-and-priority-queues" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Heaps &amp; Priority Queues — Interview Prep</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Hash Tables — Interview Prep Guide" data-selector=".article-prose" data-article-slug="coding-interview/hash-tables" data-article-title="Hash Tables — Interview Prep Guide" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

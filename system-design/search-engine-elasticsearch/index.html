@@ -1,0 +1,1402 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Search Engine (Elasticsearch) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview" class="toc-link" data-toc-link="overview" data-astro-cid-p33bl5ka>Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#the-inverted-index-the-heart-of-full-text-search" class="toc-link" data-toc-link="the-inverted-index-the-heart-of-full-text-search" data-astro-cid-p33bl5ka>The Inverted Index: The Heart of Full-Text Search</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#segments-the-immutable-unit" class="toc-link" data-toc-link="segments-the-immutable-unit" data-astro-cid-p33bl5ka>Segments: The Immutable Unit</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#doc-values-the-columnar-store-for-sorting-and-aggregations" class="toc-link" data-toc-link="doc-values-the-columnar-store-for-sorting-and-aggregations" data-astro-cid-p33bl5ka>Doc Values: The Columnar Store for Sorting and Aggregations</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#the-analyzer-chain-from-raw-text-to-searchable-tokens" class="toc-link" data-toc-link="the-analyzer-chain-from-raw-text-to-searchable-tokens" data-astro-cid-p33bl5ka>The Analyzer Chain: From Raw Text to Searchable Tokens</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#character-filters" class="toc-link" data-toc-link="character-filters" data-astro-cid-p33bl5ka>Character Filters</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#tokenizers" class="toc-link" data-toc-link="tokenizers" data-astro-cid-p33bl5ka>Tokenizers</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#token-filters" class="toc-link" data-toc-link="token-filters" data-astro-cid-p33bl5ka>Token Filters</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#index-time-vs-search-time-analysis" class="toc-link" data-toc-link="index-time-vs-search-time-analysis" data-astro-cid-p33bl5ka>Index-Time vs Search-Time Analysis</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#mapping-types-and-field-datatypes" class="toc-link" data-toc-link="mapping-types-and-field-datatypes" data-astro-cid-p33bl5ka>Mapping Types and Field Datatypes</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#field-types-and-their-indexing-behavior" class="toc-link" data-toc-link="field-types-and-their-indexing-behavior" data-astro-cid-p33bl5ka>Field Types and Their Indexing Behavior</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#two-mapping-decisions-with-outsized-operational-impact" class="toc-link" data-toc-link="two-mapping-decisions-with-outsized-operational-impact" data-astro-cid-p33bl5ka>Two Mapping Decisions with Outsized Operational Impact</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#dynamic-mapping-and-mapping-explosion" class="toc-link" data-toc-link="dynamic-mapping-and-mapping-explosion" data-astro-cid-p33bl5ka>Dynamic Mapping and Mapping Explosion</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#glossaryshardingshards-and-replicas-distributing-the-index" class="toc-link" data-toc-link="glossaryshardingshards-and-replicas-distributing-the-index" data-astro-cid-p33bl5ka>[[Glossary#Sharding|Shards]] and Replicas: Distributing the Index</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#replica-placement-and-failover" class="toc-link" data-toc-link="replica-placement-and-failover" data-astro-cid-p33bl5ka>Replica Placement and Failover</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#hot-warm-cold-frozen-tiered-architecture" class="toc-link" data-toc-link="hot-warm-cold-frozen-tiered-architecture" data-astro-cid-p33bl5ka>Hot-Warm-Cold-Frozen Tiered Architecture</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#distributed-search-the-scatter-gather-protocol" class="toc-link" data-toc-link="distributed-search-the-scatter-gather-protocol" data-astro-cid-p33bl5ka>Distributed Search: The Scatter-Gather Protocol</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#correctness-caveat-1-shard-local-statistics" class="toc-link" data-toc-link="correctness-caveat-1-shard-local-statistics" data-astro-cid-p33bl5ka>Correctness Caveat 1: Shard-Local Statistics</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#correctness-caveat-2-per-shard-top-n-cutoff" class="toc-link" data-toc-link="correctness-caveat-2-per-shard-top-n-cutoff" data-astro-cid-p33bl5ka>Correctness Caveat 2: Per-Shard Top-N Cutoff</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#over-sharding-and-fan-out-cost" class="toc-link" data-toc-link="over-sharding-and-fan-out-cost" data-astro-cid-p33bl5ka>Over-Sharding and Fan-Out Cost</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#relevance-scoring-from-tf-idf-to-bm25" class="toc-link" data-toc-link="relevance-scoring-from-tf-idf-to-bm25" data-astro-cid-p33bl5ka>Relevance Scoring: From TF-IDF to BM25</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#bm25-vs-tf-idf-comparison" class="toc-link" data-toc-link="bm25-vs-tf-idf-comparison" data-astro-cid-p33bl5ka>BM25 vs TF-IDF Comparison</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-bm25-formula" class="toc-link" data-toc-link="the-bm25-formula" data-astro-cid-p33bl5ka>The BM25 Formula</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#tuning-k1-and-b" class="toc-link" data-toc-link="tuning-k1-and-b" data-astro-cid-p33bl5ka>Tuning k1 and b</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#beyond-the-base-similarity-boosts-and-functions" class="toc-link" data-toc-link="beyond-the-base-similarity-boosts-and-functions" data-astro-cid-p33bl5ka>Beyond the Base Similarity: Boosts and Functions</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#query-dsl-structuring-complex-searches" class="toc-link" data-toc-link="query-dsl-structuring-complex-searches" data-astro-cid-p33bl5ka>Query DSL: Structuring Complex Searches</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leaf-queries-probe-a-single-field" class="toc-link" data-toc-link="leaf-queries-probe-a-single-field" data-astro-cid-p33bl5ka>Leaf Queries (probe a single field)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#compound-queries" class="toc-link" data-toc-link="compound-queries" data-astro-cid-p33bl5ka>Compound Queries</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#multi_match-strategies" class="toc-link" data-toc-link="multi_match-strategies" data-astro-cid-p33bl5ka>multi_match Strategies</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#other-compound-queries" class="toc-link" data-toc-link="other-compound-queries" data-astro-cid-p33bl5ka>Other Compound Queries</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#performance-traps-in-the-dsl" class="toc-link" data-toc-link="performance-traps-in-the-dsl" data-astro-cid-p33bl5ka>Performance Traps in the DSL</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#numeric-date-and-geo-queries" class="toc-link" data-toc-link="numeric-date-and-geo-queries" data-astro-cid-p33bl5ka>Numeric, Date, and Geo Queries</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#geo-support" class="toc-link" data-toc-link="geo-support" data-astro-cid-p33bl5ka>Geo Support</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#aggregations-analytics-on-top-of-search" class="toc-link" data-toc-link="aggregations-analytics-on-top-of-search" data-astro-cid-p33bl5ka>Aggregations: Analytics on Top of Search</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#bucket-aggregations" class="toc-link" data-toc-link="bucket-aggregations" data-astro-cid-p33bl5ka>Bucket Aggregations</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#metric-aggregations" class="toc-link" data-toc-link="metric-aggregations" data-astro-cid-p33bl5ka>Metric Aggregations</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#pipeline-aggregations" class="toc-link" data-toc-link="pipeline-aggregations" data-astro-cid-p33bl5ka>Pipeline Aggregations</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#what-backs-aggregations" class="toc-link" data-toc-link="what-backs-aggregations" data-astro-cid-p33bl5ka>What Backs Aggregations</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#two-aggregation-pitfalls" class="toc-link" data-toc-link="two-aggregation-pitfalls" data-astro-cid-p33bl5ka>Two Aggregation Pitfalls</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#aggregation-execution-model" class="toc-link" data-toc-link="aggregation-execution-model" data-astro-cid-p33bl5ka>Aggregation Execution Model</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#near-real-time-search-and-the-refresh-interval" class="toc-link" data-toc-link="near-real-time-search-and-the-refresh-interval" data-astro-cid-p33bl5ka>Near-Real-Time Search and the Refresh Interval</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#key-operations" class="toc-link" data-toc-link="key-operations" data-astro-cid-p33bl5ka>Key Operations</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-refresh-interval-central-tuning-knob" class="toc-link" data-toc-link="the-refresh-interval-central-tuning-knob" data-astro-cid-p33bl5ka>The Refresh Interval: Central Tuning Knob</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#tuning-parameters-for-indexing" class="toc-link" data-toc-link="tuning-parameters-for-indexing" data-astro-cid-p33bl5ka>Tuning Parameters for Indexing</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#bulk-loading-recipe-standard" class="toc-link" data-toc-link="bulk-loading-recipe-standard" data-astro-cid-p33bl5ka>Bulk-Loading Recipe (Standard)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#force-merge-for-read-only-indices" class="toc-link" data-toc-link="force-merge-for-read-only-indices" data-astro-cid-p33bl5ka>Force Merge for Read-Only Indices</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#bulk-indexing-high-throughput-writes" class="toc-link" data-toc-link="bulk-indexing-high-throughput-writes" data-astro-cid-p33bl5ka>Bulk Indexing: High-Throughput Writes</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#indexing-path-per-operation" class="toc-link" data-toc-link="indexing-path-per-operation" data-astro-cid-p33bl5ka>Indexing Path Per Operation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#throughput-tuning-parameters" class="toc-link" data-toc-link="throughput-tuning-parameters" data-astro-cid-p33bl5ka>Throughput Tuning Parameters</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#other-levers" class="toc-link" data-toc-link="other-levers" data-astro-cid-p33bl5ka>Other Levers</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-planning-and-operational-sizing" class="toc-link" data-toc-link="capacity-planning-and-operational-sizing" data-astro-cid-p33bl5ka>Capacity Planning and Operational Sizing</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#shard-sizing-rules" class="toc-link" data-toc-link="shard-sizing-rules" data-astro-cid-p33bl5ka>Shard Sizing Rules</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#node-sizing-rules" class="toc-link" data-toc-link="node-sizing-rules" data-astro-cid-p33bl5ka>Node Sizing Rules</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#cluster-level-planning" class="toc-link" data-toc-link="cluster-level-planning" data-astro-cid-p33bl5ka>Cluster-Level Planning</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-recurring-lesson" class="toc-link" data-toc-link="the-recurring-lesson" data-astro-cid-p33bl5ka>The Recurring Lesson</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-deep-dive" class="toc-link" data-toc-link="interview-deep-dive" data-astro-cid-p33bl5ka>Interview Deep Dive</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Search Engine (Elasticsearch)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-advanced" data-astro-cid-sgg5joot>advanced</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 31 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 43 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>search</span><span class="tag" data-astro-cid-sgg5joot>elasticsearch</span><span class="tag" data-astro-cid-sgg5joot>inverted-index</span><span class="tag" data-astro-cid-sgg5joot>distributed-search</span><span class="tag" data-astro-cid-sgg5joot>lucene</span><span class="tag" data-astro-cid-sgg5joot>bm25</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="search-engine-elasticsearch">Search Engine (Elasticsearch)</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A system that builds inverted indices from documents and serves full-text queries with ranking, filtering, and aggregation — Elasticsearch is the open-source standard built on Lucene.</p>
+<p><strong>How it’s asked:</strong> “Design a search engine for 1B documents with &lt;100ms query latency. Cover inverted index, sharding, relevance ranking, and handling real-time updates.”</p>
+<h2 id="overview">Overview</h2>
+<p>Elasticsearch is a distributed, RESTful search and analytics engine built on top of Apache Lucene, the same Java full-text search library that powers Solr. Where a relational database lets you find rows that match a predicate, Elasticsearch lets you find documents that are <em>relevant</em> to a natural-language query, rank them by statistical significance, and aggregate billions of records in milliseconds. It stores data as schema-free JSON documents, exposes a HTTP/JSON API, and scales horizontally by partitioning an index across many nodes.</p>
+<p>Its dominance in logs (the Elastic/ELK stack), product search, observability, and security analytics comes from a single design bet: treat search as a distributed, near-real-time problem and push relevance, filtering, and analytics all the way down into an immutable, segment-based inverted index.</p>
+<p>Understanding Elasticsearch at a senior level means understanding four overlapping systems — and how their tuning knobs trade off against one another:</p>
+<ul>
+<li>The <strong>Lucene segment model</strong> (immutable inverted indexes, merges)</li>
+<li>The <strong>analysis pipeline</strong> (text → tokens)</li>
+<li>The <strong>shard/replica distribution layer</strong> (horizontal scaling)</li>
+<li>The <strong>scatter-gather query coordinator</strong> (distributed search)</li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                        ┌─────────────────────────────────────┐</span></span>
+<span class="line"><span>                        │         ELASTICSEARCH STACK         │</span></span>
+<span class="line"><span>                        └─────────────────────────────────────┘</span></span>
+<span class="line"><span>                                          │</span></span>
+<span class="line"><span>            ┌───────────────┬─────────────┼──────────────┬───────────────┐</span></span>
+<span class="line"><span>            ▼               ▼             ▼              ▼               ▼</span></span>
+<span class="line"><span>   ┌──────────────┐ ┌──────────────┐ ┌──────────┐ ┌────────────┐ ┌────────────┐</span></span>
+<span class="line"><span>   │  Lucene      │ │  Analyzer    │ │  Shard / │ │  Scatter-  │ │  Relevance │</span></span>
+<span class="line"><span>   │  Segment     │ │  Chain       │ │  Replica │ │  Gather    │ │  Scoring   │</span></span>
+<span class="line"><span>   │  Model       │ │  Pipeline    │ │  Distrib.│ │  Query     │ │  (BM25)    │</span></span>
+<span class="line"><span>   └──────────────┘ └──────────────┘ └──────────┘ └────────────┘ └────────────┘</span></span></code></pre>
+<hr>
+<h2 id="the-inverted-index-the-heart-of-full-text-search">The Inverted Index: The Heart of Full-Text Search</h2>
+<p>The fundamental data structure inside every shard is the inverted index, and it is the reason full-text search is fast at all. A forward index maps a document to the terms it contains; an inverted index inverts that relationship, mapping each distinct term to the list of documents that contain it. When you search for “dog,” the engine does not scan every document — it looks up “dog” in the term dictionary and reads its posting list directly.</p>
+<p>The term dictionary is kept memory-efficient and lookup-fast by an <strong>FST</strong> (finite state transducer), a compressed automaton that maps term strings to the on-disk file offset of their postings. The posting list itself is not a naive array of integers; Lucene encodes it with frame-of-reference compression and, for conjunctions, runs skip pointers so that intersections of large posting lists skip ahead rather than walking element by element.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   DOCUMENTS                    INVERTED INDEX (per segment)</span></span>
+<span class="line"><span>   ─────────                    ─────────────────────────────</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Doc 1: "the quick brown fox"     TERM DICTIONARY (FST)</span></span>
+<span class="line"><span>   Doc 2: "the lazy dog"            ┌─────────────┐    on-disk</span></span>
+<span class="line"><span>   Doc 3: "the quick dog barks"     │  "brown" ───────┐ offset</span></span>
+<span class="line"><span>                                   │  "dog"    ───────┤</span></span>
+<span class="line"><span>                                   │  "fox"    ───────┤</span></span>
+<span class="line"><span>                                   │  "lazy"   ───────┤</span></span>
+<span class="line"><span>                                   │  "quick"  ───────┤</span></span>
+<span class="line"><span>                                   │  "the"    ───────┘</span></span>
+<span class="line"><span>                                   └─────────────┘</span></span>
+<span class="line"><span>                                          │</span></span>
+<span class="line"><span>                                          ▼</span></span>
+<span class="line"><span>                                 POSTING LISTS (frame-of-reference compressed)</span></span>
+<span class="line"><span>   ┌─────────────┬────────┬───────────┬───────────────┬───────────────────────┐</span></span>
+<span class="line"><span>   │ Term        │ Doc IDs │ Term Freq │  Positions    │  Offsets / Payloads   │</span></span>
+<span class="line"><span>   ├─────────────┼────────┼───────────┼───────────────┼───────────────────────┤</span></span>
+<span class="line"><span>   │ "brown"     │ [1]    │ 1         │ [2]           │ (for highlighting)    │</span></span>
+<span class="line"><span>   │ "dog"       │ [2,3]  │ 1, 1      │ [2],[2]       │                       │</span></span>
+<span class="line"><span>   │ "fox"       │ [1]    │ 1         │ [3]           │                       │</span></span>
+<span class="line"><span>   │ "lazy"      │ [2]    │ 1         │ [1]           │                       │</span></span>
+<span class="line"><span>   │ "quick"     │ [1,3]  │ 1, 1      │ [1],[1]       │                       │</span></span>
+<span class="line"><span>   │ "the"       │ [1,2,3]│ 1, 1, 1   │ [0],[0],[0]   │                       │</span></span>
+<span class="line"><span>   └─────────────┴────────┴───────────┴───────────────┴───────────────────────┘</span></span>
+<span class="line"><span>         ▲ skip pointers enable fast intersection of large posting lists</span></span></code></pre>
+<p>Each posting typically stores more than just a doc ID. For the <code>text</code> field it stores:</p>
+<ul>
+<li><strong>Term frequency</strong> — how many times the term appears in the document</li>
+<li><strong>Positions</strong> — the position of each occurrence (for phrase and proximity queries)</li>
+<li><strong>Offsets</strong> — for highlighting</li>
+<li><strong>Payloads</strong> — optional, application-specific</li>
+</ul>
+<p>These ancillary values are what make relevance scoring and phrase matching possible without re-reading the source document.</p>
+<h3 id="segments-the-immutable-unit">Segments: The Immutable Unit</h3>
+<p>Crucially, Lucene does not store one giant inverted index per shard. A shard is a <em>Lucene index</em>, and a Lucene index is a collection of immutable <strong>segments</strong>. Each segment is a fully self-contained inverted index written once and never modified.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   ┌─────────────────── ONE SHARD = ONE LUCENE INDEX ───────────────────┐</span></span>
+<span class="line"><span>   │                                                                     │</span></span>
+<span class="line"><span>   │   ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐  │</span></span>
+<span class="line"><span>   │   │ Segment 1│  │ Segment 2│  │ Segment 3│  │   Segment N      │  │</span></span>
+<span class="line"><span>   │   │(refresh) │  │(refresh) │  │(refresh) │  │ (merged, large)  │  │</span></span>
+<span class="line"><span>   │   │immutable │  │immutable │  │immutable │  │   immutable      │  │</span></span>
+<span class="line"><span>   │   └────┬─────┘  └────┬─────┘  └────┬─────┘  └────────┬─────────┘  │</span></span>
+<span class="line"><span>   │        │             │             │                 │            │</span></span>
+<span class="line"><span>   │        │   .live bitset marks deleted docs per segment             │</span></span>
+<span class="line"><span>   │        ▼             ▼             ▼                 ▼            │</span></span>
+<span class="line"><span>   │   ┌─────────────────────────────────────────────────────────────┐  │</span></span>
+<span class="line"><span>   │   │            Background Tiered Merge Policy                   │  │</span></span>
+<span class="line"><span>   │   │  many small segments  ──►  fewer larger segments            │  │</span></span>
+<span class="line"><span>   │   │  reclaims deletes  •  reduces file handle count             │  │</span></span>
+<span class="line"><span>   │   └─────────────────────────────────────────────────────────────┘  │</span></span>
+<span class="line"><span>   │                                                                     │</span></span>
+<span class="line"><span>   │   Translog (append-only, durability for uncommitted writes)        │</span></span>
+<span class="line"><span>   │   ────────────────────────────────────────────────────────         │</span></span>
+<span class="line"><span>   └─────────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<p>The lifecycle of a document through the segment model:</p>
+<ul>
+<li>New documents are first <strong>buffered in memory</strong></li>
+<li>A <strong>refresh</strong> writes them out as a new segment (searchable, but not <code>fsync</code>’d)</li>
+<li>Deleted documents are not actually removed but <strong>marked in a <code>.live</code> bitset</strong></li>
+<li>A segment only physically shrinks when it is <strong>merged</strong> with other segments</li>
+<li>Merge is the background garbage collector: the tiered merge policy combines many small segments into fewer larger ones, reclaims deletes, and reduces the number of files the search path must consult</li>
+</ul>
+<p>This immutability is what enables:</p>
+<ul>
+<li>Lock-free concurrent reads</li>
+<li>Cheap OS page-cache reuse</li>
+<li>The near-real-time model</li>
+</ul>
+<p>But it also explains why <strong>updates are really “mark old doc deleted, index new doc”</strong> and why a freshly indexed document is invisible until the next refresh opens a new segment.</p>
+<h3 id="doc-values-the-columnar-store-for-sorting-and-aggregations">Doc Values: The Columnar Store for Sorting and Aggregations</h3>
+<p>A second, equally important structure is <strong>doc values</strong>, a columnar on-disk store keyed by document that backs sorting, aggregations, and scripting. Where the inverted index is optimized for “which documents contain this term,” doc values are optimized for “what is the value of this field for this document.”</p>
+<p>Because doc values live on disk and are designed for sequential, cache-friendly access, aggregations and sorts do not require loading the inverted index into heap — a major operational difference from the older <code>fielddata</code> mechanism, which inverted the inverted index into JVM heap for text fields and was a frequent source of out-of-memory crashes.</p>
+<ul>
+<li><strong>Doc values</strong> are enabled by default for almost every non-text field</li>
+<li>For <code>text</code> fields they are <strong>off</strong>, which is why you typically map a field as both <code>text</code> (for search) and <code>keyword</code> (for aggregation) using multi-fields</li>
+</ul>
+<hr>
+<h2 id="the-analyzer-chain-from-raw-text-to-searchable-tokens">The Analyzer Chain: From Raw Text to Searchable Tokens</h2>
+<p>Raw text almost never enters the inverted index verbatim. Before a string is broken into postings, it passes through an analyzer chain consisting of, in strict order:</p>
+<ol>
+<li>Zero or more <strong>character filters</strong></li>
+<li>Exactly one <strong>tokenizer</strong></li>
+<li>Zero or more <strong>token filters</strong></li>
+</ol>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   RAW TEXT</span></span>
+<span class="line"><span>   "The &#x3C;b>Quick&#x3C;/b> Brown Fox"</span></span>
+<span class="line"><span>       │</span></span>
+<span class="line"><span>       ▼</span></span>
+<span class="line"><span>   ┌──────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │  1. CHARACTER FILTER(S)  (zero or more)                          │</span></span>
+<span class="line"><span>   │     html_strip  →  "The Quick Brown Fox"                         │</span></span>
+<span class="line"><span>   │     mapping     →  accent / character normalization              │</span></span>
+<span class="line"><span>   └──────────────────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span>       │</span></span>
+<span class="line"><span>       ▼</span></span>
+<span class="line"><span>   ┌──────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │  2. TOKENIZER  (exactly one — fixes token boundaries)            │</span></span>
+<span class="line"><span>   │     standard    →  ["The","Quick","Brown","Fox"]                 │</span></span>
+<span class="line"><span>   │     whitespace  →  splits on whitespace only                      │</span></span>
+<span class="line"><span>   │     keyword     →  whole string as one token                      │</span></span>
+<span class="line"><span>   │     ngram/edge  →  overlapping substrings for partial match       │</span></span>
+<span class="line"><span>   │     path_hierarchy → "/a/b/c" matchable by "/a/b"                │</span></span>
+<span class="line"><span>   └──────────────────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span>       │  stream of tokens</span></span>
+<span class="line"><span>       ▼</span></span>
+<span class="line"><span>   ┌──────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │  3. TOKEN FILTER(S)  (zero or more — order matters!)             │</span></span>
+<span class="line"><span>   │     lowercase  →  ["the","quick","brown","fox"]                  │</span></span>
+<span class="line"><span>   │     stop       →  removes stopwords  ["quick","brown","fox"]     │</span></span>
+<span class="line"><span>   │     asciifolding → strips diacritics                              │</span></span>
+<span class="line"><span>   │     synonym    →  "cu" → "see you"                                │</span></span>
+<span class="line"><span>   │     stemmer    →  "running","runs","ran" → "run"                 │</span></span>
+<span class="line"><span>   │     decompounder → "schuhgeschäft" → "schuh","geschäft"          │</span></span>
+<span class="line"><span>   └──────────────────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span>       │</span></span>
+<span class="line"><span>       ▼</span></span>
+<span class="line"><span>   FINAL TOKENS  →  indexed as postings in the inverted index</span></span>
+<span class="line"><span>   ["quick","brown","fox"]</span></span></code></pre>
+<h3 id="character-filters">Character Filters</h3>
+<p>Character filters operate on the raw string before tokenization:</p>
+<ul>
+<li><code>html_strip</code> removes markup</li>
+<li>Mapping filters can replace characters or normalize accents</li>
+</ul>
+<h3 id="tokenizers">Tokenizers</h3>
+<p>The tokenizer then splits the string into a stream of tokens:</p>
+<ul>
+<li><code>standard</code> — Unicode-aware segmentation (the default)</li>
+<li><code>whitespace</code> — splits on whitespace only</li>
+<li><code>keyword</code> — emits the whole string as a single token</li>
+<li><code>ngram</code> and <code>edge_ngram</code> — emit overlapping substrings for partial matching</li>
+<li><code>path_hierarchy</code> — splits filesystem-like paths so that <code>/a/b/c</code> can be matched by <code>/a/b</code></li>
+</ul>
+<p>The choice of tokenizer is consequential because it fixes token boundaries that the rest of the chain cannot undo.</p>
+<h3 id="token-filters">Token Filters</h3>
+<p>Token filters then transform the token stream in a pipeline:</p>
+<ul>
+<li><code>lowercase</code> — near-universal</li>
+<li><code>stop</code> — removes a configured set of stopwords</li>
+<li><code>asciifolding</code> — strips diacritics</li>
+<li><code>synonym</code> — expands or rewrites tokens (e.g., “cu” → “see you”)</li>
+<li><code>stemmer</code> or language-specific filters like <code>porter_stem</code>, <code>kstem</code>, or the Snowball filters — reduce inflected words to a root form so that “running,” “runs,” and “ran” collapse to a single posting</li>
+<li>Decompounders — split German compounds like “schuhgeschäft” into “schuh” and “geschäft”</li>
+</ul>
+<p><strong>Order matters:</strong></p>
+<ul>
+<li>Synonyms should generally be applied <strong>before</strong> stemming so the synonym’s root is also stemmed</li>
+<li>Stopwords should be removed <strong>carefully</strong> because removing them can break phrase queries whose positions no longer line up</li>
+</ul>
+<h3 id="index-time-vs-search-time-analysis">Index-Time vs Search-Time Analysis</h3>
+<p>A subtle but critical operational point is the distinction between index-time and search-time analysis:</p>
+<ul>
+<li><strong>At index time:</strong> the field’s configured analyzer produces the tokens that go into the inverted index</li>
+<li><strong>At search time:</strong> a <code>match</code> query on a <code>text</code> field re-analyzes the query string — by default with the same analyzer, though a separate <code>search_analyzer</code> can be configured to apply lighter processing at query time (for example, synonyms only at search time so you don’t inflate index size)</li>
+</ul>
+<p><strong>Mismatched analysis</strong> is one of the most common “why didn’t my document match?” bugs: if you index with stemming but search without it, “running” indexes under “run” while the query looks for “running” and finds nothing.</p>
+<ul>
+<li>The <code>_analyze</code> API lets you dry-run any analyzer against sample text to diagnose exactly this</li>
+<li>For exact-match fields — IDs, tags, statuses, hostnames — you use the <code>keyword</code> type, which bypasses analysis entirely and indexes the whole value as a single token</li>
+</ul>
+<hr>
+<h2 id="mapping-types-and-field-datatypes">Mapping Types and Field Datatypes</h2>
+<p>Mapping is Elasticsearch’s schema: it declares what fields exist, what type each is, and how it should be indexed. Older versions supported <em>mapping types</em>, a notion that one index could hold several logical “tables” distinguished by a <code>_type</code> field; this was deprecated in 6.x and removed in 7.x because fields of the same name in different types had to share one Lucene field, leading to confusing semantics, and because the type served no real isolation that a separate index wouldn’t provide better. Today the unit of schema isolation is the index itself, and the recommended pattern for distinct entity shapes is one index per entity type (or a single index with a discriminating field and <code>type</code>-aware filtering).</p>
+<h3 id="field-types-and-their-indexing-behavior">Field Types and Their Indexing Behavior</h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Analyzed?</th>
+<th>Index Structure</th>
+<th>Doc Values</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>text</code></td>
+<td>Yes</td>
+<td>Inverted index + positions</td>
+<td>Off</td>
+<td>Full-text search</td>
+</tr>
+<tr>
+<td><code>keyword</code></td>
+<td>No</td>
+<td>Single token + doc values</td>
+<td>On</td>
+<td>Exact match, sort, aggregate</td>
+</tr>
+<tr>
+<td><code>long</code>/<code>integer</code>/<code>double</code>/<code>float</code></td>
+<td>No</td>
+<td>BKD tree</td>
+<td>On</td>
+<td>Numeric range queries</td>
+</tr>
+<tr>
+<td><code>scaled_float</code></td>
+<td>No</td>
+<td>BKD tree (long × factor)</td>
+<td>On</td>
+<td>Currency</td>
+</tr>
+<tr>
+<td><code>date</code></td>
+<td>No</td>
+<td>BKD tree (epoch ms)</td>
+<td>On</td>
+<td>Time-based queries</td>
+</tr>
+<tr>
+<td><code>boolean</code></td>
+<td>No</td>
+<td>Term index</td>
+<td>On</td>
+<td>True/false filters</td>
+</tr>
+<tr>
+<td><code>ip</code></td>
+<td>No</td>
+<td>Term index</td>
+<td>On</td>
+<td>IP range/CIDR queries</td>
+</tr>
+<tr>
+<td><code>object</code></td>
+<td>No</td>
+<td>Flattened</td>
+<td>On</td>
+<td>Nested JSON</td>
+</tr>
+<tr>
+<td><code>nested</code></td>
+<td>No</td>
+<td>Hidden sub-docs</td>
+<td>On</td>
+<td>Per-element queries</td>
+</tr>
+<tr>
+<td><code>geo_point</code></td>
+<td>No</td>
+<td>BKD tree</td>
+<td>On</td>
+<td>Lat/long distance, bbox</td>
+</tr>
+<tr>
+<td><code>geo_shape</code></td>
+<td>No</td>
+<td>BKD tree</td>
+<td>On</td>
+<td>Polygons, lines, GIS</td>
+</tr>
+</tbody>
+</table>
+<p>The canonical pattern for human-readable fields is a multi-field:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="json"><code><span class="line"><span style="color:#9ECBFF">"title"</span><span style="color:#E1E4E8">: {</span></span>
+<span class="line"><span style="color:#79B8FF">  "type"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"text"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">  "fields"</span><span style="color:#E1E4E8">: {</span></span>
+<span class="line"><span style="color:#79B8FF">    "raw"</span><span style="color:#E1E4E8">: { </span><span style="color:#79B8FF">"type"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"keyword"</span><span style="color:#E1E4E8"> }</span></span>
+<span class="line"><span style="color:#E1E4E8">  }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>This lets you both full-text search <code>title</code> and aggregate on <code>title.raw</code>.</p>
+<p>Because Lucene has no true nested objects, arrays of <code>object</code> fields lose their per-element associations — for that you use <code>nested</code> type, which indexes each inner object as a separate hidden document so that queries can match “the city is X <em>and</em> the salary is Y within the same inner object.”</p>
+<h3 id="two-mapping-decisions-with-outsized-operational-impact">Two Mapping Decisions with Outsized Operational Impact</h3>
+<ul>
+<li><strong><code>index: false</code></strong> — disables indexing entirely (the field is stored but not searchable), useful for large blobs you only retrieve by <code>_id</code></li>
+<li><strong><code>norms: false</code></strong> — every indexed <code>text</code> field carries a <code>norm</code> (a single byte encoding field length and index-time boost) which costs heap per document; if you never need relevance scoring on a field (say, a log level), set <code>norms: false</code> to save memory</li>
+</ul>
+<h3 id="dynamic-mapping-and-mapping-explosion">Dynamic Mapping and Mapping Explosion</h3>
+<p>Dynamic mapping is convenient but dangerous in multi-tenant or log ingestion workloads: a single malformed document with thousands of unique field names can blow up the cluster’s mapping (the “mapping explosion”).</p>
+<ul>
+<li>Production indices set <code>index.mapping.total_fields.limit</code></li>
+<li>Often use dynamic templates or switch to <code>strict</code> dynamic mode that rejects unknown fields</li>
+<li><strong>Runtime fields</strong> (7.11+) let you define fields evaluated at query time from a Painless script rather than stored in the index, decoupling schema evolution from reindexing</li>
+</ul>
+<hr>
+<h2 id="glossaryshardingshards-and-replicas-distributing-the-index">[[Glossary#Sharding|Shards]] and Replicas: Distributing the Index</h2>
+<p>An Elasticsearch index is a logical namespace spread across one or more <strong>primary shards</strong>, and each primary shard has zero or more <strong>replica shards</strong>. A primary shard is the authoritative write target for the subset of documents routed to it; a replica is a full copy of a primary that serves reads and survives primary failure. Each shard is itself a complete, independent Lucene index — its own segments, its own inverted index, its own translog.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   INDEX "products"  (3 primary shards, 1 replica each)</span></span>
+<span class="line"><span>   ────────────────────────────────────────────────────</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        ┌─────────┐         ┌─────────┐         ┌─────────┐</span></span>
+<span class="line"><span>        │  Prim 0 │         │  Prim 1 │         │  Prim 2 │</span></span>
+<span class="line"><span>        └────┬────┘         └────┬────┘         └────┬────┘</span></span>
+<span class="line"><span>             │                   │                   │</span></span>
+<span class="line"><span>        ┌────┴────┐         ┌────┴────┐         ┌────┴────┐</span></span>
+<span class="line"><span>        │Repl 0  │         │Repl 1  │         │Repl 2  │</span></span>
+<span class="line"><span>        └─────────┘         └─────────┘         └─────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   ALLOCATION ACROSS NODES (rack/zone aware)</span></span>
+<span class="line"><span>   ┌──────────────┬──────────────┬──────────────┐</span></span>
+<span class="line"><span>   │   Node A     │   Node B     │   Node C     │</span></span>
+<span class="line"><span>   │  (Zone 1)    │  (Zone 2)    │  (Zone 3)    │</span></span>
+<span class="line"><span>   ├──────────────┼──────────────┼──────────────┤</span></span>
+<span class="line"><span>   │  P0          │  P1          │  P2          │</span></span>
+<span class="line"><span>   │  R1          │  R2          │  R0          │</span></span>
+<span class="line"><span>   └──────────────┴──────────────┴──────────────┘</span></span>
+<span class="line"><span>   ▲ Primaries and their replicas are NEVER on the same node</span></span>
+<span class="line"><span>   ▲ With shard awareness, replicas land in different zones</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   ROUTING:  shard = hash(routing) % num_primary_shards</span></span>
+<span class="line"><span>             routing defaults to _id, can be supplied per-doc</span></span>
+<span class="line"><span>             (e.g., route all of a user's events by user_id)</span></span></code></pre>
+<ul>
+<li>The number of <strong>primary shards is fixed at index creation time</strong> (later versions can split an index, but you cannot reshuffle arbitrarily without reindexing) — this makes initial shard sizing a decision you live with</li>
+<li>The number of <strong>replicas can be changed at any time</strong> with a single API call, making replicas the primary knob for read throughput and availability</li>
+</ul>
+<p>The modulo-over-primes routing design is exactly why the shard count is immutable: changing it would remap every document.</p>
+<h3 id="replica-placement-and-failover">Replica Placement and Failover</h3>
+<ul>
+<li>Replicas are placed on different nodes than their primary (and, with shard awareness, in different racks or zones) by the master’s allocation service, which continuously rebalances as nodes join or leave</li>
+<li>When a primary fails, a replica is <strong>promoted</strong></li>
+<li>When a node recovers, shards recover either from a replica (preferred, since the primary’s segments may be stale) and go through a phase of replaying the translog before being marked active</li>
+<li><strong>Cluster state</strong> — the mapping of which shard lives where — is maintained by an elected master node and gossiped through the cluster; the master does not participate in search or indexing, only in metadata and allocation</li>
+</ul>
+<h3 id="hot-warm-cold-frozen-tiered-architecture">Hot-Warm-Cold-Frozen Tiered Architecture</h3>
+<p>For data that ages, the tiered architecture, driven by Index Lifecycle Management (ILM), is the standard pattern:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   ┌──────────┐   rollover    ┌──────────┐   age/size   ┌──────────┐</span></span>
+<span class="line"><span>   │   HOT    │ ─────────────►│   WARM   │ ────────────►│   COLD   │</span></span>
+<span class="line"><span>   │ fast SSD │               │ SSD      │               │ cheap    │</span></span>
+<span class="line"><span>   │ high CPU │               │ less CPU │               │ disk     │</span></span>
+<span class="line"><span>   │ write-   │               │ read-    │               │ heap-    │</span></span>
+<span class="line"><span>   │ heavy    │               │ heavy    │               │ light    │</span></span>
+<span class="line"><span>   └──────────┘               └──────────┘               └────┬─────┘</span></span>
+<span class="line"><span>                                                                 │</span></span>
+<span class="line"><span>                            ┌──────────┐                          │</span></span>
+<span class="line"><span>                            │  FROZEN  │◄─────────────────────────┘</span></span>
+<span class="line"><span>                            │ searchable│</span></span>
+<span class="line"><span>                            │ snapshots │</span></span>
+<span class="line"><span>                            │ (object   │</span></span>
+<span class="line"><span>                            │  storage) │</span></span>
+<span class="line"><span>                            └─────┬─────┘</span></span>
+<span class="line"><span>                                  │</span></span>
+<span class="line"><span>                                  ▼  ILM delete policy</span></span>
+<span class="line"><span>                              [ DELETED ]</span></span></code></pre>
+<ul>
+<li><strong>Hot nodes</strong> (fast SSD, high CPU) hold today’s write-heavy indices</li>
+<li><strong>Warm nodes</strong> (SSD, less CPU) hold recent read-heavy indices</li>
+<li><strong>Cold and frozen nodes</strong> (cheap disk, heap-light) keep older data searchable, with frozen indices backed by searchable snapshots that page in from object storage on demand</li>
+<li>ILM rolls over an index when it hits a size or age threshold, force-merges it to reduce segment count, moves it down the tiers, and finally deletes it — automating the lifecycle that would otherwise require manual curation</li>
+</ul>
+<hr>
+<h2 id="distributed-search-the-scatter-gather-protocol">Distributed Search: The Scatter-Gather Protocol</h2>
+<p>A search request to any node becomes a two-phase scatter-gather across the cluster. The receiving node acts as the <strong>coordinating node</strong>.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                    CLIENT</span></span>
+<span class="line"><span>                      │</span></span>
+<span class="line"><span>                      │  POST /products/_search  { "query": ... }</span></span>
+<span class="line"><span>                      ▼</span></span>
+<span class="line"><span>   ┌───────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │                  COORDINATING NODE                            │</span></span>
+<span class="line"><span>   │  Determines which shards to consult (1 copy of each primary) │</span></span>
+<span class="line"><span>   └───────────────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span>                      │</span></span>
+<span class="line"><span>   ══════════════════════════════════════════════════════════════════</span></span>
+<span class="line"><span>   PHASE 1 — QUERY (scatter): fan out in parallel to all shards</span></span>
+<span class="line"><span>   ══════════════════════════════════════════════════════════════════</span></span>
+<span class="line"><span>                      │</span></span>
+<span class="line"><span>        ┌─────────────┼─────────────┐</span></span>
+<span class="line"><span>        ▼             ▼             ▼</span></span>
+<span class="line"><span>   ┌─────────┐   ┌─────────┐   ┌─────────┐</span></span>
+<span class="line"><span>   │ Shard 0 │   │ Shard 1 │   │ Shard 2 │</span></span>
+<span class="line"><span>   │ runs    │   │ runs    │   │ runs    │</span></span>
+<span class="line"><span>   │ query   │   │ query   │   │ query   │</span></span>
+<span class="line"><span>   │ locally │   │ locally │   │ locally │</span></span>
+<span class="line"><span>   └────┬────┘   └────┬────┘   └────┬────┘</span></span>
+<span class="line"><span>        │             │             │</span></span>
+<span class="line"><span>        │ returns:    │ returns:    │ returns:</span></span>
+<span class="line"><span>        │ top N doc   │ top N doc   │ top N doc</span></span>
+<span class="line"><span>        │ IDs +       │ IDs +       │ IDs +</span></span>
+<span class="line"><span>        │ scores      │ scores      │ scores</span></span>
+<span class="line"><span>        │ (NOT        │ (NOT        │ (NOT</span></span>
+<span class="line"><span>        │  _source!)  │  _source!)  │  _source!)</span></span>
+<span class="line"><span>        └─────────────┼─────────────┘</span></span>
+<span class="line"><span>                      ▼</span></span>
+<span class="line"><span>   ┌───────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │              COORDINATOR MERGES                                │</span></span>
+<span class="line"><span>   │  Per-shard top-N  ──►  global ranked top-N                    │</span></span>
+<span class="line"><span>   └───────────────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span>                      │</span></span>
+<span class="line"><span>   ══════════════════════════════════════════════════════════════════</span></span>
+<span class="line"><span>   PHASE 2 — FETCH (gather): multi-get only the winning documents</span></span>
+<span class="line"><span>   ══════════════════════════════════════════════════════════════════</span></span>
+<span class="line"><span>                      │</span></span>
+<span class="line"><span>        ┌─────────────┼─────────────┐</span></span>
+<span class="line"><span>        ▼             ▼             ▼</span></span>
+<span class="line"><span>   ┌─────────┐   ┌─────────┐   ┌─────────┐</span></span>
+<span class="line"><span>   │ Shard 0 │   │ Shard 1 │   │ Shard 2 │</span></span>
+<span class="line"><span>   │ fetches │   │ fetches │   │ fetches │</span></span>
+<span class="line"><span>   │ _source │   │ _source │   │ _source │</span></span>
+<span class="line"><span>   │ + high- │   │ + high- │   │ + high- │</span></span>
+<span class="line"><span>   │ lighting│   │ lighting│   │ lighting│</span></span>
+<span class="line"><span>   └────┬────┘   └────┬────┘   └────┬────┘</span></span>
+<span class="line"><span>        └─────────────┼─────────────┘</span></span>
+<span class="line"><span>                      ▼</span></span>
+<span class="line"><span>   ┌───────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │  FINAL RESULTS  ──►  returned to client                       │</span></span>
+<span class="line"><span>   └───────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<p>In the <strong>query phase</strong> it fans the query out to the target shards in parallel. Each shard runs the query locally against its own segments, computes local scores, and returns to the coordinator the top <em>N</em> matching document IDs together with the sort values or scores the coordinator needs to merge them — <em>not</em> the full documents. The coordinator merges these per-shard top-N lists into a globally ranked top-N and then, in the <strong>fetch phase</strong>, issues multi-get requests to the specific shards that own the winning documents to retrieve their <code>_source</code>, highlighting, and fields. This split is what keeps large result sets cheap: only the final page of documents is actually fetched and shipped to the client.</p>
+<h3 id="correctness-caveat-1-shard-local-statistics">Correctness Caveat 1: Shard-Local Statistics</h3>
+<p>BM25’s IDF component depends on document frequency, but in the default <code>QUERY_THEN_FETCH</code> mode each shard computes scores using only its own document frequencies. For a term that is evenly distributed across shards this is a fine approximation, but for a rare term concentrated in one shard the local IDF can be wildly off, distorting the relative ranking.</p>
+<ul>
+<li><strong><code>QUERY_THEN_FETCH</code></strong> (default) — uses shard-local statistics; fast, slight score distortion for rare terms</li>
+<li><strong><code>DFS_QUERY_THEN_FETCH</code></strong> — adds a preliminary round trip to collect global term frequencies and pre-distribute them; fixes the score at the cost of one extra network phase. Rarely worth it on large clusters but is the textbook answer to “why are my scores slightly different than a single-shard index?”</li>
+</ul>
+<h3 id="correctness-caveat-2-per-shard-top-n-cutoff">Correctness Caveat 2: Per-Shard Top-N Cutoff</h3>
+<p>Because each shard returns only its local top-N, the global top-N can theoretically miss a document that ranks just below a shard’s cutoff but would rank globally above a document from another shard.</p>
+<ul>
+<li>Mitigation: size the per-shard <code>size</code> generously relative to the requested page</li>
+<li>For <code>terms</code> aggregations: set <code>shard_size</code> higher than <code>size</code> to bound the <code>doc_count_error_upper_bound</code> error that terms aggregations report</li>
+</ul>
+<h3 id="over-sharding-and-fan-out-cost">Over-Sharding and Fan-Out Cost</h3>
+<p>Every additional shard multiplies fan-out: a search over an index with 100 shards sends 100 sub-queries even if you want ten results. This is the root reason over-sharding hurts query latency — not just heap overhead, but raw network and per-shard CPU amplification.</p>
+<ul>
+<li>Coordinating nodes, thread pool queues (<code>search</code>), and <code>search.max_buckets</code> for aggregations are all sized against this fan-out</li>
+<li>A misconfigured <code>size</code> (e.g., asking for 10,000 results) forces every shard to return 10,000 candidates, which is both slow and memory-hungry</li>
+</ul>
+<p><strong>Deep pagination:</strong></p>
+<ul>
+<li><code>from + size</code> is capped (default 10,000) precisely because it scales as O(from) work per shard</li>
+<li>The supported alternative is <code>search_after</code>, which uses the sort values of the last returned document as a cursor and is O(1) per page</li>
+</ul>
+<hr>
+<h2 id="relevance-scoring-from-tf-idf-to-bm25">Relevance Scoring: From TF-IDF to BM25</h2>
+<p>Relevance scoring answers the question “given that these documents all match the query, which are the best?” The classical answer is TF-IDF: a term’s weight in a document is its term frequency (how often it appears) multiplied by its inverse document frequency (how rare it is across the corpus), so a term appearing in every document contributes little while a term appearing in few documents contributes a lot.</p>
+<p>Lucene’s practical TF-IDF variant used a square-root term frequency to damp raw counts, a <code>1/sqrt(fieldLength)</code> norm so that shorter fields get a boost, and a <code>1 + ln(N/(df+1))</code> IDF. TF-IDF has two well-known weaknesses:</p>
+<ul>
+<li>Term frequency keeps growing <strong>linearly</strong> with repetition, so a document that repeats a keyword a hundred times scores dramatically higher than one that mentions it ten times (an obvious spam surface)</li>
+<li>Length normalization is <strong>crude</strong></li>
+</ul>
+<p>Elasticsearch switched its default similarity to <strong>BM25</strong> (Okapi BM25) in version 5.0 to address both. BM25 is a probabilistic model whose term-frequency term <strong>saturates</strong>: the score contribution of a term rises steeply at first and then asymptotes, so the hundredth occurrence barely adds anything over the tenth. It also normalizes document length with a tunable parameter rather than a hard inverse square root.</p>
+<h3 id="bm25-vs-tf-idf-comparison">BM25 vs TF-IDF Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>TF-IDF (Lucene variant)</th>
+<th>BM25 (default since ES 5.0)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Term frequency saturation</td>
+<td>None — grows linearly (sqrt damp)</td>
+<td>Saturating curve (asymptotes)</td>
+</tr>
+<tr>
+<td>Spam resistance</td>
+<td>Weak — repetition exploits</td>
+<td>Strong — 100th occurrence ≈ 10th</td>
+</tr>
+<tr>
+<td>Length normalization</td>
+<td><code>1/sqrt(fieldLength)</code> (crude)</td>
+<td>Tunable <code>b</code> parameter (0–1)</td>
+</tr>
+<tr>
+<td>IDF formula</td>
+<td><code>1 + ln(N/(df+1))</code></td>
+<td><code>ln(1 + (N - df + 0.5)/(df + 0.5))</code></td>
+</tr>
+<tr>
+<td>IDF sign</td>
+<td>Can be negative (needs clamping)</td>
+<td>Always non-negative, bounded</td>
+</tr>
+<tr>
+<td>Tunable params</td>
+<td>None</td>
+<td><code>k1</code> (saturation), <code>b</code> (length norm)</td>
+</tr>
+<tr>
+<td>Default k1</td>
+<td>N/A</td>
+<td>1.2</td>
+</tr>
+<tr>
+<td>Default b</td>
+<td>N/A</td>
+<td>0.75</td>
+</tr>
+<tr>
+<td>Model type</td>
+<td>Heuristic</td>
+<td>Probabilistic (Okapi)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-bm25-formula">The BM25 Formula</h3>
+<p>Summed over query terms:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   score = IDF(q) ×  (tf × (k1 + 1))</span></span>
+<span class="line"><span>                   ──────────────────────</span></span>
+<span class="line"><span>                   tf + k1 × (1 - b + b × |d|/avgdl)</span></span></code></pre>
+<p>Where:</p>
+<ul>
+<li><code>tf</code> = term frequency in the document</li>
+<li><code>|d|</code> = the document’s field length</li>
+<li><code>avgdl</code> = average field length across the corpus</li>
+<li><code>k1</code> = term frequency saturation rate (default 1.2)</li>
+<li><code>b</code> = length normalization strength (default 0.75)</li>
+<li><code>IDF(q) = ln(1 + (N - df + 0.5) / (df + 0.5))</code> — non-negative and bounded, unlike raw TF-IDF’s IDF</li>
+</ul>
+<h3 id="tuning-k1-and-b">Tuning k1 and b</h3>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Default</th>
+<th>Effect of Increasing</th>
+<th>Effect of Decreasing</th>
+<th>When to use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>k1</code></td>
+<td>1.2</td>
+<td>TF keeps mattering longer; repetition is signal</td>
+<td>TF saturates faster; less repetition impact</td>
+<td>Higher: long docs where repetition = signal. Lower: short docs, keyword-like fields</td>
+</tr>
+<tr>
+<td><code>b</code></td>
+<td>0.75</td>
+<td>More penalty for long documents</td>
+<td>Less length normalization</td>
+<td><code>b=0</code>: ignore length entirely. <code>b=1</code>: fully penalize long docs. <code>b=0.75</code>: balanced default</td>
+</tr>
+</tbody>
+</table>
+<h3 id="beyond-the-base-similarity-boosts-and-functions">Beyond the Base Similarity: Boosts and Functions</h3>
+<p>Relevance is also shaped by query structure and boosts:</p>
+<ul>
+<li>In a <code>bool</code> query, <code>should</code> clauses add to the score while <code>must</code> and <code>filter</code> contribute only to matching</li>
+<li>Per-field <code>boost</code> and per-query <code>^</code> notation tilt weight toward title matches over body matches</li>
+<li><code>function_score</code> and <code>script_score</code> let you blend text relevance with business signals — recency, popularity, price, or a learned model’s output — so that a fresh, popular document can outrank a slightly better text match</li>
+</ul>
+<p>The discipline of relevance tuning is iterative: you assemble a graded query suite, run it against changes, and watch metrics like NDCG. A common mistake is to reach for <code>function_score</code> to paper over bad analysis — if stemming or synonyms are wrong, no amount of boosting will fix the recall.</p>
+<hr>
+<h2 id="query-dsl-structuring-complex-searches">Query DSL: Structuring Complex Searches</h2>
+<p>Elasticsearch’s Query DSL is a JSON language of composable query clauses, and mastering it is mostly about knowing which clauses score and which merely filter.</p>
+<h3 id="leaf-queries-probe-a-single-field">Leaf Queries (probe a single field)</h3>
+<table>
+<thead>
+<tr>
+<th>Query</th>
+<th>Scores?</th>
+<th>Analysis?</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>match</code></td>
+<td>Yes</td>
+<td>Yes (analyzer)</td>
+<td>Full-text search on <code>text</code> field</td>
+</tr>
+<tr>
+<td><code>match_phrase</code></td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Terms in order, configurable slop</td>
+</tr>
+<tr>
+<td><code>term</code> / <code>terms</code></td>
+<td>Yes (but trivial)</td>
+<td>No</td>
+<td>Exact lookup on <code>keyword</code>/numeric</td>
+</tr>
+<tr>
+<td><code>range</code></td>
+<td>Yes (but trivial)</td>
+<td>No</td>
+<td>Numeric/date intervals</td>
+</tr>
+<tr>
+<td><code>exists</code></td>
+<td>No</td>
+<td>No</td>
+<td>Field present</td>
+</tr>
+<tr>
+<td><code>prefix</code> / <code>wildcard</code> / <code>regexp</code></td>
+<td>Yes</td>
+<td>No</td>
+<td>Pattern matching (performance traps!)</td>
+</tr>
+<tr>
+<td><code>fuzzy</code></td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Terms within Levenshtein distance</td>
+</tr>
+<tr>
+<td><code>ids</code></td>
+<td>Yes (trivial)</td>
+<td>No</td>
+<td>Match by <code>_id</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="compound-queries">Compound Queries</h3>
+<p>The most important compound query is <code>bool</code>, with its four clauses:</p>
+<table>
+<thead>
+<tr>
+<th>Clause</th>
+<th>Matches?</th>
+<th>Scores?</th>
+<th>Cacheable?</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>must</code></td>
+<td>Yes (AND)</td>
+<td>Yes</td>
+<td>No</td>
+<td>Required match + contributes to score</td>
+</tr>
+<tr>
+<td><code>should</code></td>
+<td>Optional</td>
+<td>Yes</td>
+<td>No</td>
+<td>Boosts score; required if no <code>must</code> (gated by <code>minimum_should_match</code>)</td>
+</tr>
+<tr>
+<td><code>must_not</code></td>
+<td>Excludes</td>
+<td>No</td>
+<td>Yes</td>
+<td>Exclude documents</td>
+</tr>
+<tr>
+<td><code>filter</code></td>
+<td>Yes (AND)</td>
+<td><strong>No</strong></td>
+<td><strong>Yes</strong></td>
+<td>Yes/no question — skips scoring, cached in node-level query cache</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The filter-versus-query distinction is the single most important DSL concept:</strong> a clause in <code>filter</code> context is a yes/no question that skips scoring and is cached in the node-level query cache, so anything that doesn’t need relevance — status = active, date in range, category in list — belongs in <code>filter</code>, not <code>must</code>. Putting pure filters in <code>must</code> both wastes CPU on scoring and forfeits caching.</p>
+<h3 id="multi_match-strategies">multi_match Strategies</h3>
+<p><code>multi_match</code> extends <code>match</code> across several fields and offers strategies that change semantics:</p>
+<ul>
+<li><strong><code>best_fields</code></strong> (default) — takes the best single-field score; suits queries where the whole phrase should match in one field</li>
+<li><strong><code>most_fields</code></strong> — sums scores across fields; suits cases where matching more fields is better</li>
+<li><strong><code>cross_fields</code></strong> — treats the fields as one big field; appropriate when the query terms are spread across fields like <code>first_name</code> + <code>last_name</code></li>
+<li><strong><code>phrase</code></strong> / <strong><code>phrase_prefix</code></strong> — apply phrase semantics across fields</li>
+</ul>
+<h3 id="other-compound-queries">Other Compound Queries</h3>
+<ul>
+<li><code>dis_max</code> (disjunction max) — returns the best-matching clause’s score rather than summing; useful when alternative fields are mutually exclusive descriptions of the same thing</li>
+<li><code>constant_score</code> — wraps a filter and returns a fixed score; handy when you want a clause to act as a hard filter but still combine with <code>should</code> scoring</li>
+</ul>
+<h3 id="performance-traps-in-the-dsl">Performance Traps in the DSL</h3>
+<ul>
+<li><strong>Leading-wildcard queries</strong> (<code>*foo</code>) — cannot use the term dictionary’s sorted order and effectively scan the dictionary, which on large indices is catastrophically slow. Fix: index an <code>edge_ngram</code> sub-field for prefix-as-you-type and reserve <code>wildcard</code>/<code>regexp</code> for constrained, suffix-heavy cases</li>
+<li><strong><code>fuzzy</code> and <code>prefix</code></strong> — expand to many terms and should be bounded</li>
+<li><strong>Heavy <code>script</code> queries</strong> — run interpreted Painless on every matching document and bypass the query cache; occasionally necessary but should be replaced by indexed fields or runtime fields where possible</li>
+<li><strong><code>from + size</code> deep pagination</strong> — capped for the scatter-gather reasons above; production paging uses <code>search_after</code> or, for cursoring over a stable result set, the Point-in-Time (PIT) API combined with <code>search_after</code></li>
+</ul>
+<hr>
+<h2 id="numeric-date-and-geo-queries">Numeric, Date, and Geo Queries</h2>
+<p>Numeric and date fields are not stored in the inverted index the same way text is. Since Lucene 6, numeric, date, and geo fields are indexed in <strong>BKD trees</strong> — multidimensional balanced KD-trees that support range and nearest-neighbor queries in logarithmic time without the older “numeric is many precision-step tokens” trick that inflated index size.</p>
+<p>This means <code>range</code> queries on <code>long</code>, <code>double</code>, and <code>date</code> are genuinely efficient and first-class, not a degenerate case of term enumeration.</p>
+<ul>
+<li>Date fields support a rich date-math syntax (<code>now-1d/d</code>, <code>2026-06-19||-1y/M</code>) so that rolling-window queries like “last 7 days rounded to the day” can be expressed inline</li>
+</ul>
+<h3 id="geo-support">Geo Support</h3>
+<p>Geo support is built on the same multidimensional foundations. A <code>geo_point</code> field stores a latitude/longitude pair indexed in a BKD tree (and, for legacy compatibility, optionally as geohashes).</p>
+<p>The geo query family includes:</p>
+<ul>
+<li><code>geo_distance</code> — find points within a radius</li>
+<li><code>geo_bounding_box</code> — points within a rectangle</li>
+<li><code>geo_polygon</code> — points within an arbitrary polygon</li>
+<li><code>geo_shape</code> queries — operate on <code>geo_shape</code> fields storing full GIS geometries with indexed relation predicates (<code>intersects</code>, <code>within</code>, <code>disjoint</code>, <code>contains</code>)</li>
+</ul>
+<p>Sorting by distance is supported directly and is common in store-locator and dispatch features.</p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Accuracy</th>
+<th>Efficiency</th>
+<th>Distance Sort</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>geo_point</code> (real type)</td>
+<td>Precise</td>
+<td>Efficient distance/range</td>
+<td>Yes</td>
+<td>Store locator, dispatch, any real distance</td>
+</tr>
+<tr>
+<td><code>keyword</code> geohash prefix</td>
+<td>Coarse bucketing</td>
+<td>Cheap prefix-match</td>
+<td>No (lossy)</td>
+<td>“Give me everything in this coarse region”</td>
+</tr>
+</tbody>
+</table>
+<p>For anything that needs real distance computation, use <code>geo_point</code>; for cheap “give me everything in this coarse region,” a geohash prefix on a <code>keyword</code> field can be a useful denormalization.</p>
+<hr>
+<h2 id="aggregations-analytics-on-top-of-search">Aggregations: Analytics on Top of Search</h2>
+<p>Aggregations turn Elasticsearch from a search engine into an analytics engine, and they are the basis of Kibana’s dashboards. An aggregation request runs over the result set of the query (or, with careful use, over the whole index) and is organized into <strong>bucket</strong> aggregations, which partition documents into groups, and <strong>metric</strong> aggregations, which compute a value over the documents in a bucket. The two compose, so you can nest average-price-per-category-per-month trees arbitrarily deep.</p>
+<h3 id="bucket-aggregations">Bucket Aggregations</h3>
+<ul>
+<li><code>terms</code> — top N values of a field</li>
+<li><code>range</code> and <code>histogram</code> — fixed or custom numeric intervals</li>
+<li><code>date_histogram</code> — time bucketing with calendar-aware intervals like <code>1M</code> that respect month length</li>
+<li><code>filter</code> / <code>filters</code> — explicit query-based buckets</li>
+<li><code>composite</code> — efficient multi-dimensional bucketing for pagination over all buckets</li>
+</ul>
+<h3 id="metric-aggregations">Metric Aggregations</h3>
+<ul>
+<li><code>sum</code>, <code>avg</code>, <code>min</code>, <code>max</code>, <code>stats</code></li>
+<li><code>cardinality</code> — distinct count via HyperLogLog++</li>
+<li><code>percentiles</code> — via T-Digest</li>
+<li><code>top_hits</code> — return actual documents per bucket (e.g., the best-selling product in each category)</li>
+</ul>
+<h3 id="pipeline-aggregations">Pipeline Aggregations</h3>
+<p>Pipeline aggregations like <code>cumulative_sum</code> or <code>derivative</code> then operate on the output of other aggregations.</p>
+<h3 id="what-backs-aggregations">What Backs Aggregations</h3>
+<p>All of this is backed by <strong>doc values</strong>, which is why doc values are enabled by default for non-text fields: aggregations read them from disk via the OS page cache without loading the inverted index into heap.</p>
+<ul>
+<li>For <code>text</code> fields, doc values are off and aggregations are <strong>not directly supported</strong> — you aggregate on the <code>keyword</code> sub-field instead, or pay the cost of enabling <code>fielddata</code>, which loads term ordinals into heap and is gated by a circuit breaker for good reason</li>
+</ul>
+<h3 id="two-aggregation-pitfalls">Two Aggregation Pitfalls</h3>
+<p><strong>1. <code>terms</code> aggregations are approximate on large shard counts</strong> — each shard returns only its top <code>shard_size</code> terms; the coordinator merges these and reports <code>doc_count_error_upper_bound</code>. For low-cardinality-but-high-skew fields you must raise <code>shard_size</code> or the reported counts can be meaningfully wrong.</p>
+<p><strong>2. <code>cardinality</code> is probabilistic</strong> — with a <code>precision_threshold</code> (default 3000) trading memory for accuracy:</p>
+<ul>
+<li>At thresholds above a few tens of thousands the error is small but the memory cost is real</li>
+<li>Users who expect exact distinct counts are surprised by the ~1% error</li>
+<li>For exact counts you need a transform or a count on a <code>keyword</code> field with a sufficiently high <code>shard_size</code>, which is expensive</li>
+</ul>
+<h3 id="aggregation-execution-model">Aggregation Execution Model</h3>
+<p>The execution model for aggregations mirrors search scatter-gather: each shard computes its partial aggregation, the coordinator reduces them, and the result is returned alongside (or instead of) the hits.</p>
+<ul>
+<li>Aggregations over the full index with no query are <strong>expensive</strong> because they touch every shard and every doc value</li>
+<li><code>search.max_buckets</code> guards against runaway cardinality</li>
+<li>For repeated analytics, the <strong>transform</strong> feature or <strong>rollup</strong> indices precompute common aggregations into a smaller, query-friendly index</li>
+</ul>
+<hr>
+<h2 id="near-real-time-search-and-the-refresh-interval">Near-Real-Time Search and the Refresh Interval</h2>
+<p>Elasticsearch is <em>near</em>-real-time, not real-time: by default a document is not visible to search until one second after it is indexed. The mechanism is the <strong>refresh</strong>.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   INDEXING → REFRESH → FLUSH LIFECYCLE</span></span>
+<span class="line"><span>   ────────────────────────────────────</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Document arrives</span></span>
+<span class="line"><span>       │</span></span>
+<span class="line"><span>       ▼</span></span>
+<span class="line"><span>   ┌──────────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │  IN-MEMORY INDEXING BUFFER + TRANSLOG       │</span></span>
+<span class="line"><span>   │  (translog = append-only durability log)     │</span></span>
+<span class="line"><span>   └──────────────────┬───────────────────────────┘</span></span>
+<span class="line"><span>                      │</span></span>
+<span class="line"><span>                REFRESH (default every 1s)</span></span>
+<span class="line"><span>                (no fsync — stays in OS page cache)</span></span>
+<span class="line"><span>                      ▼</span></span>
+<span class="line"><span>   ┌──────────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │  NEW IN-MEMORY SEGMENT (immediately          │</span></span>
+<span class="line"><span>   │  searchable, but NOT fsync'd to disk)        │</span></span>
+<span class="line"><span>   └──────────────────┬───────────────────────────┘</span></span>
+<span class="line"><span>                      │</span></span>
+<span class="line"><span>                FLUSH (heavier — periodic)</span></span>
+<span class="line"><span>                (fsync + clear translog + commit point)</span></span>
+<span class="line"><span>                      ▼</span></span>
+<span class="line"><span>   ┌──────────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │  SEGMENTS ON DISK (survives hard crash)      │</span></span>
+<span class="line"><span>   │  Background tiered merge compacts segments   │</span></span>
+<span class="line"><span>   └──────────────────────────────────────────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   KEY POINTS:</span></span>
+<span class="line"><span>   • Durable (in translog) the moment index() returns</span></span>
+<span class="line"><span>   • Searchable only after refresh opens a new segment</span></span>
+<span class="line"><span>   • Only flushed data survives a hard crash</span></span>
+<span class="line"><span>   • Translog is fsync'd on its own schedule</span></span></code></pre>
+<h3 id="key-operations">Key Operations</h3>
+<ul>
+<li><strong>Refresh</strong> — takes the in-memory buffer and writes it out as a new in-memory Lucene segment that is immediately searchable — <em>without</em> an <code>fsync</code>, so it lives in the OS page cache and is fast</li>
+<li><strong>Flush</strong> — the heavier operation that <code>fsync</code>s the segments to disk, clears the translog, and writes a new commit point; only flushed data survives a hard crash, which is why the translog is periodically <code>fsync</code>’d on its own schedule (configurable per index)</li>
+<li><strong>Segment merging</strong> (background) — compacts the steady stream of small refresh-produced segments into fewer larger ones, reclaiming deleted documents and reducing per-query file count; the tiered merge policy balances merge I/O against segment count</li>
+</ul>
+<h3 id="the-refresh-interval-central-tuning-knob">The Refresh Interval: Central Tuning Knob</h3>
+<p>The <strong>refresh interval</strong> is the central tuning knob of the indexing/search tradeoff.</p>
+<table>
+<thead>
+<tr>
+<th>Workload</th>
+<th><code>refresh_interval</code></th>
+<th>Replicas</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Interactive (default)</td>
+<td><code>1s</code></td>
+<td>1+</td>
+<td>Sub-second search latency for new docs</td>
+</tr>
+<tr>
+<td>Interactive, freshness-critical</td>
+<td><code>500ms</code> or <code>true</code>-on-write</td>
+<td>1+</td>
+<td>Faster freshness, accept segment churn</td>
+</tr>
+<tr>
+<td>Bulk ingestion</td>
+<td><code>30s</code> or <code>-1</code> (disabled)</td>
+<td><code>0</code> during load, restore after</td>
+<td>Avoid torrent of tiny segments; halve CPU/I/O</td>
+</tr>
+</tbody>
+</table>
+<h3 id="tuning-parameters-for-indexing">Tuning Parameters for Indexing</h3>
+<ul>
+<li><code>indices.memory.index_buffer_size</code> (default 10% of heap, shared across shards) — controls how much indexing can buffer before a refresh is forced</li>
+<li><code>index.translog.flush_threshold_size</code> (default 512MB) — controls when a flush is triggered</li>
+<li>Both interact with refresh to determine the steady-state segment profile</li>
+</ul>
+<h3 id="bulk-loading-recipe-standard">Bulk-Loading Recipe (Standard)</h3>
+<ul>
+<li>Set <code>refresh_interval</code> to <code>30s</code> or <code>-1</code> (disabled)</li>
+<li>Reduce replicas to <code>0</code> during the load</li>
+<li>Load using the Bulk API</li>
+<li>Restore <code>refresh_interval</code> and replicas afterward</li>
+<li>Gains are often an order of magnitude</li>
+</ul>
+<h3 id="force-merge-for-read-only-indices">Force Merge for Read-Only Indices</h3>
+<p>For read-only indices, a <strong>force merge</strong> to a single segment:</p>
+<ul>
+<li>Maximizes search performance</li>
+<li>Reduces heap usage (fewer segment-level structures, no deleted-doc bitsets)</li>
+<li>Is a routine step after an ILM rollover moves an index to warm</li>
+</ul>
+<hr>
+<h2 id="bulk-indexing-high-throughput-writes">Bulk Indexing: High-Throughput Writes</h2>
+<p>The <strong>Bulk API</strong> is the only correct way to load large volumes into Elasticsearch; single-document indexing at scale is dominated by HTTP and per-request overhead. A bulk request is a newline-delimited JSON stream pairing an action line with an optional data line — <code>index</code>, <code>create</code>, <code>update</code>, or <code>delete</code> — so that one HTTP request can carry thousands of operations.</p>
+<h3 id="indexing-path-per-operation">Indexing Path Per Operation</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   BULK REQUEST (newline-delimited JSON)</span></span>
+<span class="line"><span>       │</span></span>
+<span class="line"><span>       ▼</span></span>
+<span class="line"><span>   ┌──────────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │  COORDINATING NODE: parse + route            │</span></span>
+<span class="line"><span>   └──────────────────┬───────────────────────────┘</span></span>
+<span class="line"><span>                      │  hash(routing) % num_primaries</span></span>
+<span class="line"><span>                      ▼</span></span>
+<span class="line"><span>   ┌──────────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │  PRIMARY SHARD                                │</span></span>
+<span class="line"><span>   │  1. Append to translog                        │</span></span>
+<span class="line"><span>   │  2. Add to indexing buffer                    │</span></span>
+<span class="line"><span>   │  3. Async replicate to replica shards         │</span></span>
+<span class="line"><span>   └──────────────────┬───────────────────────────┘</span></span>
+<span class="line"><span>                      │</span></span>
+<span class="line"><span>                      ▼</span></span>
+<span class="line"><span>   ┌──────────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │  REPLICA SHARD(S)                             │</span></span>
+<span class="line"><span>   │  Append to their translogs + indexing buffers │</span></span>
+<span class="line"><span>   └──────────────────┬───────────────────────────┘</span></span>
+<span class="line"><span>                      │</span></span>
+<span class="line"><span>                      ▼</span></span>
+<span class="line"><span>   ┌──────────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │  ACK to coordinator when required number of   │</span></span>
+<span class="line"><span>   │  shards have confirmed (write consistency:    │</span></span>
+<span class="line"><span>   │  quorum / wait_for_active_shards)             │</span></span>
+<span class="line"><span>   └──────────────────────────────────────────────┘</span></span></code></pre>
+<h3 id="throughput-tuning-parameters">Throughput Tuning Parameters</h3>
+<ul>
+<li><strong>Ideal bulk request size:</strong> 5–15 MB — small enough to distribute load across shards and avoid overloading a single coordinating node’s heap, large enough to amortize per-request overhead</li>
+<li><strong>Parallelism:</strong> multiple concurrent bulk workers (often driven by a queue) keep all primary shards busy, but too much concurrency saturates thread pools and fills the <code>write</code> queue, at which point nodes return 429 (<code>EsRejectedExecutionException</code>) and the client must back off and retry</li>
+<li><strong>Replication factor:</strong> directly multiplies write work — every replica does the same indexing work as the primary — so the bulk-load recipe of <code>replicas: 0</code> then re-add is not just about refresh churn but about halving the CPU and disk I/O during the load</li>
+</ul>
+<h3 id="other-levers">Other Levers</h3>
+<ul>
+<li>Disable <code>_source</code> reprocessing with <code>update</code> (prefer <code>index</code> with the full doc over <code>update</code> scripts where possible)</li>
+<li>Pre-create the index with explicit mapping to avoid dynamic-mapping overhead</li>
+<li>Use the <strong>Reindex API</strong> or <code>update_by_query</code> for in-cluster moves with throttling (<code>requests_per_second</code>)</li>
+<li>For very high sustained ingestion: use a buffering layer (Kafka) feeding a bulk consumer that batches and retries, decoupling producer rate from cluster capacity</li>
+</ul>
+<hr>
+<h2 id="capacity-planning-and-operational-sizing">Capacity Planning and Operational Sizing</h2>
+<p>Capacity planning for Elasticsearch is dominated by the interaction of shard count, shard size, and JVM heap, and most production incidents trace back to violating these guidelines.</p>
+<h3 id="shard-sizing-rules">Shard Sizing Rules</h3>
+<table>
+<thead>
+<tr>
+<th>Guideline</th>
+<th>Target</th>
+<th>Too Small</th>
+<th>Too Large</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Data per shard</td>
+<td>10–50 GB</td>
+<td>&lt; few GB: wasted overhead (fixed Lucene + cluster-state cost per shard)</td>
+<td>&gt; 50 GB: slow, fragile recovery; hard to rebalance</td>
+</tr>
+<tr>
+<td>Shards per GB of heap</td>
+<td>~20 (upper bound)</td>
+<td>—</td>
+<td>Exceeding: heap pressure from segment metadata, cluster-state bloat</td>
+</tr>
+<tr>
+<td>Shards per node (30 GB heap)</td>
+<td>~a few hundred</td>
+<td>—</td>
+<td>Thousands: slow master elections, recoveries, constant GC</td>
+</tr>
+</tbody>
+</table>
+<p>The classic <strong>over-sharding</strong> failure mode: an operator creates daily indices with 30 primaries across a small cluster and accumulates tens of thousands of shards, at which point cluster-state updates, master elections, and recoveries all slow to a crawl and heap pressure triggers constant GC.</p>
+<h3 id="node-sizing-rules">Node Sizing Rules</h3>
+<ul>
+<li><strong>Heap should be 50% of available RAM, capped at the compressed-oops threshold of ~31 GB</strong> — leaving the other 50% for the OS filesystem cache</li>
+<li>Lucene is designed around the assumption that hot segments live in the OS page cache, so a node with a huge heap and no free RAM for caching will paradoxically search slower than one with a smaller heap and more cache</li>
+<li><strong>Storage:</strong> SSDs for hot and warm tiers (HDDs are acceptable only for cold/frozen); IOPS matter because merges, recoveries, and large aggregations are I/O-bound</li>
+<li><strong>Thread pools</strong> (<code>write</code>, <code>search</code>, <code>get</code>) have bounded queues and reject work when full — monitoring rejections is essential</li>
+<li><strong>Circuit breakers</strong> — <code>fielddata</code>, <code>parent</code> (request), and <code>in-flight requests</code> — protect the JVM from OOM by aborting queries that would load too much into heap; tripping them is a sign of a query that needs restructuring (e.g., aggregating on a <code>text</code> field without <code>fielddata</code> planning) rather than a cluster that needs more memory</li>
+</ul>
+<h3 id="cluster-level-planning">Cluster-Level Planning</h3>
+<ul>
+<li>Choose the number of data nodes to keep per-node shard count and disk usage within bounds while providing enough CPU for the expected query and indexing load</li>
+<li>Size the master nodes: <strong>dedicated, 3 for quorum, low CPU but enough to hold cluster state</strong> to avoid split brain</li>
+<li>Use <strong>cross-cluster replication</strong> or search for multi-region or disaster-recovery setups</li>
+<li>ILM ties this together by rolling indices over at a target size, moving them through tiers, and deleting them — which is what keeps a logging cluster from growing itself to death</li>
+</ul>
+<h3 id="the-recurring-lesson">The Recurring Lesson</h3>
+<p>Elasticsearch punishes over-provisioning of one resource at the expense of another:</p>
+<table>
+<thead>
+<tr>
+<th>Over-provisioning</th>
+<th>Consequence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Too many shards</td>
+<td>Ruins heap</td>
+</tr>
+<tr>
+<td>Too-large shards</td>
+<td>Ruins recovery</td>
+</tr>
+<tr>
+<td>Too little cache</td>
+<td>Ruins search</td>
+</tr>
+<tr>
+<td>Too few replicas</td>
+<td>Ruins availability</td>
+</tr>
+</tbody>
+</table>
+<p>The art is in balancing them against the workload’s actual read/write/analytics mix.</p>
+<hr>
+<h2 id="interview-deep-dive">Interview Deep Dive</h2>
+<p><strong>Question:</strong> <em>You index a document and immediately search for it, but it doesn’t appear. A second later it does. Your teammate says Elasticsearch is “inconsistent.” Is that right, and what is actually happening — and how would you make a document visible to search the instant it’s written without wrecking indexing throughput?</em></p>
+<p><strong>Model answer:</strong> It is not a consistency bug; it is the near-real-time refresh model. A document is durable (it is in the translog) the moment the index call returns, but it is not <em>searchable</em> until a refresh opens a new Lucene segment containing it, which by default happens every 1 second. So the document was safely written — a crash and translog replay would recover it — it just wasn’t in any <em>open, searchable segment</em> yet.</p>
+<p>To make a specific write visible immediately:</p>
+<ul>
+<li>Call the index API with <code>refresh=true</code>, which forces a refresh of the affected shards before returning</li>
+<li>For testing, <code>?refresh=wait_for</code> blocks until the next natural refresh</li>
+</ul>
+<p><strong>The trap:</strong> <code>refresh=true</code> on every document defeats the batching that makes refresh cheap: you create one tiny segment per write, starving the merger and exploding segment count.</p>
+<p><strong>The production pattern:</strong></p>
+<ul>
+<li>Keep <code>refresh_interval</code> at a tuned value (1s for interactive, tens of seconds for bulk)</li>
+<li>Only force-refresh for the rare case that truly needs instant visibility</li>
+<li>Or accept that search-visible-after-1-second is a feature, not a bug, and design the application around it</li>
+</ul>
+<p><strong>Common pitfall — Over-sharding by default:</strong> Creating a daily index with <code>number_of_shards: 10</code> for a workload that ingests a few hundred MB per day sounds prudent (“more shards = more parallelism”), but after a year you have 3,650 shards, most of them a few megabytes each, each carrying fixed Lucene and cluster-state overhead and each adding a fan-out sub-query to every search.</p>
+<p>The cost shows up as:</p>
+<ul>
+<li>Slow master elections</li>
+<li>Bloated cluster state</li>
+<li>Heap pressure from segment metadata</li>
+<li>Per-query latency proportional to shard count even when the data is tiny</li>
+</ul>
+<p><strong>The fix:</strong></p>
+<ul>
+<li>Size shards to the 10–50 GB target — for a small daily volume, that means far fewer primaries, or rolling over by size rather than by day, or using ILM to merge old small indices</li>
+<li>Remember that the number of primaries is <em>immutable</em> once set, so undersizing shards at index creation is an error you can only fix by reindexing</li>
+</ul>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Elasticsearch is built on Lucene’s immutable, segment-based inverted index. Documents are not searchable until a refresh opens a new segment (default 1s) — this is a feature, not a bug, and the root cause of most “I wrote it but can’t find it” confusion.</li>
+<li>The inverted index answers “which documents contain this term”; doc values (columnar store) answer “what is this field’s value for this document” — and back all sorting and aggregations. Map human-readable fields as both <code>text</code> (search) and <code>keyword</code> (aggregate/sort).</li>
+<li>Use <code>filter</code> context (not <code>must</code>) for yes/no predicates — filters skip scoring and are cached, while putting pure filters in <code>must</code> wastes CPU and forfeits caching. This is the single most important Query DSL concept.</li>
+<li>Primary shard count is immutable at index creation; over-sharding (too many tiny shards) is the #1 production failure mode — size shards to 10–50 GB and keep ~20 shards per GB of heap. Use ILM tiering (hot-warm-cold-frozen) for time-series data.</li>
+<li>BM25 (default since ES 5.0) saturates term frequency so keyword repetition doesn’t game ranking, unlike linear TF-IDF. Tune <code>k1</code> (saturation) and <code>b</code> (length normalization) only with a graded query suite and NDCG metrics.</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li><strong>“I index a document and search immediately but can’t find it — is Elasticsearch inconsistent?”</strong> — No, it’s near-real-time by design: the document is durable in the translog immediately but not searchable until the next refresh opens a new segment (default 1s). Use <code>refresh=true</code> for instant visibility, but never in bulk — it creates one tiny segment per write and starves the merger.</li>
+<li><strong>“How do you scale Elasticsearch for a logging workload ingesting 1TB/day?”</strong> — Use ILM with time-based indices, size shards to 10–50 GB, set replicas to 0 during bulk loads with disabled refresh, use the Bulk API at 5–15 MB per request, and tier storage (hot SSD → warm → cold disk → frozen searchable snapshots).</li>
+<li><strong>“Why are my search scores slightly different than expected?”</strong> — The default <code>QUERY_THEN_FETCH</code> uses shard-local document frequencies for BM25’s IDF, which distorts scores for rare terms concentrated in one shard. Use <code>DFS_QUERY_THEN_FETCH</code> for global term frequencies at the cost of one extra round trip.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Over-sharding by default: creating daily indices with many primary shards for a low-volume workload accumulates thousands of tiny shards, each carrying fixed Lucene and cluster-state overhead and each adding a fan-out sub-query to every search. The number of primary shards is immutable once set, so undersizing is an error you can only fix by reindexing — always size shards to the 10–50 GB target from the start.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/search-engine-elasticsearch/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Search%20Engine%20(Elasticsearch)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fsearch-engine-elasticsearch%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fsearch-engine-elasticsearch%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/search-engine-elasticsearch" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/cdn-and-edge-computing" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>CDN &amp; Edge Computing</span></a><a href="/notes/system-design/database-sharding-and-replication" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Database Sharding &amp; Replication</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Search Engine (Elasticsearch)" data-selector=".article-prose" data-article-slug="system-design/search-engine-elasticsearch" data-article-title="Search Engine (Elasticsearch)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

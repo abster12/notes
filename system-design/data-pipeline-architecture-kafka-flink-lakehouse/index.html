@@ -1,0 +1,866 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Data Pipeline Architecture (Kafka + Flink + Lakehouse) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-what-problem-does-a-data-pipeline-solve" class="toc-link" data-toc-link="1-what-problem-does-a-data-pipeline-solve" data-astro-cid-p33bl5ka>1. What Problem Does a Data Pipeline Solve?</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-three-generations-of-data-architecture" class="toc-link" data-toc-link="the-three-generations-of-data-architecture" data-astro-cid-p33bl5ka>The Three Generations of Data Architecture</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-three-layer-model" class="toc-link" data-toc-link="the-three-layer-model" data-astro-cid-p33bl5ka>The Three-Layer Model</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-layer-1--ingestion-apache-kafka" class="toc-link" data-toc-link="2-layer-1--ingestion-apache-kafka" data-astro-cid-p33bl5ka>2. Layer 1 — Ingestion (Apache Kafka)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#kafka-internals-what-matters-for-interviews" class="toc-link" data-toc-link="kafka-internals-what-matters-for-interviews" data-astro-cid-p33bl5ka>Kafka Internals (what matters for interviews)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-decision-that-shapes-everything-how-many-partitions" class="toc-link" data-toc-link="the-decision-that-shapes-everything-how-many-partitions" data-astro-cid-p33bl5ka>The Decision That Shapes Everything: How Many Partitions?</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#kafka-connect-dont-write-producers" class="toc-link" data-toc-link="kafka-connect-dont-write-producers" data-astro-cid-p33bl5ka>Kafka Connect: Don’t Write Producers</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-layer-2--processing-apache-flink" class="toc-link" data-toc-link="3-layer-2--processing-apache-flink" data-astro-cid-p33bl5ka>3. Layer 2 — Processing (Apache Flink)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#why-flink-over-spark-streaming" class="toc-link" data-toc-link="why-flink-over-spark-streaming" data-astro-cid-p33bl5ka>Why Flink over Spark Streaming?</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-flink-state-model-the-hardest-part" class="toc-link" data-toc-link="the-flink-state-model-the-hardest-part" data-astro-cid-p33bl5ka>The Flink State Model (The Hardest Part)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#windowing-the-core-enrichment-primitive" class="toc-link" data-toc-link="windowing-the-core-enrichment-primitive" data-astro-cid-p33bl5ka>Windowing: The Core Enrichment Primitive</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#4-layer-3--storage-lakehouse-apache-iceberg" class="toc-link" data-toc-link="4-layer-3--storage-lakehouse-apache-iceberg" data-astro-cid-p33bl5ka>4. Layer 3 — Storage (Lakehouse: Apache Iceberg)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#why-not-just-write-parquet-to-s3" class="toc-link" data-toc-link="why-not-just-write-parquet-to-s3" data-astro-cid-p33bl5ka>Why Not Just Write Parquet to S3?</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-medallion-architecture-bronze--silver--gold" class="toc-link" data-toc-link="the-medallion-architecture-bronze--silver--gold" data-astro-cid-p33bl5ka>The Medallion Architecture (Bronze → Silver → Gold)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#iceberg-internals-the-30-second-explanation" class="toc-link" data-toc-link="iceberg-internals-the-30-second-explanation" data-astro-cid-p33bl5ka>Iceberg Internals (the 30-second explanation)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#5-exactly-once-semantics-the-full-pipeline" class="toc-link" data-toc-link="5-exactly-once-semantics-the-full-pipeline" data-astro-cid-p33bl5ka>5. Exactly-Once Semantics: The Full Pipeline</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#6-schema-evolution--data-contracts" class="toc-link" data-toc-link="6-schema-evolution--data-contracts" data-astro-cid-p33bl5ka>6. Schema Evolution &amp; Data Contracts</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#schema-registry-confluent--apicurio" class="toc-link" data-toc-link="schema-registry-confluent--apicurio" data-astro-cid-p33bl5ka>Schema Registry (Confluent / Apicurio)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#7-common-architecture-patterns-and-when-to-use-them" class="toc-link" data-toc-link="7-common-architecture-patterns-and-when-to-use-them" data-astro-cid-p33bl5ka>7. Common Architecture Patterns (and when to use them)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#pattern-a-simple-streaming-etl" class="toc-link" data-toc-link="pattern-a-simple-streaming-etl" data-astro-cid-p33bl5ka>Pattern A: Simple Streaming ETL</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#pattern-b-lambda-architecture-streaming--batch" class="toc-link" data-toc-link="pattern-b-lambda-architecture-streaming--batch" data-astro-cid-p33bl5ka>Pattern B: Lambda Architecture (Streaming + Batch)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#pattern-c-kappa-architecture-streaming-only" class="toc-link" data-toc-link="pattern-c-kappa-architecture-streaming-only" data-astro-cid-p33bl5ka>Pattern C: Kappa Architecture (Streaming-Only)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#pattern-d-cdc-first-database-as-source-of-truth" class="toc-link" data-toc-link="pattern-d-cdc-first-database-as-source-of-truth" data-astro-cid-p33bl5ka>Pattern D: CDC-First (Database as Source of Truth)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#8-operations--observability" class="toc-link" data-toc-link="8-operations--observability" data-astro-cid-p33bl5ka>8. Operations &amp; Observability</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-four-golden-signals-for-data-pipelines" class="toc-link" data-toc-link="the-four-golden-signals-for-data-pipelines" data-astro-cid-p33bl5ka>The Four Golden Signals for Data Pipelines</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-dead-letter-queue-dlq-pattern" class="toc-link" data-toc-link="the-dead-letter-queue-dlq-pattern" data-astro-cid-p33bl5ka>The Dead Letter Queue (DLQ) Pattern</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#data-quality-checks-great-expectations--soda--dbt-tests" class="toc-link" data-toc-link="data-quality-checks-great-expectations--soda--dbt-tests" data-astro-cid-p33bl5ka>Data Quality Checks (Great Expectations / Soda / dbt tests)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#9-capacity-planning--cost" class="toc-link" data-toc-link="9-capacity-planning--cost" data-astro-cid-p33bl5ka>9. Capacity Planning &amp; Cost</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#10-weaknesses--trade-offs" class="toc-link" data-toc-link="10-weaknesses--trade-offs" data-astro-cid-p33bl5ka>10. Weaknesses &amp; Trade-offs</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#related" class="toc-link" data-toc-link="related" data-astro-cid-p33bl5ka>Related</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Data Pipeline Architecture (Kafka + Flink + Lakehouse)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 15 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 21 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>platform</span><span class="tag" data-astro-cid-sgg5joot>data-engineering</span><span class="tag" data-astro-cid-sgg5joot>kafka</span><span class="tag" data-astro-cid-sgg5joot>flink</span><span class="tag" data-astro-cid-sgg5joot>lakehouse</span><span class="tag" data-astro-cid-sgg5joot>iceberg</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="data-pipeline-architecture-kafka--flink--lakehouse">Data Pipeline Architecture (Kafka + Flink + Lakehouse)</h1>
+<blockquote>
+<p><strong>Staff-Engineer Focus:</strong> Building a data pipeline that moves events from A to B is a junior task. Building a data pipeline that ensures exactly-once semantics across a dozen services with millisecond latency at 10 million events/second — while handling schema evolution, late-arriving data, backfills, and a data quality SLA of 99.99% — that’s a staff engineer problem. The interview question isn’t “explain Kafka” — it’s “your company has 200 microservices each emitting events to 30 different destinations. The operations team says they find data quality issues 3 days after they occur. The data science team says they can’t trust the numbers. The VP of engineering says data pipeline delays are blocking 3 product launches. Walk me through your architecture.”</p>
+</blockquote>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A streaming data platform using Kafka for transport, Flink for processing, and a Lakehouse (Iceberg/Delta) for ACID storage on object storage — the modern replacement for data warehouses and lakes. It handles exactly-once semantics, schema evolution, and data quality SLAs across hundreds of source services.</p>
+<p><strong>How it’s asked:</strong> “Design a data pipeline that moves 10M events/sec from 200 microservices to a lakehouse with exactly-once semantics, schema evolution, and 99.99% data quality.”</p>
+<hr>
+<h2 id="1-what-problem-does-a-data-pipeline-solve">1. What Problem Does a Data Pipeline Solve?</h2>
+<p>At its core, a data pipeline answers one question: <strong>how does data get from where it’s born to where it’s needed — correctly, on time, and at scale?</strong></p>
+<p>But at the staff level, the real question is deeper: <strong>how do you build a data platform that turns 200+ independent producers and 50+ independent consumers into a coherent, observable, trustworthy system — without becoming a bottleneck yourself?</strong></p>
+<h3 id="the-three-generations-of-data-architecture">The Three Generations of Data Architecture</h3>
+<table>
+<thead>
+<tr>
+<th>Generation</th>
+<th>Paradigm</th>
+<th>Storage</th>
+<th>Processing</th>
+<th>Problems</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Gen 1 — Data Warehouse</strong></td>
+<td>ETL (Extract → Transform → Load)</td>
+<td>Relational DB (Oracle, Teradata)</td>
+<td>Batch SQL, nightly jobs</td>
+<td>Schema changes = 6-week project. Can’t handle unstructured data. Costs $500K/year in licenses.</td>
+</tr>
+<tr>
+<td><strong>Gen 2 — Data Lake</strong></td>
+<td>ELT (Extract → Load → Transform)</td>
+<td>Object store (S3/HDFS) + Hive metastore</td>
+<td>Spark/Hadoop batch</td>
+<td>“Lake” becomes “swamp” — no ACID, no schema enforcement, no data versioning. 30% of queries return wrong answers because someone wrote a bad partition. The “small files problem” brings reads to a crawl.</td>
+</tr>
+<tr>
+<td><strong>Gen 3 — Data Lakehouse</strong></td>
+<td>Streaming ELT + ACID</td>
+<td>Object store (S3) + table format (Iceberg/Delta/Hudi)</td>
+<td>Flink (streaming) + Spark/Trino (batch)</td>
+<td>Unifies batch and streaming on the same storage layer. ACID transactions, time travel, schema evolution, partition evolution — all on cheap S3 storage.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The gen 3 architecture — Kafka + Flink + Lakehouse — is what you should reach for in an interview.</strong> It’s the modern standard for companies operating at scale, and it directly addresses the pain points of gen 1 and gen 2.</p>
+<h3 id="the-three-layer-model">The Three-Layer Model</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌─────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                    INGESTION LAYER                       │</span></span>
+<span class="line"><span>│  ┌──────────┐  ┌──────────┐  ┌──────────────┐          │</span></span>
+<span class="line"><span>│  │  Kafka   │  │  Kafka   │  │  Change Data  │          │</span></span>
+<span class="line"><span>│  │  (app    │  │  Connect │  │  Capture      │          │</span></span>
+<span class="line"><span>│  │  events) │  │  (DB → K)│  │  (Debezium)   │          │</span></span>
+<span class="line"><span>│  └────┬─────┘  └────┬─────┘  └──────┬───────┘          │</span></span>
+<span class="line"><span>│       └──────────────┼──────────────┘                   │</span></span>
+<span class="line"><span>│                      ▼                                   │</span></span>
+<span class="line"><span>├─────────────────────────────────────────────────────────┤</span></span>
+<span class="line"><span>│                  PROCESSING LAYER                        │</span></span>
+<span class="line"><span>│  ┌──────────────────────────────────────────────────┐   │</span></span>
+<span class="line"><span>│  │              Apache Flink (Streaming)             │   │</span></span>
+<span class="line"><span>│  │  ┌─────────┐  ┌────────┐  ┌──────────────────┐   │   │</span></span>
+<span class="line"><span>│  │  │Enrich   │  │Window  │  │Stateful joins    │   │   │</span></span>
+<span class="line"><span>│  │  └────┬────┘  └───┬────┘  └────────┬─────────┘   │   │</span></span>
+<span class="line"><span>│  │       └───────────┼───────────────┘              │   │</span></span>
+<span class="line"><span>│  └───────────────────┼──────────────────────────────┘   │</span></span>
+<span class="line"><span>│                      ▼                                   │</span></span>
+<span class="line"><span>├─────────────────────────────────────────────────────────┤</span></span>
+<span class="line"><span>│                   STORAGE LAYER                          │</span></span>
+<span class="line"><span>│  ┌──────────────────────────────────────────────────┐   │</span></span>
+<span class="line"><span>│  │     Lakehouse (Apache Iceberg / Delta / Hudi)     │   │</span></span>
+<span class="line"><span>│  │  ┌──────────┐  ┌──────────┐  ┌──────────────┐    │   │</span></span>
+<span class="line"><span>│  │  │ Bronze   │→ │ Silver   │→ │ Gold         │    │   │</span></span>
+<span class="line"><span>│  │  │ (raw)    │  │ (clean)  │  │ (aggregated) │    │   │</span></span>
+<span class="line"><span>│  │  └──────────┘  └──────────┘  └──────────────┘    │   │</span></span>
+<span class="line"><span>│  └──────────────────────────────────────────────────┘   │</span></span>
+<span class="line"><span>└─────────────────────────────────────────────────────────┘</span></span></code></pre>
+<hr>
+<h2 id="2-layer-1--ingestion-apache-kafka">2. Layer 1 — Ingestion (Apache Kafka)</h2>
+<p>Kafka is the <strong>durable, replayable, partitioned commit log</strong> at the heart of the pipeline. It decouples producers from consumers: producers write to topics; consumers read at their own pace.</p>
+<h3 id="kafka-internals-what-matters-for-interviews">Kafka Internals (what matters for interviews)</h3>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>What It Is</th>
+<th>Why It Matters at Scale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Partition</strong></td>
+<td>An ordered, immutable sequence of records. Kafka’s unit of parallelism.</td>
+<td>All records with the same key go to the same partition → ordering guarantees for that key. Partition count determines max consumer parallelism. You can’t decrease partitions once set.</td>
+</tr>
+<tr>
+<td><strong>Consumer Group</strong></td>
+<td>A set of consumers that divide partitions among themselves.</td>
+<td>Exactly one consumer per partition in a group → no duplicate processing within the group. Rebalancing (when consumers join/leave) causes a brief processing pause — the “stop-the-world” problem.</td>
+</tr>
+<tr>
+<td><strong>ISR (In-Sync Replicas)</strong></td>
+<td>Replicas that are fully caught up with the leader.</td>
+<td><code>min.insync.replicas = 2</code> means you survive 1 broker failure without data loss. Setting this to <code>replication.factor</code> sacrifices availability for durability.</td>
+</tr>
+<tr>
+<td><strong>Log Compaction</strong></td>
+<td>Keeps only the latest value per key (not time-based deletion).</td>
+<td>Essential for CDC (Change Data Capture) — the latest state of each database row is always available. Enables “bootstrap a new consumer from the compacted topic” without replaying years of events.</td>
+</tr>
+<tr>
+<td><strong>Idempotent Producer</strong></td>
+<td><code>enable.idempotence=true</code> ensures no duplicates from producer retries.</td>
+<td>The foundation for exactly-once semantics. Without it, a producer retry can result in duplicate messages. With it, the broker de-duplicates using producer ID + sequence number.</td>
+</tr>
+<tr>
+<td><strong>Transactions</strong></td>
+<td>Atomic writes across multiple partitions/topics.</td>
+<td>Enables “exactly-once” for read-process-write patterns (consume from topic A, process, produce to topic B — either both succeed or neither does). Critical for financial pipelines.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-decision-that-shapes-everything-how-many-partitions">The Decision That Shapes Everything: How Many Partitions?</h3>
+<p><strong>The rule:</strong> <code>partitions &gt;= max(expected throughput / per-partition throughput, consumer parallelism needed)</code></p>
+<p>But this is deceptively simple. The real question is: <strong>what ordering guarantees do you need?</strong></p>
+<ul>
+<li><strong>Global ordering?</strong> 1 partition. Throughput limited to ~50-100 MB/s per partition. All consumers bottlenecked.</li>
+<li><strong>Per-entity ordering?</strong> Partition by entity ID. Orders for the same user are ordered; orders across users are not. Scales horizontally.</li>
+<li><strong>No ordering needed?</strong> Partition by random key or round-robin. Maximum parallelism, zero ordering guarantees.</li>
+</ul>
+<p><strong>Pitfall:</strong> Setting partitions too low initially, then realizing you need more parallelism. You can increase partitions, but existing key-based data won’t redistribute — old data stays on old partitions, creating hot spots during replay. <strong>Always over-provision partitions by 2-3x</strong> at topic creation time. The overhead of extra partitions is negligible; the cost of re-partitioning is enormous.</p>
+<h3 id="kafka-connect-dont-write-producers">Kafka Connect: Don’t Write Producers</h3>
+<p>For database → Kafka ingestion, use <strong>Kafka Connect with Debezium connectors</strong>. Writing a custom producer that reads from Postgres and writes to Kafka is reinventing a wheel that Debezium has already perfected — with transaction log tailing, schema registry integration, and exactly-once support.</p>
+<hr>
+<h2 id="3-layer-2--processing-apache-flink">3. Layer 2 — Processing (Apache Flink)</h2>
+<p>Kafka gets data in. Flink transforms it. Flink is the <strong>stateful stream processing engine</strong> — it processes events one-at-a-time (or in micro-batches) with exactly-once guarantees and sub-millisecond latency.</p>
+<h3 id="why-flink-over-spark-streaming">Why Flink over Spark Streaming?</h3>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Spark Structured Streaming</th>
+<th>Apache Flink</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Processing model</strong></td>
+<td>Micro-batch (hundreds of ms latency)</td>
+<td>True event-at-a-time (sub-ms latency)</td>
+</tr>
+<tr>
+<td><strong>State management</strong></td>
+<td>In-memory or checkpointed to DFS</td>
+<td>RocksDB-backed state store; incremental checkpointing; state scales to TB</td>
+</tr>
+<tr>
+<td><strong>Exactly-once</strong></td>
+<td>Yes (with idempotent sinks)</td>
+<td>Yes (two-phase commit via Kafka transactions)</td>
+</tr>
+<tr>
+<td><strong>Late data handling</strong></td>
+<td>Watermark-based, but limited</td>
+<td>Sophisticated side outputs for late data; multiple window types</td>
+</tr>
+<tr>
+<td><strong>Backpressure</strong></td>
+<td>Stops accepting new micro-batches</td>
+<td>Natural backpressure through TCP flow control</td>
+</tr>
+<tr>
+<td><strong>Savepoints</strong></td>
+<td>Checkpoint-based, requires structured streaming format</td>
+<td>True savepoints — pause job, upgrade Flink version, resume from savepoint</td>
+</tr>
+<tr>
+<td><strong>Ecosystem maturity</strong></td>
+<td>Tied to Databricks/Spark ecosystem</td>
+<td>Standalone, but growing rapidly (AWS Managed Flink, Ververica, Confluent)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The interview heuristic:</strong> Reach for Spark when you’re already in the Databricks/Spark ecosystem and latency &gt; 1 second is acceptable. Reach for Flink when sub-second latency matters, stateful processing is required, or you have complex event-time windowing with late data.</p>
+<h3 id="the-flink-state-model-the-hardest-part">The Flink State Model (The Hardest Part)</h3>
+<p>Flink’s state management is what separates it from stateless stream processors. Understanding state backends, checkpointing, and savepoints is the difference between a junior and staff answer.</p>
+<p><strong>Checkpointing:</strong> Flink periodically takes a consistent snapshot of all operator state and stores it in a durable store (S3, HDFS). On failure, it restarts from the last checkpoint — exactly-once. The <strong>checkpoint interval</strong> is the key tuning parameter: shorter = faster recovery + higher overhead. Typical: 1-5 minutes.</p>
+<p><strong>Savepoints:</strong> A manually triggered checkpoint that includes the exact positions in the Kafka partitions being consumed. Savepoints let you stop a Flink job, upgrade your code, and resume from where you left off — without data loss or duplication. This is critical for operational pipelines that run 24/7.</p>
+<p><strong>State Backend (RocksDB):</strong> Flink stores state in RocksDB (an embedded key-value store) on local disk, with incremental checkpoints to S3. Each key’s state is stored separately, enabling scaling to <strong>terabytes of state</strong> — think “the last 30 days of user session activity” materialized in state.</p>
+<p><strong>The critical interview point:</strong> Flink state must be <strong>keyed by something that distributes evenly.</strong> If your state key is <code>user_id</code>, and you have a handful of power users generating 50% of events, you get <strong>state skew</strong> — one task manager holds 50% of the state and becomes the bottleneck. The fix: pre-aggregate or use a composite key that distributes load.</p>
+<h3 id="windowing-the-core-enrichment-primitive">Windowing: The Core Enrichment Primitive</h3>
+<table>
+<thead>
+<tr>
+<th>Window Type</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Tumbling</strong></td>
+<td>Fixed-size, non-overlapping windows</td>
+<td>“Count orders every 5 minutes”</td>
+</tr>
+<tr>
+<td><strong>Sliding</strong></td>
+<td>Fixed-size, overlapping windows (slide &lt; size)</td>
+<td>“Moving average of orders over last 30 minutes, updated every 5 minutes”</td>
+</tr>
+<tr>
+<td><strong>Session</strong></td>
+<td>Activity-based windows with a gap timeout</td>
+<td>“Group all clicks in a user session (30 min inactivity gap)”</td>
+</tr>
+<tr>
+<td><strong>Global</strong></td>
+<td>Single window across all time (custom triggers)</td>
+<td>“Maintain the latest state for each user forever”</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Event time vs. processing time:</strong> This is the #1 source of data quality bugs. Processing time is when Flink receives the event; event time is when the event actually occurred. If you window by processing time and events arrive 5 minutes late, your windows will be wrong. Always window by <strong>event time</strong> with <strong>watermarks</strong> that tolerate late data.</p>
+<hr>
+<h2 id="4-layer-3--storage-lakehouse-apache-iceberg">4. Layer 3 — Storage (Lakehouse: Apache Iceberg)</h2>
+<p>The data lakehouse is where data lands — but it’s not “a bucket of Parquet files.” It’s an <strong>ACID-compliant table format on top of object storage.</strong> Iceberg (Netflix), Delta Lake (Databricks), and Hudi (Uber) all solve the same problem: make S3 behave like a database.</p>
+<h3 id="why-not-just-write-parquet-to-s3">Why Not Just Write Parquet to S3?</h3>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Parquet-on-S3</th>
+<th>Lakehouse (Iceberg)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Atomic writes</strong></td>
+<td>Partial files visible during write → readers see incomplete data</td>
+<td>Snapshot isolation — writes are all-or-nothing</td>
+</tr>
+<tr>
+<td><strong>Schema evolution</strong></td>
+<td>Add a column → rewrite the entire table</td>
+<td>Add/drop/rename columns as metadata operations (no data rewrite)</td>
+</tr>
+<tr>
+<td><strong>Partition evolution</strong></td>
+<td>Change partition scheme → rewrite entire table</td>
+<td>Change partition spec → new data uses new scheme, old data stays</td>
+</tr>
+<tr>
+<td><strong>Time travel</strong></td>
+<td>Hope you kept old files around</td>
+<td>Query table as of any snapshot ID or timestamp</td>
+</tr>
+<tr>
+<td><strong>Concurrent writes</strong></td>
+<td>Writers silently clobber each other</td>
+<td>Optimistic concurrency with retry — Iceberg catalog arbitrates</td>
+</tr>
+<tr>
+<td><strong>Small files</strong></td>
+<td>10,000 tiny Parquet files = 30x slower queries</td>
+<td>Compaction jobs merge small files into optimal sizes</td>
+</tr>
+<tr>
+<td><strong>Data skipping</strong></td>
+<td>Read every file</td>
+<td>Min/max stats per file + partition pruning → skip 99% of data</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-medallion-architecture-bronze--silver--gold">The Medallion Architecture (Bronze → Silver → Gold)</h3>
+<p>This is the standard pattern for organizing data in the lakehouse:</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Purpose</th>
+<th>Transformations</th>
+<th>Schema</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Bronze</strong></td>
+<td>Raw ingestion, immutable append-only</td>
+<td>None (exactly as ingested)</td>
+<td>Source schema</td>
+</tr>
+<tr>
+<td><strong>Silver</strong></td>
+<td>Cleaned, deduplicated, enriched, validated</td>
+<td>De-duplication, PII masking, schema normalization, quality checks</td>
+<td>Standardized schema</td>
+</tr>
+<tr>
+<td><strong>Gold</strong></td>
+<td>Business-level aggregates, dimensional models, ML features</td>
+<td>Aggregations, joins, feature engineering</td>
+<td>Business-friendly schema</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The key principle:</strong> Bronze is append-only and never modified. If you discover a bug in Silver, you don’t fix Bronze — you fix the Flink job and reprocess Bronze → Silver. This preserves the immutable raw data while enabling correction downstream.</p>
+<h3 id="iceberg-internals-the-30-second-explanation">Iceberg Internals (the 30-second explanation)</h3>
+<p>An Iceberg table has three layers:</p>
+<ol>
+<li><strong>Data files</strong> — Parquet files in S3 (the actual data)</li>
+<li><strong>Manifest files</strong> — Lists of data files with per-file statistics (min/max per column, row count)</li>
+<li><strong>Manifest list / metadata file</strong> — Snapshot of the table: which manifest files belong to this version, schema, partition spec</li>
+</ol>
+<p>When you query, the engine reads the metadata file, uses partition + column stats to prune 95-99% of files, then reads only the relevant Parquet files. When you write, a new metadata file is atomically swapped in via the catalog’s compare-and-swap operation — readers see either the old snapshot or the new one, never a partial write.</p>
+<hr>
+<h2 id="5-exactly-once-semantics-the-full-pipeline">5. Exactly-Once Semantics: The Full Pipeline</h2>
+<p>End-to-end exactly-once is the gold standard. Here’s how the layers work together:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Producer → Kafka (idempotent producer + transactions)</span></span>
+<span class="line"><span>  ↓</span></span>
+<span class="line"><span>Flink consumes from Kafka (reads committed transactions only)</span></span>
+<span class="line"><span>  ↓</span></span>
+<span class="line"><span>Flink processes with checkpointed state (state is part of checkpoint)</span></span>
+<span class="line"><span>  ↓</span></span>
+<span class="line"><span>Flink writes to Iceberg via two-phase commit:</span></span>
+<span class="line"><span>  Phase 1: Write data files to S3 (but don't commit)</span></span>
+<span class="line"><span>  Phase 2: On checkpoint completion, atomically commit Iceberg snapshot</span></span>
+<span class="line"><span>  ↓</span></span>
+<span class="line"><span>Consumer reads from Iceberg (sees only committed snapshots)</span></span></code></pre>
+<p><strong>What this guarantees:</strong> Every event is processed exactly once, from producer to consumer. If Flink crashes mid-write, it restarts from the last checkpoint — data files from the failed write are orphaned (they exist in S3 but aren’t referenced by any Iceberg snapshot) and are cleaned up by a background compaction job.</p>
+<p><strong>The practical trade-off:</strong> Exactly-once adds ~15-25% latency overhead (waiting for Kafka transactions + Iceberg commits). For 95% of pipelines, <strong>at-least-once with idempotent sinks</strong> is sufficient and simpler. Reserve exactly-once for pipelines where duplicates have financial or legal consequences (payments, billing, compliance).</p>
+<hr>
+<h2 id="6-schema-evolution--data-contracts">6. Schema Evolution &amp; Data Contracts</h2>
+<p>In a pipeline with 200 services producing events and 50 consuming them, schema changes without coordination cause cascading failures. The staff-engineer answer is <strong>schema registry + data contracts.</strong></p>
+<h3 id="schema-registry-confluent--apicurio">Schema Registry (Confluent / Apicurio)</h3>
+<p>Every Kafka topic has a schema (Avro/Protobuf/JSON Schema) registered in the Schema Registry. Producers validate messages against the schema before publishing. Consumers know exactly what they’re reading.</p>
+<p><strong>Compatibility modes that matter:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Rule</th>
+<th>Safe For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>BACKWARD</code></td>
+<td>New schema can read old data</td>
+<td>Consumers upgrade first → safe for producers to add optional fields</td>
+</tr>
+<tr>
+<td><code>FORWARD</code></td>
+<td>Old schema can read new data</td>
+<td>Producers upgrade first → safe for consumers to add optional fields</td>
+</tr>
+<tr>
+<td><code>FULL</code></td>
+<td>Both directions compatible</td>
+<td>Add optional fields only. Breaking changes require a new topic.</td>
+</tr>
+<tr>
+<td><code>NONE</code></td>
+<td>No compatibility checks</td>
+<td>Fast and dangerous — use only for POC topics</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Data contracts go beyond schemas:</strong> They specify SLAs — freshness (data available within X minutes), completeness (99.9% of expected events present), and schema guarantees. Violation = alert to the producer team (not the data team). <strong>The data platform team is not responsible for data quality — they’re responsible for enforcing the contracts that make data quality the producer’s responsibility.</strong></p>
+<hr>
+<h2 id="7-common-architecture-patterns-and-when-to-use-them">7. Common Architecture Patterns (and when to use them)</h2>
+<h3 id="pattern-a-simple-streaming-etl">Pattern A: Simple Streaming ETL</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>App → Kafka → Flink (clean/enrich) → Iceberg (Silver) → dbt/Spark → Iceberg (Gold) → BI</span></span></code></pre>
+<p><strong>When:</strong> You have well-structured events, moderate volume (&lt; 100K events/sec), and batch-compatible latency (&gt; 5 min).</p>
+<h3 id="pattern-b-lambda-architecture-streaming--batch">Pattern B: Lambda Architecture (Streaming + Batch)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Fast path: App → Kafka → Flink → Redis/Serving layer (latency: ms)</span></span>
+<span class="line"><span>Slow path: Kafka → S3 (raw) → Spark (batch) → Iceberg (corrected) → Serving layer</span></span></code></pre>
+<p><strong>When:</strong> You need sub-second latency but also need exact correctness. The streaming layer gives fast, approximate results; the batch layer corrects them nightly. <strong>The cost:</strong> You maintain two codebases. Use only if streaming-only can’t meet your accuracy requirements.</p>
+<h3 id="pattern-c-kappa-architecture-streaming-only">Pattern C: Kappa Architecture (Streaming-Only)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>App → Kafka → Flink (all processing) → Iceberg → Everything else</span></span></code></pre>
+<p><strong>When:</strong> All processing — including historical re-processing — happens through the streaming system. When you need to backfill 3 years of data, you replay from Kafka’s retention (or the raw data in S3). Single codebase, single processing model. <strong>This is the modern default.</strong> Use it unless you have a specific reason not to.</p>
+<h3 id="pattern-d-cdc-first-database-as-source-of-truth">Pattern D: CDC-First (Database as Source of Truth)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Postgres → Debezium → Kafka → Flink (denormalize) → Iceberg → Search/Analytics</span></span></code></pre>
+<p><strong>When:</strong> Your databases are the system of record and you need to synchronize derived views (search indexes, analytics, caches) in near-real-time. Debezium tails the Postgres WAL (Write-Ahead Log), producing a Kafka event for every INSERT/UPDATE/DELETE. Flink denormalizes across tables. Iceberg stores the denormalized view for analytics.</p>
+<hr>
+<h2 id="8-operations--observability">8. Operations &amp; Observability</h2>
+<p>A data pipeline without observability is a black box that breaks silently. The staff engineer’s pipeline has:</p>
+<h3 id="the-four-golden-signals-for-data-pipelines">The Four Golden Signals for Data Pipelines</h3>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Metric</th>
+<th>Alert Threshold</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Latency</strong></td>
+<td>End-to-end event age: time from event creation to availability in Gold</td>
+<td>P99 &gt; SLA (e.g., 5 min)</td>
+</tr>
+<tr>
+<td><strong>Throughput</strong></td>
+<td>Events per second at each stage</td>
+<td>-20% of 7-day average (silent data loss)</td>
+</tr>
+<tr>
+<td><strong>Errors</strong></td>
+<td>Dead letter queue (DLQ) depth, Flink checkpoint failures, Iceberg commit failures</td>
+<td>&gt; 0 DLQ messages in 15 min</td>
+</tr>
+<tr>
+<td><strong>Freshness</strong></td>
+<td>Time since last successful write to each Iceberg table</td>
+<td>&gt; 2x expected interval</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-dead-letter-queue-dlq-pattern">The Dead Letter Queue (DLQ) Pattern</h3>
+<p>Every pipeline stage pushes unprocessable events to a DLQ topic — not to /dev/null. The DLQ stores the raw event + error metadata (which stage failed, what the error was, the timestamp). A separate process monitors DLQ depth and alerts. <strong>Events in the DLQ are not lost — they’re quarantined.</strong></p>
+<h3 id="data-quality-checks-great-expectations--soda--dbt-tests">Data Quality Checks (Great Expectations / Soda / dbt tests)</h3>
+<p>At each Medallion layer, automated tests validate:</p>
+<ul>
+<li><strong>Bronze:</strong> Row count within expected range, no null primary keys</li>
+<li><strong>Silver:</strong> Referential integrity, no PII in unencrypted columns, values in expected ranges</li>
+<li><strong>Gold:</strong> Aggregate values consistent with Silver, no sudden 20%+ drops</li>
+</ul>
+<p><strong>The rule:</strong> Quality issues discovered at Gold cost 10x more to fix than issues discovered at Bronze. Validate early, validate often.</p>
+<hr>
+<h2 id="9-capacity-planning--cost">9. Capacity Planning &amp; Cost</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Scaling Unit</th>
+<th>Cost Driver</th>
+<th>Optimization</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Kafka</strong></td>
+<td>Number of partitions × replication factor</td>
+<td>Provisioned throughput (MSK) or broker count (self-managed)</td>
+<td>Right-size partitions. Use tiered storage (S3-backed) for topics &gt; 1TB. Delete old data aggressively.</td>
+</tr>
+<tr>
+<td><strong>Flink</strong></td>
+<td>Task slots (cores) × task managers</td>
+<td>State size (RocksDB on disk), checkpoint frequency</td>
+<td>Incremental checkpoints. State TTL to evict old state. Use AsyncIO for external calls instead of blocking.</td>
+</tr>
+<tr>
+<td><strong>Iceberg</strong></td>
+<td>S3 storage + query engine compute</td>
+<td>Parquet file size (too small → high overhead), compaction</td>
+<td>Compaction job merges small files. Partition wisely → partition pruning saves 90%+ of query scans.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Back-of-napkin:</strong> At 1M events/sec, expect: 3-6 Kafka brokers (r6i.xlarge), 10-20 Flink task slots, 5-50 TB/month in Iceberg (depending on event size).</p>
+<hr>
+<h2 id="10-weaknesses--trade-offs">10. Weaknesses &amp; Trade-offs</h2>
+<ol>
+<li>
+<p><strong>Operational complexity is real.</strong> Kafka + Flink + Iceberg is 3 distributed systems that each need expertise to run. Managed services (MSK, Kinesis Data Analytics, AWS Glue) reduce but don’t eliminate the complexity.</p>
+</li>
+<li>
+<p><strong>Kafka retention is not infinite.</strong> Tiered storage helps, but replaying 3 years of data from Kafka is not practical. You need the S3 raw layer (Bronze) for long-term replayability.</p>
+</li>
+<li>
+<p><strong>Exactly-once adds latency overhead.</strong> Evaluate whether you truly need it vs. at-least-once with idempotent consumers.</p>
+</li>
+<li>
+<p><strong>Flink state can grow unbounded.</strong> Without State TTL, RocksDB state grows until it OOMs. Always configure <code>state.backend.rocksdb.ttl</code> or use timers to evict stale keys.</p>
+</li>
+<li>
+<p><strong>The “schema registry is down” scenario.</strong> If the Schema Registry is unavailable, producers can’t validate new schemas (but can produce with cached schemas). Ensure your Schema Registry is highly available — it’s a critical dependency.</p>
+</li>
+</ol>
+<hr>
+<h2 id="related">Related</h2>
+<ul>
+<li>[[topic-queue]]</li>
+<li>[[Message Queue (Kafka-RabbitMQ)]]</li>
+<li>[[Event Sourcing &amp; CQRS]]</li>
+<li>[[Data Pipeline Architecture (Kafka + Flink + Lakehouse) — Weakness Vault]]</li>
+</ul>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>The three-generation evolution: Data Warehouse (ETL, expensive) → Data Lake (ELT, no ACID) → Lakehouse (streaming ELT + ACID on object storage). Always reach for gen 3 in interviews.</li>
+<li>Kafka is the transport layer (durable, replayable), Flink is the processing layer (streaming SQL, exactly-once), and Iceberg/Delta/Hudi is the storage layer (ACID, time travel, schema evolution on S3).</li>
+<li>Exactly-once semantics require idempotent producers + transactional consumers + checkpointed processing — all three, not two out of three.</li>
+<li>Schema Registry is a critical dependency — if it’s down, producers can’t validate schemas. Make it highly available.</li>
+<li>The small files problem kills lakehouse read performance — compaction jobs are mandatory, not optional.</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you handle late-arriving data in a streaming pipeline?” — Use Flink’s watermarks and allowed lateness; route late events to a side output for reprocessing.</li>
+<li>“What happens if a consumer falls behind by hours?” — Kafka retains data by retention policy (hours/days), so the consumer can catch up. Monitor consumer lag as a key SLO.</li>
+<li>“How do you do a backfill without breaking the live pipeline?” — Run a parallel Flink job that reads from the earliest Kafka offset, writes to a new table, then swap.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>“Exactly-once” in Kafka means exactly-once within the Kafka cluster + consumer group. It does NOT mean exactly-once to an external sink (like a database) unless you use Kafka Connect with exactly-once sink connectors or two-phase commit. Many candidates conflate the two.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/data-pipeline-architecture-kafka-flink-lakehouse/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Data%20Pipeline%20Architecture%20(Kafka%20%2B%20Flink%20%2B%20Lakehouse)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fdata-pipeline-architecture-kafka-flink-lakehouse%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fdata-pipeline-architecture-kafka-flink-lakehouse%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/data-pipeline-architecture-kafka-flink-lakehouse" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/collaborative-editor-crdts-operation-transform" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Collaborative Editor (CRDTs, Operation Transform)</span></a><a href="/notes/system-design/database-indexing-and-query-optimization" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Database Indexing &amp; Query Optimization</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Data Pipeline Architecture (Kafka + Flink + Lakehouse)" data-selector=".article-prose" data-article-slug="system-design/data-pipeline-architecture-kafka-flink-lakehouse" data-article-title="Data Pipeline Architecture (Kafka + Flink + Lakehouse)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

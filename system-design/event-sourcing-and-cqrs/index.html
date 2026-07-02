@@ -1,0 +1,709 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Event Sourcing &amp; CQRS · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview" class="toc-link" data-toc-link="overview" data-astro-cid-p33bl5ka>Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#the-event-store-as-source-of-truth" class="toc-link" data-toc-link="the-event-store-as-source-of-truth" data-astro-cid-p33bl5ka>The Event Store as Source of Truth</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#event-sourcing-vs-crud" class="toc-link" data-toc-link="event-sourcing-vs-crud" data-astro-cid-p33bl5ka>Event Sourcing vs CRUD</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#the-append-only-log-mechanics-and-guarantees" class="toc-link" data-toc-link="the-append-only-log-mechanics-and-guarantees" data-astro-cid-p33bl5ka>The Append-Only Log: Mechanics and Guarantees</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#event-store-append-only-log" class="toc-link" data-toc-link="event-store-append-only-log" data-astro-cid-p33bl5ka>Event Store Append-Only Log</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#event-schema-evolution-and-versioning" class="toc-link" data-toc-link="event-schema-evolution-and-versioning" data-astro-cid-p33bl5ka>Event Schema Evolution and Versioning</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#event-versioning-rules" class="toc-link" data-toc-link="event-versioning-rules" data-astro-cid-p33bl5ka>Event Versioning Rules</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#snapshots-and-snapshotting-strategies" class="toc-link" data-toc-link="snapshots-and-snapshotting-strategies" data-astro-cid-p33bl5ka>Snapshots and Snapshotting Strategies</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#snapshot-strategies-compared" class="toc-link" data-toc-link="snapshot-strategies-compared" data-astro-cid-p33bl5ka>Snapshot Strategies Compared</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#projections-and-read-models-cqrs-separation" class="toc-link" data-toc-link="projections-and-read-models-cqrs-separation" data-astro-cid-p33bl5ka>Projections and Read Models (CQRS Separation)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#cqrs-readwrite-separation" class="toc-link" data-toc-link="cqrs-readwrite-separation" data-astro-cid-p33bl5ka>CQRS Read/Write Separation</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#eventually-consistent-reads" class="toc-link" data-toc-link="eventually-consistent-reads" data-astro-cid-p33bl5ka>Eventually Consistent Reads</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#projection-rebuild-flow" class="toc-link" data-toc-link="projection-rebuild-flow" data-astro-cid-p33bl5ka>Projection Rebuild Flow</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#command-validation-and-the-write-side" class="toc-link" data-toc-link="command-validation-and-the-write-side" data-astro-cid-p33bl5ka>Command Validation and the Write Side</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#idempotency-in-event-handlers" class="toc-link" data-toc-link="idempotency-in-event-handlers" data-astro-cid-p33bl5ka>Idempotency in Event Handlers</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#sagas-with-event-sourcing" class="toc-link" data-toc-link="sagas-with-event-sourcing" data-astro-cid-p33bl5ka>Sagas with Event Sourcing</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#saga-with-event-sourcing-flow" class="toc-link" data-toc-link="saga-with-event-sourcing-flow" data-astro-cid-p33bl5ka>Saga with Event Sourcing Flow</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#event-streaming-integration-kafka" class="toc-link" data-toc-link="event-streaming-integration-kafka" data-astro-cid-p33bl5ka>Event Streaming Integration (Kafka)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#time-travel-queries" class="toc-link" data-toc-link="time-travel-queries" data-astro-cid-p33bl5ka>Time-Travel Queries</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-planning" class="toc-link" data-toc-link="capacity-planning" data-astro-cid-p33bl5ka>Capacity Planning</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-question" class="toc-link" data-toc-link="interview-question" data-astro-cid-p33bl5ka>Interview Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Event Sourcing &amp; CQRS</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-advanced" data-astro-cid-sgg5joot>advanced</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 27 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 38 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>advanced</span><span class="tag" data-astro-cid-sgg5joot>event-sourcing</span><span class="tag" data-astro-cid-sgg5joot>cqrs</span><span class="tag" data-astro-cid-sgg5joot>eventual-consistency</span><span class="tag" data-astro-cid-sgg5joot>projections</span><span class="tag" data-astro-cid-sgg5joot>event-store</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="event-sourcing--cqrs">Event Sourcing &amp; CQRS</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>An architecture where state changes are stored as an immutable event log (event sourcing), and reads are separated from writes using different models (CQRS). The event store is the system of record; current state is derived by replaying events, while projections build specialized read models from the log for query-optimized access.</p>
+<p><strong>How it’s asked:</strong> “Design an event-sourced system for a banking ledger. Handle event schema evolution, snapshots, replay, and separate read models for balance queries and audit trails.”</p>
+<hr>
+<h2 id="overview">Overview</h2>
+<p><strong>Event Sourcing</strong> persists every state-changing fact as an immutable, append-only sequence of events, and treats that log — the <em>event store</em> — as the system of record. The “current state” of any entity is never stored directly; it is a <em>derived</em> value, computed by folding the events for that entity in order. <strong>CQRS</strong> (Command Query Responsibility Segregation) is a separate but companion pattern: it splits the model used to accept writes (commands) from the model(s) used to serve reads (queries), allowing each side to be optimised independently. The two are frequently paired because event sourcing naturally produces a write-optimised, ordered log, while CQRS consumes that log to build many specialised read models (projections) — but they are emphatically not the same thing. You can practise CQRS without event sourcing (separate read replicas or a denormalised read table updated synchronously), and you can practise event sourcing without CQRS (replaying events into a single aggregated model on every query).</p>
+<p>At staff level, this topic stops being about definitions and becomes a test of how well you reason about the <em>seams</em>: where eventual consistency bites, how to evolve schemas on a log you cannot rewrite, how to keep replay times bounded as years of events accumulate, how to make handlers idempotent under at-least-once delivery, and how sagas coordinate long-running workflows across services without a distributed transaction. The rest of this note walks those seams in depth.</p>
+<h2 id="the-event-store-as-source-of-truth">The Event Store as Source of Truth</h2>
+<p>The defining commitment of event sourcing is that the event store is the <em>only</em> authoritative state. Everything else — every read model, every cache, every in-memory aggregate — is disposable and reconstructable. This is a profound inversion of the usual CRUD model, where a row in a table <em>is</em> the state and updates mutate it in place. In event sourcing, a row in a table is at best a cached projection; if it drifts or is lost, you delete it and replay the log. This single property yields four consequences worth internalising.</p>
+<p>First, you get a complete, immutable audit trail for free. Every deposit, every address change, every refund is recorded with who, what, and when, in the exact order it happened. Regulators and finance teams love this because “show me the history of account X” is a query against the log, not a reconstruction from a mutable row that may have been overwritten. Second, you get temporal queries for free: because state is a pure function of the event stream, you can compute the state of an entity <em>as of any historical instant</em> by replaying events up to that timestamp. Third, the write path is extremely simple and fast — it is an append, with no read-modify-write cycle, no row-level locking, and no contention on the “current” row. Fourth, you decouple the <em>shape</em> of writes from the <em>shape</em> of reads: commands produce small, intent-revealing events; projections reshape those events into whatever query-optimal form each consumer needs (a wide table, a search index, a graph).</p>
+<p>The price is that the event store becomes the most critical, most irreplaceable component in the system. It must never lose data, it must never reorder events within a stream, and it must remain readable for the entire lifetime of the system (which means you must solve schema evolution on an immutable log — see below). Losing a projection is a nuisance; losing or corrupting the event store is a company-ending event. This is why event stores are typically deployed with synchronous replication, fsync on every append, and careful WAL handling, and why you should never treat “we’ll restore from the projections” as a recovery strategy.</p>
+<h3 id="event-sourcing-vs-crud">Event Sourcing vs CRUD</h3>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>CRUD (mutable state)</th>
+<th>Event Sourcing (append-only log)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>System of record</td>
+<td>Current row in a table</td>
+<td>Immutable event log</td>
+</tr>
+<tr>
+<td>State representation</td>
+<td>Stored directly; mutated in place</td>
+<td>Derived by folding events in order</td>
+</tr>
+<tr>
+<td>Update semantics</td>
+<td>Read-modify-write; in-place overwrite</td>
+<td>Append-only; corrections are events</td>
+</tr>
+<tr>
+<td>Audit trail</td>
+<td>Optional; often lost on overwrite</td>
+<td>Free; complete, ordered, immutable</td>
+</tr>
+<tr>
+<td>Temporal queries</td>
+<td>Hard/impossible (old values overwritten)</td>
+<td>Native (replay to a timestamp)</td>
+</tr>
+<tr>
+<td>Write path</td>
+<td>Read-modify-write, row locking, contention</td>
+<td>Pure append; no read-modify-write</td>
+</tr>
+<tr>
+<td>Write/read shape coupling</td>
+<td>Same table serves both</td>
+<td>Decoupled; events vs. projections</td>
+</tr>
+<tr>
+<td>Recovery model</td>
+<td>Restore from backup; lose recent changes</td>
+<td>Replay log to rebuild any projection</td>
+</tr>
+<tr>
+<td>Schema evolution</td>
+<td>Alter table in place; migrate rows</td>
+<td>Upcasters / versioned interpretation layer</td>
+</tr>
+<tr>
+<td>Storage growth</td>
+<td>Bounded by current-state size</td>
+<td>Monotonic; grows with event volume forever</td>
+</tr>
+<tr>
+<td>Failure blast radius</td>
+<td>Lost row = lost state</td>
+<td>Lost projection = reindex; lost log = catastrophic</td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-append-only-log-mechanics-and-guarantees">The Append-Only Log: Mechanics and Guarantees</h2>
+<p>Mechanically, an event store is a set of <em>streams</em>, where a stream is an ordered, append-only sequence of events belonging to a single aggregate (an account, an order, a shopping cart). Each event carries a monotonically increasing <em>version</em> or <em>sequence number</em> within its stream, a globally unique event id, a timestamp, the event type, and a serialised payload. Appends are conditional on an <em>expected version</em>: a client says “append these events to stream S, provided its current version is N.” If the store’s version is not N — because another writer appended in between — the append fails with a concurrency conflict (an optimistic-concurrency violation) and the client must re-read, re-validate, and retry. This expected-version check is the mechanism that enforces the invariant of a single aggregate without any locks: serialise all writes through one stream, reject concurrent conflicting writes, and let the application retry.</p>
+<p>The log is append-only in the strict sense: events are never edited and never deleted in the normal path. This is what makes it a reliable audit trail and what makes replay deterministic. “Corrections” are themselves events — a <code>PaymentReversed</code> event rather than a delete of <code>PaymentRecorded</code>. The only sanctioned mutation is <em>archival</em>: very old events may be moved to cold storage once they have been folded into a snapshot, provided the snapshot plus the retained tail can still reconstruct full state. Even then, most teams refuse to delete from the live log and instead keep it forever (or for the regulatory retention window), relying on snapshotting to bound <em>replay</em> cost without bounding <em>storage</em>.</p>
+<p>Durability and ordering guarantees vary by store. Dedicated event stores (EventStoreDB, Axon, Marten) provide first-class stream semantics, optimistic concurrency, and often subscriptions. If you build on a general-purpose database, you typically implement the log as an <code>events</code> table with <code>(stream_id, version)</code> as a unique constraint — the unique index <em>is</em> your optimistic-concurrency enforcement — and use <code>SERIALIZABLE</code> or row-level locking on the stream head to serialise appends. Kafka is sometimes used as the event store itself (see below), but Kafka’s partition is a coarser unit than a business aggregate stream, so you must partition by aggregate id and accept that the “expected version” check becomes a partition-level offset check rather than a per-aggregate version.</p>
+<h3 id="event-store-append-only-log">Event Store Append-Only Log</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                     EVENT STORE (system of record)</span></span>
+<span class="line"><span>  ┌────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>  │                                                                    │</span></span>
+<span class="line"><span>  │  Stream: account-42                       Stream: order-77         │</span></span>
+<span class="line"><span>  │  ┌─────────────────────────────────────┐  ┌─────────────────────┐  │</span></span>
+<span class="line"><span>  │  │ v1 │ AccountOpened    {owner,...}   │  │ v1 │ OrderPlaced     │  │</span></span>
+<span class="line"><span>  │  │ v2 │ FundsDeposited   {amt: 100}    │  │ v2 │ PaymentCharged  │  │</span></span>
+<span class="line"><span>  │  │ v3 │ FundsWithdrawn   {amt: 30}     │  │ v3 │ OrderShipped    │  │</span></span>
+<span class="line"><span>  │  │ v4 │ AddressChanged   {city: ...}   │  │ v4 │ OrderDelivered  │  │</span></span>
+<span class="line"><span>  │  │ v5 │ FundsDeposited   {amt: 50}     │  │    │                 │  │</span></span>
+<span class="line"><span>  │  │    ▼ append-only, never edited      │  │    ▼ append-only     │  │</span></span>
+<span class="line"><span>  │  └─────────────────────────────────────┘  └─────────────────────┘  │</span></span>
+<span class="line"><span>  │                                                                    │</span></span>
+<span class="line"><span>  │  Each event: { id, stream_id, version, type, timestamp, payload }  │</span></span>
+<span class="line"><span>  │  Append guard: expected_version == current stream version          │</span></span>
+<span class="line"><span>  │  Unique constraint on (stream_id, version) => optimistic concurrency│</span></span>
+<span class="line"><span>  └────────────────────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span>         ▲                              │</span></span>
+<span class="line"><span>         │ append(events, expectedVer)  │ ordered subscription / tail</span></span>
+<span class="line"><span>         │  fails if version mismatch   ▼</span></span>
+<span class="line"><span>     Write side                    Projections / Sagas / Kafka bus</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  "Current state" = fold(events[1..N])</span></span>
+<span class="line"><span>      AccountOpened  -> FundsDeposited(100) -> FundsWithdrawn(30)</span></span>
+<span class="line"><span>                     -> FundsDeposited(50)   =>  balance = 120</span></span></code></pre>
+<h2 id="event-schema-evolution-and-versioning">Event Schema Evolution and Versioning</h2>
+<p>The hardest long-term problem in event sourcing is that events are <em>immutable facts</em> but their <em>schema</em> must evolve. An <code>OrderPlaced</code> event written in 2019 had a certain shape; the same logical event in 2026 may need additional fields, renamed fields, or a restructured payload. You cannot rewrite billions of historical events, and you cannot break projections that consume five-year-old events. You need a deliberate versioning and evolution strategy, and it must be decided <em>before</em> you write the first event, because retrofitting it is painful.</p>
+<p>The baseline technique is <strong>weak schema evolution</strong> via optional fields and additive change: new fields are added with defaults, old consumers ignore unknown fields, and you never remove or rename a field that existing consumers depend on. This works for purely additive changes and is the cheapest path — most teams adopt Avro, Protobuf, or JSON Schema with forward/backward compatibility rules enforced in CI. The next level is <strong>event versioning</strong>: include a <code>schema_version</code> (or <code>event_version</code>) field in the event metadata, and have consumers branch on version during deserialisation. <code>OrderPlaced.v1</code> had <code>currency</code> as a free string; <code>OrderPlaced.v2</code> carries an ISO-4217 code plus a <code>tax_breakdown</code> array. A version-aware deserialiser (an “upcaster” or “normaliser”) transforms v1 payloads into the v2 canonical shape on read, so the domain logic and projections only ever see the latest shape. Upcasters are pure functions composed in a chain (v1→v2→v3) and are the standard pattern in mature frameworks (Axon’s <code>EventUpcaster</code>, EventStoreDB’s upcaster pipelines).</p>
+<p>The harder cases are <em>semantic</em> drift — the meaning of a field changed, or a business rule was applied retroactively — and <em>structural</em> changes that upcasting cannot hide. For these you generally accept one of two strategies: introduce a new event type entirely (<code>OrderPlacedV2</code> alongside the legacy <code>OrderPlaced</code>) and route new writes to it, leaving old streams to keep producing the old type; or perform a one-off <em>migration</em> that reads the entire log, applies a transformation, and writes a <em>new</em> event stream or a new projection while keeping the original log untouched as the legal record. Never rewrite the original events in place — you lose the audit property and you invalidate every snapshot’s assumptions. The golden rule is: the log is append-only and immutable; evolution happens at the <em>interpretation</em> layer (upcasters, versioned projections), not at the storage layer.</p>
+<h3 id="event-versioning-rules">Event Versioning Rules</h3>
+<ul>
+<li><strong>Decide the strategy before the first event.</strong> Retrofitting versioning onto a log with billions of events is painful; bake it in from day one.</li>
+<li><strong>Prefer additive, backward-compatible change first.</strong> New optional fields with defaults; old consumers ignore unknown fields; never remove or rename a field existing consumers depend on.</li>
+<li><strong>Enforce compatibility in CI.</strong> Adopt Avro, Protobuf, or JSON Schema with forward/backward compatibility rules checked on every producer change (schema registry rejects incompatible schemas pre-deploy).</li>
+<li><strong>Carry an explicit version in event metadata.</strong> Include <code>schema_version</code> / <code>event_version</code> so consumers can branch on version during deserialisation.</li>
+<li><strong>Transform on read with upcasters.</strong> Version-aware normalisers (pure functions, composed as a chain v1→v2→v3) convert old payloads to the current canonical shape, so domain logic and projections see only the latest shape.</li>
+<li><strong>Never rewrite historical events in place.</strong> The log is immutable; rewriting loses the audit property and invalidates snapshot assumptions. Evolution lives at the interpretation layer, not the storage layer.</li>
+<li><strong>For semantic drift or structural change, fork the event type.</strong> Introduce <code>OrderPlacedV2</code> alongside the legacy <code>OrderPlaced</code>; route new writes to the new type; leave old streams on the old type.</li>
+<li><strong>For retroactive business rules, run a one-off migration.</strong> Read the log, transform, write a new stream or new projection — keep the original log untouched as the legal record.</li>
+<li><strong>Version snapshots too.</strong> Include a <code>snapshot_schema_version</code>; skip snapshots produced by older domain logic and fall back to a full replay for those streams.</li>
+</ul>
+<h2 id="snapshots-and-snapshotting-strategies">Snapshots and Snapshotting Strategies</h2>
+<p>Without snapshots, reconstructing an aggregate’s state requires replaying every event in its stream from the beginning — a cost that grows linearly with the stream’s age. An account opened in 2018 and active ever since may have tens of thousands of events; rebuilding it on every command is unacceptable. <strong>Snapshotting</strong> breaks that linear cost by periodically persisting the <em>fully-folded state</em> of an aggregate at a specific version, so that a rebuild loads the nearest snapshot and replays only the events after it.</p>
+<p>The simplest and most common strategy is <strong>frequency-based snapshotting</strong>: every N events appended to a stream, persist a snapshot at that version. N is tuned per aggregate type — small enough that replay-after-snapshot stays in the millisecond range, large enough that you don’t pay snapshot-write overhead on every append (a common choice is N=100 to N=500). The snapshot is keyed by <code>(stream_id, version)</code> and is itself an append to a <code>snapshots</code> store; on rebuild, you fetch the highest-version snapshot below the requested version and fold forward. A subtlety: snapshots must be <em>consistent</em> with the event folding function. If you change your domain logic, old snapshots encode the old logic’s output and will produce wrong state on rebuild. The standard mitigation is to include a <code>snapshot_schema_version</code> and to <em>invalidate</em> (skip) snapshots whose schema version is older than the current folder, falling back to a full replay for those streams. Many teams also add a manual “purge all snapshots” operation tied to a deploy of logic-changing code, accepting a one-time slow rebuild.</p>
+<p>A second strategy is <strong>time-based snapshotting</strong>: snapshot at most once per T (e.g., daily), useful when streams are bursty. A third is <strong>demand-driven / on-demand snapshotting</strong>: snapshot only when a rebuild actually happens and the replay exceeded a threshold — this avoids snapshotting cold streams that are never read. A fourth, increasingly popular at scale, is <strong>caching the live aggregate</strong>: keep the folded aggregate in an in-memory cache (or a fast KV store) keyed by stream id, invalidate on eviction, and rebuild only on cache miss — effectively a snapshot on every state change, trading memory for replay cost. The right combination depends on read/write ratios, stream length distributions, and memory budget. The key capacity invariant to enforce: <em>worst-case rebuild time</em> (snapshot interval ÷ append rate × per-event fold cost) must stay under your command-latency SLA, with headroom for cold-cache misses.</p>
+<h3 id="snapshot-strategies-compared">Snapshot Strategies Compared</h3>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Trigger</th>
+<th>Best for</th>
+<th>Cost trade-off</th>
+<th>Watch-outs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Frequency-based</td>
+<td>Every N events appended</td>
+<td>General purpose; steady streams</td>
+<td>Snapshot write every N appends; bounded replay</td>
+<td>Tune N per aggregate; invalidation on logic change</td>
+</tr>
+<tr>
+<td>Time-based</td>
+<td>At most once per T (e.g. daily)</td>
+<td>Bursty streams; periodic workloads</td>
+<td>Fewer snapshot writes; replay can exceed T of events</td>
+<td>Replay window grows with burst size</td>
+</tr>
+<tr>
+<td>Demand-driven / on-demand</td>
+<td>When a rebuild replay exceeds a threshold</td>
+<td>Cold streams rarely read</td>
+<td>No overhead on unread streams</td>
+<td>First rebuild after threshold is slow</td>
+</tr>
+<tr>
+<td>Cache the live aggregate</td>
+<td>Every state change (in-memory / KV)</td>
+<td>Hot, high-traffic aggregates</td>
+<td>Memory-for-replay trade; near-zero replay on hit</td>
+<td>Eviction → cold miss; invalidation discipline</td>
+</tr>
+<tr>
+<td>Projection snapshot / checkpointed dump</td>
+<td>Periodic dump of the read model</td>
+<td>Full-projection rebuild SLAs</td>
+<td>Bounds <em>projection</em> rebuild, not per-aggregate</td>
+<td>Stale between dumps; reindex pipeline needed</td>
+</tr>
+</tbody>
+</table>
+<h2 id="projections-and-read-models-cqrs-separation">Projections and Read Models (CQRS Separation)</h2>
+<p>CQRS formalises what event sourcing makes natural: the write side accepts <em>commands</em>, validates them against the aggregate (rebuilt from the log), and appends events; the read side serves queries from <em>projections</em> — independently-built, query-optimised representations derived from the event stream. The two sides have different shapes, different scaling characteristics, and different consistency models, and that separation is the whole point. The write model is small, normalised, and optimised for correctness and append throughput; each read model is denormalised, wide, and optimised for a specific query pattern — a <code>customer_orders_summary</code> table, an Elasticsearch index for full-text order search, a Redis sorted set for a leaderboard, a graph store for relationship traversal.</p>
+<p>A projection is built by a <em>projection handler</em> that subscribes to the event stream and, for each event, updates the read model accordingly. <code>OrderPlaced</code> inserts a row; <code>OrderShipped</code> sets a status column and writes to a <code>shipments</code> index; <code>OrderCancelled</code> flips the status and emits a compensating entry to a revenue projection. Because projections are derived, you can have <em>as many as you want</em> without touching the write side, and you can rebuild any of them from scratch by replaying the log — which is the recovery story when a projection is corrupted, when you add a new query, or when you change a projection’s schema. This “throw away and replay” property is one of the most powerful operational features of the pattern: a bad migration becomes a reindex, not a data-loss incident.</p>
+<p>The separation also enables independent scaling and independent technology choice. A write store optimised for ordered appends (EventStoreDB, Postgres events table, Kafka) can be paired with read stores optimised for their access pattern (Postgres for transactional reads, ClickHouse for analytics, OpenSearch for search, Redis for hot lookups). The cost is operational complexity: you now run more infrastructure, and you must monitor projection lag (see below) as a first-class SLI. A common failure mode is teams that build five projections but only alert on the write side — the system looks healthy while reads are serving stale data because one projection handler is wedged.</p>
+<h3 id="cqrs-readwrite-separation">CQRS Read/Write Separation</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                         ┌──────────────────────┐</span></span>
+<span class="line"><span>                         │      Client / API     │</span></span>
+<span class="line"><span>                         └──────────┬───────────┘</span></span>
+<span class="line"><span>            commands (write)        │        queries (read)</span></span>
+<span class="line"><span>                         ▼          │            ▼</span></span>
+<span class="line"><span>            ┌────────────────┐      │      ┌────────────────┐</span></span>
+<span class="line"><span>            │   Write Side   │      │      │   Read Side    │</span></span>
+<span class="line"><span>            │  (Command Bus) │      │      │  (Query APIs)  │</span></span>
+<span class="line"><span>            └───────┬────────┘      │      └───────▲────────┘</span></span>
+<span class="line"><span>                    │               │              │</span></span>
+<span class="line"><span>                    ▼               │              │</span></span>
+<span class="line"><span>        ┌───────────────────┐       │      ┌───────────────┐</span></span>
+<span class="line"><span>        │   Aggregate(s)    │       │      │  Projections  │</span></span>
+<span class="line"><span>        │  decide()→events  │       │      │  (read models)│</span></span>
+<span class="line"><span>        │  apply()→state    │       │      └───────▲───────┘</span></span>
+<span class="line"><span>        └─────────┬─────────┘       │              │</span></span>
+<span class="line"><span>                  │ append events   │      update  │</span></span>
+<span class="line"><span>                  ▼ (expected ver)  │              │</span></span>
+<span class="line"><span>        ┌───────────────────┐       │              │</span></span>
+<span class="line"><span>        │    EVENT STORE    │───────┼──────────────┘</span></span>
+<span class="line"><span>        │  (system of       │ subscribe / tail</span></span>
+<span class="line"><span>        │   record, log)    │──────────────────────────► projection handlers</span></span>
+<span class="line"><span>        └───────────────────┘</span></span>
+<span class="line"><span>        STRONG consistency        EVENTUAL consistency</span></span>
+<span class="line"><span>        (validate vs log)         (projections lag the log)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Rule: command validation ALWAYS reads the event store, never a projection.</span></span></code></pre>
+<h2 id="eventually-consistent-reads">Eventually Consistent Reads</h2>
+<p>Because projections are populated <em>asynchronously</em> by subscribing to the event stream, there is an unavoidable lag between the moment a command appends an event and the moment that event is reflected in a given projection. This is <em>eventual consistency</em>, and it is not a bug to be eliminated — it is an inherent property of the architecture that must be modelled explicitly. The lag has several sources: the time for the event store to publish the event to subscribers, the time for the projection handler to process it, the time to commit the read-model update, and any batching the handler does for throughput. Typical lag is tens to hundreds of milliseconds; under load or during a backlog it can balloon to seconds or minutes.</p>
+<p>The engineering discipline is to make this lag <em>measurable and bounded</em>. Every projection should track a <em>checkpoint</em> (the last event sequence number it has applied) and expose it; the system should expose the event store’s current head; and the gap between them is your projection lag, graphed and alerted on. A common pattern is for read APIs to return not just data but also the <em>as-of version</em> they reflect, so a client that just issued a command can poll or wait until the read model catches up to the version it knows its write produced (“read-your-writes consistency through version gating”). Some systems offer a <em>read-your-writes</em> guarantee by routing a client’s reads to a projection that has been confirmed to have processed at least up to the client’s last write — a stronger but more expensive contract.</p>
+<p>Where you cannot tolerate the lag — typically for the <em>command validation</em> itself, which must see the aggregate’s current state — you do <em>not</em> read from a projection; you rebuild the aggregate from the event log (with snapshots), which is strongly consistent because it reads the authoritative stream. This is the key consistency boundary: writes are strongly consistent against the event store; reads from projections are eventually consistent; the aggregate rebuild for command validation is strongly consistent against the log. Designers who confuse these three and try to validate commands against a projection get subtle correctness bugs (a command accepted against stale state, producing an event that violates an invariant). The rule: <em>command validation always reads the event store, never a projection</em>.</p>
+<h3 id="projection-rebuild-flow">Projection Rebuild Flow</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  Trigger: projection corrupted  |  new query added  |  schema changed</span></span>
+<span class="line"><span>                                   │</span></span>
+<span class="line"><span>                                   ▼</span></span>
+<span class="line"><span>          ┌───────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>          │  1. DROP / TRUNCATE the target read model          │</span></span>
+<span class="line"><span>          │     (it is disposable &#x26; reconstructable)           │</span></span>
+<span class="line"><span>          └───────────────────────┬───────────────────────────┘</span></span>
+<span class="line"><span>                                  ▼</span></span>
+<span class="line"><span>          ┌───────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>          │  2. RESET projection checkpoint to 0               │</span></span>
+<span class="line"><span>          │     (last_applied = 0, idempotency table cleared)  │</span></span>
+<span class="line"><span>          └───────────────────────┬───────────────────────────┘</span></span>
+<span class="line"><span>                                  ▼</span></span>
+<span class="line"><span>          ┌───────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>          │  3. REPLAY the event log from the beginning        │</span></span>
+<span class="line"><span>          │     ┌──────────┐   partition by aggregate id       │</span></span>
+<span class="line"><span>          │     │  EVENT   │   ┌──────┐ ┌──────┐ ┌──────┐      │</span></span>
+<span class="line"><span>          │     │  STORE   │──►│worker│►│worker│►│worker│      │</span></span>
+<span class="line"><span>          │     │ (log)    │   └──┬───┘ └──┬───┘ └──┬───┘      │</span></span>
+<span class="line"><span>          │     └──────────┘      │        │        │          │</span></span>
+<span class="line"><span>          │   parallelised:       ▼        ▼        ▼          │</span></span>
+<span class="line"><span>          │   total_events ÷ replay_throughput = rebuild time   │</span></span>
+<span class="line"><span>          └───────────────────────┬───────────────────────────┘</span></span>
+<span class="line"><span>                                  ▼</span></span>
+<span class="line"><span>          ┌───────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>          │  4. APPLY each event via projection handler        │</span></span>
+<span class="line"><span>          │     idempotent + in-order within partition         │</span></span>
+<span class="line"><span>          │     advance checkpoint in same tx as read-model    │</span></span>
+<span class="line"><span>          │     update (both succeed or neither)               │</span></span>
+<span class="line"><span>          └───────────────────────┬───────────────────────────┘</span></span>
+<span class="line"><span>                                  ▼</span></span>
+<span class="line"><span>          ┌───────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>          │  5. CATCH UP to event store head                   │</span></span>
+<span class="line"><span>          │     checkpoint == head  =>  rebuild complete       │</span></span>
+<span class="line"><span>          │     switch handler back to live subscription       │</span></span>
+<span class="line"><span>          └───────────────────────────────────────────────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Bounded by:  total events ÷ replay throughput  ≤  recovery SLA</span></span>
+<span class="line"><span>  Speed-ups:   partition the log, shard the projection,</span></span>
+<span class="line"><span>               use periodic projection snapshots as starting point</span></span></code></pre>
+<h2 id="command-validation-and-the-write-side">Command Validation and the Write Side</h2>
+<p>The write side is organised around <em>commands</em> — imperative, intent-revealing requests (“PlaceOrder”, “CancelOrder”, “TransferFunds”) — and <em>aggregates</em>, the consistency boundary that enforces invariants. Processing a command is a four-step pipeline: load the aggregate by replaying its event stream (from the latest snapshot), apply the command to the aggregate’s current state to decide whether it is <em>allowed</em> and, if so, which events it produces, append those events to the stream with the expected-version check, and publish them to subscribers. The decisive property is that <em>validation happens against the folded current state</em>, and the events emitted are the <em>decision</em>, not a mutation. The aggregate never mutates state directly; it returns events, and those events are what actually change state when folded.</p>
+<p>This split between “decide” (pure function of command + state → events) and “apply” (pure function of state + event → new state) is what makes the whole pattern tractable: the same <code>apply</code> function is used both during command processing and during replay, guaranteeing that the state reconstructed from the log is identical to the state the command saw. Idempotency of command handling is typically achieved with an <em>idempotency key</em> (a client-generated UUID) stored alongside the events or in a dedup table: if a command with the same key has already been processed, return the cached result instead of appending duplicate events. Without this, retries (network failures, client retries) produce double-charged cards and duplicate orders — a classic production incident.</p>
+<p>Concurrency on the write side is handled by the expected-version check described earlier. When two commands target the same stream concurrently, the first append succeeds and bumps the version; the second’s expected-version check fails, and the command is retried by re-loading the aggregate (now including the first command’s events), re-validating, and re-deciding. Under contention this retry loop can livelock, so aggregates should be small (a single account, a single order) to keep contention localised, and high-contention hotspots should be modelled with finer-grained aggregates or with a saga/event-driven coordination rather than a single bottleneck aggregate.</p>
+<h2 id="idempotency-in-event-handlers">Idempotency in Event Handlers</h2>
+<p>Projection handlers and saga processors consume events from a subscription, and subscriptions almost always deliver events <em>at-least-once</em>, not exactly-once — exactly-once delivery is provably impossible across a network with failures, and even Kafka’s “exactly-once” is really transactional consume-produce, not transactional external side effects. So every handler must assume it will see the same event more than once (after a crash mid-commit, a rebalance, a redelivery) and must be <em>idempotent</em>: applying an event a second time must not change the projection’s state or produce duplicate side effects.</p>
+<p>The standard mechanism is to record the <em>last processed event id</em> (or sequence number) per handler and skip events already applied. For a projection backed by a database, this is often done transactionally with the projection update itself: in the same transaction that updates the read model, advance the handler’s checkpoint, so either both happen or neither. For handlers that produce external side effects (sending an email, calling a payment gateway), the checkpoint alone is insufficient because the side effect may have succeeded before the crash; you need an <em>idempotency table</em> keyed by event id plus handler id, recording that the side effect was attempted, and the external system itself must be idempotent on its own idempotency key (a payment API called twice with the same idempotency key returns the same result rather than charging twice).</p>
+<p>A subtle trap is <em>out-of-order</em> delivery. Some subscriptions (Kafka partitions within a stream, cross-stream merges) can deliver events out of order, and a naive “apply every event” handler will corrupt state — e.g., applying <code>OrderShipped</code> before <code>OrderPlaced</code>. Mitigations include partitioning strictly by aggregate id so per-stream order is preserved, buffering out-of-order events until the predecessor arrives, or designing projections to be order-insensitive where possible (using event timestamps and merge logic rather than positional apply). For most business projections, partitioning by aggregate id and requiring in-order delivery within a partition is the pragmatic choice, and you alert on sequence gaps as a sign of a broken pipeline.</p>
+<h2 id="sagas-with-event-sourcing">Sagas with Event Sourcing</h2>
+<p>A <em>saga</em> is a long-running, multi-step business process that coordinates work across several services or aggregates without a distributed transaction, using compensating actions to roll back when a step fails. In an event-sourced system, sagas are themselves often modelled as event-sourced state machines: a saga instance has its own event stream (<code>SagaStarted</code>, <code>FlightReserved</code>, <code>HotelBooked</code>, <code>PaymentCharged</code>, <code>SagaCompleted</code>, or <code>SagaCompensated</code>), its current state is rebuilt by replaying those events, and it reacts to events from the participating services by emitting commands and, eventually, its own events.</p>
+<p>The classic example is the travel-booking saga: reserve a flight, reserve a hotel, charge payment; if the hotel reservation fails, cancel the flight and refund any partial charge; if the payment fails, cancel both. Each step is a command to a separate aggregate (or service), each emits events, and the saga subscribes to those events to drive its state machine forward. Because there is no two-phase commit across the flight, hotel, and payment services, the saga must be designed for <em>semantic atomicity</em> through compensations, not technical atomicity through a transaction. This means the business must accept that intermediate states are observable (a flight can be reserved before the hotel is confirmed) and that “rollback” is a domain-level compensation (a <code>FlightCancelled</code> event), not a database rollback.</p>
+<p>Modelling sagas as event-sourced state machines gives you the same benefits as any event-sourced aggregate: full auditability of the process, rebuildability, and a clear current-state reconstruction. It also gives you a natural place to enforce <em>process idempotency</em>: a saga’s state encodes which steps have completed, so a redelivered <code>FlightReserved</code> event finds the saga already in the <code>flight_reserved</code> state and is a no-op rather than a double-charge. The failure modes to design for are: a saga stuck because a compensating command itself fails (you need retry with backoff plus human escalation / a “poison” state), a saga that cannot complete because a participant is permanently unavailable (you need a timeout/slip mechanism that forces a compensation decision), and duplicate saga instances from duplicate triggering events (gate saga creation on a correlation id). Sagas are where event sourcing meets its hardest coordination problems, and they are a frequent interview focus precisely because they expose whether a candidate understands that distributed consistency is a <em>business</em> design problem, not a database feature.</p>
+<h3 id="saga-with-event-sourcing-flow">Saga with Event Sourcing Flow</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  Travel Booking Saga  (event-sourced state machine, own event stream)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Trigger: OrderRequested event  ──►  SagaStarted (saga stream v1)</span></span>
+<span class="line"><span>                                        │</span></span>
+<span class="line"><span>                                        ▼</span></span>
+<span class="line"><span>                           ┌─────────────────────────┐</span></span>
+<span class="line"><span>                           │  State: started          │</span></span>
+<span class="line"><span>                           │  emit cmd: ReserveFlight │</span></span>
+<span class="line"><span>                           └────────────┬────────────┘</span></span>
+<span class="line"><span>                                        ▼</span></span>
+<span class="line"><span>                        ┌──────────────────────────────┐</span></span>
+<span class="line"><span>                        │  Flight Service (aggregate)   │</span></span>
+<span class="line"><span>                        │  FlightReserved event         │</span></span>
+<span class="line"><span>                        └───────────────┬──────────────┘</span></span>
+<span class="line"><span>                                        │ saga subscribes</span></span>
+<span class="line"><span>                                        ▼</span></span>
+<span class="line"><span>                           ┌─────────────────────────┐</span></span>
+<span class="line"><span>                           │  State: flight_reserved  │</span></span>
+<span class="line"><span>                           │  Saga stream: v2          │</span></span>
+<span class="line"><span>                           │  emit cmd: ReserveHotel   │</span></span>
+<span class="line"><span>                           └────────────┬────────────┘</span></span>
+<span class="line"><span>                                        ▼</span></span>
+<span class="line"><span>                        ┌──────────────────────────────┐</span></span>
+<span class="line"><span>                        │  Hotel Service (aggregate)    │</span></span>
+<span class="line"><span>                        │  HotelReserved  ─or─  Failed   │</span></span>
+<span class="line"><span>                        └───────────────┬──────────────┘</span></span>
+<span class="line"><span>                                  success│        │failure</span></span>
+<span class="line"><span>                                        ▼        ▼</span></span>
+<span class="line"><span>                          ┌──────────────┐  ┌──────────────────┐</span></span>
+<span class="line"><span>                          │ hotel_booked │  │ COMPENSATE:       │</span></span>
+<span class="line"><span>                          │  emit cmd:   │  │  CancelFlight     │</span></span>
+<span class="line"><span>                          │  ChargePayment│  │  FlightCancelled  │</span></span>
+<span class="line"><span>                          └──────┬───────┘  │  SagaCompensated  │</span></span>
+<span class="line"><span>                                 ▼          └──────────────────┘</span></span>
+<span class="line"><span>                        ┌──────────────────┐</span></span>
+<span class="line"><span>                        │ Payment Service   │</span></span>
+<span class="line"><span>                        │ PaymentCharged    │</span></span>
+<span class="line"><span>                        └────────┬─────────┘</span></span>
+<span class="line"><span>                                 ▼</span></span>
+<span class="line"><span>                          ┌──────────────┐</span></span>
+<span class="line"><span>                          │ SagaCompleted │</span></span>
+<span class="line"><span>                          │ saga stream: vN│</span></span>
+<span class="line"><span>                          └──────────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Properties:</span></span>
+<span class="line"><span>   - No 2PC; semantic atomicity via compensations (FlightCancelled, RefundIssued)</span></span>
+<span class="line"><span>   - Saga state = fold(saga events); redelivered events are no-ops</span></span>
+<span class="line"><span>   - Idempotency: gate saga creation on correlation id</span></span>
+<span class="line"><span>   - Timeouts force a compensation decision if a participant is unavailable</span></span></code></pre>
+<h2 id="event-streaming-integration-kafka">Event Streaming Integration (Kafka)</h2>
+<p>A common scaling and integration question is how an event-sourced system relates to a streaming platform like Kafka. The two are often conflated but serve different layers: the event store is the <em>system of record</em> (durable, per-aggregate ordered, optimised for appends and replay-by-stream), while Kafka is an <em>event distribution backbone</em> (high-throughput, partition-ordered, multi-consumer pub/sub). The cleanest architecture uses the event store as the authoritative log and <em>publishes</em> each committed event to Kafka so that downstream consumers — projections, analytics, other services, data lakes — can subscribe without each one polling the event store. This is the “event store as source, Kafka as bus” pattern: a small publisher component tails the event store (via its subscription/catch-up API) and writes each event to a Kafka topic, preserving order within a partition keyed by aggregate id.</p>
+<p>A key decision is whether Kafka <em>is</em> the event store or merely mirrors it. Using Kafka as the event store (log-compaction retained forever, keyed by aggregate id, one partition per aggregate id hash) is tempting because it removes a component, but it has real costs: optimistic concurrency is weaker (you check against the partition’s high watermark, not a per-aggregate version), per-aggregate replay requires scanning a partition, snapshotting is harder to bolt on, and the granular stream semantics of a dedicated store are absent. Most production designs therefore keep a dedicated event store for the write/validate path and use Kafka purely as the fan-out bus for reads and integration. This also lets you shape the Kafka events differently from the stored events — e.g., publishing normalised, upcast, public-API events to Kafka while the store keeps the raw internal events.</p>
+<p>Integration concerns include <em>exactly-once</em> semantics across the boundary. Kafka’s transactional producer/consumer (EOS) guarantees that a consumer that reads from Kafka, processes, and writes back to Kafka does so without duplicates <em>within Kafka</em>, but it does <em>not</em> extend to external side effects (a database projection write). So projection handlers that consume from Kafka and write to Postgres still need their own idempotency (checkpoint + idempotency table), and a Kafka rebalance mid-commit can still cause a redelivery. Schema management across the bus is enforced with a schema registry (Confluent Schema Registry + Avro/Protobuf) so that producers and consumers negotiate compatible versions — this is where the schema-evolution discipline from earlier pays off, because the registry will reject a producer publishing an incompatible schema before any consumer breaks. Finally, plan for <em>topic partitioning by aggregate id</em> to preserve per-stream order, and for <em>partition count as a hard-to-change decision</em> — choose it based on long-term throughput, not initial load.</p>
+<h2 id="time-travel-queries">Time-Travel Queries</h2>
+<p>Because state is a pure fold over the event stream, “what was the balance of account X on 2023-04-15 at 14:00?” is answerable exactly: replay the stream up to that timestamp and stop. This <em>time-travel</em> capability is a first-class benefit of event sourcing and is painful or impossible in a CRUD system (where the old values were overwritten). The naive implementation — replay from the beginning up to the target timestamp — works but is O(stream length); for long streams you apply snapshots: find the most recent snapshot <em>at or before</em> the target time and fold forward from there. For frequent historical queries, you can build a <em>time-travel projection</em> that stores periodic snapshots (e.g., end-of-day balances) indexed by time, so a historical query is a lookup plus a short forward fold.</p>
+<p>A more sophisticated read model uses a database that natively supports temporal queries (a <code>SYSTEM_TIME</code> period table in SQL:2011, or a bitemporal data model) and have the projection write each event’s effect with valid-time and transaction-time, enabling “as-of” and “as-known-at” queries directly in SQL. Bitemporal modelling is expensive but is the right answer when audit and regulatory reconstruction are core requirements (insurance, finance, healthcare). The cost of all time-travel facilities is storage and index complexity, and the discipline to never mutate a historical fact — only append corrections with their own timestamps.</p>
+<p>A subtle pitfall: time-travel over <em>projections</em> reconstructs the projection’s state at a time, which may differ from the aggregate’s true state at that time if the projection was lagging then. For authoritative historical state, fold the event stream directly; projections are for query convenience and may encode their own delays. Designers who conflate “the projection said X at time T” with “the aggregate was X at time T” produce subtle audit errors.</p>
+<h2 id="capacity-planning">Capacity Planning</h2>
+<p>Capacity planning for an event-sourced system is unusual because the dominant growth axis is <em>event volume</em>, not row count or current-state size — and event volume is permanent and monotonic (you append forever; you rarely delete). The key numbers to model are: events per second written (peak and sustained), average event payload size (which drives storage and network), events per aggregate over its lifetime (which drives per-stream replay cost and thus snapshot frequency), projection count and their per-event processing cost (which drives total compute), and projection lag budget (which drives how much parallelism each projection needs).</p>
+<p>Storage grows at <code>events/s × payload × retention</code>. At 1k events/s, 1KB each, that is ~86GB/day or ~31TB/year before replication and compaction — a number that forces an early decision on tiering (hot store vs. cold archive) and on whether you ever delete. Most teams keep the live log for the regulatory window (often 7+ years in finance) and move cold events to object storage once folded into snapshots. Read-side compute scales with <code>events/s × Σ(projection processing cost per event)</code>; five projections each doing 2ms of work per event at 1k events/s is 10 CPU-seconds per wall-second of pure projection work, before parallelism — so projections are horizontally scaled with per-partition workers, and the partition count must be chosen to allow enough parallelism to keep lag under budget.</p>
+<p>Replay capacity is the often-forgotten axis: rebuilding a projection from scratch requires replaying the entire log, and the time to do so (<code>total events ÷ replay throughput</code>) must fit your recovery SLA. For a 10-billion-event log at 50k events/s replay, that is ~55 hours — unacceptable for most SLAs, which is why teams build parallelised replay (partition the log, replay each partition concurrently into a sharded projection) and invest in the tooling to do this safely. Snapshots bound <em>per-aggregate</em> rebuild but not <em>full-projection</em> rebuild; for the latter you need either periodic projection snapshots (a checkpointed dump of the read model) or a parallelised reindex pipeline. Finally, model the <em>event store</em> as a write-critical path: its append latency is your command latency, so provision it for the write peak with headroom, replicate synchronously, and fsync on commit — cutting corners here is how teams lose the system of record.</p>
+<h2 id="interview-question">Interview Question</h2>
+<p><strong>Q:</strong> You’re running an event-sourced order system. A new projection you just deployed is being populated from the live event stream, but the business reports the new read API is returning <em>stale</em> data for orders placed in the last few minutes, while old orders look correct. Walk me through your diagnosis.</p>
+<p><strong>Model answer:</strong> First, distinguish two failure modes: (1) the projection is <em>behind</em> (lagging the live stream), which would affect all recent writes, or (2) the projection is <em>wrong</em> (mis-handling events), which would affect a subset deterministically. The symptom — recent orders stale, old orders correct — points strongly at lag, not logic: old orders had time to catch up, recent ones have not. I’d check the projection’s checkpoint versus the event store head: if the gap is large and growing, the handler is not keeping up (undersized parallelism, a slow downstream, a blocking call in the handler). If the gap is small but the API is still stale, the problem is between the API and the projection — a caching layer in front of the read model with a long TTL, or the API reading from a read replica that is itself lagging. I’d also confirm the API returns its as-of version and compare it to the event store head for a just-placed order; that pinpoints where the staleness lives. Once I know it’s projection lag, the fix is capacity (more partitions/workers) or removing a bottleneck in the handler; the <em>design</em> fix is to expose lag as an SLI with an SLO, and to offer a read-your-writes path for clients that just wrote. I’d explicitly <em>not</em> try to make the projection synchronous — that defeats the CQRS decoupling and couples read latency to write throughput.</p>
+<p><strong>Common pitfall:</strong> Reaching for <em>synchronous projection updates</em> or <em>two-phase commit</em> to “fix” staleness. This re-couples reads to writes, kills the independent-scaling benefit of CQRS, and under load produces write timeouts that look exactly like the data-loss you were trying to prevent. Eventual consistency between log and projection is a <em>design property</em>, not a bug — the correct response is to measure it, bound it, and expose it to clients via version gating, not to eliminate it with a distributed transaction. The complementary pitfall is <em>validating commands against a projection</em> to avoid a rebuild: that makes correctness depend on the lag you just accepted, so a command can be accepted against stale state and emit an event that violates an invariant. Command validation always reads the event store.</p>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Event sourcing makes an immutable, append-only event log the system of record; current state is <em>derived</em> by folding events in order. Projections and caches are disposable — delete them and replay the log to rebuild.</li>
+<li>CQRS separates the write model (commands → events, optimised for append correctness) from read models (projections, optimised per query). They’re often paired but independent: you can do CQRS without event sourcing and vice versa.</li>
+<li>Eventual consistency between the log and projections is a <em>design property</em>, not a bug. Make lag measurable (checkpoint vs head) and bounded; never “fix” it with synchronous updates or 2PC — that re-couples reads to writes.</li>
+<li>Command validation ALWAYS reads the event store (rebuild the aggregate from the log + snapshots), never a projection. Validating against a stale projection accepts commands that violate invariants.</li>
+<li>Schema evolution must be solved <em>before</em> the first event: use upcasters (v1→v2→v3 pure functions) at the interpretation layer; never rewrite historical events in place.</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li><em>How do you handle a projection serving stale data?</em> — First distinguish lag (checkpoint behind event store head) from logic errors. If lag, add parallelism/partitions or fix a blocking handler; expose lag as an SLI and offer read-your-writes via version gating. Don’t make the projection synchronous.</li>
+<li><em>How do you keep replay bounded as events accumulate?</em> — Snapshotting: persist the fully-folded aggregate state every N events so a rebuild loads the nearest snapshot and replays only the tail. Include a snapshot_schema_version and invalidate old snapshots when domain logic changes.</li>
+<li><em>Can Kafka be your event store?</em> — You can, but you lose per-aggregate optimistic concurrency (you get partition-offset checks instead), granular stream semantics, and easy snapshotting. Most production designs keep a dedicated event store for writes and use Kafka only as the fan-out bus.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>People conflate “the projection said X at time T” with “the aggregate was X at time T,” but projections lag the log and may have been behind at that moment. For authoritative historical state, fold the event stream directly; projections are for query convenience, not audit truth.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/event-sourcing-and-cqrs/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Event%20Sourcing%20%26%20CQRS&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fevent-sourcing-and-cqrs%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fevent-sourcing-and-cqrs%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/event-sourcing-and-cqrs" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/distributed-tracing" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Distributed Tracing</span></a><a href="/notes/system-design/feature-store-and-online-offline-consistency" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Feature Store &amp; Online/Offline Consistency</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Event Sourcing &amp; CQRS" data-selector=".article-prose" data-article-slug="system-design/event-sourcing-and-cqrs" data-article-title="Event Sourcing &amp; CQRS" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

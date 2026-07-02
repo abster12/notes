@@ -1,0 +1,706 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Metrics &amp; Monitoring (Prometheus/Grafana) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview" class="toc-link" data-toc-link="overview" data-astro-cid-p33bl5ka>Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#key-requirements" class="toc-link" data-toc-link="key-requirements" data-astro-cid-p33bl5ka>Key Requirements</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#functional-requirements" class="toc-link" data-toc-link="functional-requirements" data-astro-cid-p33bl5ka>Functional Requirements</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#non-functional-requirements" class="toc-link" data-toc-link="non-functional-requirements" data-astro-cid-p33bl5ka>Non-Functional Requirements</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#metric-types" class="toc-link" data-toc-link="metric-types" data-astro-cid-p33bl5ka>Metric Types</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#prometheus-architecture" class="toc-link" data-toc-link="prometheus-architecture" data-astro-cid-p33bl5ka>Prometheus Architecture</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#scrape-model" class="toc-link" data-toc-link="scrape-model" data-astro-cid-p33bl5ka>Scrape Model</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#tsdb-storage" class="toc-link" data-toc-link="tsdb-storage" data-astro-cid-p33bl5ka>TSDB Storage</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#promql" class="toc-link" data-toc-link="promql" data-astro-cid-p33bl5ka>PromQL</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#cardinality-management" class="toc-link" data-toc-link="cardinality-management" data-astro-cid-p33bl5ka>Cardinality Management</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#label-design" class="toc-link" data-toc-link="label-design" data-astro-cid-p33bl5ka>Label Design</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#service-level-objectives-slo--sli--sla" class="toc-link" data-toc-link="service-level-objectives-slo--sli--sla" data-astro-cid-p33bl5ka>Service-Level Objectives (SLO / SLI / SLA)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#alerting-rules-and-alert-fatigue" class="toc-link" data-toc-link="alerting-rules-and-alert-fatigue" data-astro-cid-p33bl5ka>Alerting Rules and Alert Fatigue</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#grafana-dashboards" class="toc-link" data-toc-link="grafana-dashboards" data-astro-cid-p33bl5ka>Grafana Dashboards</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#distributed-tracing-integration" class="toc-link" data-toc-link="distributed-tracing-integration" data-astro-cid-p33bl5ka>Distributed Tracing Integration</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#log-aggregation-correlation" class="toc-link" data-toc-link="log-aggregation-correlation" data-astro-cid-p33bl5ka>Log Aggregation Correlation</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#red-and-use-methods" class="toc-link" data-toc-link="red-and-use-methods" data-astro-cid-p33bl5ka>RED and USE Methods</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-planning-for-monitoring-itself" class="toc-link" data-toc-link="capacity-planning-for-monitoring-itself" data-astro-cid-p33bl5ka>Capacity Planning for Monitoring Itself</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#long-term-storage-thanos-and-cortex" class="toc-link" data-toc-link="long-term-storage-thanos-and-cortex" data-astro-cid-p33bl5ka>Long-Term Storage: Thanos and Cortex</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#sharp-interview-question" class="toc-link" data-toc-link="sharp-interview-question" data-astro-cid-p33bl5ka>Sharp Interview Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Metrics &amp; Monitoring (Prometheus/Grafana)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 22 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 31 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>monitoring</span><span class="tag" data-astro-cid-sgg5joot>observability</span><span class="tag" data-astro-cid-sgg5joot>prometheus</span><span class="tag" data-astro-cid-sgg5joot>grafana</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="metrics--monitoring-prometheusgrafana">Metrics &amp; Monitoring (Prometheus/Grafana)</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A system that collects time-series metrics (Prometheus), visualizes them (Grafana), and alerts on SLO breaches — the foundation of observability alongside logs and traces.</p>
+<p><strong>How it’s asked:</strong> “Design a monitoring system for 200 microservices. Cover metric types, cardinality management, alerting strategy, and how to avoid alert fatigue.”</p>
+<hr>
+<h2 id="overview">Overview</h2>
+<p>A metrics and monitoring system is the nervous system of reliability engineering. It continuously collects, stores, and queries numerical time-series measurements from running services so that on-call engineers can detect regressions, localize outages, reason about capacity, and prove to the business that service-level commitments are being met. At scale, monitoring is not a single product but a stack:</p>
+<ul>
+<li>A collection mechanism (pull or push)</li>
+<li>A time-series database (TSDB) optimized for append-mostly writes and windowed aggregation</li>
+<li>A query language</li>
+<li>An alerting layer that turns raw signals into human notifications</li>
+<li>A visualization layer that turns queries into dashboards</li>
+</ul>
+<p>The dominant open-source implementation of this stack is Prometheus for collection and storage plus Grafana for visualization, often extended with Thanos or Cortex for long-term storage and horizontal scalability. Designing this stack well is less about choosing tools and more about controlling cardinality, designing labels that stay useful as the system grows, and writing alerts that fire on real user pain rather than on noise.</p>
+<h2 id="key-requirements">Key Requirements</h2>
+<h3 id="functional-requirements">Functional Requirements</h3>
+<p>The system must:</p>
+<ul>
+<li>Collect metrics from every service and host in the fleet, exposing them through a standard endpoint that a scraper can poll on a fixed interval.</li>
+<li>Store samples in a time-series database that supports efficient range queries and downsampling, so that a dashboard rendering 30 days of data does not scan 30 days of raw points.</li>
+<li>Provide a query language expressive enough to compute rates, quantiles, and aggregations over arbitrary label dimensions.</li>
+<li>Evaluate alerting rules against incoming data and route firing alerts to the correct human channel — PagerDuty for page-worthy incidents, Slack for informational warnings.</li>
+<li>Visualize the results in dashboards that engineers can build and share without writing code.</li>
+</ul>
+<h3 id="non-functional-requirements">Non-Functional Requirements</h3>
+<p>Monitoring is meta-infrastructure: when it is down, you cannot tell whether anything else is down. This makes its own availability requirements stricter than the services it watches:</p>
+<ul>
+<li>The collection path must be resilient to individual target failures (one hung exporter must not stall the scrape loop).</li>
+<li>The storage layer must survive disk pressure without silent data loss.</li>
+<li>Dashboard queries for common windows (1h, 24h, 7d) must return in under two seconds even at hundreds of thousands of samples per second.</li>
+<li>The system must enforce cardinality discipline: a single mislabeled high-cardinality metric (user_id, request_id, trace_id) can blow up the series count and OOM the server, so ingestion must either reject or bucket such labels.</li>
+</ul>
+<p>Ingestion throughput targets are typically in the range of 50,000 to 500,000 samples per second for a mid-size fleet, with retention of 15–30 days hot on local SSD and one year or more in cold object storage.</p>
+<h2 id="metric-types">Metric Types</h2>
+<p>Understanding the four Prometheus metric types is foundational because each type constrains what queries are meaningful and how the TSDB stores the data.</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Behavior</th>
+<th>Goes Up/Down</th>
+<th>Typical Use</th>
+<th>Key Query Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Counter</strong></td>
+<td>Monotonically increasing; resets to zero on restart</td>
+<td>Up only</td>
+<td>Total requests, bytes sent, errors</td>
+<td><code>rate()</code>, <code>increase()</code></td>
+</tr>
+<tr>
+<td><strong>Gauge</strong></td>
+<td>Arbitrary value at any moment</td>
+<td>Up or down</td>
+<td>Memory in use, queue depth, active connections, temperature</td>
+<td>Direct query; <code>avg</code>, <code>max</code>, <code>sum</code></td>
+</tr>
+<tr>
+<td><strong>Histogram</strong></td>
+<td>Buckets observations cumulatively; stores sum + count</td>
+<td>Up only</td>
+<td>Latency distributions, aggregatable across instances</td>
+<td><code>histogram_quantile()</code></td>
+</tr>
+<tr>
+<td><strong>Summary</strong></td>
+<td>Computes quantiles client-side per instance</td>
+<td>Up only</td>
+<td>Per-instance quantiles (not aggregatable)</td>
+<td>Direct quantile read</td>
+</tr>
+</tbody>
+</table>
+<p>A <strong>counter</strong> is a monotonically increasing value that only ever goes up (or resets to zero on restart) — total requests served, total bytes sent, total errors. Counters are useless as raw values (the absolute number tells you nothing) but powerful when differenced over time with <code>rate()</code> or <code>increase()</code>, which yield per-second rates and handle resets correctly. A <strong>gauge</strong> is a value that can go up or down at any time — current memory in use, queue depth, number of active connections, temperature. Gauges are queried directly with no rate function; you can aggregate them with <code>avg</code>, <code>max</code>, <code>sum</code> across instances. A <strong>histogram</strong> buckets observations into cumulative buckets and also stores a sum and count, enabling server-side quantile estimation with <code>histogram_quantile()</code> and aggregation across instances (a critical capability for distributed latency measurement). A <strong>summary</strong> also measures distributions but computes quantiles client-side, which means you cannot meaningfully average or sum quantiles across instances — this makes summaries a poor fit for most distributed systems and a common source of incorrect dashboards.</p>
+<p>The histogram-versus-summary choice is one of the most frequently misunderstood aspects of metric design. Histograms are almost always the right call for latencies in a distributed system because they are aggregatable: you can scrape ten instances, sum their bucket counts, and compute a global p99 with <code>histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))</code>. Summaries precompute quantiles per instance and offer no way to combine them — averaging ten p99 values does not yield the global p99. The trade-off is that histograms require you to choose bucket boundaries upfront, and poorly chosen buckets produce quantile error. A common heuristic is to define buckets that bracket the SLO threshold tightly (e.g., if your latency SLO is 300ms, include a 0.3 bucket) so that the error budget burn rate is computed accurately.</p>
+<h2 id="prometheus-architecture">Prometheus Architecture</h2>
+<h3 id="scrape-model">Scrape Model</h3>
+<p>Prometheus uses a pull model: the server actively scrapes each target’s <code>/metrics</code> endpoint on a configurable interval (default 15s). This is a deliberate departure from push-based systems like StatsD and is one of Prometheus’s most debated design decisions. Pull makes target discovery explicit, allows the server to detect a down target immediately (a failed scrape produces an <code>up=0</code> sample), and avoids the push system’s failure mode where a misbehaving client floods the ingestion path.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>            +-----------------------+</span></span>
+<span class="line"><span>            |   Service Discovery   |</span></span>
+<span class="line"><span>            | (K8s, Consul, EC2,    |</span></span>
+<span class="line"><span>            |  DNS, static config)  |</span></span>
+<span class="line"><span>            +----------+------------+</span></span>
+<span class="line"><span>                       | target list refresh</span></span>
+<span class="line"><span>                       v</span></span>
+<span class="line"><span>+----------------------+-----------------------+</span></span>
+<span class="line"><span>|                Prometheus Server              |</span></span>
+<span class="line"><span>|  +-----------------+   +-------------------+  |</span></span>
+<span class="line"><span>|  |  Scrape Manager |-->|   TSDB (local)    |  |</span></span>
+<span class="line"><span>|  +--------+--------+   +---------+---------+  |</span></span>
+<span class="line"><span>|           |                      |            |</span></span>
+<span class="line"><span>|           | scrape /metrics      | store      |</span></span>
+<span class="line"><span>|           | (default 15s)        | samples    |</span></span>
+<span class="line"><span>+-----------+----------------------+------------+</span></span>
+<span class="line"><span>            |                      |</span></span>
+<span class="line"><span>            |  +-------------------+</span></span>
+<span class="line"><span>            |  |</span></span>
+<span class="line"><span>            v  v</span></span>
+<span class="line"><span>   +--------+--+--+--------+--------+</span></span>
+<span class="line"><span>   |        |     |        |        |</span></span>
+<span class="line"><span>+--+--+  +--+--+ |     +--+--+  +---+---+</span></span>
+<span class="line"><span>| API |  | DB  | |     |Node |  | Push  |</span></span>
+<span class="line"><span>|svc  |  |export| |    |export| |gateway|</span></span>
+<span class="line"><span>|/met |  | /met | |    | /met| | (batch|</span></span>
+<span class="line"><span>|rics |  | rics | |    | rics| |  jobs)|</span></span>
+<span class="line"><span>+--+--+  +--+--+ |     +--+--+  +---+---+</span></span>
+<span class="line"><span>   ^        ^    |        ^         ^</span></span>
+<span class="line"><span>   | up=0   |    |        |         | push (ephemeral)</span></span>
+<span class="line"><span>   | on fail|    |        |         |</span></span>
+<span class="line"><span>   +--------+----+--------+---------+</span></span></code></pre>
+<p>The downside is that pull does not fit naturally behind NAT, in serverless platforms, or for ephemeral batch jobs; for those, Prometheus offers the Pushgateway as an intermediary, though it is explicitly not meant for long-lived state. Service discovery is pluggable: Prometheus integrates with Kubernetes, Consul, EC2, DNS, and static configs, refreshing target lists on a schedule so that autoscaled instances appear and disappear without manual reconfiguration. Each scrape has a timeout and the server records <code>scrape_duration_seconds</code> and <code>scrape_samples_post_metric_relabeling</code> per target, which are themselves the first signals of a target that is slow or producing too many series.</p>
+<h3 id="tsdb-storage">TSDB Storage</h3>
+<p>The Prometheus TSDB stores samples in a custom on-disk format organized into blocks of roughly two hours, each block containing chunked, compressed time-series data plus an index over label names and values. Samples within a chunk are delta-encoded and then compressed with a combination of XOR float compression and run-length encoding, achieving roughly 1.3 bytes per sample for typical data. The index uses an inverted index on label pairs, enabling fast lookups like “all series where <code>job="api"</code> and <code>status="500"</code>.”</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  Time --></span></span>
+<span class="line"><span>  </span></span>
+<span class="line"><span>  Block N-1          Block N (compacted)        Head Block (in-memory)</span></span>
+<span class="line"><span>  [2h, read-only]    [2h, read-only]            [active append window]</span></span>
+<span class="line"><span>  +--------------+   +--------------+           +-------------------+</span></span>
+<span class="line"><span>  | Index        |   | Index        |           | Head (RAM)        |</span></span>
+<span class="line"><span>  | (inverted    |   | (inverted    |           |  + chunks (RAM)   |</span></span>
+<span class="line"><span>  |  label idx)  |   |  label idx)  |           +---------+---------+</span></span>
+<span class="line"><span>  +--------------+   +--------------+                     |</span></span>
+<span class="line"><span>  | Chunks       |   | Chunks       |   on checkpoint     v</span></span>
+<span class="line"><span>  | [series A]   |   | [series A]   |   ----- cut ------->| new block</span></span>
+<span class="line"><span>  | [series B]   |   | [series B]   |                     | persisted</span></span>
+<span class="line"><span>  | [series C]   |   | [series C]   |                     v</span></span>
+<span class="line"><span>  | delta+XOR    |   | delta+XOR    |           +-------------------+</span></span>
+<span class="line"><span>  | ~1.3 B/sample|   | ~1.3 B/sample|           | Block N+1         |</span></span>
+<span class="line"><span>  +--------------+   +--------------+           | (written to disk) |</span></span>
+<span class="line"><span>         |                  |                   +-------------------+</span></span>
+<span class="line"><span>         v                  v</span></span>
+<span class="line"><span>   +-----------+      +-----------+</span></span>
+<span class="line"><span>   | merged by |&#x3C;---- | Compactor |</span></span>
+<span class="line"><span>   | Compactor |      | (older    |</span></span>
+<span class="line"><span>   | (larger   |      |  blocks)  |</span></span>
+<span class="line"><span>   |  blocks)  |      +-----------+</span></span>
+<span class="line"><span>   +-----------+</span></span>
+<span class="line"><span>         |</span></span>
+<span class="line"><span>         v</span></span>
+<span class="line"><span>   +-----------------+</span></span>
+<span class="line"><span>   | Remote Write -> |  to Thanos / Cortex / object store</span></span>
+<span class="line"><span>   | (long-term)     |   (S3 / GCS / Azure)</span></span>
+<span class="line"><span>   +-----------------+</span></span></code></pre>
+<p>Blocks older than the retention window are compacted and merged, and the head block (the active, in-memory append window) is the most resource-intensive portion. Local retention is typically 15–30 days because a single Prometheus server is a vertical-scale component that is not designed for multi-year storage or horizontal sharding. For longer retention or federation across regions, the ecosystem extends Prometheus with remote write to a long-term store.</p>
+<h3 id="promql">PromQL</h3>
+<p>PromQL is a functional query language where every expression evaluates to a time-series matrix, vector, or scalar. The core building blocks are:</p>
+<ul>
+<li><strong>Instant vectors</strong> — <code>http_requests_total</code> returns the latest value per series.</li>
+<li><strong>Range vectors</strong> — <code>http_requests_total[5m]</code> returns all samples in the last five minutes.</li>
+<li><strong>Transform functions</strong> — <code>rate()</code> for per-second increase of counters, <code>histogram_quantile()</code> for quantile estimation, <code>topk()</code> and <code>quantile_over_time()</code> for windowed analytics.</li>
+</ul>
+<p>Aggregation operators (<code>sum</code>, <code>avg</code>, <code>max</code>, <code>min</code>, <code>count</code>, <code>stddev</code>) can be grouped by arbitrary label sets with <code>by</code> and <code>without</code> clauses, which is how you slice latency by endpoint or error rate by service. PromQL is evaluated at a specific timestamp for instant queries (dashboards, alerts) or over a range for range queries (graph rendering). The language’s sharp edges include:</p>
+<ul>
+<li>The difference between <code>rate</code> and <code>irate</code> — <code>irate</code> uses only the last two samples and is more responsive but noisier.</li>
+<li><code>histogram_quantile</code> must wrap an aggregated <code>sum by (le)</code> and not be applied per-instance.</li>
+<li>Range vector selectors do not look back across scrape gaps, which can produce <code>NaN</code> during brief outages.</li>
+</ul>
+<h2 id="cardinality-management">Cardinality Management</h2>
+<p>Cardinality — the number of distinct label-value combinations, which equals the number of distinct time series — is the single most important and most dangerous property of a Prometheus deployment. Every distinct series is a separate row in the TSDB index and a separate set of chunks on disk; the cost of a metric is not its name but the product of its label cardinalities. A metric with <code>path</code>, <code>method</code>, and <code>status</code> labels where path has 200 values, method has 5, and status has 50 has 50,000 series from those dimensions alone — and if someone adds a <code>user_id</code> label with 10 million values, that single metric becomes 500 billion series and the server is dead within minutes. This is not a theoretical failure mode; it is the most common cause of Prometheus outages in production.</p>
+<p>The defenses are layered:</p>
+<ul>
+<li><strong>Never put unbounded identifiers into metric labels</strong> — user_id, session_id, request_id, trace_id, email, IP address belong in logs and traces, not metrics.</li>
+<li><strong>Use metric relabeling at scrape time</strong> to drop or hash high-cardinality labels before they enter the TSDB; a common pattern is to hash user IDs into a fixed set of buckets if any per-user signal is truly needed.</li>
+<li><strong>Monitor the series count itself</strong> — <code>prometheus_tsdb_head_series</code> and <code>scrape_samples_post_metric_relabeling</code> are the early-warning gauges, and a sudden spike in head series is almost always a new high-cardinality label shipped in a deploy.</li>
+<li><strong>Set hard limits per scrape config</strong> — <code>label_limit</code>, <code>label_name_length_limit</code>, and <code>label_value_length_limit</code> to hard-reject pathological targets.</li>
+<li><strong>Collapse route parameters in your HTTP library</strong> — turn <code>/users/12345/orders/67890</code> into <code>/users/:id/orders/:id</code> so that route cardinality stays bounded to the number of routes, not the number of resources ever accessed.</li>
+</ul>
+<h2 id="label-design">Label Design</h2>
+<p>Good label design is what makes a metric queryable across the dimensions engineers actually care about, and bad label design is what makes dashboards unusable or the TSDB explode. The canonical guidance is to label every metric with the minimal set of dimensions needed to identify the source and the failure mode: typically <code>job</code> (which service), <code>instance</code> (which process), and then the relevant business dimensions such as <code>method</code>, <code>path</code>, <code>status</code>, or <code>le</code> (for histograms). A label should be low-cardinality, stable, and meaningful for aggregation.</p>
+<ul>
+<li>Avoid putting the thing you would group by into the metric name — don’t emit <code>http_requests_total_get</code> and <code>http_requests_total_post</code>; emit one <code>http_requests_total</code> with a <code>method</code> label, because metric names cannot be aggregated over.</li>
+<li>Avoid labels that vary per request or per user.</li>
+<li>Avoid labels that duplicate information already present — <code>job</code> and <code>instance</code> are added automatically by Prometheus based on the scrape target, so you should not also emit them yourself.</li>
+</ul>
+<p>A subtler rule: do not use a label to distinguish things that you will never query across. If you have two independent processes that you will never want to sum together, they can be separate metrics or separate jobs; forcing them under one metric with a label just inflates series count for no analytical benefit. Conversely, if you frequently want to aggregate across something (all instances of a service, all status codes of an endpoint), that thing must be a label, not a separate metric. The test is: will I ever write a query that groups by or filters on this dimension? If yes, it is a label. If no, it is noise.</p>
+<h2 id="service-level-objectives-slo--sli--sla">Service-Level Objectives (SLO / SLI / SLA)</h2>
+<p>Service-level thinking is the framework that turns raw metrics into reliability decisions:</p>
+<ul>
+<li><strong>SLI</strong> (service-level indicator) — a measurable signal of service quality, e.g., the fraction of requests that returned in under 300ms, or the fraction of responses with status &lt; 500.</li>
+<li><strong>SLO</strong> (service-level objective) — a target for that SLI over a window, e.g., 99.9% of requests under 300ms over 30 days.</li>
+<li><strong>SLA</strong> (service-level agreement) — the business contract with consequences, typically looser than the SLO, with refunds or credits if breached, so that the team has a safety margin between the SLO they operate to and the SLA they promised.</li>
+</ul>
+<p>The error budget is the key SLO concept: if your SLO is 99.9% availability over 30 days, your error budget is 0.1% of 30 days, or about 43 minutes of allowed downtime. The budget is a resource to be spent, not a target to hover at — you can use it to ship risky changes, take deliberate downtime for migrations, or justify not paging for a slow canary. The discipline is to burn budget deliberately and to alert on burn rate, not on raw thresholds. A multi-window multi-burn-rate alerting strategy (the Google SRE pattern) fires a page when the burn rate is high over both a short window (e.g., 1h) and a long window (e.g., 5m), which catches sustained incidents without paging on transient spikes. This is far more humane than threshold alerts and directly ties notifications to user-visible impact.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  Error budget burn rate over time</span></span>
+<span class="line"><span>  (SLO = 99.9% over 30d => budget = 0.1% = ~43 min downtime)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  burn     |   Normal ops stays under 1x budget burn</span></span>
+<span class="line"><span>  rate     |</span></span>
+<span class="line"><span>           |</span></span>
+<span class="line"><span>  14.4x ---|----- page threshold (fast burn, 1h window)</span></span>
+<span class="line"><span>           |        \</span></span>
+<span class="line"><span>           |         \  incident: sustained high burn</span></span>
+<span class="line"><span>   6x  ----|----------\----------------------------------  page threshold</span></span>
+<span class="line"><span>           |           \                                 (5m window x 1h window)</span></span>
+<span class="line"><span>           |            \____                           both must exceed</span></span>
+<span class="line"><span>   1x  ----|-----------------___----------------------  normal budget burn</span></span>
+<span class="line"><span>           |                     \____</span></span>
+<span class="line"><span>           |                          \________________</span></span>
+<span class="line"><span>   0x  ----+-----+-----+-----+-----+-----+-----+-----+--> time</span></span>
+<span class="line"><span>           0     6h    12h   18h   24h   30h   36h   42h</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Multi-window multi-burn-rate (Google SRE pattern):</span></span>
+<span class="line"><span>  - Page  : 14.4x burn over 1h  AND  6x burn over 5m</span></span>
+<span class="line"><span>  - Ticket: 6x    burn over 6h  AND  3x burn over 30m</span></span>
+<span class="line"><span>  - Fast burn drains the 30d budget in ~2h  -> page</span></span>
+<span class="line"><span>  - Slow burn drains the 30d budget in ~5d  -> ticket</span></span></code></pre>
+<p>SLIs should be few and should measure what users actually experience: availability (successful responses / total responses), latency (fraction under a threshold that matters to users), and where relevant, freshness, correctness, or throughput. The hardest design decision is choosing the latency threshold — it should reflect the user’s experience, not the p99 of your current performance, and it should be tight enough that the error budget is meaningful. A common mistake is setting the SLO to whatever the service happens to do today, which makes the budget meaningless; the SLO should be a product decision about what good looks like.</p>
+<h2 id="alerting-rules-and-alert-fatigue">Alerting Rules and Alert Fatigue</h2>
+<p>Alerting is where monitoring meets human systems, and alert fatigue is the dominant failure mode. Every alert that fires without representing real user impact trains the team to ignore the channel, which means the real incident is missed. The cardinal rules:</p>
+<ul>
+<li>Alert on <strong>symptoms</strong> (user-visible problems), not on <strong>causes</strong> (high CPU, disk near full) — causes are many and most don’t matter.</li>
+<li>Alert on <strong>SLO burn rate</strong> rather than static thresholds, because burn rate is calibrated to user impact.</li>
+<li><strong>Route by severity</strong> so that page-worthy alerts go to PagerDuty and informational ones go to a Slack channel that no one is expected to read in real time.</li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   Prometheus                  Alertmanager                 Humans</span></span>
+<span class="line"><span>  +-----------+   fires       +---------------+   routes    +-----------+</span></span>
+<span class="line"><span>  | Alert     |-------------->| Dedup +       |-----------> | PagerDuty |</span></span>
+<span class="line"><span>  | rules     |  (for clause) | Grouping      |  (severity= | (page)    |</span></span>
+<span class="line"><span>  | eval      |               |               |   page)     +-----------+</span></span>
+<span class="line"><span>  +-----------+               | Inhibition    |</span></span>
+<span class="line"><span>                              | (suppress     |   routes    +-----------+</span></span>
+<span class="line"><span>   metric    + labels         |  child when   |-----------> | Slack     |</span></span>
+<span class="line"><span>   condition  (severity,      |  parent       |  (severity= | (info)    |</span></span>
+<span class="line"><span>   persists   team, service)  |  firing)      |   info)     +-----------+</span></span>
+<span class="line"><span>                              |               |</span></span>
+<span class="line"><span>                              | Silencing     |             +-----------+</span></span>
+<span class="line"><span>                              | (maintenance) |-----------> | Email     |</span></span>
+<span class="line"><span>                              +---------------+  (other)    | (backup)  |</span></span>
+<span class="line"><span>                                                                +-----------+</span></span></code></pre>
+<p>Alert rule design in Prometheus uses a <code>FOR</code> clause to require a condition to persist for a duration before firing, which filters transient spikes. Labels on the alert (severity, team, service) drive routing in Alertmanager, and annotations carry the runbook link, the dashboard link, and a human-readable summary. Alertmanager handles deduplication, grouping, inhibition (suppress a disk-full alert when the host-down alert for the same machine is already firing), and silencing for planned maintenance. The single most effective fatigue reduction is the post-incident alert audit: after every incident, review every alert that fired and every alert that should have but didn’t, then prune or rewrite. A healthy alerting system fires rarely and almost never fires falsely.</p>
+<h2 id="grafana-dashboards">Grafana Dashboards</h2>
+<p>Grafana is the visualization layer that sits in front of Prometheus (and any other data source) and renders dashboards from PromQL queries. Good dashboards are designed for a specific user and a specific question:</p>
+<ul>
+<li>An <strong>on-call dashboard</strong> answers “what is broken and where.”</li>
+<li>A <strong>service dashboard</strong> answers “how is this service doing against its SLOs.”</li>
+<li>A <strong>capacity dashboard</strong> answers “when do we run out of headroom.”</li>
+</ul>
+<p>Mixing these audiences produces dashboards that are useless to all of them. The practical guidelines:</p>
+<ul>
+<li>Put the most important panels at the top (single-stat panels for the headline SLI and the error budget burn rate).</li>
+<li>Use consistent time ranges across panels so they correlate.</li>
+<li>Prefer stacked graphs for component breakdowns and line graphs for trends.</li>
+<li>Use heatmap panels (supported natively for Prometheus histograms) for latency distributions rather than plotting p50/p90/p99 as three lines, which hides the shape of the distribution.</li>
+</ul>
+<p>Dashboard-as-code (Grafana’s JSON model, managed through tools like grafonnet or Terraform) is essential at scale because hand-built dashboards drift, get orphaned, and resist review. Templating variables let one dashboard cover all services by parameterizing the <code>job</code> and <code>instance</code> selectors. The single most common dashboard mistake is creating a dashboard with 40 panels that takes 30 seconds to load and answers no question — every panel should justify its place by answering a specific question that someone would actually ask.</p>
+<h2 id="distributed-tracing-integration">Distributed Tracing Integration</h2>
+<p>Metrics tell you that something is wrong and roughly where; traces tell you why and how. Distributed tracing (Jaeger, Zipkin, Tempo, Datadog APM) instruments each request with a trace ID and spans across service boundaries, so that a slow request can be decomposed into the time spent in each hop. The integration with metrics is by correlation, not duplication: metrics keep the cardinality low and drive alerts, while traces are sampled (typically 1–10% in steady state, with adaptive sampling to capture all errors and slow requests) and are queried only when an alert fires or a user reports a problem.</p>
+<p>The bridge between the two is the exemplar: a Prometheus histogram can carry an exemplar on a bucket, which is the trace ID of a request that fell into that bucket. Grafana can then render a link from a latency heatmap panel directly to the trace in Jaeger or Tempo, so that an engineer looking at a spike in p99 latency can click through to an actual slow trace without leaving the dashboard. This closes the observability loop: the metric fires the alert, the alert links to the dashboard, the dashboard links to the exemplar, and the exemplar links to the trace that explains the root cause. Exemplar support requires Prometheus 2.16+ and instrumentation that attaches the trace ID to the histogram observation, which is now standard in OpenTelemetry SDKs.</p>
+<h2 id="log-aggregation-correlation">Log Aggregation Correlation</h2>
+<p>Logs are the third pillar of observability and the most verbose. Where metrics are pre-aggregated and cheap to store, and traces are sampled and structured, logs are high-volume, semi-structured, and often the only place where the per-request context (the user_id, the error message, the stack trace) lives. The correlation pattern is the same as with traces: do not put high-cardinality fields in metrics, but do include a request ID or trace ID in every log line so that an engineer who has isolated a failing request via metrics or traces can pivot to the exact logs for that request.</p>
+<p>Structured logging (JSON with consistent field names) is what makes this pivot work at scale, because it lets the log aggregator (Loki, Elasticsearch, Splunk) index the trace_id field and return all lines for a request in milliseconds. Loki is the natural pairing with the Prometheus/Grafana stack because it uses the same label model (labels are low-cardinality, the log content is not indexed but is queried with LogQL) and because Grafana can render log panels next to metric panels with a shared time range and label selector, so that the same dashboard shows the latency spike and the error messages that accompanied it. The cardinality rule applies to Loki too: never put user_id or request_id in Loki labels, only in the log line, or the index explodes exactly as a Prometheus TSDB would.</p>
+<h2 id="red-and-use-methods">RED and USE Methods</h2>
+<p>The RED and USE methods are checklists that ensure you instrument the right signals without thinking from scratch each time.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Stands For</th>
+<th>Scope</th>
+<th>Signals</th>
+<th>Questions Answered</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>RED</strong></td>
+<td>Rate, Errors, Duration</td>
+<td>Request-driven services</td>
+<td>Request rate (counter by route/status), error rate (failure subset), duration (histogram by route)</td>
+<td>Is it handling traffic? Is it failing? Is it slow?</td>
+</tr>
+<tr>
+<td><strong>USE</strong></td>
+<td>Utilization, Saturation, Errors</td>
+<td>Resource-oriented components</td>
+<td>Utilization (fraction of capacity in use), saturation (queue length / wait time — leading contention indicator), errors (device errors, dropped packets, OOM kills)</td>
+<td>Is the resource overloaded? Is it queuing? Is it erroring?</td>
+</tr>
+<tr>
+<td><strong>Golden Signals</strong></td>
+<td>Latency, Traffic, Errors, Saturation</td>
+<td>User-facing services (Google SRE)</td>
+<td>RED + saturation combined</td>
+<td>Minimum viable observability for any user-facing service</td>
+</tr>
+</tbody>
+</table>
+<p><strong>RED</strong> (Rate, Errors, Duration) is the method for request-driven services: for every service, emit the request rate (a counter of requests, sliced by route and status), the error rate (the subset of that counter where status indicates failure), and the duration (a histogram of latency, sliced by route). These three signals answer “is the service handling traffic, is it failing, and is it slow” — which covers the vast majority of service-level incidents. <strong>USE</strong> (Utilization, Saturation, Errors) is the method for resource-oriented components: for every resource (CPU, memory, disk, network, connection pool), emit the utilization (the fraction of capacity in use), the saturation (the queue length or wait time, which is the leading indicator of contention), and the errors (device errors, dropped packets, OOM kills). USE is the right frame for infrastructure; RED is the right frame for applications.</p>
+<p>The two methods compose: a service dashboard typically has a RED section at the top (the user-facing view) and a USE section below it (the resource view that explains the RED signals when they degrade). Google’s <strong>four golden signals</strong> (latency, traffic, errors, saturation) are essentially RED plus saturation, and they are the minimum set that any user-facing service should expose. The discipline is to instrument all four for every service, not just the ones that have had incidents, because the service you haven’t instrumented is the one whose first incident will be un-debuggable.</p>
+<h2 id="capacity-planning-for-monitoring-itself">Capacity Planning for Monitoring Itself</h2>
+<p>Monitoring infrastructure is itself a system with capacity limits, and one of the most embarrassing outages is losing monitoring during the incident you needed it for. A single Prometheus server has practical limits:</p>
+<ul>
+<li>Roughly 1–2 million active series per server for comfortable operation (more is possible but scrape and query latency degrade).</li>
+<li>Memory footprint of roughly 2–4 KB per active series in the head.</li>
+<li>Disk proportional to series count times retention.</li>
+</ul>
+<p>The planning inputs are: number of targets, series per target (measured, not guessed — use <code>scrape_samples_post_metric_relabeling</code>), retention window, and query load. A fleet of 1,000 targets averaging 2,000 series each is 2 million series, which is at the edge of one server and calls for sharding.</p>
+<p>Sharding strategies include:</p>
+<ul>
+<li>Running multiple Prometheus servers each scraping a subset of targets (by job, by namespace, or by a consistent hash of instance).</li>
+<li>Using Thanos or Cortex to federate the shards into a single queryable view.</li>
+<li>Using recording rules to precompute heavy queries so that dashboards hit pre-aggregated data rather than scanning raw series on every load.</li>
+</ul>
+<p>Recording rules are the single most effective capacity lever: a dashboard that computes <code>histogram_quantile(0.99, sum(rate(...)) by (le))</code> over 1,000 instances on every refresh is expensive; a recording rule that evaluates that expression every minute and stores the result as a new series makes the dashboard a cheap read of one series. Record everything that powers a frequently-loaded dashboard or a frequently-evaluated alert.</p>
+<p>Beyond Prometheus itself, plan for:</p>
+<ul>
+<li>The remote write buffer (Prometheus batches remote writes and will drop samples if the downstream is slow).</li>
+<li>Object store throughput and cost (Thanos/Cortex write compacted blocks to S3/GCS, and query fan-out across many blocks is expensive).</li>
+<li>The Grafana query load (every open dashboard polls on an interval, and a dashboard shared by 50 engineers is 50x the query load — use caching or reduce the refresh interval for shared dashboards).</li>
+</ul>
+<p>Treat monitoring capacity with the same rigor as product capacity: set budgets, track growth, and alert on monitoring-system health (the Prometheus self-metrics like <code>prometheus_tsdb_head_series</code>, <code>prometheus_tsdb_head_samples_appended_total</code>, and <code>prometheus_remote_storage_dropped_samples_total</code> are the SLOs for the monitoring system).</p>
+<h2 id="long-term-storage-thanos-and-cortex">Long-Term Storage: Thanos and Cortex</h2>
+<p>Prometheus’s local TSDB is intentionally short-retention and single-instance, which is correct for the hot path but leaves two gaps: long-term retention for trend analysis and capacity planning, and horizontal scalability for fleets too large for one server. Thanos and Cortex (now part of the Mimir project) are the two main answers, both built on the same building blocks (Prometheus, remote write, object storage) but with different architectures.</p>
+<p><strong>Thanos</strong> extends each Prometheus server with a sidecar that uploads compacted blocks to object storage (S3/GCS/Azure) and exposes a StoreAPI that a Thanos Query component can fan out across. Thanos Querier aggregates results from multiple Prometheus servers, sidecars, and Store nodes, presenting a single PromQL interface over the whole fleet and full retention history. Thanos Compactor downsamples blocks for long windows (5m and 1h resolutions) so that a year-long query doesn’t scan raw samples. Thanos Receiver allows push-based ingestion for cases where pull isn’t feasible. Thanos’s model is federated and preserves the per-Prometheus deployment, which suits organizations that run many independent Prometheus instances and want a unified query layer without re-architecting.</p>
+<p><strong>Cortex / Mimir</strong> takes a different approach: Prometheus remote-writes samples directly to a horizontally scalable, multi-tenant ingestion and storage cluster, which shards series across ingesters and stores chunks in object storage. Queries go to the Cortex query frontend, which fans out across the shards. This is a more centralized architecture that trades the simplicity of local Prometheus for true horizontal scale and multi-tenancy, and it is the better fit for very large fleets or SaaS-style monitoring platforms where many teams share one system. Both systems support long-term retention, multi-cluster federation, and the same PromQL, so the choice is operational (federated sidecars vs. centralized ingest) rather than functional.</p>
+<p>The common operational concerns across both are:</p>
+<ul>
+<li><strong>Object-store cost</strong> — long retention of high-resolution data is expensive; downsample aggressively for anything beyond 30 days.</li>
+<li><strong>Query fan-out latency</strong> — a query spanning a year of data across many blocks is inherently slow; use recording rules and downsampling.</li>
+<li><strong>Consistency model</strong> — both are eventually consistent for very recent data because remote write is async; don’t alert on Cortex/Thanos with the same freshness expectation as local Prometheus.</li>
+</ul>
+<p>A common architecture is local Prometheus for hot alerting (seconds of freshness, 15-day retention) plus Thanos or Cortex for long-term dashboards and capacity analysis (minutes of freshness, year-plus retention), which gives each layer the properties it needs.</p>
+<h2 id="sharp-interview-question">Sharp Interview Question</h2>
+<p><strong>Question:</strong> You deploy a new version of your API and your Prometheus server OOMs within 10 minutes. The new version added a single label to an existing histogram. How do you diagnose this, and what was almost certainly the label?</p>
+<p><strong>Model Answer:</strong> The first signal is <code>prometheus_tsdb_head_series</code> spiking at the moment of deploy, visible in the server’s own metrics (if Grafana is still up) or in the Prometheus logs which print “series mismatch” or high-append-rate warnings. The second signal is that <code>scrape_samples_post_metric_relabeling</code> for the API job jumped by orders of magnitude after the deploy, which pinpoints the offending target and tells you the new series are coming from that scrape. The third step is to query the Prometheus API directly (<code>/api/v1/series?match[]=http_request_duration_seconds_bucket&amp;start=...</code>) and look at the label sets — the label whose value set exploded is the culprit. Almost certainly the new label is an unbounded identifier: <code>user_id</code>, <code>request_id</code>, <code>trace_id</code>, <code>session_id</code>, or <code>path</code> with unparameterized route values. The fix is to remove the label from the instrumentation (high-cardinality identifiers belong in logs and traces, not metrics), or if some per-thing signal is genuinely needed, to hash the value into a fixed bucket count via metric relabeling. The deeper lesson is that series count is the product of all label cardinalities, so adding one high-cardinality label to an existing metric multiplies its cost by that cardinality — which is why a single bad label can take down a server that was otherwise comfortable.</p>
+<p><strong>Common Pitfall:</strong> Reaching for <code>avg()</code> to aggregate a summary’s precomputed quantiles across instances. A summary computes <code>quantile(0.99, ...)</code> per process, and there is no mathematically correct way to combine ten per-instance p99 values into a global p99 — averaging them systematically underestimates the true tail. The fix is to use a histogram with well-chosen buckets and to compute the global quantile server-side with <code>histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))</code>. The <code>sum by (le)</code> is mandatory: you must aggregate the bucket counts across instances before applying <code>histogram_quantile</code>, or you get per-instance quantiles wrapped in a meaningless aggregation. This single mistake produces dashboards that report a “p99” that is actually closer to p95, which hides the tail latency that real users experience.</p>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Four metric types: counter (monotonic), gauge (up/down), histogram (bucketed distribution), summary (precomputed quantiles)</li>
+<li>Prometheus is pull-based: it scrapes metrics endpoints on a schedule. Push-based alternatives: StatsD, InfluxDB</li>
+<li>Grafana visualizes Prometheus data with dashboards and alerts</li>
+<li>USE method (Utilization, Saturation, Errors) for resources; RED method (Rate, Errors, Duration) for services</li>
+<li>Alert on symptoms (user-visible problems), not causes (internal details). “Error rate &gt; 1%” not “CPU &gt; 80%”</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you choose between histogram and summary?” — Histogram for aggregatable distributions (compute p99 across instances). Summary for pre-computed quantiles that can’t be aggregated correctly.</li>
+<li>“What’s the cardinality trap?” — Label combinations explode: 100 endpoints × 10 status codes × 5 methods = 5,000 series. High cardinality causes memory blowup in Prometheus.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Never use <code>avg()</code> to aggregate per-instance p99 values. Averaging ten p99s does not give you the global p99 — it systematically underestimates the tail. Use histograms with <code>histogram_quantile()</code> and aggregate bucket counts before computing the quantile.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/metrics-and-monitoring-prometheus-grafana/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Metrics%20%26%20Monitoring%20(Prometheus%2FGrafana)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fmetrics-and-monitoring-prometheus-grafana%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fmetrics-and-monitoring-prometheus-grafana%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/metrics-and-monitoring-prometheus-grafana" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/message-queue-kafka-rabbitmq" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Message Queue (Kafka / RabbitMQ)</span></a><a href="/notes/system-design/multi-agent-orchestration-planning-tool-use-memory-routing" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Multi-Agent Orchestration (Planning, Tool Use, Memory, Routing)</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Metrics &amp; Monitoring (Prometheus/Grafana)" data-selector=".article-prose" data-article-slug="system-design/metrics-and-monitoring-prometheus-grafana" data-article-title="Metrics &amp; Monitoring (Prometheus/Grafana)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

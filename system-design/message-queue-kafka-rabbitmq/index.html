@@ -1,0 +1,922 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Message Queue (Kafka / RabbitMQ) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview" class="toc-link" data-toc-link="overview" data-astro-cid-p33bl5ka>Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#why-it-matters-at-scale" class="toc-link" data-toc-link="why-it-matters-at-scale" data-astro-cid-p33bl5ka>Why It Matters at Scale</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#kafka-architecture" class="toc-link" data-toc-link="kafka-architecture" data-astro-cid-p33bl5ka>Kafka Architecture</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#brokers-partitions-and-offsets" class="toc-link" data-toc-link="brokers-partitions-and-offsets" data-astro-cid-p33bl5ka>Brokers, Partitions, and Offsets</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#consumer-groups-and-rebalancing" class="toc-link" data-toc-link="consumer-groups-and-rebalancing" data-astro-cid-p33bl5ka>Consumer Groups and Rebalancing</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#isr-in-sync-replicas-and-replication" class="toc-link" data-toc-link="isr-in-sync-replicas-and-replication" data-astro-cid-p33bl5ka>ISR (In-Sync Replicas) and Replication</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#rabbitmq-architecture" class="toc-link" data-toc-link="rabbitmq-architecture" data-astro-cid-p33bl5ka>RabbitMQ Architecture</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#exchanges-queues-bindings-and-channels" class="toc-link" data-toc-link="exchanges-queues-bindings-and-channels" data-astro-cid-p33bl5ka>Exchanges, Queues, Bindings, and Channels</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#delivery-and-acknowledgment-model" class="toc-link" data-toc-link="delivery-and-acknowledgment-model" data-astro-cid-p33bl5ka>Delivery and Acknowledgment Model</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#delivery-semantics" class="toc-link" data-toc-link="delivery-semantics" data-astro-cid-p33bl5ka>Delivery Semantics</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#at-most-once" class="toc-link" data-toc-link="at-most-once" data-astro-cid-p33bl5ka>At-Most-Once</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#at-least-once" class="toc-link" data-toc-link="at-least-once" data-astro-cid-p33bl5ka>At-Least-Once</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#exactly-once" class="toc-link" data-toc-link="exactly-once" data-astro-cid-p33bl5ka>Exactly-Once</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#delivery-semantics-comparison" class="toc-link" data-toc-link="delivery-semantics-comparison" data-astro-cid-p33bl5ka>Delivery Semantics Comparison</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#partition-strategies" class="toc-link" data-toc-link="partition-strategies" data-astro-cid-p33bl5ka>Partition Strategies</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#log-compaction" class="toc-link" data-toc-link="log-compaction" data-astro-cid-p33bl5ka>Log Compaction</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#throughput-optimization" class="toc-link" data-toc-link="throughput-optimization" data-astro-cid-p33bl5ka>Throughput Optimization</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#kafka-producer-tuning" class="toc-link" data-toc-link="kafka-producer-tuning" data-astro-cid-p33bl5ka>Kafka Producer Tuning</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#kafka-consumer-tuning" class="toc-link" data-toc-link="kafka-consumer-tuning" data-astro-cid-p33bl5ka>Kafka Consumer Tuning</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#kafka-broker-tuning" class="toc-link" data-toc-link="kafka-broker-tuning" data-astro-cid-p33bl5ka>Kafka Broker Tuning</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#rabbitmq-throughput-tuning" class="toc-link" data-toc-link="rabbitmq-throughput-tuning" data-astro-cid-p33bl5ka>RabbitMQ Throughput Tuning</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#dead-letter-queues" class="toc-link" data-toc-link="dead-letter-queues" data-astro-cid-p33bl5ka>Dead Letter Queues</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#schema-registry" class="toc-link" data-toc-link="schema-registry" data-astro-cid-p33bl5ka>Schema Registry</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#when-to-use-kafka-vs-rabbitmq" class="toc-link" data-toc-link="when-to-use-kafka-vs-rabbitmq" data-astro-cid-p33bl5ka>When to Use Kafka vs RabbitMQ</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#kafka-vs-rabbitmq--feature-comparison" class="toc-link" data-toc-link="kafka-vs-rabbitmq--feature-comparison" data-astro-cid-p33bl5ka>Kafka vs RabbitMQ — Feature Comparison</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-estimation" class="toc-link" data-toc-link="capacity-estimation" data-astro-cid-p33bl5ka>Capacity Estimation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#kafka-sizing-math" class="toc-link" data-toc-link="kafka-sizing-math" data-astro-cid-p33bl5ka>Kafka Sizing Math</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#partition-count-sizing" class="toc-link" data-toc-link="partition-count-sizing" data-astro-cid-p33bl5ka>Partition Count Sizing</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#rabbitmq-sizing" class="toc-link" data-toc-link="rabbitmq-sizing" data-astro-cid-p33bl5ka>RabbitMQ Sizing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-question" class="toc-link" data-toc-link="interview-question" data-astro-cid-p33bl5ka>Interview Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary" class="toc-link" data-toc-link="summary" data-astro-cid-p33bl5ka>Summary</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Message Queue (Kafka / RabbitMQ)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-intermediate" data-astro-cid-sgg5joot>intermediate</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 24 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 34 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>basics</span><span class="tag" data-astro-cid-sgg5joot>kafka</span><span class="tag" data-astro-cid-sgg5joot>rabbitmq</span><span class="tag" data-astro-cid-sgg5joot>messaging</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="message-queue-kafka--rabbitmq">Message Queue (Kafka / RabbitMQ)</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A system that decouples producers from consumers using durable, replayable message logs — Kafka for high-throughput streaming, RabbitMQ for complex routing.</p>
+<p><strong>How it’s asked:</strong> “Design a message queue supporting 1M messages/sec with exactly-once delivery, consumer groups, and 7-day retention. Compare Kafka and RabbitMQ for this use case.”</p>
+<h2 id="overview">Overview</h2>
+<p>A message queue is a durability-first, asynchronous communication channel between services. Producers write messages; consumers read them. The queue decouples sender from receiver — the producer never blocks waiting for the consumer, and vice versa.</p>
+<p>At its core, a message broker is an intermediary that accepts messages from producers, stores them durably (in memory or on disk), and delivers them to consumers according to a defined routing and delivery model. Two dominant architectures have emerged:</p>
+<ul>
+<li><strong>The traditional AMQP-style broker (RabbitMQ)</strong> — a smart routing layer that pushes messages to consumers and deletes them on acknowledgment.</li>
+<li><strong>The distributed commit log (Kafka)</strong> — a dumb, append-only log that consumers pull from and that retains messages for a configurable period regardless of whether they have been consumed.</li>
+</ul>
+<p>The choice between these two models is one of the most consequential infrastructure decisions in a distributed system, because it shapes throughput characteristics, ordering guarantees, delivery semantics, operational complexity, and the kinds of failure modes the system will exhibit.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                     PRODUCER                       CONSUMER</span></span>
+<span class="line"><span>                        |                              |</span></span>
+<span class="line"><span>                        v                              v</span></span>
+<span class="line"><span>   +--------------------+------------------------------+--------------------+</span></span>
+<span class="line"><span>   |                  MESSAGE BROKER (intermediary)                         |</span></span>
+<span class="line"><span>   |                                                                         |</span></span>
+<span class="line"><span>   |   RabbitMQ:  Exchange -> [routing rules] -> Queue -> push -> Consumer   |</span></span>
+<span class="line"><span>   |              (message destroyed on ack)                                 |</span></span>
+<span class="line"><span>   |                                                                         |</span></span>
+<span class="line"><span>   |   Kafka:     Topic -> Partition[] -> append-only log -> Consumer pulls  |</span></span>
+<span class="line"><span>   |              (message retained for TTL / replayable)                    |</span></span>
+<span class="line"><span>   +-------------------------------------------------------------------------+</span></span></code></pre>
+<h2 id="why-it-matters-at-scale">Why It Matters at Scale</h2>
+<p>Message queues earn their keep in four specific ways at scale:</p>
+<ul>
+<li><strong>Temporal decoupling</strong> — services evolve independently on different release cycles, and a producer can write messages even when the downstream consumer is temporarily down or mid-deployment.</li>
+<li><strong>[[Glossary#Backpressure|Backpressure]] management</strong> — a slow consumer does not crash the producer; messages queue up in the broker, and the producer continues operating at its own rate.</li>
+<li><strong>Replayability</strong> — Kafka retains messages on disk for days or weeks, so you can replay events for debugging, auditing, rebuilding state stores, or backfilling a new downstream service that was added later.</li>
+<li><strong>Throughput isolation</strong> — critical for workflows where one slow downstream service cannot be allowed to choke the entire pipeline, because each consumer reads at its own pace from its own offset or queue.</li>
+</ul>
+<p>Beyond these four, message queues also serve as the backbone for:</p>
+<ul>
+<li>Event-driven architecture</li>
+<li>Change data capture (CDC)</li>
+<li>Real-time stream processing</li>
+<li>The transactional outbox pattern, where a database table and a relay process together provide reliable event publication without dual-write inconsistency</li>
+</ul>
+<h2 id="kafka-architecture">Kafka Architecture</h2>
+<p>Kafka is a distributed, partitioned, replicated commit log. The unit of organization is the <strong>topic</strong>, which is a named logical stream of records. Each topic is split into one or more <strong>partitions</strong>, and each partition is an ordered, append-only sequence of records identified by a monotonically increasing integer called the <strong>offset</strong>.</p>
+<p>Partitions are the fundamental unit of parallelism in Kafka: a topic with N partitions can be consumed by up to N consumers in parallel within a single consumer group, and adding partitions is the primary mechanism for scaling a topic’s throughput. A record’s position within a partition is its offset, and offsets are assigned by the broker at write time — the producer does not choose offsets. Ordering is guaranteed only within a single partition, never across partitions, which is why partition key selection is a critical design decision (covered below).</p>
+<h3 id="brokers-partitions-and-offsets">Brokers, Partitions, and Offsets</h3>
+<p>A Kafka cluster consists of one or more <strong>brokers</strong> — servers that host partitions. Each partition is replicated across a configurable number of brokers (the replication factor, typically 3) for fault tolerance. One replica of each partition is designated the <strong>leader</strong>, and all other replicas are <strong>followers</strong>. The leader handles all reads and writes for that partition; followers passively replicate the leader’s log. If the leader fails, one of the in-sync followers is elected as the new leader by the cluster controller.</p>
+<p>Partition leadership is distributed across brokers so that no single broker is the leader for all partitions of a busy topic, which balances load. Producers connect to any broker (which acts as a bootstrap server) and the broker redirects metadata requests to the correct leader. Consumers similarly discover partition leaders through metadata.</p>
+<p>The offset model is powerful because it gives consumers random access into the log — a consumer can seek to any offset, replay from the beginning, or skip ahead. This is fundamentally different from a traditional queue where a message is destroyed after acknowledgement.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                        KAFKA CLUSTER  (topic "orders", 3 partitions, RF=3)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Broker 1                Broker 2                Broker 3</span></span>
+<span class="line"><span>  +----------------+     +----------------+     +----------------+</span></span>
+<span class="line"><span>  | P0 [LEADER]    |     | P1 [LEADER]    |     | P2 [LEADER]    |</span></span>
+<span class="line"><span>  |  offset: 0..n  |&#x3C;--->|  offset: 0..m  |&#x3C;--->|  offset: 0..k  |   (followers</span></span>
+<span class="line"><span>  | P1 [follower]  |     | P2 [follower]  |     | P0 [follower]  |    replicate</span></span>
+<span class="line"><span>  | P2 [follower]  |     | P0 [follower]  |     | P1 [follower]  |    leader log)</span></span>
+<span class="line"><span>  +----------------+     +----------------+     +----------------+</span></span>
+<span class="line"><span>          ^                     ^                     ^</span></span>
+<span class="line"><span>          |                     |                     |</span></span>
+<span class="line"><span>          +----------+----------+----------+----------+</span></span>
+<span class="line"><span>                     |                     |</span></span>
+<span class="line"><span>               PRODUCER (writes              CONSUMER (pulls,</span></span>
+<span class="line"><span>               to leader of P0)              seeks any offset)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Partition/Offset model (one partition = one ordered log):</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   P0:  [0] msg_A   &#x3C;-- oldest</span></span>
+<span class="line"><span>        [1] msg_B</span></span>
+<span class="line"><span>        [2] msg_C</span></span>
+<span class="line"><span>        [3] msg_D   &#x3C;-- high-watermark (last committed; visible to consumers)</span></span>
+<span class="line"><span>        [4] msg_E   &#x3C;-- uncommitted (leader only; NOT visible until ISR acks)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Consumer can seek(0) to replay, seek(end) to tail, or seek(N) to skip ahead.</span></span></code></pre>
+<h3 id="consumer-groups-and-rebalancing">Consumer Groups and Rebalancing</h3>
+<p>All consumers sharing the same <code>group.id</code> form a <strong>consumer group</strong>, and partitions of a topic are distributed among the group’s members. Each partition is assigned to exactly one consumer within the group, which means parallelism is bounded by the number of partitions, not the number of consumers — adding more consumers than partitions yields idle consumers.</p>
+<p>When consumers join or leave the group (due to deployment, crash, or scaling), a <strong>rebalance</strong> occurs: the partition-to-consumer assignment is recomputed and redistributed. Rebalances are expensive because they involve a stop-the-world pause during which no consumption happens, and in older Kafka versions they could take seconds or longer.</p>
+<p>Modern Kafka (2.4+) offers <strong>incremental cooperative rebalancing</strong> (the CooperativeStickyAssignor) that reduces this disruption by transferring only the partitions that must move rather than revoking and reassigning everything. For workloads where rebalance pauses are unacceptable, <strong>static partition assignment</strong> (assigning partitions manually and forgoing the group protocol) is an option.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   CONSUMER GROUP REBALANCING  (topic with 4 partitions: P0, P1, P2, P3)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   BEFORE (3 consumers):          AFTER (consumer-2 crashes -> 2 consumers):</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   consumer-1: P0, P1   |           consumer-1: P0, P1, P2</span></span>
+<span class="line"><span>   consumer-2: P2       |     -->   consumer-3: P3</span></span>
+<span class="line"><span>   consumer-3: P3       |           (consumer-2 gone; P2 reassigned)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Stop-the-world pause during rebalance -> no consumption.</span></span>
+<span class="line"><span>   CooperativeStickyAssignor moves ONLY P2 (the changed partition),</span></span>
+<span class="line"><span>   instead of revoking + reassigning all partitions.</span></span></code></pre>
+<p>A key operational detail: the consumer offset (the last successfully processed offset) is committed to an internal compacted topic called <code>__consumer_offsets</code>, and committing offsets after processing (not before) is what gives Kafka its at-least-once default. Consumers can commit offsets:</p>
+<ul>
+<li><strong>Automatically</strong> — at a fixed interval (simpler, but may commit before processing finishes → duplicates on crash)</li>
+<li><strong>Manually</strong> — after processing a batch (finer control; the basis for exactly-once-adjacent semantics)</li>
+</ul>
+<h3 id="isr-in-sync-replicas-and-replication">ISR (In-Sync Replicas) and Replication</h3>
+<p>The <strong>ISR (In-Sync Replicas)</strong> set is the set of replicas that have fully caught up with the leader’s log — they have fetched all messages up to the leader’s high-watermark within a configurable lag threshold (controlled by <code>replica.lag.time.max.ms</code>, default 30 seconds). Only ISR members are eligible to become leader if the current leader fails.</p>
+<p>The replication factor (typically 3) determines how many brokers hold a copy of each partition. When <code>acks=all</code> (the recommended setting) is configured on the producer, the leader waits for all ISR replicas to acknowledge the write before considering it committed, meaning a single broker failure cannot lose data as long as at least one ISR replica survives. If a follower falls behind and leaves the ISR, it rejoins only after fully catching up.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   ISR &#x26; REPLICATION (partition P0, replication factor 3)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        Leader (Broker 1)          Follower (Broker 2)      Follower (Broker 3)</span></span>
+<span class="line"><span>        offset 0..5 [committed]    offset 0..5 [caught up]  offset 0..3 [LAGGING]</span></span>
+<span class="line"><span>             |                          |                         |</span></span>
+<span class="line"><span>             |  acks=all: leader waits  |                         |</span></span>
+<span class="line"><span>             +-- for ISR acks --------->+                         |</span></span>
+<span class="line"><span>             |                          |   (NOT in ISR —         |</span></span>
+<span class="line"><span>             |  high-watermark = 5 &#x3C;----+   ineligible to lead)   |</span></span>
+<span class="line"><span>             v</span></span>
+<span class="line"><span>        [6] new write   ---- replicated to ISR members ----> Broker 2 ✓</span></span>
+<span class="line"><span>                          ---- Broker 3 lagging, excluded -------> ✗</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   IF leader fails:  controller elects an ISR follower as new leader.</span></span>
+<span class="line"><span>   IF all ISR fail simultaneously (rare): data can be lost.</span></span>
+<span class="line"><span>   unclean.leader.election.enable=true  -> prefer availability (may lose data)</span></span>
+<span class="line"><span>   unclean.leader.election.enable=false -> prefer consistency (partition down</span></span>
+<span class="line"><span>                                            until ISR recovers) [DEFAULT]</span></span></code></pre>
+<p>The critical failure mode to understand: if all ISR replicas fail simultaneously (a rare but catastrophic scenario), data can be lost. Kafka’s <code>unclean.leader.election.enable</code> setting controls whether a non-ISR replica can become leader:</p>
+<ul>
+<li><strong><code>true</code></strong> — availability is prioritized over consistency (potential data loss)</li>
+<li><strong><code>false</code></strong> (the default in modern Kafka) — consistency is prioritized (the partition remains unavailable until an ISR replica recovers)</li>
+</ul>
+<p>This is the classic [[Glossary#CAP Theorem|CAP]] tradeoff surfaced as a configuration knob.</p>
+<p>The <strong>high-watermark</strong> is the offset of the last committed message — it advances only after ISR acks, and only messages below the high-watermark are visible to consumers, which prevents consumers from reading uncommitted data that could be rolled back if the leader fails.</p>
+<h2 id="rabbitmq-architecture">RabbitMQ Architecture</h2>
+<p>RabbitMQ is a traditional AMQP 0-9-1 message broker built on Erlang/OTP, designed around a smart broker and dumb consumer model. Where Kafka is a distributed log that consumers pull from, RabbitMQ is a routing and delivery engine that pushes messages to consumers based on a graph of exchanges, bindings, and queues. The broker takes responsibility for routing messages to the right place, tracking delivery, and removing messages once they are acknowledged. This model excels at complex routing, task distribution, and request-response patterns where each message has a clear destination and lifecycle.</p>
+<h3 id="exchanges-queues-bindings-and-channels">Exchanges, Queues, Bindings, and Channels</h3>
+<p>An <strong>exchange</strong> is the entry point for a published message — producers never write directly to a queue; they write to an exchange. The exchange inspects the message’s <strong>routing key</strong> (and optionally headers) and routes it to one or more queues based on <strong>bindings</strong>. A binding is a rule that links an exchange to a queue with a routing key pattern.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   RABBITMQ: PRODUCER -> EXCHANGE -> [binding rules] -> QUEUE -> CONSUMER</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Producer --publish(routing_key)--> EXCHANGE</span></span>
+<span class="line"><span>                                          |</span></span>
+<span class="line"><span>              +---------------------------+---------------------------+</span></span>
+<span class="line"><span>              |                           |                           |</span></span>
+<span class="line"><span>        binding(key="A")            binding(key="B.*")          binding(any)</span></span>
+<span class="line"><span>              |                           |                           |</span></span>
+<span class="line"><span>              v                           v                           v</span></span>
+<span class="line"><span>         +--------+                 +--------+                 +--------+</span></span>
+<span class="line"><span>         | Queue1 |                 | Queue2 |                 | Queue3 |</span></span>
+<span class="line"><span>         +--------+                 +--------+                 +--------+</span></span>
+<span class="line"><span>              |                           |                           |</span></span>
+<span class="line"><span>              v (push)                    v (push)                    v (push)</span></span>
+<span class="line"><span>          Consumer1                   Consumer2                   Consumer3</span></span>
+<span class="line"><span>              |                           |                           |</span></span>
+<span class="line"><span>              +-- ack/nack ---------------+-- ack/nack ---------------+</span></span>
+<span class="line"><span>                  (broker removes              (broker removes</span></span>
+<span class="line"><span>                   message on ack)             message on ack)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Channels: one TCP connection multiplexes many virtual "channels"</span></span>
+<span class="line"><span>   (unit of concurrency; avoids repeated TCP handshake/auth overhead).</span></span></code></pre>
+<p>There are four core exchange types:</p>
+<ul>
+<li><strong>Direct exchange</strong> — routes messages to queues whose binding key exactly matches the routing key. Useful for point-to-point delivery and task routing by severity or category.</li>
+<li><strong>Topic exchange</strong> — matches the routing key against wildcard patterns where <code>*</code> matches one word and <code>#</code> matches zero or more dot-separated words. Useful for hierarchical routing like <code>logs.us.west.error</code> or <code>orders.region-7.created</code>.</li>
+<li><strong>Fanout exchange</strong> — ignores the routing key and delivers a copy of every message to every bound queue. Useful for broadcast patterns like cache invalidation or fan-out work distribution.</li>
+<li><strong>Headers exchange</strong> — routes based on message headers rather than the routing key, allowing arbitrary attribute-based matching.</li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   EXCHANGE TYPES (routing behavior)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   DIRECT (exact key match):</span></span>
+<span class="line"><span>        routing_key="error"  -->  Queue[bind "error"]</span></span>
+<span class="line"><span>        routing_key="info"   X   Queue[bind "error"]  (no match)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   TOPIC (wildcard pattern):</span></span>
+<span class="line"><span>        routing_key="logs.us.west.error"</span></span>
+<span class="line"><span>          -> Queue[bind "logs.*.west.*"]       (* = one word)   MATCH</span></span>
+<span class="line"><span>          -> Queue[bind "logs.#.error"]        (# = 0+ words)   MATCH</span></span>
+<span class="line"><span>          -> Queue[bind "logs.eu.#"]                            NO MATCH</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   FANOUT (ignore key, copy to ALL bound queues):</span></span>
+<span class="line"><span>        routing_key=&#x3C;anything></span></span>
+<span class="line"><span>          -> Queue A (copy)  -> Queue B (copy)  -> Queue C (copy)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   HEADERS (match on headers, not routing key):</span></span>
+<span class="line"><span>        headers={format="json", type="report"}</span></span>
+<span class="line"><span>          -> Queue[bind x-match=all, format=json, type=report]  MATCH</span></span></code></pre>
+<p><strong>Queues</strong> are the actual message buffers; they are durable or transient, and they hold messages until a consumer acknowledges them. <strong>Channels</strong> are virtual multiplexed connections — a single TCP connection from a client can carry many channels, each acting as an independent session, which avoids the overhead of opening many TCP connections while still allowing concurrent operations. This is important because opening a TCP connection in AMQP involves a handshake and authentication that is relatively expensive, so channels are the unit of concurrency.</p>
+<h3 id="delivery-and-acknowledgment-model">Delivery and Acknowledgment Model</h3>
+<p>RabbitMQ uses a <strong>push model</strong>: when a consumer is registered on a queue, the broker pushes messages to it, subject to a <strong>prefetch count</strong> (QoS setting) that limits how many unacknowledged messages can be in flight to a single consumer. The prefetch count is the RabbitMQ equivalent of flow control — it prevents a fast broker from overwhelming a slow consumer by capping the number of unacked messages buffered at the consumer.</p>
+<p>When the consumer finishes processing a message, it sends an <strong>ack</strong> (<code>basic.ack</code>) to the broker, which then removes the message from the queue. If the consumer dies (TCP connection drops) without acking, the broker requeues the message for redelivery to another consumer — this is the basis of at-least-once delivery. A consumer can also:</p>
+<ul>
+<li><strong>Nack</strong> a message (<code>basic.nack</code>), optionally with <code>requeue=false</code> to send it to a dead letter exchange.</li>
+<li><strong>Reject</strong> a single message.</li>
+</ul>
+<p>RabbitMQ also supports <strong>publisher confirms</strong> (an async acknowledgment from broker to publisher that a message was received and persisted) for durable delivery, and <strong>transactions</strong> for atomic publish operations, though transactions are slow and confirms are preferred in practice.</p>
+<p>The choice between auto-ack and manual-ack is a delivery-semantics decision:</p>
+<ul>
+<li><strong>Auto-ack</strong> — the broker removes the message as soon as it is delivered. Gives <strong>at-most-once</strong> (a consumer crash after delivery loses the message).</li>
+<li><strong>Manual-ack</strong> — the consumer must explicitly ack. Gives <strong>at-least-once</strong> (a crash before ack requeues it).</li>
+</ul>
+<h2 id="delivery-semantics">Delivery Semantics</h2>
+<p>The three delivery semantics — at-most-once, at-least-once, and exactly-once — are the central correctness tradeoff in any messaging system, and interviewers probe them heavily because they connect to the broader distributed systems concepts of idempotency, consensus, and the two-general problem.</p>
+<h3 id="at-most-once">At-Most-Once</h3>
+<p>Each message is delivered zero or one times; duplicates are impossible but losses are possible. This is the cheapest semantic because it requires no acknowledgments or retries.</p>
+<ul>
+<li><strong>RabbitMQ:</strong> auto-ack consumers</li>
+<li><strong>Kafka:</strong> <code>acks=0</code> on the producer and never retrying</li>
+<li><strong>Use case:</strong> telemetry, metrics, and log forwarding where occasional loss is acceptable and the cost of deduplication exceeds the cost of loss.</li>
+</ul>
+<h3 id="at-least-once">At-Least-Once</h3>
+<p>Each message is delivered one or more times; losses are impossible but duplicates are possible under failure. This is the most common and practical semantic.</p>
+<ul>
+<li><strong>Kafka:</strong> the default with <code>acks=all</code>, retries enabled, and the idempotent producer enabled (<code>enable.idempotence=true</code>), which deduplicates retries within a producer session so the broker never writes the same sequence number twice.</li>
+<li><strong>RabbitMQ:</strong> manual ack and publisher confirms.</li>
+<li><strong>Critical implication:</strong> consumers must be <strong>[[Glossary#Idempotency|idempotent]]</strong> — processing the same message twice must not corrupt state. This is typically achieved with a deduplication key (a message ID stored in a processed-messages set or database unique constraint) so the consumer can detect and skip duplicates.</li>
+<li>Most production systems default to at-least-once with idempotent consumers because it is simple, robust, and sufficient for the vast majority of workloads.</li>
+</ul>
+<h3 id="exactly-once">Exactly-Once</h3>
+<p>Each message is delivered exactly one time — no losses, no duplicates. True end-to-end exactly-once is expensive and often impossible without distributed transactions or consensus across the producer, broker, and consumer.</p>
+<ul>
+<li><strong>Kafka:</strong> offers exactly-once within the Kafka ecosystem via its transactions API. A producer can atomically write to multiple partitions and a consumer can read only committed transactions (<code>isolation.level=read_committed</code>). The consume-process-produce loop (the read-modify-write pattern common in stream processing) can be made exactly-once with <code>transactional.id</code> and the Kafka Streams API.</li>
+<li><strong>Kafka + external system:</strong> exactly-once across Kafka and an external system (e.g., Kafka to a database) is <strong>not</strong> provided by Kafka alone — you need the transactional outbox pattern (write the message and the database update in the same database transaction, then a relay publishes to Kafka) or a two-phase commit, both of which have performance and complexity costs.</li>
+</ul>
+<p>The standard senior-level guidance: default to at-least-once with idempotent consumers, and reserve exactly-once for cases where duplicates cause financial or correctness harm (payment processing, inventory deduction) and where the infrastructure cost is justified.</p>
+<h3 id="delivery-semantics-comparison">Delivery Semantics Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Semantic</th>
+<th>Losses?</th>
+<th>Duplicates?</th>
+<th>Cost</th>
+<th>Kafka config</th>
+<th>RabbitMQ config</th>
+<th>Typical use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>At-most-once</strong></td>
+<td>Yes</td>
+<td>No</td>
+<td>Lowest</td>
+<td><code>acks=0</code>, no retries</td>
+<td>auto-ack consumers</td>
+<td>Telemetry, metrics, log forwarding</td>
+</tr>
+<tr>
+<td><strong>At-least-once</strong></td>
+<td>No</td>
+<td>Yes</td>
+<td>Medium</td>
+<td><code>acks=all</code>, retries, <code>enable.idempotence=true</code></td>
+<td>manual ack + publisher confirms</td>
+<td>Most production workloads</td>
+</tr>
+<tr>
+<td><strong>Exactly-once</strong></td>
+<td>No</td>
+<td>No</td>
+<td>Highest</td>
+<td>Transactions API, <code>transactional.id</code>, <code>isolation.level=read_committed</code></td>
+<td>Not natively supported (needs app-level dedup + outbox)</td>
+<td>Payments, inventory deduction, financial systems</td>
+</tr>
+</tbody>
+</table>
+<h2 id="partition-strategies">Partition Strategies</h2>
+<p>Partition key selection determines which messages land on which partition, and because ordering is only guaranteed within a partition, it determines the ordering guarantees your system can provide.</p>
+<ul>
+<li><strong>Key-based hashing (default):</strong> partition by a key like <code>user_id</code> or <code>order_id</code> using a hash of the key (Kafka’s default partitioner uses <code>murmur2</code> hash mod number of partitions). This guarantees that all messages for a given user land on the same partition and are consumed in order by a single consumer — essential for per-entity state machines like order lifecycle processing.</li>
+<li><strong>Risk: skew.</strong> A disproportionately active user (a “hot key”) can overload a single partition, creating a bottleneck because that partition’s throughput is bounded by a single broker and a single consumer.</li>
+</ul>
+<p>Mitigations for skew:</p>
+<ul>
+<li><strong>Salting the key</strong> — append a random number to create sub-partitions that are later reassembled.</li>
+<li><strong>Custom partitioners</strong> that spread known hot keys.</li>
+<li><strong>Partitioning by a higher-cardinality field.</strong></li>
+</ul>
+<p>If no ordering is needed, <strong>round-robin</strong> or <strong>sticky partitioning</strong> (Kafka 2.4+, which batches messages to the same partition to improve batching efficiency) can maximize throughput by evenly distributing load.</p>
+<p>A common mistake is choosing a key that produces severe skew without realizing it — always validate partition distribution in production with metrics on per-partition message rate. Another subtle issue: the number of partitions is set at topic creation and can only be increased (never decreased), and adding partitions breaks key ordering for keys whose hash now maps to a new partition, so plan partition counts upfront based on throughput estimates.</p>
+<h2 id="log-compaction">Log Compaction</h2>
+<p>Kafka’s retention model offers two modes:</p>
+<ul>
+<li><strong>Time-based retention</strong> — delete messages older than a TTL (default 7 days).</li>
+<li><strong>Log compaction</strong> — retain the latest value for each key in a partition and delete older records with the same key, producing a snapshot-like log where each key maps to its most recent value.</li>
+</ul>
+<p>Log compaction is the mechanism behind Kafka’s use as a state store and source of truth — the <code>__consumer_offsets</code> topic and the Kafka Streams changelog topics are compacted, and any application can use compacted topics to maintain a materialized view (e.g., current user profiles, current inventory levels) by simply replaying the log from the beginning and retaining only the last value per key.</p>
+<p>Compaction characteristics:</p>
+<ul>
+<li>Runs in the background by a thread that builds clean segments; active segments are never compacted until they roll.</li>
+<li>Does not guarantee immediate removal of old keys — there is a delay, and a key with only one record is retained.</li>
+<li>Guarantees that eventually the log contains at least the last value for every key that was ever written.</li>
+<li>Conceptually similar to the LSM-tree compaction in LevelDB or RocksDB. Kafka Streams uses RocksDB locally for state stores, syncing changes back to a compacted Kafka topic for fault tolerance.</li>
+</ul>
+<p>The practical implication for design:</p>
+<ul>
+<li>If you need a durable, replayable <strong>source of truth for current state</strong> (not events) → use a <strong>compacted topic</strong> with a stable key.</li>
+<li>If you need an <strong>event log of all changes</strong> → use <strong>time-based retention</strong>.</li>
+</ul>
+<h2 id="throughput-optimization">Throughput Optimization</h2>
+<p>Kafka’s throughput comes from a set of design choices:</p>
+<ul>
+<li><strong>Sequential disk writes</strong> — on modern SSDs and even spinning disks approach the speed of random memory access for large sequential workloads because the OS page cache and disk prefetch absorb the cost.</li>
+<li><strong>Zero-copy transfer</strong> — the broker uses <code>sendfile</code> to move data directly from page cache to the socket without copying into user space.</li>
+<li><strong>Batching</strong> — producers batch messages into large requests and consumers batch fetches, amortizing network and disk overhead.</li>
+</ul>
+<h3 id="kafka-producer-tuning">Kafka Producer Tuning</h3>
+<ul>
+<li><code>batch.size</code> — max batch size in bytes (default 16KB). Increase to 64KB or more for high-throughput.</li>
+<li><code>linger.ms</code> — time the producer waits to fill a batch (default 0). Setting to 5–20ms trades a small latency increase for much larger batches.</li>
+<li><strong>Compression</strong> — <code>snappy</code> (balanced CPU/compression), <code>lz4</code> (speed), <code>zstd</code> (best ratio).</li>
+<li><strong>Enable the idempotent producer</strong> (<code>enable.idempotence=true</code>).</li>
+</ul>
+<h3 id="kafka-consumer-tuning">Kafka Consumer Tuning</h3>
+<ul>
+<li>Increase <code>fetch.min.bytes</code> and <code>fetch.max.bytes</code> to pull larger batches per request.</li>
+<li>Increase the number of partitions and consumers in the group.</li>
+<li>Use manual offset commits per batch rather than per message.</li>
+</ul>
+<h3 id="kafka-broker-tuning">Kafka Broker Tuning</h3>
+<ul>
+<li>Ensure sufficient <strong>disk I/O bandwidth</strong> (Kafka is disk-bound under load).</li>
+<li>Enough <strong>page cache RAM</strong> (a rule of thumb is enough RAM to hold the active working set).</li>
+<li>Avoid overloading any single broker with too many partition leaders — use <strong>partition reassignment</strong> to balance.</li>
+</ul>
+<h3 id="rabbitmq-throughput-tuning">RabbitMQ Throughput Tuning</h3>
+<p>RabbitMQ throughput is bounded by the broker’s single-node Erlang scheduler and routing overhead, so the primary levers are:</p>
+<ul>
+<li>Use <strong>quorum queues</strong> (replicated, Raft-based, better than classic mirrored queues for durability and throughput under failure) or <strong>classic queues</strong> for raw single-node throughput.</li>
+<li>Increase <strong>prefetch count</strong> to keep consumers busy.</li>
+<li>Use <strong>multiple queues and consumers</strong> for parallelism.</li>
+<li>Keep messages small (large messages should be offloaded to object storage with a reference passed in the message body).</li>
+<li>Be aware classic queues peak around 20,000–50,000 messages per second on a single broker; quorum queues are lower due to Raft replication overhead.</li>
+</ul>
+<h2 id="dead-letter-queues">Dead Letter Queues</h2>
+<p>A <strong>dead letter queue (DLQ)</strong> is a destination for messages that cannot be processed successfully after exhausting retries — it is the safety net that prevents poison messages from blocking the main pipeline indefinitely.</p>
+<ul>
+<li>
+<p><strong>RabbitMQ:</strong> DLQs are a first-class feature. A queue can be configured with <code>x-dead-letter-exchange</code> so that messages that are:</p>
+<ul>
+<li>rejected (<code>nack</code> with <code>requeue=false</code>),</li>
+<li>expired (TTL exceeded), or</li>
+<li>exceed a queue length limit</li>
+</ul>
+<p>are routed to a specified exchange, which typically feeds a DLQ for inspection and replay.</p>
+</li>
+<li>
+<p><strong>Kafka:</strong> there is no built-in DLQ. It is an application-level pattern where the consumer catches processing exceptions and publishes the failed message to a separate dead letter topic, then commits the original offset so the main topic can continue.</p>
+</li>
+</ul>
+<p>The DLQ message should carry metadata:</p>
+<ul>
+<li>Original topic, partition, offset</li>
+<li>Exception type and message</li>
+<li>Timestamp</li>
+</ul>
+<p>A common production pattern is a <strong>tiered retry strategy</strong>: retry a few times with exponential backoff (using a delayed exchange in RabbitMQ or a scheduled retry topic in Kafka), and if still failing, move to the DLQ for human or automated inspection.</p>
+<p>The key design principle: never block the main pipeline on an unprocessable message — move it aside, preserve it, and keep the pipeline flowing. DLQs are also a debugging goldmine: a rising DLQ depth is an alert signal that something is wrong with a downstream dependency, a schema change, or a data quality issue.</p>
+<h2 id="schema-registry">Schema Registry</h2>
+<p>In a Kafka-based event streaming architecture, producers and consumers need to agree on the structure of messages — the <strong>schema</strong>. Without a central registry, schema evolution breaks consumers silently: if a producer starts sending a new field or renames an existing one, consumers built for the old schema fail or produce garbage.</p>
+<p>The <strong>Confluent Schema Registry</strong> solves this by storing schemas (typically Avro, Protobuf, or JSON Schema) in a dedicated service and assigning each a unique ID. Producers register or look up the schema, include the schema ID in the message payload, and the registry enforces compatibility rules configured per topic.</p>
+<p>Compatibility modes:</p>
+<ul>
+<li><strong>Backward compatibility</strong> (default) — new schema can read old data.</li>
+<li><strong>Forward compatibility</strong> — old schema can read new data.</li>
+<li><strong>Full compatibility</strong> — both backward and forward.</li>
+</ul>
+<p>The compatibility check happens at publish time — a producer cannot publish a message with a schema that violates the topic’s compatibility policy, which prevents breaking changes from reaching production.</p>
+<p>Practical guidance for schema evolution:</p>
+<ul>
+<li><strong>Add fields with defaults</strong> (backward compatible).</li>
+<li><strong>Never remove fields</strong> without a deprecation window (breaks backward compatibility).</li>
+<li><strong>Never change field types</strong> (breaks everything).</li>
+<li><strong>Use union types or optional fields</strong> for forward-compatible changes.</li>
+</ul>
+<p>Schema Registry is often paired with <strong>Avro</strong> for compact binary encoding (smaller than JSON, faster to parse) and with the Confluent serializers that integrate with Kafka producers and consumers transparently.</p>
+<p>For a senior interview, the key points are:</p>
+<ul>
+<li>Schema registry is about <strong>governance and safe evolution</strong>.</li>
+<li>It enforces <strong>compatibility at publish time</strong>.</li>
+<li>It decouples the schema from the message bytes by embedding only an ID.</li>
+</ul>
+<h2 id="when-to-use-kafka-vs-rabbitmq">When to Use Kafka vs RabbitMQ</h2>
+<p>The decision rests on the workload’s shape and the guarantees needed.</p>
+<p><strong>Use Kafka when you need:</strong></p>
+<ul>
+<li>High-throughput event streaming (millions of messages per second across a cluster)</li>
+<li>Durable retention and replay (consuming the same events multiple times by different applications, rebuilding state, auditing)</li>
+<li>Decoupled multi-consumer fan-out where many independent applications read the same stream at their own pace</li>
+<li>Change data capture (CDC) pipelines</li>
+<li>Log aggregation</li>
+<li>Real-time stream processing with Kafka Streams or Flink</li>
+<li>Event sourcing where the log itself is the system of record</li>
+</ul>
+<p><strong>Use RabbitMQ when you need:</strong></p>
+<ul>
+<li>Complex routing (topic exchanges, header-based routing, conditional delivery)</li>
+<li>Low-latency per-message delivery with individual acknowledgement</li>
+<li>Task queues and work distribution where each task should be processed exactly once by one of many workers</li>
+<li>Request-response RPC patterns (reply queues, correlation IDs)</li>
+<li>Legacy AMQP ecosystem integration</li>
+<li>Smaller message volumes where the operational overhead of a Kafka cluster is not justified</li>
+</ul>
+<p>A useful mental model:</p>
+<ul>
+<li><strong>Kafka is a ledger</strong> — append-only, retained, replayable, high throughput, coarse ordering.</li>
+<li><strong>RabbitMQ is a mailroom</strong> — routed, delivered, discarded, lower throughput, flexible routing.</li>
+</ul>
+<p>Many systems use both — Kafka for the event backbone and durable stream, RabbitMQ for command-style task queues and RPC. Do not use Kafka for RPC (it can be done but it is awkward and fights the design), and do not use RabbitMQ for long-term event retention (it can be done with lazy queues but it is not the sweet spot).</p>
+<h3 id="kafka-vs-rabbitmq--feature-comparison">Kafka vs RabbitMQ — Feature Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Kafka</th>
+<th>RabbitMQ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Model</strong></td>
+<td>Distributed append-only commit log (consumers pull)</td>
+<td>Smart routing broker (push to consumers)</td>
+</tr>
+<tr>
+<td><strong>Unit of organization</strong></td>
+<td>Topic → partitions → offset-ordered log</td>
+<td>Exchange → binding → queue</td>
+</tr>
+<tr>
+<td><strong>Message retention</strong></td>
+<td>Retained for TTL (default 7 days) or compacted; replayable</td>
+<td>Removed on ack; not replayable</td>
+</tr>
+<tr>
+<td><strong>Throughput</strong></td>
+<td>Millions/sec across cluster</td>
+<td>~20K–50K/sec per queue (single node)</td>
+</tr>
+<tr>
+<td><strong>Parallelism</strong></td>
+<td>Partitions (consumers ≤ partitions per group)</td>
+<td>Multiple queues + consumers</td>
+</tr>
+<tr>
+<td><strong>Ordering guarantee</strong></td>
+<td>Per-partition (offset order)</td>
+<td>Per-queue (FIFO)</td>
+</tr>
+<tr>
+<td><strong>Routing</strong></td>
+<td>Partition key (hash-based)</td>
+<td>Rich: direct, topic, fanout, headers</td>
+</tr>
+<tr>
+<td><strong>Delivery</strong></td>
+<td>Pull, offset-based, seekable</td>
+<td>Push, prefetch-limited, ack-based</td>
+</tr>
+<tr>
+<td><strong>Replay</strong></td>
+<td>Yes (seek to any offset)</td>
+<td>No (deleted on ack)</td>
+</tr>
+<tr>
+<td><strong>Durability</strong></td>
+<td>Replication (ISR, acks=all, RF=3)</td>
+<td>Quorum queues (Raft) or classic mirrored</td>
+</tr>
+<tr>
+<td><strong>DLQ</strong></td>
+<td>Application-level pattern</td>
+<td>First-class (<code>x-dead-letter-exchange</code>)</td>
+</tr>
+<tr>
+<td><strong>Best for</strong></td>
+<td>Event streaming, CDC, log aggregation, event sourcing</td>
+<td>Task queues, RPC, complex routing, work distribution</td>
+</tr>
+<tr>
+<td><strong>Mental model</strong></td>
+<td>Ledger (append-only, retained)</td>
+<td>Mailroom (routed, delivered, discarded)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="capacity-estimation">Capacity Estimation</h2>
+<p>For a senior interview, you should be able to size a Kafka cluster from requirements. Suppose the workload is <strong>100,000 events per second</strong>, each event averaging <strong>1 KB</strong>, with a <strong>7-day retention</strong> and a <strong>replication factor of 3</strong>.</p>
+<h3 id="kafka-sizing-math">Kafka Sizing Math</h3>
+<ul>
+<li><strong>Raw write throughput:</strong> 100,000 × 1 KB = ~100 MB/s</li>
+<li><strong>Network write amplification (RF=3):</strong> ~300 MB/s across the cluster (each message written to leader + replicated to 2 followers)</li>
+<li><strong>Storage per day:</strong> 100 MB/s × 86,400 s = ~8.6 TB raw data</li>
+<li><strong>With RF=3:</strong> ~26 TB per day across the cluster</li>
+<li><strong>With 7-day retention:</strong> ~180 TB total storage</li>
+<li><strong>Broker count:</strong> if each broker has 4 TB usable disk (leaving headroom for OS and compaction), you need ~180 / 4 = 45 broker-disks; with 4 disks per broker → ~12 brokers. Ensure no single broker is a bottleneck for network or disk I/O — 100 MB/s of leader writes plus 200 MB/s of follower replication traffic must be spread so no broker exceeds its bandwidth.</li>
+</ul>
+<h3 id="partition-count-sizing">Partition Count Sizing</h3>
+<ul>
+<li>Write side: if each partition handles ~10–20 MB/s (conservative, hardware/batching dependent), you need at least <strong>5–10 partitions</strong> for 100,000 events/sec.</li>
+<li>Consume side: if you want 10 parallel consumers, you need at least <strong>10 partitions</strong>.</li>
+<li>In practice, <strong>over-provision partitions to 2–3× the consumer count</strong> to allow for scaling and rebalancing headroom.</li>
+</ul>
+<h3 id="rabbitmq-sizing">RabbitMQ Sizing</h3>
+<ul>
+<li>Dominant constraint is <strong>per-queue throughput on a single node</strong>:
+<ul>
+<li>Classic queues peak around <strong>20,000–50,000 messages/sec</strong> on a single broker.</li>
+<li>Quorum queues are lower due to Raft replication overhead.</li>
+</ul>
+</li>
+<li>High-throughput RabbitMQ deployments <strong>shard across many queues and brokers</strong>.</li>
+<li>Primary resource constraints:
+<ul>
+<li><strong>RAM</strong> (for the message backlog in classic queues)</li>
+<li><strong>Disk</strong> (for durable messages and quorum queue logs)</li>
+</ul>
+</li>
+</ul>
+<h2 id="interview-question">Interview Question</h2>
+<p><strong>Question:</strong> You are building an order processing system. Orders arrive at 10,000 per second and each order goes through a payment, inventory, and shipping step, each handled by a separate service. The payment step must not be duplicated (double-charging is unacceptable). How do you design the messaging layer, and what delivery semantics do you choose for each step?</p>
+<p><strong>Model Answer:</strong></p>
+<p>Use Kafka as the backbone with an <code>orders</code> topic partitioned by <code>order_id</code> so all events for a given order land on the same partition and are processed in order — this preserves the order state machine’s integrity. Each downstream service (payment, inventory, shipping) is its own consumer group reading from the relevant topic, so they are decoupled and can scale independently up to the partition count.</p>
+<p><strong>Payment step — exactly-once required (avoid double-charging):</strong></p>
+<ul>
+<li>Cleanest approach: the <strong>transactional outbox pattern</strong> — the payment service processes the order and writes both the payment record and an outbox event to the same database transaction, then a relay publishes the outbox event to Kafka. This guarantees the payment and the event publication are atomic: no double-charge, no lost event.</li>
+<li>Alternative: if the payment service uses Kafka Streams with <code>transactional.id</code> and the consume-process-produce loop, exactly-once within Kafka is achievable without an external outbox.</li>
+</ul>
+<p><strong>Inventory &amp; shipping — at-least-once with idempotent consumers:</strong></p>
+<ul>
+<li>Each consumer deduplicates by <code>order_id</code> using a processed-events table or a Redis set with a TTL, so redelivery after a consumer crash is safe.</li>
+</ul>
+<p><strong>Producer settings:</strong></p>
+<ul>
+<li>Set <code>acks=all</code> and <code>enable.idempotence=true</code> on all producers to prevent duplicate writes on retry.</li>
+</ul>
+<p><strong>Retry/failure handling:</strong></p>
+<ul>
+<li>Use a tiered retry with a DLQ topic for messages that fail after N attempts so a poison message does not block the partition.</li>
+</ul>
+<p><strong>Monitoring:</strong></p>
+<ul>
+<li>Monitor <strong>consumer lag</strong> (the gap between the log-end offset and the committed offset) as the primary health metric — rising lag means a downstream service cannot keep up and signals a capacity or failure issue.</li>
+</ul>
+<p><strong>Common Pitfall:</strong> A frequent mistake is assuming that Kafka’s idempotent producer gives end-to-end exactly-once delivery. It does not — the idempotent producer only prevents duplicate writes to Kafka within a producer session; it says nothing about the consumer side, where a crash after processing but before committing the offset causes redelivery. End-to-end exactly-once requires either Kafka transactions (within Kafka) or the outbox pattern (with an external system), plus idempotent consumers as a defense in depth.</p>
+<p>Another pitfall is choosing <code>order_id</code> as the partition key without checking for skew — if one merchant bulk-submits 10,000 orders, all land on one partition and overwhelm a single consumer; salt the key or use a composite key in that case.</p>
+<h2 id="summary">Summary</h2>
+<p>The Kafka-versus-RabbitMQ choice is not about which is “better” — it is about which model fits the workload.</p>
+<ul>
+<li><strong>Kafka</strong> is the right tool for high-throughput, retained, replayable event streams where the log is the system of record and multiple consumers read independently at their own pace.</li>
+<li><strong>RabbitMQ</strong> is the right tool for routed, task-oriented message delivery where each message has a clear destination and lifecycle, complex routing is needed, and retention is not the goal.</li>
+</ul>
+<p>For senior interviews, master the four pillars:</p>
+<ol>
+<li><strong>Kafka’s partition-and-offset model</strong> and its implications for ordering and parallelism.</li>
+<li><strong>The ISR and replication mechanics</strong> that underpin durability and the CAP tradeoff.</li>
+<li><strong>The three delivery semantics</strong> and how to achieve each in both systems.</li>
+<li><strong>The operational patterns</strong> (idempotent consumers, outbox, DLQ, schema registry, capacity sizing) that make a messaging system production-grade.</li>
+</ol>
+<p>Default to at-least-once with idempotent consumers; reach for exactly-once only when the business cost of duplicates justifies the infrastructure complexity.</p>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Kafka is a durable, append-only log that consumers pull from and replay; RabbitMQ is a smart routing broker that pushes messages and deletes them on ack. Mental model: Kafka is a ledger, RabbitMQ is a mailroom.</li>
+<li>Kafka guarantees ordering only within a partition — partition key choice determines both ordering and skew risk. Parallelism is bounded by partition count (consumers ≤ partitions per group).</li>
+<li>Default to at-least-once delivery with idempotent consumers (dedup by message ID); reserve exactly-once for cases where duplicates cause real harm (payments), using Kafka transactions or the transactional outbox pattern.</li>
+<li><code>acks=all</code> with <code>enable.idempotence=true</code> and replication factor 3 is the production baseline for Kafka durability; <code>unclean.leader.election.enable=false</code> prioritizes consistency over availability when all ISR replicas fail.</li>
+<li>Size partitions to 2–3x the consumer count, and monitor consumer lag (the gap between log-end and committed offset) as the primary health metric.</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li><strong>“How do you prevent duplicate processing if a consumer crashes mid-handling?”</strong> — Make consumers idempotent: store a processed-message ID (in a DB unique constraint or Redis set with TTL) and skip duplicates on redelivery, since at-least-once means redelivery is expected, not exceptional.</li>
+<li><strong>“When would you pick RabbitMQ over Kafka?”</strong> — When you need complex routing (topic/header exchanges), low-latency per-message delivery with individual acks, task queues/RPC patterns, or smaller volumes where a Kafka cluster’s operational overhead isn’t justified.</li>
+<li><strong>“Can Kafka give you exactly-once delivery?”</strong> — Only within the Kafka ecosystem (transactions API with <code>transactional.id</code>); across Kafka and an external system you need the transactional outbox pattern. The idempotent producer alone only prevents duplicate writes to Kafka, not end-to-end duplicates.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Assuming Kafka’s idempotent producer delivers end-to-end exactly-once. It does not — it only deduplicates producer retries within a session. A consumer crash after processing but before committing the offset causes redelivery, so end-to-end exactly-once still requires Kafka transactions or the outbox pattern plus idempotent consumers.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/message-queue-kafka-rabbitmq/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Message%20Queue%20(Kafka%20%2F%20RabbitMQ)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fmessage-queue-kafka-rabbitmq%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fmessage-queue-kafka-rabbitmq%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/message-queue-kafka-rabbitmq" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/llm-serving-at-scale-vllm-quantization-batching-kv-cache" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>LLM Serving at Scale (vLLM, Quantization, Batching, KV Cache)</span></a><a href="/notes/system-design/metrics-and-monitoring-prometheus-grafana" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Metrics &amp; Monitoring (Prometheus/Grafana)</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Message Queue (Kafka / RabbitMQ)" data-selector=".article-prose" data-article-slug="system-design/message-queue-kafka-rabbitmq" data-article-title="Message Queue (Kafka / RabbitMQ)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

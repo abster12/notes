@@ -1,0 +1,947 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Real-Time ML Inference (Streaming Features, Online Learning) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-overview" class="toc-link" data-toc-link="1-overview" data-astro-cid-p33bl5ka>1. Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-key-requirements" class="toc-link" data-toc-link="2-key-requirements" data-astro-cid-p33bl5ka>2. Key Requirements</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#functional-requirements" class="toc-link" data-toc-link="functional-requirements" data-astro-cid-p33bl5ka>Functional Requirements</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#non-functional-requirements-slas" class="toc-link" data-toc-link="non-functional-requirements-slas" data-astro-cid-p33bl5ka>Non-Functional Requirements (SLAs)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-capacity-planning" class="toc-link" data-toc-link="3-capacity-planning" data-astro-cid-p33bl5ka>3. Capacity Planning</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#4-feature-freshness-ladder" class="toc-link" data-toc-link="4-feature-freshness-ladder" data-astro-cid-p33bl5ka>4. Feature Freshness Ladder</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#5-streaming-feature-computation--flink-deep-dive" class="toc-link" data-toc-link="5-streaming-feature-computation--flink-deep-dive" data-astro-cid-p33bl5ka>5. Streaming Feature Computation — Flink Deep Dive</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#late-data-and-watermarks" class="toc-link" data-toc-link="late-data-and-watermarks" data-astro-cid-p33bl5ka>Late Data and Watermarks</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#6-online-learning--architecture-and-safety" class="toc-link" data-toc-link="6-online-learning--architecture-and-safety" data-astro-cid-p33bl5ka>6. Online Learning — Architecture and Safety</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#why-not-just-retrain-nightly" class="toc-link" data-toc-link="why-not-just-retrain-nightly" data-astro-cid-p33bl5ka>Why Not Just Retrain Nightly?</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#7-feature-serving--the-merge-problem" class="toc-link" data-toc-link="7-feature-serving--the-merge-problem" data-astro-cid-p33bl5ka>7. Feature Serving — The Merge Problem</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#feature-merge-pitfalls" class="toc-link" data-toc-link="feature-merge-pitfalls" data-astro-cid-p33bl5ka>Feature Merge Pitfalls</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#8-onlineoffline-consistency--point-in-time-correctness" class="toc-link" data-toc-link="8-onlineoffline-consistency--point-in-time-correctness" data-astro-cid-p33bl5ka>8. Online/Offline Consistency — Point-in-Time Correctness</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#9-model-serving-infrastructure" class="toc-link" data-toc-link="9-model-serving-infrastructure" data-astro-cid-p33bl5ka>9. Model Serving Infrastructure</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#batch-inference-optimization" class="toc-link" data-toc-link="batch-inference-optimization" data-astro-cid-p33bl5ka>Batch Inference Optimization</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#10-monitoring-and-drift-detection" class="toc-link" data-toc-link="10-monitoring-and-drift-detection" data-astro-cid-p33bl5ka>10. Monitoring and Drift Detection</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#11-deployment-and-experimentation" class="toc-link" data-toc-link="11-deployment-and-experimentation" data-astro-cid-p33bl5ka>11. Deployment and Experimentation</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#12-weaknesses--improvements" class="toc-link" data-toc-link="12-weaknesses--improvements" data-astro-cid-p33bl5ka>12. Weaknesses &amp; Improvements</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#13-sharp-question" class="toc-link" data-toc-link="13-sharp-question" data-astro-cid-p33bl5ka>13. Sharp Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#related" class="toc-link" data-toc-link="related" data-astro-cid-p33bl5ka>Related</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Real-Time ML Inference (Streaming Features, Online Learning)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 25 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 35 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>ai-ml</span><span class="tag" data-astro-cid-sgg5joot>real-time-inference</span><span class="tag" data-astro-cid-sgg5joot>streaming-features</span><span class="tag" data-astro-cid-sgg5joot>online-learning</span><span class="tag" data-astro-cid-sgg5joot>feature-store</span><span class="tag" data-astro-cid-sgg5joot>model-serving</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="real-time-ml-inference-streaming-features-online-learning">Real-Time ML Inference (Streaming Features, Online Learning)</h1>
+<blockquote>
+<p><strong>Staff-Engineer Focus:</strong> “We serve the model behind a REST endpoint with a feature store lookup” is the senior-MLE answer. <strong>The staff engineer doesn’t stop at the serving layer. They ask: “We have a fraud detection model that scores every payment transaction in &lt;50ms P99 at 20,000 TPS. The model consumes 87 features — 72 are pre-computed nightly (credit score, 30-day avg transaction volume, device reputation), 12 are near-real-time computed in the last 5 minutes from a Kafka stream (velocity of transactions from this IP, geo-velocity — distance between last two transaction locations, count of distinct merchants in the last 10 minutes), and 3 are computed at request time from the transaction payload itself (amount z-score relative to user’s historical distribution, time-of-day anomaly score, merchant category code risk). The 12 real-time features are computed by a Flink job that maintains 15-minute sliding windows with 1-second slide intervals. When a new payment arrives, the serving layer must merge the batch features from the feature store, the streaming features from a Redis cache that Flink writes to, and the request-time features — all within the 50ms budget. Now, here’s the hard part: the fraud patterns shift — what was fraudulent last month (elderly-targeted phishing) is different from what’s fraudulent today (synthetic identity with BNPL layering). You need to update the model weights continuously as new labeled fraud cases come in (typically confirmed 2-72 hours after the transaction). Walk me through: (a) your online learning architecture — do you retrain from scratch nightly, fine-tune incrementally on new labels, or use a two-model setup with a fast learner and a stable learner ensembled together, (b) how you validate that the online-updated model isn’t degrading — what metrics tell you the new weights are better and not just overfitting to yesterday’s fraud ring, (c) your strategy for feature consistency when the nightly batch pipeline computes ‘30-day avg transaction volume’ using a different code path than the streaming pipeline that computes ‘5-minute transaction velocity’ — and what happens when they disagree, and (d) the rollback story: the online model updated at 2 AM, and at 9 AM the fraud ops team reports a 40% false positive spike — how do you revert to the last known-good checkpoint in under 30 seconds without dropping any transactions?”</strong></p>
+</blockquote>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A system that serves ML predictions using features computed in real-time from streaming data, with models that update continuously as new labels arrive.</p>
+<p><strong>How it’s asked:</strong> “Design a fraud detection system scoring 20K transactions/sec in &lt;50ms, with 12 real-time features from Kafka streams and online model updates as fraud labels arrive.”</p>
+<hr>
+<h2 id="1-overview">1. Overview</h2>
+<p>Real-time ML inference is the practice of serving model predictions on live data with latency constraints measured in milliseconds, consuming features that span a freshness spectrum from “pre-computed last night” to “computed 50 milliseconds ago from the event that triggered this prediction.” It is not a model problem — it is an infrastructure problem that intersects feature engineering, stream processing, model serving, and operational safety.</p>
+<p>The defining tension in real-time ML is between <strong>freshness and reliability.</strong> Batch-trained models updated nightly are stable, well-validated, and easy to roll back — but they can’t react to a fraud ring that emerged at 10 AM. Online-updated models react instantly, but they can silently degrade, overfit to transient patterns, and lack the validation safety net that batch training provides. The staff engineer’s job is to design a system where freshness and reliability are not opposites but complements — where the fast path and the slow path reinforce each other.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                    REAL-TIME ML INFERENCE — SYSTEM TOPOLOGY                         │</span></span>
+<span class="line"><span>│                                                                                    │</span></span>
+<span class="line"><span>│                            ┌──────────────────────┐                                │</span></span>
+<span class="line"><span>│                            │   EVENT PRODUCERS     │                                │</span></span>
+<span class="line"><span>│                            │  (app servers, IoT,   │                                │</span></span>
+<span class="line"><span>│                            │   mobile, payment gw) │                                │</span></span>
+<span class="line"><span>│                            └──────────┬───────────┘                                │</span></span>
+<span class="line"><span>│                                       │ events (Kafka)                             │</span></span>
+<span class="line"><span>│                                       ▼                                            │</span></span>
+<span class="line"><span>│  ┌─────────────────────────────────────────────────────────────────────────┐      │</span></span>
+<span class="line"><span>│  │                        STREAM PROCESSING (Flink / Kafka Streams)          │      │</span></span>
+<span class="line"><span>│  │                                                                          │      │</span></span>
+<span class="line"><span>│  │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐        │      │</span></span>
+<span class="line"><span>│  │  │ Windowed Agg    │  │ Streaming Joins  │  │ Feature Compute  │        │      │</span></span>
+<span class="line"><span>│  │  │ (5-min sliding) │  │ (event + profile)│  │ (z-score, vec)   │        │      │</span></span>
+<span class="line"><span>│  │  └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘        │      │</span></span>
+<span class="line"><span>│  │           │                     │                     │                   │      │</span></span>
+<span class="line"><span>│  │           └─────────────────────┼─────────────────────┘                   │      │</span></span>
+<span class="line"><span>│  │                                 │                                         │      │</span></span>
+<span class="line"><span>│  │                    Write real-time features to Redis                       │      │</span></span>
+<span class="line"><span>│  └─────────────────────────────────┼─────────────────────────────────────────┘      │</span></span>
+<span class="line"><span>│                                    │                                                │</span></span>
+<span class="line"><span>│                                    ▼                                                │</span></span>
+<span class="line"><span>│  ┌─────────────────────────────────────────────────────────────────────────┐      │</span></span>
+<span class="line"><span>│  │                      FEATURE STORE (Online Serving Layer)                  │      │</span></span>
+<span class="line"><span>│  │                                                                           │      │</span></span>
+<span class="line"><span>│  │  ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐     │      │</span></span>
+<span class="line"><span>│  │  │ Batch Features   │    │ Streaming Feat.  │    │ Request-Time     │     │      │</span></span>
+<span class="line"><span>│  │  │ (Redis/Dynamo)   │    │ (Redis, TTL 15m) │    │ (compute on fly) │     │      │</span></span>
+<span class="line"><span>│  │  │ TTL: 24h         │    │ Updated: ~1s     │    │                  │     │      │</span></span>
+<span class="line"><span>│  │  └────────┬─────────┘    └────────┬─────────┘    └────────┬─────────┘     │      │</span></span>
+<span class="line"><span>│  │           │                       │                       │               │      │</span></span>
+<span class="line"><span>│  │           └───────────────────────┼───────────────────────┘               │      │</span></span>
+<span class="line"><span>│  │                                   │                                       │      │</span></span>
+<span class="line"><span>│  │                    Feature Merge (entity_id join)                          │      │</span></span>
+<span class="line"><span>│  └───────────────────────────────────┼───────────────────────────────────────┘      │</span></span>
+<span class="line"><span>│                                      │ feature vector (87 dims)                     │</span></span>
+<span class="line"><span>│                                      ▼                                              │</span></span>
+<span class="line"><span>│  ┌─────────────────────────────────────────────────────────────────────────┐      │</span></span>
+<span class="line"><span>│  │                        MODEL SERVING LAYER                                │      │</span></span>
+<span class="line"><span>│  │                                                                          │      │</span></span>
+<span class="line"><span>│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────────┐     │      │</span></span>
+<span class="line"><span>│  │  │ Primary  │  │ Shadow   │  │ Canary   │  │ Online Learner        │     │      │</span></span>
+<span class="line"><span>│  │  │ Model v3 │  │ Model v4 │  │ Model v4 │  │ (async weight update) │     │      │</span></span>
+<span class="line"><span>│  │  │ (stable) │  │ (eval)   │  │ (1% traf)│  │                       │     │      │</span></span>
+<span class="line"><span>│  │  └──────────┘  └──────────┘  └──────────┘  └──────────────────────┘     │      │</span></span>
+<span class="line"><span>│  │                                                                          │      │</span></span>
+<span class="line"><span>│  │  Inference Engine: Triton / TorchServe / custom gRPC                     │      │</span></span>
+<span class="line"><span>│  │  P99 Latency budget: 50ms (feature merge + inference)                    │      │</span></span>
+<span class="line"><span>│  └──────────────────────────────────────────────────────────────────────────┘      │</span></span>
+<span class="line"><span>│                                      │                                              │</span></span>
+<span class="line"><span>│                                      ▼                                              │</span></span>
+<span class="line"><span>│                            ┌──────────────────┐                                     │</span></span>
+<span class="line"><span>│                            │   PREDICTION      │                                     │</span></span>
+<span class="line"><span>│                            │   (score + reason)│                                     │</span></span>
+<span class="line"><span>│                            └──────────────────┘                                     │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<p>The architecture above reflects the fundamental insight: real-time ML is a <strong>data pipeline problem as much as a serving problem.</strong> The model is the easy part. Getting the right features, at the right freshness, with the right consistency guarantees, within the latency budget — that’s where systems fail.</p>
+<hr>
+<h2 id="2-key-requirements">2. Key Requirements</h2>
+<h3 id="functional-requirements">Functional Requirements</h3>
+<ul>
+<li>Serve model predictions at &lt;50ms P99 for online inference requests (synchronous path)</li>
+<li>Compute real-time features from streaming event data with &lt;1 second staleness</li>
+<li>Merge batch features (nightly-computed), streaming features (last N minutes), and request-time features into a single feature vector per prediction request</li>
+<li>Support online model updates — incorporate new labeled data into model weights within minutes of label availability, not hours</li>
+<li>Multi-model deployment: stable model (95% traffic), canary model (5% traffic), shadow model (0% traffic, log-only)</li>
+<li>Feature freshness monitoring: detect when streaming features are stale and gracefully degrade (use last-known value or batch fallback)</li>
+<li>Explainability: return feature contributions alongside prediction scores for debugging and compliance</li>
+</ul>
+<h3 id="non-functional-requirements-slas">Non-Functional Requirements (SLAs)</h3>
+<ul>
+<li><strong>Prediction latency:</strong> P99 &lt; 50ms end-to-end (feature fetch + merge + inference)</li>
+<li><strong>Throughput:</strong> 20,000 predictions/second at peak (sustained), 50,000 burst (30-second windows)</li>
+<li><strong>Availability:</strong> 99.95% — failed predictions must be handled gracefully (default-allow or default-deny based on use case, never a 500 error to the caller)</li>
+<li><strong>Feature freshness:</strong> Real-time features no more than 1 second stale; streaming features no more than 5 minutes stale; batch features up to 24 hours stale</li>
+<li><strong>Online update latency:</strong> New labels incorporated into model within 5 minutes of label availability</li>
+<li><strong>Rollback time:</strong> &lt; 30 seconds to revert to last-known-good model checkpoint</li>
+<li><strong>Cost:</strong> 70% of inference infrastructure cost in feature serving (storage + retrieval), not model compute</li>
+</ul>
+<hr>
+<h2 id="3-capacity-planning">3. Capacity Planning</h2>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Estimate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Peak prediction QPS</td>
+<td>20,000 (sustained), 50,000 (burst)</td>
+</tr>
+<tr>
+<td>Features per prediction</td>
+<td>87 (72 batch + 12 streaming + 3 request-time)</td>
+</tr>
+<tr>
+<td>Feature vector size</td>
+<td>87 × 8 bytes (float64) = 696 bytes per request</td>
+</tr>
+<tr>
+<td>Batch features storage</td>
+<td>100M entities × 72 floats × 8 bytes = ~58 GB</td>
+</tr>
+<tr>
+<td>Streaming features storage (Redis)</td>
+<td>10M active entities × 12 floats × 8 bytes = ~1 GB</td>
+</tr>
+<tr>
+<td>Streaming events throughput</td>
+<td>100,000 events/sec (Kafka, partitioned by entity_id)</td>
+</tr>
+<tr>
+<td>Flink parallelism</td>
+<td>64 task slots (event throughput / per-slot capacity ~1,500/sec)</td>
+</tr>
+<tr>
+<td>Model size (GBDT/NN)</td>
+<td>~500 MB (compressed, in-memory at serving)</td>
+</tr>
+<tr>
+<td>Serving instances</td>
+<td>20 × 8 vCPU + 16 GB RAM (1,000 QPS per instance)</td>
+</tr>
+<tr>
+<td>Redis cluster (feature store)</td>
+<td>6 nodes × 32 GB (Redis Cluster, sharded by entity_id)</td>
+</tr>
+<tr>
+<td>Online training throughput</td>
+<td>~1,000 updates/sec (mini-batch SGD on GPU)</td>
+</tr>
+<tr>
+<td>Label delay</td>
+<td>P50: 2 hours, P99: 72 hours (fraud confirmation lag)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Storage choice:</strong> Batch features in Redis Cluster (hot path) with DynamoDB fallback. Streaming features exclusively in Redis (volatile, TTL-governed). Model checkpoints in S3 with local SSD cache on serving instances for fast rollback. Training data (labeled events) in a columnar data lake (Iceberg/Parquet) for batch retraining; recent labels streamed via Kafka for online updates.</p>
+<hr>
+<h2 id="4-feature-freshness-ladder">4. Feature Freshness Ladder</h2>
+<p>The single most important concept in real-time ML architecture is that not all features have the same freshness requirement. Categorizing features by freshness tier determines where they’re computed, where they’re stored, and how they’re retrieved.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                    FEATURE FRESHNESS LADDER                            │</span></span>
+<span class="line"><span>│                                                                       │</span></span>
+<span class="line"><span>│  TIER 0: REQUEST-TIME (0ms staleness)                                 │</span></span>
+<span class="line"><span>│  ┌──────────────────────────────────────────────────────────────┐    │</span></span>
+<span class="line"><span>│  │ Computed from the prediction request payload itself.          │    │</span></span>
+<span class="line"><span>│  │ Examples: amount_zscore(transaction), time_of_day_sin_cos,    │    │</span></span>
+<span class="line"><span>│  │            merchant_category_risk_lookup                       │    │</span></span>
+<span class="line"><span>│  │ Storage: NOWHERE — computed inline in the serving layer       │    │</span></span>
+<span class="line"><span>│  │ Latency: 1-3ms (pure compute, no I/O)                         │    │</span></span>
+<span class="line"><span>│  └──────────────────────────────────────────────────────────────┘    │</span></span>
+<span class="line"><span>│                                                                       │</span></span>
+<span class="line"><span>│  TIER 1: STREAMING HOT (&#x3C; 1 second staleness)                        │</span></span>
+<span class="line"><span>│  ┌──────────────────────────────────────────────────────────────┐    │</span></span>
+<span class="line"><span>│  │ Computed by stream processor, written to Redis.               │    │</span></span>
+<span class="line"><span>│  │ Examples: 5-min tx_velocity, geo_velocity, distinct_merchants │    │</span></span>
+<span class="line"><span>│  │ Storage: Redis, TTL = window_size + grace_period              │    │</span></span>
+<span class="line"><span>│  │ Latency: &#x3C;5ms (Redis GET, batch by entity_id)                 │    │</span></span>
+<span class="line"><span>│  └──────────────────────────────────────────────────────────────┘    │</span></span>
+<span class="line"><span>│                                                                       │</span></span>
+<span class="line"><span>│  TIER 2: STREAMING WARM (&#x3C; 5 minutes staleness)                      │</span></span>
+<span class="line"><span>│  ┌──────────────────────────────────────────────────────────────┐    │</span></span>
+<span class="line"><span>│  │ Computed by stream processor on larger windows.               │    │</span></span>
+<span class="line"><span>│  │ Examples: 30-min session_features, hourly_aggregates           │    │</span></span>
+<span class="line"><span>│  │ Storage: Redis, TTL = 1 hour                                   │    │</span></span>
+<span class="line"><span>│  │ Latency: &#x3C;5ms (Redis GET)                                      │    │</span></span>
+<span class="line"><span>│  └──────────────────────────────────────────────────────────────┘    │</span></span>
+<span class="line"><span>│                                                                       │</span></span>
+<span class="line"><span>│  TIER 3: BATCH FRESH (&#x3C; 24 hours staleness)                          │</span></span>
+<span class="line"><span>│  ┌──────────────────────────────────────────────────────────────┐    │</span></span>
+<span class="line"><span>│  │ Computed by nightly Spark/Dataflow jobs.                      │    │</span></span>
+<span class="line"><span>│  │ Examples: 30d_avg_tx_volume, credit_score, device_reputation   │    │</span></span>
+<span class="line"><span>│  │ Storage: Redis (hot cache) with DynamoDB/Feast (source)        │    │</span></span>
+<span class="line"><span>│  │ Latency: &#x3C;5ms (Redis GET); &#x3C;20ms (DynamoDB if cache miss)     │    │</span></span>
+<span class="line"><span>│  └──────────────────────────────────────────────────────────────┘    │</span></span>
+<span class="line"><span>│                                                                       │</span></span>
+<span class="line"><span>│  TIER 4: SLOW-BATCH (> 24 hours staleness)                           │</span></span>
+<span class="line"><span>│  ┌──────────────────────────────────────────────────────────────┐    │</span></span>
+<span class="line"><span>│  │ Computed weekly/monthly. Rarely changes.                      │    │</span></span>
+<span class="line"><span>│  │ Examples: user_segment, lifetime_value_tier, churn_risk_score  │    │</span></span>
+<span class="line"><span>│  │ Storage: Redis (preloaded, TTL = 7 days)                       │    │</span></span>
+<span class="line"><span>│  │ Latency: &#x3C;5ms                                                  │    │</span></span>
+<span class="line"><span>│  └──────────────────────────────────────────────────────────────┘    │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<p>The key architectural insight: <strong>Tier 0 features cost nothing at retrieval time but consume serving-layer CPU. Tier 1 features cost stream-processing infrastructure and Redis memory. Tier 3 features cost batch compute and storage.</strong> The staff engineer’s optimization problem is allocating features to the right tier based on their marginal value to model accuracy vs their infrastructure cost.</p>
+<hr>
+<h2 id="5-streaming-feature-computation--flink-deep-dive">5. Streaming Feature Computation — Flink Deep Dive</h2>
+<p>Real-time features are computed in a stream processor, typically Apache Flink or Kafka Streams. The architecture must handle exactly-once semantics, late-arriving data, and state recovery from failure.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│              STREAMING FEATURE COMPUTATION — FLINK JOB TOPOLOGY            │</span></span>
+<span class="line"><span>│                                                                           │</span></span>
+<span class="line"><span>│  Kafka Source Topic: raw.events (100K msg/sec, partitioned by entity_id)  │</span></span>
+<span class="line"><span>│       │                                                                    │</span></span>
+<span class="line"><span>│       ▼                                                                    │</span></span>
+<span class="line"><span>│  ┌──────────────────────────────────────────────────────────────────┐    │</span></span>
+<span class="line"><span>│  │ Step 1: Parse + Validate                                         │    │</span></span>
+<span class="line"><span>│  │   - Deserialize Protobuf/Avro                                    │    │</span></span>
+<span class="line"><span>│  │   - Drop events with missing entity_id or timestamp               │    │</span></span>
+<span class="line"><span>│  │   - Enrich with static entity metadata (Redis async lookup)      │    │</span></span>
+<span class="line"><span>│  └──────────────────────────┬───────────────────────────────────────┘    │</span></span>
+<span class="line"><span>│                             │ Keyed by entity_id                          │</span></span>
+<span class="line"><span>│                             ▼                                             │</span></span>
+<span class="line"><span>│  ┌──────────────────────────────────────────────────────────────────┐    │</span></span>
+<span class="line"><span>│  │ Step 2: Windowed Aggregation (5-min sliding, 1-min slide)        │    │</span></span>
+<span class="line"><span>│  │                                                                  │    │</span></span>
+<span class="line"><span>│  │   Window 1 [10:00–10:05] ────┐                                    │    │</span></span>
+<span class="line"><span>│  │   Window 2 [10:01–10:06] ────┤                                    │    │</span></span>
+<span class="line"><span>│  │   Window 3 [10:02–10:07] ────┤─── Emit every minute              │    │</span></span>
+<span class="line"><span>│  │   Window 4 [10:03–10:08] ────┤                                    │    │</span></span>
+<span class="line"><span>│  │   Window 5 [10:04–10:09] ────┘                                    │    │</span></span>
+<span class="line"><span>│  │                                                                  │    │</span></span>
+<span class="line"><span>│  │   Aggregates per window:                                         │    │</span></span>
+<span class="line"><span>│  │   - COUNT(event) → tx_velocity                                   │    │</span></span>
+<span class="line"><span>│  │   - COUNT(DISTINCT merchant) → distinct_merchants                │    │</span></span>
+<span class="line"><span>│  │   - SUM(amount) / COUNT → avg_tx_amount                          │    │</span></span>
+<span class="line"><span>│  │   - LAST(location) → for geo-velocity computation                │    │</span></span>
+<span class="line"><span>│  └──────────────────────────┬───────────────────────────────────────┘    │</span></span>
+<span class="line"><span>│                             │                                             │</span></span>
+<span class="line"><span>│                             ▼                                             │</span></span>
+<span class="line"><span>│  ┌──────────────────────────────────────────────────────────────────┐    │</span></span>
+<span class="line"><span>│  │ Step 3: Feature Transform                                        │    │</span></span>
+<span class="line"><span>│  │   - geo_velocity = haversine(last_location, prev_location)       │    │</span></span>
+<span class="line"><span>│  │                    / time_diff_hours                              │    │</span></span>
+<span class="line"><span>│  │   - amount_zscore = (amount - global_mean) / global_stddev       │    │</span></span>
+<span class="line"><span>│  │   - velocity_ratio = current_window_count / prev_window_count    │    │</span></span>
+<span class="line"><span>│  └──────────────────────────┬───────────────────────────────────────┘    │</span></span>
+<span class="line"><span>│                             │                                             │</span></span>
+<span class="line"><span>│                             ▼                                             │</span></span>
+<span class="line"><span>│  ┌──────────────────────────────────────────────────────────────────┐    │</span></span>
+<span class="line"><span>│  │ Step 4: Redis Sink                                               │    │</span></span>
+<span class="line"><span>│  │   - Key: "stream_feat:{entity_id}"                               │    │</span></span>
+<span class="line"><span>│  │   - Value: JSON/Protobuf of all 12 features                      │    │</span></span>
+<span class="line"><span>│  │   - TTL: 15 minutes (window_size + 2× slide_interval + buffer)   │    │</span></span>
+<span class="line"><span>│  │   - Write mode: UPSERT (overwrites, atomic per-key)              │    │</span></span>
+<span class="line"><span>│  └──────────────────────────────────────────────────────────────────┘    │</span></span>
+<span class="line"><span>│                                                                           │</span></span>
+<span class="line"><span>│  State Backend: RocksDB (local SSD) with Checkpointing to S3 every 60s    │</span></span>
+<span class="line"><span>│  Failure Recovery: Restore from latest checkpoint, replay from Kafka      │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<h3 id="late-data-and-watermarks">Late Data and Watermarks</h3>
+<p>Streaming windows must handle events that arrive out of order. A user’s click on their phone might arrive 30 seconds after the click on their laptop, even though the phone click happened first. Flink handles this with <strong>watermarks</strong> — a watermark(t) says “all events with timestamp &lt; t have probably arrived.” The window fires when the watermark passes the window end + allowed lateness.</p>
+<p>The allowed lateness is a trade-off: longer lateness = more accurate features but more state to retain and more memory. For real-time ML features, 30 seconds of allowed lateness is typical — any event later than that is dropped from the window and the feature is computed from incomplete data. This is acceptable because a single dropped event in a 5-minute window of hundreds of events barely moves the aggregate.</p>
+<hr>
+<h2 id="6-online-learning--architecture-and-safety">6. Online Learning — Architecture and Safety</h2>
+<p>Online learning is the practice of updating model weights incrementally as new labeled data arrives, rather than retraining from scratch periodically. It is the right approach when:</p>
+<ul>
+<li>the data distribution shifts faster than your batch retraining cadence (fraud patterns, trending topics, seasonal demand)</li>
+<li>labels arrive continuously (clicks, conversions, fraud confirmations)</li>
+<li>the cost of a stale model is high (fraud loss, missed recommendations)</li>
+</ul>
+<p>But online learning is dangerous. A model that updates on every new label can overfit to the most recent examples, oscillate on noisy labels, or be adversarially poisoned. The safe architecture uses a <strong>dual-model pattern:</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                    DUAL-MODEL ONLINE LEARNING ARCHITECTURE                  │</span></span>
+<span class="line"><span>│                                                                           │</span></span>
+<span class="line"><span>│                          ┌─────────────────────┐                          │</span></span>
+<span class="line"><span>│                          │   Labeled Events     │                          │</span></span>
+<span class="line"><span>│                          │   (Kafka: labels)    │                          │</span></span>
+<span class="line"><span>│                          └──────────┬──────────┘                          │</span></span>
+<span class="line"><span>│                                     │                                      │</span></span>
+<span class="line"><span>│                                     ▼                                      │</span></span>
+<span class="line"><span>│  ┌──────────────────────────────────────────────────────────────────┐    │</span></span>
+<span class="line"><span>│  │                    ONLINE LEARNER (GPU Instance)                   │    │</span></span>
+<span class="line"><span>│  │                                                                   │    │</span></span>
+<span class="line"><span>│  │  ┌─────────────────────┐    ┌─────────────────────┐               │    │</span></span>
+<span class="line"><span>│  │  │ Fast Model          │    │ Stable Model        │               │    │</span></span>
+<span class="line"><span>│  │  │ (updated every 100  │    │ (updated every 10K  │               │    │</span></span>
+<span class="line"><span>│  │  │  labels, high LR)   │    │  labels, low LR)    │               │    │</span></span>
+<span class="line"><span>│  │  │                     │    │                     │               │    │</span></span>
+<span class="line"><span>│  │  │ • Learns new        │    │ • Maintains long-   │               │    │</span></span>
+<span class="line"><span>│  │  │   patterns fast     │    │   term stability    │               │    │</span></span>
+<span class="line"><span>│  │  │ • High variance     │    │ • Low variance      │               │    │</span></span>
+<span class="line"><span>│  │  │ • Risk of overfit   │    │ • Risk of staleness │               │    │</span></span>
+<span class="line"><span>│  │  │                     │    │                     │               │    │</span></span>
+<span class="line"><span>│  │  └──────────┬──────────┘    └──────────┬──────────┘               │    │</span></span>
+<span class="line"><span>│  │             │                          │                           │    │</span></span>
+<span class="line"><span>│  │             └──────────┬───────────────┘                           │    │</span></span>
+<span class="line"><span>│  │                        │                                           │    │</span></span>
+<span class="line"><span>│  │                        ▼                                           │    │</span></span>
+<span class="line"><span>│  │              ┌─────────────────────┐                               │    │</span></span>
+<span class="line"><span>│  │              │ Ensemble / Gating   │                               │    │</span></span>
+<span class="line"><span>│  │              │ (weighted average   │                               │    │</span></span>
+<span class="line"><span>│  │              │  or contextual      │                               │    │</span></span>
+<span class="line"><span>│  │              │  routing)           │                               │    │</span></span>
+<span class="line"><span>│  │              └─────────────────────┘                               │    │</span></span>
+<span class="line"><span>│  └──────────────────────────────────────────────────────────────────┘    │</span></span>
+<span class="line"><span>│                                                                           │</span></span>
+<span class="line"><span>│  ┌──────────────────────────────────────────────────────────────────┐    │</span></span>
+<span class="line"><span>│  │                    SAFETY GUARDRAILS                               │    │</span></span>
+<span class="line"><span>│  │                                                                   │    │</span></span>
+<span class="line"><span>│  │  1. Validation Holdout: Last 1 hour of labels → evaluate before    │    │</span></span>
+<span class="line"><span>│  │     promoting online model (must beat stable on AUROC by >1%)      │    │</span></span>
+<span class="line"><span>│  │                                                                   │    │</span></span>
+<span class="line"><span>│  │  2. Shadow Deployment: Online model always runs in shadow on       │    │</span></span>
+<span class="line"><span>│  │     100% of traffic (predictions logged, not served) for 1 hour    │    │</span></span>
+<span class="line"><span>│  │     before any promotion                                           │    │</span></span>
+<span class="line"><span>│  │                                                                   │    │</span></span>
+<span class="line"><span>│  │  3. Performance Degradation Auto-Rollback: If online model's       │    │</span></span>
+<span class="line"><span>│  │     shadow AUROC drops below stable model's for 3 consecutive      │    │</span></span>
+<span class="line"><span>│  │     10-minute windows → auto-revert to last checkpoint             │    │</span></span>
+<span class="line"><span>│  │                                                                   │    │</span></span>
+<span class="line"><span>│  │  4. Prediction Distribution Drift: If prediction mean shifts       │    │</span></span>
+<span class="line"><span>│  │     by >2 standard deviations from 24h baseline → alert, pause     │    │</span></span>
+<span class="line"><span>│  │     online updates, investigate                                    │    │</span></span>
+<span class="line"><span>│  │                                                                   │    │</span></span>
+<span class="line"><span>│  │  5. Weight Norm Monitoring: If L2 norm of weight delta from        │    │</span></span>
+<span class="line"><span>│  │     checkpoint exceeds threshold → clip or reject update           │    │</span></span>
+<span class="line"><span>│  └──────────────────────────────────────────────────────────────────┘    │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<h3 id="why-not-just-retrain-nightly">Why Not Just Retrain Nightly?</h3>
+<p>For use cases with moderate label delay and slowly shifting distributions (recommendations, search ranking), nightly retraining is sufficient and safer. Online learning is justified only when all three conditions hold: (a) fast distribution shift, (b) continuous label arrival, (c) high cost of staleness. If labels arrive with a 72-hour delay (fraud confirmation), online learning on a per-label basis is still valuable because labels trickle in — you don’t need to wait for all labels from Tuesday to start learning on Tuesday’s patterns.</p>
+<hr>
+<h2 id="7-feature-serving--the-merge-problem">7. Feature Serving — The Merge Problem</h2>
+<p>When a prediction request arrives, the serving layer must assemble the full feature vector from three sources (batch, streaming, request-time). This is called the <strong>feature merge</strong> and it is a surprisingly hard problem.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                    FEATURE MERGE — REQUEST LIFECYCLE                   │</span></span>
+<span class="line"><span>│                                                                       │</span></span>
+<span class="line"><span>│  TIME (ms)                                                            │</span></span>
+<span class="line"><span>│  0    │  Prediction request arrives (user_id, transaction_payload)    │</span></span>
+<span class="line"><span>│       │                                                                │</span></span>
+<span class="line"><span>│  0-2  │  Request-time feature compute (amount_zscore, time_features)  │</span></span>
+<span class="line"><span>│       │  Pure CPU, no I/O                                              │</span></span>
+<span class="line"><span>│       │                                                                │</span></span>
+<span class="line"><span>│  2-7  │  Parallel Redis GET:                                           │</span></span>
+<span class="line"><span>│       │  ┌─ "batch_feat:{user_id}"     (Redis shard A)                │</span></span>
+<span class="line"><span>│       │  ├─ "stream_feat:{user_id}"    (Redis shard B)                │</span></span>
+<span class="line"><span>│       │  └─ "profile:{user_id}"         (Redis shard C)                │</span></span>
+<span class="line"><span>│       │  Each &#x3C;5ms P99 (Redis pipelined)                               │</span></span>
+<span class="line"><span>│       │                                                                │</span></span>
+<span class="line"><span>│  7-8  │  Feature merge + validation                                    │</span></span>
+<span class="line"><span>│       │  - Align feature indices (slot 0 = credit_score, etc.)        │</span></span>
+<span class="line"><span>│       │  - Handle cache misses: fallback batch feat → DynamoDB        │</span></span>
+<span class="line"><span>│       │  - Handle stale streaming feat: use batch feature instead     │</span></span>
+<span class="line"><span>│       │  - Impute missing values (mean/median per feature)            │</span></span>
+<span class="line"><span>│       │  - Validate: dimension == 87, no NaN, no Inf                  │</span></span>
+<span class="line"><span>│       │                                                                │</span></span>
+<span class="line"><span>│  8-10 │  Construct inference tensor → GPU (if NN) or CPU (if GBDT)    │</span></span>
+<span class="line"><span>│       │                                                                │</span></span>
+<span class="line"><span>│ 10-15 │  Model inference (NN: GPU batch; GBDT: CPU tree traversal)    │</span></span>
+<span class="line"><span>│       │                                                                │</span></span>
+<span class="line"><span>│ 15-16 │  Post-processing: sigmoid → score, SHAP → explanations         │</span></span>
+<span class="line"><span>│       │                                                                │</span></span>
+<span class="line"><span>│ 16    │  Response returned                                             │</span></span>
+<span class="line"><span>│       ▼                                                                │</span></span>
+<span class="line"><span>│  End-to-end: ~16ms (well within 50ms P99 budget)                      │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<h3 id="feature-merge-pitfalls">Feature Merge Pitfalls</h3>
+<p><strong>Missing streaming features:</strong> If Flink is down or the entity has no recent events, <code>stream_feat:{user_id}</code> returns nil. The merge layer must have a well-defined fallback: (a) use the batch equivalent if it exists (e.g., batch <code>30d_avg_tx_volume</code> ≈ streaming <code>5m_tx_count</code> scaled up — not the same feature but a correlated signal), (b) impute with the population mean, or (c) use the last-known streaming value if within its TTL window. Option (a) is the safest — it degrades information quality but doesn’t introduce arbitrary values.</p>
+<p><strong>Stale-but-not-expired features:</strong> Redis TTL of 15 minutes means a feature computed 14 minutes ago is still returned. For a prediction at minute 14:30, that’s a 14-minute-stale feature being treated as if it’s “streaming fresh.” The fix: store the computation timestamp alongside the feature value, and the merge layer checks: if <code>now - feature_compute_time &gt; freshness_threshold</code>, downgrade to batch fallback.</p>
+<p><strong>Feature divergence:</strong> The batch pipeline computes <code>30d_avg_tx_volume</code> using a Spark SQL query with a 30-day rolling window. The streaming pipeline computes <code>5m_tx_velocity</code> using Flink sliding windows. These are different code paths, different frameworks, different time semantics (event time vs processing time). If a bug in the batch pipeline causes a feature to be consistently 10% higher than its streaming equivalent, the model sees a distribution shift at the batch/streaming boundary — which features shift? The model learns to rely on whichever is more predictive, but if the discontinuity changes day-to-day (because the batch job’s output varies based on when it runs), prediction quality oscillates. The defense: <strong>feature monitoring</strong> — track the mean and variance of every feature in both batch and streaming pipelines, alert on divergence &gt; 3 standard deviations, and freeze online updates when divergence is detected.</p>
+<hr>
+<h2 id="8-onlineoffline-consistency--point-in-time-correctness">8. Online/Offline Consistency — Point-in-Time Correctness</h2>
+<p>This topic builds directly on Day 50 (Feature Store) but with the added complexity of streaming features. The problem: when you join a batch feature computed at midnight with a streaming feature computed at 10:15 AM, the joined feature vector represents a state that never actually existed. The batch feature used data through midnight, but the streaming feature used data through 10:15 AM. There’s a 10-hour gap where intermediate events occurred.</p>
+<p>For most applications, this inconsistency is harmless — the model learns to handle it implicitly. But for time-sensitive predictions (fraud detection on a transaction at 10:15 AM using a credit score computed at midnight), the inconsistency can cause errors.</p>
+<p>The solution has two layers:</p>
+<ol>
+<li>
+<p><strong>Point-in-time feature retrieval:</strong> The feature store tracks when each feature value was computed. The merge layer annotates the feature vector with a <code>max_staleness</code> field. The online learner can use this as an input feature — the model learns to discount certain features when they’re stale.</p>
+</li>
+<li>
+<p><strong>Temporal consistency windows:</strong> Batch features that change slowly (credit score updates monthly) don’t need point-in-time precision. Streaming features that change every second do. Categorize features by their natural update frequency, and only enforce point-in-time consistency on features where the update frequency is faster than the prediction frequency.</p>
+</li>
+</ol>
+<hr>
+<h2 id="9-model-serving-infrastructure">9. Model Serving Infrastructure</h2>
+<p>The serving layer for real-time ML must balance three constraints: low latency, high throughput, and model version agility.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                    MODEL SERVING ARCHITECTURE                          │</span></span>
+<span class="line"><span>│                                                                       │</span></span>
+<span class="line"><span>│   Load Balancer (Envoy / NGINX)                                       │</span></span>
+<span class="line"><span>│   │                                                                   │</span></span>
+<span class="line"><span>│   ├─▶ Serving Pod 1 ─▶ Model v3 (stable) + Model v4 (shadow)         │</span></span>
+<span class="line"><span>│   ├─▶ Serving Pod 2 ─▶ Model v3 (stable) + Model v4 (shadow)         │</span></span>
+<span class="line"><span>│   ├─▶ ...                                                             │</span></span>
+<span class="line"><span>│   ├─▶ Serving Pod 18 ─▶ Model v3 (stable)                             │</span></span>
+<span class="line"><span>│   ├─▶ Serving Pod 19 ─▶ Model v4 (canary, 5% traffic)                │</span></span>
+<span class="line"><span>│   └─▶ Serving Pod 20 ─▶ Model v4 (canary, 5% traffic)                │</span></span>
+<span class="line"><span>│                                                                       │</span></span>
+<span class="line"><span>│   Model Loading Protocol:                                             │</span></span>
+<span class="line"><span>│   ┌─────────────────────────────────────────────────────────────┐    │</span></span>
+<span class="line"><span>│   │ 1. New model version published to S3:                        │    │</span></span>
+<span class="line"><span>│   │    s3://models/fraud/v4/checkpoint-2026-06-27-0200.pt        │    │</span></span>
+<span class="line"><span>│   │                                                              │    │</span></span>
+<span class="line"><span>│   │ 2. Serving instances poll S3 every 60s (or S3 event → SQS)  │    │</span></span>
+<span class="line"><span>│   │                                                              │    │</span></span>
+<span class="line"><span>│   │ 3. Download to local SSD: /models/fraud/v4/                  │    │</span></span>
+<span class="line"><span>│   │                                                              │    │</span></span>
+<span class="line"><span>│   │ 4. Load into GPU/CPU memory (warm-up: run 100 dummy inputs   │    │</span></span>
+<span class="line"><span>│   │    to populate CUDA kernels and cache)                       │    │</span></span>
+<span class="line"><span>│   │                                                              │    │</span></span>
+<span class="line"><span>│   │ 5. Atomic model swap: update pointer in serving engine        │    │</span></span>
+<span class="line"><span>│   │    (no dropped requests during swap)                          │    │</span></span>
+<span class="line"><span>│   │                                                              │    │</span></span>
+<span class="line"><span>│   │ 6. Health check: /health returns 200 only after warm-up       │    │</span></span>
+<span class="line"><span>│   └─────────────────────────────────────────────────────────────┘    │</span></span>
+<span class="line"><span>│                                                                       │</span></span>
+<span class="line"><span>│   Rollback Architecture:                                              │</span></span>
+<span class="line"><span>│   ┌─────────────────────────────────────────────────────────────┐    │</span></span>
+<span class="line"><span>│   │ Each serving instance keeps the LAST 3 model versions on     │    │</span></span>
+<span class="line"><span>│   │ local SSD (checkpoint, config, feature transform).           │    │</span></span>
+<span class="line"><span>│   │                                                              │    │</span></span>
+<span class="line"><span>│   │ Rollback command (Redis pub/sub or gRPC admin endpoint):     │    │</span></span>
+<span class="line"><span>│   │   ROLLBACK model=fraud to_version=v3                         │    │</span></span>
+<span class="line"><span>│   │                                                              │    │</span></span>
+<span class="line"><span>│   │ All instances receive within 1s, swap atomically.            │    │</span></span>
+<span class="line"><span>│   │ No S3 download needed — v3 already on disk.                  │    │</span></span>
+<span class="line"><span>│   │ Total rollback time: &#x3C;5 seconds after command issued.        │    │</span></span>
+<span class="line"><span>│   └─────────────────────────────────────────────────────────────┘    │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<h3 id="batch-inference-optimization">Batch Inference Optimization</h3>
+<p>For GPU-based models (neural networks), inference throughput improves dramatically with batching. But real-time requests arrive one at a time — you can’t wait to accumulate a batch because latency would spike.</p>
+<p>The solution is <strong>dynamic batching:</strong> the serving engine (Triton, TorchServe) queues incoming requests for a configurable window (e.g., 5ms). All requests arriving in that window are batched into a single GPU forward pass. This amortizes GPU kernel launch overhead across multiple requests while keeping latency bounded. At 20,000 QPS, a 5ms batching window collects ~100 requests per batch, achieving near-theoretical GPU throughput while maintaining &lt;15ms inference latency.</p>
+<p>For CPU-based models (GBDT/XGBoost), batching is less critical — tree traversal is already O(depth) per prediction and doesn’t benefit as much from vectorization. Each request is processed independently on a thread pool.</p>
+<hr>
+<h2 id="10-monitoring-and-drift-detection">10. Monitoring and Drift Detection</h2>
+<p>Real-time ML systems fail silently. The model returns a prediction — it’s always a number — but that number may be wrong. Monitoring must detect four types of failure:</p>
+<table>
+<thead>
+<tr>
+<th>Failure Mode</th>
+<th>Detection Signal</th>
+<th>Threshold</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Feature drift</td>
+<td>KL divergence of feature distribution (24h window vs 7d baseline)</td>
+<td>&gt; 0.3 for any top-10-importance feature</td>
+<td>Alert; if &gt;3 features drift simultaneously → pause online updates</td>
+</tr>
+<tr>
+<td>Prediction drift</td>
+<td>Mean prediction shift (1h window vs 24h baseline)</td>
+<td>&gt; 2 std dev</td>
+<td>Alert; if sustained for 3 windows → auto-rollback</td>
+</tr>
+<tr>
+<td>Label drift</td>
+<td>Positive label rate change (1h vs 24h)</td>
+<td>&gt; 50% relative change</td>
+<td>Alert (may be real pattern shift, not degradation)</td>
+</tr>
+<tr>
+<td>Latency degradation</td>
+<td>P99 latency (1-min rolling window)</td>
+<td>&gt; 50ms</td>
+<td>Alert; if sustained → scale up serving instances</td>
+</tr>
+<tr>
+<td>Feature staleness</td>
+<td>% of predictions using fallback features</td>
+<td>&gt; 5%</td>
+<td>Alert; investigate stream processor health</td>
+</tr>
+<tr>
+<td>Model staleness</td>
+<td>Hours since last successful online update</td>
+<td>&gt; 4 hours</td>
+<td>Alert; may need manual intervention</td>
+</tr>
+</tbody>
+</table>
+<p>The difference between a good ML engineer and a staff engineer is that the staff engineer builds the monitoring before the model goes to production, not after the first incident. They also design for <strong>graceful degradation:</strong> when features are missing or stale, the model should still return a prediction — perhaps with a lower confidence score or a flag indicating reduced reliability — rather than throwing an error that the caller must handle.</p>
+<hr>
+<h2 id="11-deployment-and-experimentation">11. Deployment and Experimentation</h2>
+<p>Real-time ML systems require safe deployment patterns that go beyond standard software canary deployments because model quality is stateful and distribution-dependent.</p>
+<p><strong>Shadow deployment:</strong> Deploy the new model alongside the current one. Route 100% of traffic to the current model for actual predictions, but also run the new model on 100% of traffic and log its predictions (without serving them). Compare offline. This is zero-risk and should be the default first step for every model update.</p>
+<p><strong>A/B (canary) deployment:</strong> Route a small percentage of traffic (1-5%) to the new model. Compare business metrics (fraud catch rate, click-through rate, conversion) between the A and B groups. This is higher-risk than shadow but necessary because offline metrics don’t always correlate with online outcomes (the model may have better AUROC offline but worse business impact due to interaction effects).</p>
+<p><strong>Traffic splitting mechanism:</strong> Use a consistent hash on <code>entity_id</code> to ensure the same entity always goes to the same model variant within an experiment. This prevents a single user from seeing predictions from two different models within the same session, which would corrupt both the experiment results and the user experience.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                    SAFE DEPLOYMENT PIPELINE                        │</span></span>
+<span class="line"><span>│                                                                   │</span></span>
+<span class="line"><span>│  Stage 1: Offline Validation (automated, runs on every checkpoint)│</span></span>
+<span class="line"><span>│  ┌───────────────────────────────────────────────────────────┐   │</span></span>
+<span class="line"><span>│  │ • AUROC on last-7-day holdout > stable model               │   │</span></span>
+<span class="line"><span>│  │ • No feature with >50% importance change                   │   │</span></span>
+<span class="line"><span>│  │ • Prediction calibration (expected vs actual rate) &#x3C; 5%    │   │</span></span>
+<span class="line"><span>│  └───────────────────────────────────────────────────────────┘   │</span></span>
+<span class="line"><span>│       │ Pass                                                       │</span></span>
+<span class="line"><span>│       ▼                                                            │</span></span>
+<span class="line"><span>│  Stage 2: Shadow Deployment (100% traffic, log-only, 2 hours)     │</span></span>
+<span class="line"><span>│  ┌───────────────────────────────────────────────────────────┐   │</span></span>
+<span class="line"><span>│  │ • Shadow predictions logged, compared offline              │   │</span></span>
+<span class="line"><span>│  │ • Distribution comparison: KS-test shadow vs stable        │   │</span></span>
+<span class="line"><span>│  │ • If KS statistic > 0.1 → investigate, pause promotion     │   │</span></span>
+<span class="line"><span>│  └───────────────────────────────────────────────────────────┘   │</span></span>
+<span class="line"><span>│       │ Pass                                                       │</span></span>
+<span class="line"><span>│       ▼                                                            │</span></span>
+<span class="line"><span>│  Stage 3: Canary Deployment (5% traffic, 4 hours)                 │</span></span>
+<span class="line"><span>│  ┌───────────────────────────────────────────────────────────┐   │</span></span>
+<span class="line"><span>│  │ • Business metrics comparison (fraud catch rate, CTR)      │   │</span></span>
+<span class="line"><span>│  │ • Latency comparison (P50/P99 must be within 10%)          │   │</span></span>
+<span class="line"><span>│  │ • Error rate comparison (must be within 0.1%)              │   │</span></span>
+<span class="line"><span>│  └───────────────────────────────────────────────────────────┘   │</span></span>
+<span class="line"><span>│       │ Pass                                                       │</span></span>
+<span class="line"><span>│       ▼                                                            │</span></span>
+<span class="line"><span>│  Stage 4: Full Rollout (100% traffic, gradual over 1 hour)        │</span></span>
+<span class="line"><span>│  ┌───────────────────────────────────────────────────────────┐   │</span></span>
+<span class="line"><span>│  │ • 10% → 25% → 50% → 100% in 15-minute increments           │   │</span></span>
+<span class="line"><span>│  │ • Monitor at each step: latency, errors, prediction drift  │   │</span></span>
+<span class="line"><span>│  │ • Auto-rollback trigger active throughout                  │   │</span></span>
+<span class="line"><span>│  └───────────────────────────────────────────────────────────┘   │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<hr>
+<h2 id="12-weaknesses--improvements">12. Weaknesses &amp; Improvements</h2>
+<ul>
+<li>
+<p><strong>Online learning instability:</strong> The dual-model pattern mitigates but doesn’t eliminate the risk of online model degradation. A coordinated fraud ring that slowly poisons labels over 48 hours can steer both models. Improvement: adversarial label validation — compare label distributions across data sources; if labels from source A (manual review) disagree with labels from source B (customer disputes) by &gt; threshold, quarantine the batch.</p>
+</li>
+<li>
+<p><strong>Streaming pipeline as single point of failure:</strong> If the Flink cluster fails, all Tier 1 features go stale simultaneously, and the model degrades across all predictions. Improvement: run two independent Flink clusters (active-active) consuming the same Kafka topic with different consumer groups, writing to different Redis keyspaces. The merge layer reads from both and uses whichever is fresher.</p>
+</li>
+<li>
+<p><strong>Feature store consistency across batch and streaming:</strong> As discussed, two code paths computing related features will inevitably diverge. Improvement: adopt a unified feature definition language (Feast, Tecton) where the same feature definition is compiled to both batch (Spark SQL) and streaming (Flink SQL) — one source of truth, two execution engines. This is aspirational; in practice, even with unified definitions, floating-point differences between engines cause subtle divergence.</p>
+</li>
+<li>
+<p><strong>Cold-start for new entities:</strong> A new user with no history has no batch features and no streaming features. The model receives a vector of imputed values, which produces an uninformative (often near-median) prediction. Improvement: content-based initialization — use static attributes (device type, signup source, geo) to initialize a “prior” feature vector that’s better than population imputation. Alternatively, use a separate cold-start model trained specifically on new-entity outcomes.</p>
+</li>
+<li>
+<p><strong>Explainability overhead:</strong> Computing SHAP values for 87 features at 20K QPS is expensive (~10ms per prediction for tree-SHAP). Improvement: pre-compute approximate SHAP values for common feature-value ranges and serve them from a lookup table; only compute exact SHAP for a sampled 1% of traffic for monitoring.</p>
+</li>
+</ul>
+<hr>
+<h2 id="13-sharp-question">13. Sharp Question</h2>
+<p><strong>Q:</strong> You’re the ML platform tech lead at a payments company. Your fraud detection model serves 20,000 predictions per second at P99 &lt; 50ms. The business team reports a new fraud pattern: synthetic identity fraud using Buy-Now-Pay-Later (BNPL) layering — fraudsters create accounts with stolen identities, make small legitimate purchases for 2 weeks to build credit, then make a large BNPL purchase and disappear. The current model misses 92% of these cases because the 2-week grooming period looks like normal behavior to batch features. How do you add a new streaming feature that detects this pattern — specifically a “BNPL usage velocity over the last 7 days” feature — and get it into production within 24 hours, without breaking the existing pipeline or adding more than 3ms to P99 latency?</p>
+<p><strong>Model Answer:</strong></p>
+<p>The constraint is tight (24 hours, no &gt;3ms latency increase), which means you can’t redesign the streaming pipeline. You need a lightweight addition that plugs into the existing architecture.</p>
+<p><strong>Step 1 — New stream processor (3 hours to deploy):</strong> Instead of modifying the existing Flink job (which requires code review, testing, and a full deployment cycle that typically takes days), deploy a <strong>new, independent Flink job</strong> that consumes the same Kafka topic and computes only one feature: <code>bnpl_7d_velocity</code> = count of BNPL transactions in a 7-day sliding window per entity. This job is small (one operator, one window) and can be deployed independently. It writes to a new Redis key: <code>stream_feat_bnpl:{entity_id}</code> with TTL 8 days. This pattern — <strong>feature-level microservices for stream processing</strong> — is the real architectural insight. Features should be independently deployable, not bundled into monolithic Flink jobs.</p>
+<p><strong>Step 2 — Feature merge update (1 hour to deploy):</strong> Add one line to the feature merge configuration: <code>bnpl_7d_velocity → redis("stream_feat_bnpl:{entity_id}")</code>. This is a config change, not a code change — the merge layer already supports reading from arbitrary Redis keys. The additional Redis GET adds ~1ms to latency (pipelined with existing Redis calls), well within the 3ms budget. No serving-layer code change needed.</p>
+<p><strong>Step 3 — Model update (2 hours to train + validate):</strong> The model needs to learn the new feature’s weight. You have two paths:</p>
+<ul>
+<li>
+<p><strong>Path A (fastest, recommended for 24h):</strong> Train a new GBDT model (XGBoost/LightGBM) that includes the new feature alongside all existing features. GBDT training on 87 features with 30 days of data takes ~30 minutes on a single GPU. It automatically handles feature interactions (BNPL velocity × account age, BNPL velocity × credit score) without manual feature engineering.</p>
+</li>
+<li>
+<p><strong>Path B (if NN):</strong> Add the new feature to the input layer (88th dimension) and fine-tune the existing model for 2 epochs with a low learning rate, freezing all layers except the first and last. This preserves existing knowledge while incorporating the new signal. ~1 hour on GPU.</p>
+</li>
+</ul>
+<p>Deploy via the standard 4-stage pipeline: offline validation → shadow 2h → canary 4h → full rollout.</p>
+<p><strong>Step 4 — Model doesn’t need the new feature to serve (graceful degradation):</strong> The merge layer treats missing <code>bnpl_7d_velocity</code> as 0 (the feature didn’t exist before, so 0 is the correct historical default). Old model versions (v3) that don’t have the 88th input dimension won’t be accidentally served the new feature. The serving engine handles variable-length input via feature name mapping, not positional indexing.</p>
+<p><strong>Latency:</strong> +1ms for the additional Redis GET, +0ms for inference (GDBT tree depth is unchanged at 87 → 88 features). Total increase: ~1ms. P99 stays at ~17ms, well under the 50ms budget.</p>
+<p><strong>Common Pitfall:</strong> Engineers try to add the new feature by modifying the existing Flink job, which couples the new feature’s deployment to the existing pipeline’s release cycle and risks breaking existing features if the window configuration is accidentally changed. The correct pattern is <strong>feature-level isolation</strong> — each feature or small group of related features gets its own stream processor. This is the microservices principle applied to stream processing: independent deployability, independent scaling, independent failure domains.</p>
+<p>A second pitfall: assuming the new feature works by just adding it to the input. Without validation on holdout data, you don’t know if <code>bnpl_7d_velocity</code> is actually predictive of the new fraud pattern. Always validate on a labeled dataset before deploying — the 2-hour training window includes 30 minutes of feature engineering (constructing the label: “was this transaction part of a confirmed BNPL synthetic fraud case?”) and 30 minutes of feature importance analysis (does <code>bnpl_7d_velocity</code> rank in the top 20 features by SHAP importance?).</p>
+<hr>
+<h2 id="related">Related</h2>
+<ul>
+<li>[[topic-queue]]</li>
+<li>[[Feature Store &amp; Online-Offline Consistency]]</li>
+<li>[[Vector Database Internals (HNSW, IVF, Sharding)]]</li>
+<li>[[LLM Serving at Scale (vLLM, Quantization, Batching, KV Cache)]]</li>
+<li>[[Multi-Agent Orchestration (Planning, Tool Use, Memory, Routing)]]</li>
+<li>[[Recommender Systems (Two-Tower, Candidate Gen, Ranking)]]</li>
+</ul>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Two-stage architecture: candidate generation (millions → thousands) then ranking (thousands → top-N)</li>
+<li>Two-tower model: user tower + item tower produce embeddings; ANN search retrieves nearest items for a user</li>
+<li>Real-time features (last 5 min behavior) must be blended with batch features (30-day history) within the serving latency budget</li>
+<li>Cold-start: new items need content-based features (category, tags) until collaborative signals accumulate</li>
+<li>Online learning: update model weights incrementally as new labels arrive, but validate to prevent overfitting to recent patterns</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you handle the exploration vs exploitation trade-off?” — Reserve a percentage of slots for exploration (random or diverse items) to gather new interaction data. Epsilon-greedy or bandit approaches.</li>
+<li>“What’s your latency budget breakdown?” — User embedding (5ms) + ANN retrieval (10ms) + ranking (10ms) + feature fetch (5ms) = ~30ms P99 for homepage recommendations.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>A model with higher CTR isn’t always better. Short-term engagement metrics (clicks) can cannibalize long-term metrics (retention, satisfaction). Always monitor north-star metrics alongside model metrics before shipping.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/real-time-ml-inference-streaming-features-online-learning/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Real-Time%20ML%20Inference%20(Streaming%20Features%2C%20Online%20Learning)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Freal-time-ml-inference-streaming-features-online-learning%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Freal-time-ml-inference-streaming-features-online-learning%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/real-time-ml-inference-streaming-features-online-learning" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/rate-limiting-algorithms-deep-dive" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Rate Limiting Algorithms Deep Dive</span></a><a href="/notes/system-design/recommender-systems-two-tower-candidate-gen-ranking" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Recommender Systems (Two-Tower, Candidate Gen, Ranking)</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Real-Time ML Inference (Streaming Features, Online Learning)" data-selector=".article-prose" data-article-slug="system-design/real-time-ml-inference-streaming-features-online-learning" data-article-title="Real-Time ML Inference (Streaming Features, Online Learning)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

@@ -1,0 +1,1278 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Binary Search — Complete Coding Interview Prep · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link active" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-why-binary-search-matters" class="toc-link" data-toc-link="1-why-binary-search-matters" data-astro-cid-p33bl5ka>1. Why Binary Search Matters</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-classic-binary-search-leetcode-704" class="toc-link" data-toc-link="2-classic-binary-search-leetcode-704" data-astro-cid-p33bl5ka>2. Classic Binary Search (LeetCode 704)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-core-loop" class="toc-link" data-toc-link="the-core-loop" data-astro-cid-p33bl5ka>The Core Loop</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ascii-diagram--binary-search-convergence" class="toc-link" data-toc-link="ascii-diagram--binary-search-convergence" data-astro-cid-p33bl5ka>ASCII Diagram — Binary Search Convergence</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-704" class="toc-link" data-toc-link="java-solution-704" data-astro-cid-p33bl5ka>Java Solution (704)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-leftmost-and-rightmost-binary-search" class="toc-link" data-toc-link="3-leftmost-and-rightmost-binary-search" data-astro-cid-p33bl5ka>3. Leftmost and Rightmost Binary Search</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leftmost-first-occurrence" class="toc-link" data-toc-link="leftmost-first-occurrence" data-astro-cid-p33bl5ka>Leftmost (First Occurrence)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#rightmost-last-occurrence" class="toc-link" data-toc-link="rightmost-last-occurrence" data-astro-cid-p33bl5ka>Rightmost (Last Occurrence)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#4-search-in-rotated-sorted-array-leetcode-33" class="toc-link" data-toc-link="4-search-in-rotated-sorted-array-leetcode-33" data-astro-cid-p33bl5ka>4. Search in Rotated Sorted Array (LeetCode 33)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ascii-diagram--rotated-array-pivot" class="toc-link" data-toc-link="ascii-diagram--rotated-array-pivot" data-astro-cid-p33bl5ka>ASCII Diagram — Rotated Array Pivot</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-33" class="toc-link" data-toc-link="java-solution-33" data-astro-cid-p33bl5ka>Java Solution (33)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#5-find-minimum-in-rotated-sorted-array-leetcode-153" class="toc-link" data-toc-link="5-find-minimum-in-rotated-sorted-array-leetcode-153" data-astro-cid-p33bl5ka>5. Find Minimum in Rotated Sorted Array (LeetCode 153)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ascii-diagram--finding-minimum" class="toc-link" data-toc-link="ascii-diagram--finding-minimum" data-astro-cid-p33bl5ka>ASCII Diagram — Finding Minimum</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-153" class="toc-link" data-toc-link="java-solution-153" data-astro-cid-p33bl5ka>Java Solution (153)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#6-search-a-2d-matrix-leetcode-74" class="toc-link" data-toc-link="6-search-a-2d-matrix-leetcode-74" data-astro-cid-p33bl5ka>6. Search a 2D Matrix (LeetCode 74)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ascii-diagram--2d-matrix-as-1d-sorted-array" class="toc-link" data-toc-link="ascii-diagram--2d-matrix-as-1d-sorted-array" data-astro-cid-p33bl5ka>ASCII Diagram — 2D Matrix as 1D Sorted Array</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-74" class="toc-link" data-toc-link="java-solution-74" data-astro-cid-p33bl5ka>Java Solution (74)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#7-binary-search-on-answer" class="toc-link" data-toc-link="7-binary-search-on-answer" data-astro-cid-p33bl5ka>7. Binary Search on Answer</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-pattern" class="toc-link" data-toc-link="the-pattern" data-astro-cid-p33bl5ka>The Pattern</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ascii-diagram--binary-search-on-answer-search-space" class="toc-link" data-toc-link="ascii-diagram--binary-search-on-answer-search-space" data-astro-cid-p33bl5ka>ASCII Diagram — Binary Search on Answer Search Space</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#koko-eating-bananas-leetcode-875" class="toc-link" data-toc-link="koko-eating-bananas-leetcode-875" data-astro-cid-p33bl5ka>Koko Eating Bananas (LeetCode 875)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-875" class="toc-link" data-toc-link="java-solution-875" data-astro-cid-p33bl5ka>Java Solution (875)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#capacity-to-ship-packages-within-d-days-leetcode-1011" class="toc-link" data-toc-link="capacity-to-ship-packages-within-d-days-leetcode-1011" data-astro-cid-p33bl5ka>Capacity To Ship Packages Within D Days (LeetCode 1011)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ascii-diagram--capacity-search-space" class="toc-link" data-toc-link="ascii-diagram--capacity-search-space" data-astro-cid-p33bl5ka>ASCII Diagram — Capacity Search Space</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-1011" class="toc-link" data-toc-link="java-solution-1011" data-astro-cid-p33bl5ka>Java Solution (1011)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#split-array-largest-sum-leetcode-410" class="toc-link" data-toc-link="split-array-largest-sum-leetcode-410" data-astro-cid-p33bl5ka>Split Array Largest Sum (LeetCode 410)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#summary-of-binary-search-on-answer" class="toc-link" data-toc-link="summary-of-binary-search-on-answer" data-astro-cid-p33bl5ka>Summary of Binary Search on Answer</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#8-find-peak-element-leetcode-162" class="toc-link" data-toc-link="8-find-peak-element-leetcode-162" data-astro-cid-p33bl5ka>8. Find Peak Element (LeetCode 162)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#9-median-of-two-sorted-arrays-leetcode-4" class="toc-link" data-toc-link="9-median-of-two-sorted-arrays-leetcode-4" data-astro-cid-p33bl5ka>9. Median of Two Sorted Arrays (LeetCode 4)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-idea" class="toc-link" data-toc-link="the-idea" data-astro-cid-p33bl5ka>The Idea</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ascii-diagram--partition-approach" class="toc-link" data-toc-link="ascii-diagram--partition-approach" data-astro-cid-p33bl5ka>ASCII Diagram — Partition Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-solution-4" class="toc-link" data-toc-link="java-solution-4" data-astro-cid-p33bl5ka>Java Solution (4)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#10-square-root-using-binary-search-leetcode-69" class="toc-link" data-toc-link="10-square-root-using-binary-search-leetcode-69" data-astro-cid-p33bl5ka>10. Square Root Using Binary Search (LeetCode 69)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ascii-diagram--sqrt-search-space" class="toc-link" data-toc-link="ascii-diagram--sqrt-search-space" data-astro-cid-p33bl5ka>ASCII Diagram — Sqrt Search Space</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#11-binary-search-on-functions" class="toc-link" data-toc-link="11-binary-search-on-functions" data-astro-cid-p33bl5ka>11. Binary Search on Functions</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#search-insert-position-leetcode-35" class="toc-link" data-toc-link="search-insert-position-leetcode-35" data-astro-cid-p33bl5ka>Search Insert Position (LeetCode 35)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#first-bad-version-leetcode-278" class="toc-link" data-toc-link="first-bad-version-leetcode-278" data-astro-cid-p33bl5ka>First Bad Version (LeetCode 278)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#12-comparison-table--binary-search-variants" class="toc-link" data-toc-link="12-comparison-table--binary-search-variants" data-astro-cid-p33bl5ka>12. Comparison Table — Binary Search Variants</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#template-selection-guide" class="toc-link" data-toc-link="template-selection-guide" data-astro-cid-p33bl5ka>Template Selection Guide</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#13-pattern-recognition-table" class="toc-link" data-toc-link="13-pattern-recognition-table" data-astro-cid-p33bl5ka>13. Pattern Recognition Table</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#14-tips-for-interview-success" class="toc-link" data-toc-link="14-tips-for-interview-success" data-astro-cid-p33bl5ka>14. Tips for Interview Success</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#15-complexity-summary" class="toc-link" data-toc-link="15-complexity-summary" data-astro-cid-p33bl5ka>15. Complexity Summary</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#16-final-notes" class="toc-link" data-toc-link="16-final-notes" data-astro-cid-p33bl5ka>16. Final Notes</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/coding-interview/" class="article-category" data-astro-cid-sgg5joot>Coding Interview</a><h1 class="article-title" data-astro-cid-sgg5joot>Binary Search — Complete Coding Interview Prep</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-medium-to-hard" data-astro-cid-sgg5joot>medium-to-hard</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 23 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 32 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>binary-search</span><span class="tag" data-astro-cid-sgg5joot>interview-prep</span><span class="tag" data-astro-cid-sgg5joot>java</span><span class="tag" data-astro-cid-sgg5joot>algorithms</span><span class="tag" data-astro-cid-sgg5joot>leetcode</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="binary-search--complete-coding-interview-prep">Binary Search — Complete Coding Interview Prep</h1>
+<p>Binary search is deceptively simple — repeatedly halve a sorted search space — but edge cases, variants, and “binary search on answer” make it one of the richest interview topics. This article covers every major pattern with full Java solutions, ASCII diagrams, and pattern tables.</p>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>An O(log n) search on sorted data that halves the search space each step — including binary search on the answer space for optimization problems.</p>
+<p><strong>How it’s asked:</strong> “Find element in sorted array, search insert position, find minimum in rotated sorted array, split array largest sum — ‘find X such that condition holds’ with a monotonic predicate.”</p>
+<hr>
+<h2 id="1-why-binary-search-matters">1. Why Binary Search Matters</h2>
+<p>Binary search converts an O(n) linear scan into an O(log n) operation by exploiting sorted structure. Beyond the textbook “find a number,” interviewers love it because it tests loop invariants and off-by-one reasoning, and the “binary search on answer” pattern appears in problems that don’t look like search at all (shipping capacity, eating speed, splitting arrays). If you can write a correct binary search without infinite loops or missed elements, you are ahead of many candidates.</p>
+<hr>
+<h2 id="2-classic-binary-search-leetcode-704">2. Classic Binary Search (LeetCode 704)</h2>
+<p>Given a sorted array of integers and a target, return the index of the target if it exists, otherwise return -1.</p>
+<h3 id="the-core-loop">The Core Loop</h3>
+<p>The key invariant: the answer, if it exists, is always in the inclusive range <code>[lo, hi]</code>. We pick a midpoint <code>mid = lo + (hi - lo) / 2</code> (to avoid integer overflow) and shrink the range by half each step.</p>
+<h3 id="ascii-diagram--binary-search-convergence">ASCII Diagram — Binary Search Convergence</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Array:  [-1, 0, 3, 5, 9, 12]   target = 9</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 1:  lo=0            hi=5</span></span>
+<span class="line"><span>         [-1, 0, 3, 5, 9, 12]</span></span>
+<span class="line"><span>          lo       mid      hi     mid=2, arr[2]=3 &#x3C; 9  → go right</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 2:        lo=3       hi=5</span></span>
+<span class="line"><span>         [-1, 0, 3, 5, 9, 12]</span></span>
+<span class="line"><span>                  lo  mid  hi      mid=4, arr[4]=9 == 9 → FOUND at index 4</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>General convergence (search space halves each step):</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  [###########################]  n elements</span></span>
+<span class="line"><span>  [##############]               n/2</span></span>
+<span class="line"><span>  [#######]                      n/4</span></span>
+<span class="line"><span>  [###]                          n/8</span></span>
+<span class="line"><span>  [#]                            1   → log2(n) steps</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Each step: compare arr[mid] with target, discard half.</span></span>
+<span class="line"><span>  Terminates when lo > hi (not found) or arr[mid] == target (found).</span></span></code></pre>
+<h3 id="java-solution-704">Java Solution (704)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> search</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> target</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nums.length </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (lo </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> hi) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> (hi </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> lo) </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;  </span><span style="color:#6A737D">// overflow-safe</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (nums[mid] </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> target) {</span></span>
+<span class="line"><span style="color:#F97583">                return</span><span style="color:#E1E4E8"> mid;</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (nums[mid] </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> target) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                lo </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;   </span><span style="color:#6A737D">// discard left half (mid included)</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">                hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;   </span><span style="color:#6A737D">// discard right half (mid included)</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#F97583"> -</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity:</strong> O(log n) time, O(1) space.</p>
+<p><strong>Common pitfalls:</strong></p>
+<ul>
+<li><strong>Overflow:</strong> <code>(lo + hi) / 2</code> can overflow. Use <code>lo + (hi - lo) / 2</code> or <code>(lo + hi) &gt;&gt;&gt; 1</code>.</li>
+<li><strong>Loop condition:</strong> <code>while (lo &lt;= hi)</code> ensures the single-element case is checked. Using <code>&lt;</code> skips it.</li>
+<li><strong>Boundary updates:</strong> <code>lo = mid + 1</code> and <code>hi = mid - 1</code> (not <code>mid</code>) prevent infinite loops when mid is not the answer.</li>
+</ul>
+<hr>
+<h2 id="3-leftmost-and-rightmost-binary-search">3. Leftmost and Rightmost Binary Search</h2>
+<p>Sometimes you need the first or last position of a target (e.g., LeetCode 34 — Find First and Last Position). The trick: when you find the target, don’t return immediately — keep searching in the direction that might have an earlier/later occurrence.</p>
+<h3 id="leftmost-first-occurrence">Leftmost (First Occurrence)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> leftmost</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] nums, </span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> target) {</span></span>
+<span class="line"><span style="color:#F97583">    int</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nums.length </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">, result </span><span style="color:#F97583">=</span><span style="color:#F97583"> -</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">    while</span><span style="color:#E1E4E8"> (lo </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> hi) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> (hi </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> lo) </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (nums[mid] </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> target) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            result </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid;       </span><span style="color:#6A737D">// record, but keep searching left</span></span>
+<span class="line"><span style="color:#E1E4E8">            hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        } </span><span style="color:#F97583">else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (nums[mid] </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> target) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            lo </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">            hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="rightmost-last-occurrence">Rightmost (Last Occurrence)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> rightmost</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] nums, </span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> target) {</span></span>
+<span class="line"><span style="color:#F97583">    int</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nums.length </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">, result </span><span style="color:#F97583">=</span><span style="color:#F97583"> -</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">    while</span><span style="color:#E1E4E8"> (lo </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> hi) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> (hi </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> lo) </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (nums[mid] </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> target) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            result </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid;       </span><span style="color:#6A737D">// record, but keep searching right</span></span>
+<span class="line"><span style="color:#E1E4E8">            lo </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        } </span><span style="color:#F97583">else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (nums[mid] </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> target) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            lo </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">            hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>A half-open template (<code>while (lo &lt; hi)</code> with <code>hi = mid</code> / <code>lo = mid + 1</code>) avoids the separate <code>result</code> variable but is trickier. The golden rule: <strong>if you use <code>hi = mid</code>, compute mid left-biased (<code>lo + (hi - lo) / 2</code>); if you use <code>lo = mid</code>, compute mid right-biased (<code>lo + (hi - lo + 1) / 2</code>)</strong> to avoid infinite loops.</p>
+<hr>
+<h2 id="4-search-in-rotated-sorted-array-leetcode-33">4. Search in Rotated Sorted Array (LeetCode 33)</h2>
+<p>A sorted array is rotated at an unknown pivot. Find a target in O(log n) time.</p>
+<p>The key insight: in a rotated sorted array, at least one half of the array (left or right of mid) is always normally sorted. Determine which half is sorted, then decide if the target lies in that sorted half.</p>
+<h3 id="ascii-diagram--rotated-array-pivot">ASCII Diagram — Rotated Array Pivot</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Original sorted:  [0, 1, 2, 3, 4, 5, 6, 7]</span></span>
+<span class="line"><span>Rotated at pivot=3: [4, 5, 6, 7, 0, 1, 2, 3]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Index:   0  1  2  3  4  5  6  7</span></span>
+<span class="line"><span>Value:   4  5  6  7  0  1  2  3</span></span>
+<span class="line"><span>         └──left half──┘ └─right half─┘</span></span>
+<span class="line"><span>          (sorted)        (sorted)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>The "pivot" is the index of the smallest element (index 4).</span></span>
+<span class="line"><span>Key property: arr[pivot-1] > arr[pivot]  (7 > 0).</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>When we pick mid, one side is ALWAYS sorted:</span></span>
+<span class="line"><span>  arr[lo] &#x3C;= arr[mid] → left half sorted</span></span>
+<span class="line"><span>  else                → right half sorted</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Example: lo=0, hi=7, mid=3 → arr[0]=4 &#x3C;= arr[3]=7 → left sorted</span></span>
+<span class="line"><span>  If arr[lo] &#x3C;= target &#x3C; arr[mid] → search left, else search right.</span></span></code></pre>
+<h3 id="java-solution-33">Java Solution (33)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> search</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> target</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nums.length </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (lo </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> hi) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> (hi </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> lo) </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (nums[mid] </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> target) </span><span style="color:#F97583">return</span><span style="color:#E1E4E8"> mid;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">            // Left half is sorted</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (nums[lo] </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> nums[mid]) {</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (nums[lo] </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> target </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> target </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> nums[mid]) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                    hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;   </span><span style="color:#6A737D">// target in sorted left half</span></span>
+<span class="line"><span style="color:#E1E4E8">                } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">                    lo </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;   </span><span style="color:#6A737D">// target in right half</span></span>
+<span class="line"><span style="color:#E1E4E8">                }</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#6A737D">            // Right half is sorted</span></span>
+<span class="line"><span style="color:#F97583">            else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (nums[mid] </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> target </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> target </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> nums[hi]) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                    lo </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;   </span><span style="color:#6A737D">// target in sorted right half</span></span>
+<span class="line"><span style="color:#E1E4E8">                } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">                    hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;   </span><span style="color:#6A737D">// target in left half</span></span>
+<span class="line"><span style="color:#E1E4E8">                }</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#F97583"> -</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity:</strong> O(log n) time, O(1) space.</p>
+<p><strong>Key details:</strong></p>
+<ul>
+<li><code>nums[lo] &lt;= nums[mid]</code> uses <code>&lt;=</code> to handle <code>lo == mid</code> (single element range). Without <code>=</code>, you’d misclassify the left half as unsorted.</li>
+<li>The condition <code>nums[lo] &lt;= target &amp;&amp; target &lt; nums[mid]</code> checks if target is in the sorted left half. Note the strict <code>&lt;</code> on the right boundary since we already checked <code>nums[mid] == target</code>.</li>
+</ul>
+<hr>
+<h2 id="5-find-minimum-in-rotated-sorted-array-leetcode-153">5. Find Minimum in Rotated Sorted Array (LeetCode 153)</h2>
+<p>Find the minimum element in a rotated sorted array with no duplicates, in O(log n).</p>
+<p>The minimum is the “pivot” — the only element smaller than its left neighbor. The strategy: compare <code>nums[mid]</code> with <code>nums[hi]</code>. If <code>nums[mid] &lt; nums[hi]</code>, the minimum is in the left half (including mid). If <code>nums[mid] &gt; nums[hi]</code>, the minimum is in the right half (excluding mid).</p>
+<h3 id="ascii-diagram--finding-minimum">ASCII Diagram — Finding Minimum</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Array:  [4, 5, 6, 7, 0, 1, 2, 3]   (rotated, min = 0 at index 4)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Step 1: lo=0, hi=7, mid=3 → arr[3]=7 > arr[hi]=3 → min in RIGHT → lo=4</span></span>
+<span class="line"><span>Step 2: lo=4, hi=7, mid=5 → arr[5]=1 &#x3C; arr[hi]=3 → min in LEFT (incl mid) → hi=5</span></span>
+<span class="line"><span>Step 3: lo=4, hi=5, mid=4 → arr[4]=0 &#x3C; arr[hi]=1 → min in LEFT → hi=4</span></span>
+<span class="line"><span>Step 4: lo==hi==4 → arr[4]=0 is the minimum</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Compare mid with hi (not lo):</span></span>
+<span class="line"><span>    arr[mid] &#x3C; arr[hi]  →  min in [lo, mid]   →  hi = mid</span></span>
+<span class="line"><span>    arr[mid] > arr[hi]  →  min in [mid+1, hi] →  lo = mid + 1</span></span></code></pre>
+<h3 id="java-solution-153">Java Solution (153)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> findMin</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nums.length </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (lo </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> hi) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> (hi </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> lo) </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (nums[mid] </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> nums[hi]) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid;       </span><span style="color:#6A737D">// min is in [lo, mid]</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">                lo </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;   </span><span style="color:#6A737D">// min is in [mid+1, hi]</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> nums[lo];  </span><span style="color:#6A737D">// lo == hi, pointing at minimum</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity:</strong> O(log n) time, O(1) space.</p>
+<p>Comparing with <code>nums[hi]</code> (not <code>nums[lo]</code>) works in both rotated and non-rotated cases — comparing with <code>nums[lo]</code> fails when the array is fully sorted. For the version <strong>with duplicates</strong> (LeetCode 154), when <code>nums[mid] == nums[hi]</code> and you can’t decide, decrement <code>hi</code> (<code>hi--</code>) for a worst-case O(n) solution.</p>
+<hr>
+<h2 id="6-search-a-2d-matrix-leetcode-74">6. Search a 2D Matrix (LeetCode 74)</h2>
+<p>Write an efficient algorithm to search a value in an m x n matrix where:</p>
+<ul>
+<li>Each row is sorted left to right.</li>
+<li>The first integer of each row is greater than the last integer of the previous row.</li>
+</ul>
+<p>This means the entire matrix can be treated as a single sorted array of length <code>m * n</code>. Map a 1D index to 2D coordinates: <code>row = index / n</code>, <code>col = index % n</code>.</p>
+<h3 id="ascii-diagram--2d-matrix-as-1d-sorted-array">ASCII Diagram — 2D Matrix as 1D Sorted Array</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Matrix:</span></span>
+<span class="line"><span>  [ 1,  3,  5,  7]</span></span>
+<span class="line"><span>  [10, 11, 16, 20]</span></span>
+<span class="line"><span>  [23, 30, 34, 60]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Treated as 1D sorted array (m=3 rows, n=4 cols):</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Index:  0  1  2  3   4  5  6  7   8   9  10  11</span></span>
+<span class="line"><span>  Value:  1  3  5  7  10 11 16 20  23  30  34  60</span></span>
+<span class="line"><span>          └── row 0 ──┘ └── row 1 ──┘ └── row 2 ──┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  1D index → 2D:  row = index / n   col = index % n</span></span>
+<span class="line"><span>  Example: index=6 → row=6/4=1, col=6%4=2 → matrix[1][2]=16</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Binary search over indices [0, m*n - 1]:</span></span>
+<span class="line"><span>    lo=0, hi=11, mid=5 → matrix[1][1]=11</span></span>
+<span class="line"><span>    Compare with target, shrink range as in classic binary search.</span></span></code></pre>
+<h3 id="java-solution-74">Java Solution (74)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> searchMatrix</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[][] </span><span style="color:#FFAB70">matrix</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> target</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> m </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> matrix.length, n </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> matrix[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">].length;</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> m </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (lo </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> hi) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> (hi </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> lo) </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> row </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">/</span><span style="color:#E1E4E8"> n;</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> col </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">%</span><span style="color:#E1E4E8"> n;</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> value </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> matrix[row][col];</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (value </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> target) {</span></span>
+<span class="line"><span style="color:#F97583">                return</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (value </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> target) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                lo </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">                hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity:</strong> O(log(m * n)) time, O(1) space.</p>
+<p><strong>Note on LeetCode 240:</strong> If rows and columns are independently sorted (but row-start &gt; prev-row-end doesn’t hold), you cannot flatten to 1D. Start from the <strong>top-right corner</strong> and eliminate one row or column per step: if <code>matrix[r][c] &gt; target</code>, move left; if <code>&lt; target</code>, move down. This is O(m + n).</p>
+<hr>
+<h2 id="7-binary-search-on-answer">7. Binary Search on Answer</h2>
+<p>This is the pattern that catches candidates off guard. Many optimization problems have a monotonic property that lets you binary search over the answer space rather than the input array.</p>
+<h3 id="the-pattern">The Pattern</h3>
+<ol>
+<li>Identify a monotonic predicate <code>can(x)</code> — as <code>x</code> increases, <code>can(x)</code> goes from false to true and never goes back.</li>
+<li>Binary search over the range of possible answers <code>[lo, hi]</code>, evaluating <code>can(mid)</code> at each step.</li>
+<li>The smallest (or largest) <code>x</code> for which <code>can(x)</code> is true is your answer.</li>
+</ol>
+<h3 id="ascii-diagram--binary-search-on-answer-search-space">ASCII Diagram — Binary Search on Answer Search Space</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Predicate can(x): "Can we achieve the goal with value x?"</span></span>
+<span class="line"><span>  Monotonically increasing: once true, stays true.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  can(x):  F  F  F  F  F  F  T  T  T  T  T</span></span>
+<span class="line"><span>  x:       1  2  3  4  5  6  7  8  9 10 11</span></span>
+<span class="line"><span>                              ↑</span></span>
+<span class="line"><span>                    answer = 7 (smallest x where can(x) = T)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  lo=1, hi=11 (search space of ANSWERS, not array indices)</span></span>
+<span class="line"><span>  mid=6 → can(6)=F → lo=7    mid=9 → can(9)=T → hi=9</span></span>
+<span class="line"><span>  mid=8 → can(8)=T → hi=8    mid=7 → can(7)=T → hi=7</span></span>
+<span class="line"><span>  lo==hi==7 → answer</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  For "largest x where can(x)=F", flip the logic (decreasing predicate).</span></span></code></pre>
+<h3 id="koko-eating-bananas-leetcode-875">Koko Eating Bananas (LeetCode 875)</h3>
+<p>Koko has <code>n</code> piles of bananas. She eats at speed <code>k</code> (piles per hour). Each hour she picks a pile and eats up to <code>k</code> bananas from it (if the pile has fewer than <code>k</code>, she eats all and does not move to another pile that hour). Find the minimum integer <code>k</code> such that she can eat all bananas within <code>h</code> hours.</p>
+<p><strong>Predicate:</strong> <code>canEat(k)</code> — can Koko finish all piles in <code>h</code> hours at speed <code>k</code>? As <code>k</code> increases, total hours decreases monotonically. Binary search for the smallest <code>k</code> where <code>canEat(k)</code> is true.</p>
+<ul>
+<li><code>lo = 1</code> (minimum possible speed)</li>
+<li><code>hi = max(piles)</code> (at max pile size, each pile takes exactly 1 hour)</li>
+</ul>
+<h3 id="java-solution-875">Java Solution (875)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> minEatingSpeed</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">piles</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> h</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> hi </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> pile </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> piles) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(hi, pile);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (lo </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> hi) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> (hi </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> lo) </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (</span><span style="color:#B392F0">canFinish</span><span style="color:#E1E4E8">(piles, mid, h)) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid;       </span><span style="color:#6A737D">// mid works, try smaller</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">                lo </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;   </span><span style="color:#6A737D">// mid too slow, need faster</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> lo;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> canFinish</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">piles</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> k</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> h</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        long</span><span style="color:#E1E4E8"> hours </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;  </span><span style="color:#6A737D">// use long to avoid overflow</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> pile </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> piles) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            hours </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> (pile </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> k </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">/</span><span style="color:#E1E4E8"> k;  </span><span style="color:#6A737D">// ceiling division: ceil(pile / k)</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> hours </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> h;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity:</strong> O(n * log(max(piles))) time, O(1) space. Ceiling division <code>(pile + k - 1) / k</code> avoids floating point. Use <code>long</code> for hours to prevent overflow.</p>
+<hr>
+<h3 id="capacity-to-ship-packages-within-d-days-leetcode-1011">Capacity To Ship Packages Within D Days (LeetCode 1011)</h3>
+<p>A conveyor belt has packages that must be shipped in order within <code>days</code> days. The <code>i</code>-th package has weight <code>weights[i]</code>. Find the minimum capacity of the ship so that all packages can be shipped within <code>days</code> days. Each day, you load the ship with packages in order (cannot reorder) and the total weight cannot exceed capacity.</p>
+<p><strong>Predicate:</strong> <code>canShip(capacity)</code> — can we ship all packages in <code>days</code> days with the given capacity? As capacity increases, days needed decreases monotonically. Binary search for the smallest capacity where <code>canShip(capacity)</code> is true.</p>
+<ul>
+<li><code>lo = max(weights)</code> (must carry the heaviest single package)</li>
+<li><code>hi = sum(weights)</code> (ship everything in one day)</li>
+</ul>
+<h3 id="ascii-diagram--capacity-search-space">ASCII Diagram — Capacity Search Space</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Weights: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], days = 5</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Search space for capacity:</span></span>
+<span class="line"><span>  lo = 10 (max single weight)   hi = 55 (sum of all weights)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>canShip(capacity):  F  F  F  ...  T  T  T  T</span></span>
+<span class="line"><span>                   10 11 12     14 15    55</span></span>
+<span class="line"><span>                                  ↑</span></span>
+<span class="line"><span>                        answer = smallest capacity where canShip = T</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Binary search:</span></span>
+<span class="line"><span>  lo=10, hi=55, mid=32 → canShip=T → hi=32</span></span>
+<span class="line"><span>  lo=10, hi=32, mid=21 → canShip=T → hi=21</span></span>
+<span class="line"><span>  lo=10, hi=21, mid=15 → canShip=T → hi=15</span></span>
+<span class="line"><span>  lo=10, hi=15, mid=12 → canShip=F → lo=13</span></span>
+<span class="line"><span>  lo=13, hi=15, mid=14 → canShip=T → hi=14</span></span>
+<span class="line"><span>  lo==hi → answer = 15 (actual value depends on exact weights)</span></span></code></pre>
+<h3 id="java-solution-1011">Java Solution (1011)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> shipWithinDays</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">weights</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> days</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, hi </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> w </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> weights) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            lo </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(lo, w);</span></span>
+<span class="line"><span style="color:#E1E4E8">            hi </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> w;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (lo </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> hi) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> (hi </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> lo) </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (</span><span style="color:#B392F0">canShip</span><span style="color:#E1E4E8">(weights, mid, days)) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid;       </span><span style="color:#6A737D">// mid works, try smaller capacity</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">                lo </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;   </span><span style="color:#6A737D">// mid too small, need more capacity</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> lo;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> canShip</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">weights</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> capacity</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> days</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> daysNeeded </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> currentLoad </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> w </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> weights) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (currentLoad </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> w </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> capacity) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                daysNeeded</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">                currentLoad </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">            currentLoad </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> w;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> daysNeeded </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> days;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity:</strong> O(n * log(sum - max)) time, O(1) space.</p>
+<hr>
+<h3 id="split-array-largest-sum-leetcode-410">Split Array Largest Sum (LeetCode 410)</h3>
+<p>Given an array of non-negative integers and an integer <code>m</code>, split the array into <code>m</code> non-empty contiguous subarrays. Minimize the largest sum among the <code>m</code> subarrays.</p>
+<p>This is structurally identical to Capacity To Ship Packages — the “capacity” here is the “largest subarray sum,” and “days” maps to “number of subarrays m.”</p>
+<p><strong>Predicate:</strong> <code>canSplit(maxSum)</code> — can we split the array into at most <code>m</code> subarrays where each subarray sum is at most <code>maxSum</code>? As <code>maxSum</code> increases, the number of subarrays needed decreases. Binary search for the smallest <code>maxSum</code> where <code>canSplit(maxSum)</code> is true.</p>
+<ul>
+<li><code>lo = max(nums)</code> (a single element could be its own subarray)</li>
+<li><code>hi = sum(nums)</code> (one subarray containing everything)</li>
+</ul>
+<p>The code is structurally identical to Capacity To Ship Packages (1011) above — replace <code>capacity</code> with <code>maxSum</code>, <code>days</code> with <code>m</code>, and the <code>canShip</code> function counts subarrays instead of days. The <code>canSplit</code> helper counts how many contiguous subarrays are needed so that each subarray sum is at most <code>maxSum</code>, then returns <code>count &lt;= m</code>.</p>
+<p><strong>Complexity:</strong> O(n * log(sum - max)) time, O(1) space.</p>
+<h3 id="summary-of-binary-search-on-answer">Summary of Binary Search on Answer</h3>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>lo (min answer)</th>
+<th>hi (max answer)</th>
+<th>Predicate (monotonic)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Koko Eating Bananas</td>
+<td>1</td>
+<td>max(piles)</td>
+<td>hours(piles, k) &lt;= h</td>
+</tr>
+<tr>
+<td>Ship Within Days</td>
+<td>max(weights)</td>
+<td>sum(weights)</td>
+<td>daysNeeded(weights, cap) &lt;= days</td>
+</tr>
+<tr>
+<td>Split Array Largest Sum</td>
+<td>max(nums)</td>
+<td>sum(nums)</td>
+<td>subarraysNeeded(nums, maxSum) &lt;= m</td>
+</tr>
+</tbody>
+</table>
+<p>The common thread: find a feasible threshold via a monotonic predicate, binary search the threshold.</p>
+<hr>
+<h2 id="8-find-peak-element-leetcode-162">8. Find Peak Element (LeetCode 162)</h2>
+<p>A peak element is an element that is strictly greater than its neighbors. Given an array, find any peak index. You may imagine <code>nums[-1] = nums[n] = -infinity</code>. The array may contain multiple peaks — return any of them.</p>
+<p>The key insight for O(log n): if <code>nums[mid] &lt; nums[mid + 1]</code>, there must be a peak to the right (because the array rises to the right, and eventually must fall since <code>nums[n] = -inf</code>). Conversely, if <code>nums[mid] &gt; nums[mid + 1]</code>, there must be a peak to the left (including mid).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Array: [1, 2, 3, 1]   (peak at index 2, value 3)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  nums[mid] &#x3C; nums[mid+1]: peak exists in right half → lo = mid + 1</span></span>
+<span class="line"><span>  nums[mid] > nums[mid+1]: peak exists at mid or left  → hi = mid</span></span>
+<span class="line"><span>  The "slope" tells us which direction a peak must exist.</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> findPeakElement</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nums.length </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (lo </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> hi) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> (hi </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> lo) </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (nums[mid] </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> nums[mid </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">]) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                lo </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;   </span><span style="color:#6A737D">// peak is to the right</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">                hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid;       </span><span style="color:#6A737D">// peak is at mid or to the left</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> lo;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity:</strong> O(log n) time, O(1) space. LeetCode 162 guarantees no adjacent duplicates. A variant with duplicates may degrade to O(n) worst case.</p>
+<hr>
+<h2 id="9-median-of-two-sorted-arrays-leetcode-4">9. Median of Two Sorted Arrays (LeetCode 4)</h2>
+<p>Given two sorted arrays <code>nums1</code> and <code>nums2</code> of sizes <code>m</code> and <code>n</code>, return the median of the two sorted arrays in O(log(min(m, n))) time.</p>
+<p>This is the hardest binary search problem on this list. The approach: binary search on the <strong>partition position</strong> in the smaller array.</p>
+<h3 id="the-idea">The Idea</h3>
+<p>Binary search on the <strong>partition position</strong> in the smaller array. We partition both arrays into left and right halves where: (1) the left half contains exactly <code>(m + n + 1) / 2</code> elements (extra goes left when total is odd), and (2) every left element is &lt;= every right element. If we choose partition index <code>i</code> in <code>nums1</code> (meaning <code>nums1[0..i-1]</code> goes left), then <code>nums2</code>’s partition is forced: <code>j = (m + n + 1) / 2 - i</code>. We binary search <code>i</code> to find the valid partition.</p>
+<h3 id="ascii-diagram--partition-approach">ASCII Diagram — Partition Approach</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>nums1:  [1, 3, 8, 9, 15]          m = 5</span></span>
+<span class="line"><span>nums2:  [7, 11, 18, 19, 21, 25]   n = 6</span></span>
+<span class="line"><span>Total = 11, left half needs (11+1)/2 = 6 elements.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Binary search partition i in the shorter array (after swap):</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Try i=3: nums1[0..2]=[1,3,8]  nums2[0..2]=[7,11,18] → 6 elements ✓</span></span>
+<span class="line"><span>  maxLeft1=8, minRight1=9, maxLeft2=18, minRight2=19</span></span>
+<span class="line"><span>  18 &#x3C;= 9? ✗ → i too small, increase</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Try i=4: nums1[0..3]=[1,3,8,9]  nums2[0..1]=[7,11]  → 6 elements ✓</span></span>
+<span class="line"><span>  maxLeft1=9, minRight1=15, maxLeft2=11, minRight2=18</span></span>
+<span class="line"><span>  9&#x3C;=18 ✓  11&#x3C;=15 ✓  → VALID PARTITION</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Left max = max(9, 11) = 11   Right min = min(15, 18) = 15</span></span>
+<span class="line"><span>  Total odd → median = 11</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  nums1:  [1,  3,  8,  9 | 15]       i=4 on left</span></span>
+<span class="line"><span>  nums2:  [7, 11 | 18, 19, 21, 25]   j=2 on left</span></span>
+<span class="line"><span>               ↑ combined left=6, right=5</span></span></code></pre>
+<h3 id="java-solution-4">Java Solution (4)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> double</span><span style="color:#B392F0"> findMedianSortedArrays</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums1</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums2</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6A737D">        // Ensure nums1 is the shorter array for O(log(min(m,n)))</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (nums1.length </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> nums2.length) {</span></span>
+<span class="line"><span style="color:#F97583">            return</span><span style="color:#B392F0"> findMedianSortedArrays</span><span style="color:#E1E4E8">(nums2, nums1);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> m </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nums1.length, n </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nums2.length;</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> m;  </span><span style="color:#6A737D">// partition range in nums1: [0, m]</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> halfTotal </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (m </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;  </span><span style="color:#6A737D">// left half size</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (lo </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> hi) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> (hi </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> lo) </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;   </span><span style="color:#6A737D">// partition in nums1: i elements on left</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> j </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> halfTotal </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> i;        </span><span style="color:#6A737D">// partition in nums2: j elements on left</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">            // Edge cases: use -inf/+inf when partition is at boundary</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> maxLeft1  </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">?</span><span style="color:#E1E4E8"> Integer.MIN_VALUE </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> nums1[i </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> minRight1 </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> m) </span><span style="color:#F97583">?</span><span style="color:#E1E4E8"> Integer.MAX_VALUE </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> nums1[i];</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> maxLeft2  </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (j </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">?</span><span style="color:#E1E4E8"> Integer.MIN_VALUE </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> nums2[j </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> minRight2 </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (j </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> n) </span><span style="color:#F97583">?</span><span style="color:#E1E4E8"> Integer.MAX_VALUE </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> nums2[j];</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (maxLeft1 </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> minRight2 </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> maxLeft2 </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> minRight1) {</span></span>
+<span class="line"><span style="color:#6A737D">                // Valid partition found</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> ((m </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> n) </span><span style="color:#F97583">%</span><span style="color:#79B8FF"> 2</span><span style="color:#F97583"> ==</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">                    return</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(maxLeft1, maxLeft2);</span></span>
+<span class="line"><span style="color:#E1E4E8">                } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">                    return</span><span style="color:#E1E4E8"> (Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(maxLeft1, maxLeft2)</span></span>
+<span class="line"><span style="color:#F97583">                          +</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">min</span><span style="color:#E1E4E8">(minRight1, minRight2)) </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 2.0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">                }</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (maxLeft1 </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> minRight2) {</span></span>
+<span class="line"><span style="color:#6A737D">                // i is too large, decrease it</span></span>
+<span class="line"><span style="color:#E1E4E8">                hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#6A737D">                // maxLeft2 > minRight1, i is too small, increase it</span></span>
+<span class="line"><span style="color:#E1E4E8">                lo </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        throw</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> IllegalArgumentException</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"Input arrays are not sorted."</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity:</strong> O(log(min(m, n))) time, O(1) space.</p>
+<p><strong>Key details:</strong></p>
+<ul>
+<li>Always binary search the <strong>shorter</strong> array to guarantee O(log(min(m, n))).</li>
+<li><code>i</code> ranges from <code>0</code> to <code>m</code> inclusive — <code>0</code> means nums1 contributes nothing to left; <code>m</code> means all of nums1 is left.</li>
+<li><code>j = halfTotal - i</code> is forced by the left-half size constraint.</li>
+<li>Boundary sentinels (<code>MIN_VALUE</code>, <code>MAX_VALUE</code>) handle empty partitions so comparisons still work.</li>
+<li>Odd total: median = max(left halves). Even total: median = average of max(left halves) and min(right halves).</li>
+</ul>
+<hr>
+<h2 id="10-square-root-using-binary-search-leetcode-69">10. Square Root Using Binary Search (LeetCode 69)</h2>
+<p>Given a non-negative integer <code>x</code>, compute and return the square root of <code>x</code> rounded down to the nearest integer.</p>
+<p>The square root of <code>x</code> is in the range <code>[0, x]</code>. We binary search for the largest integer <code>mid</code> such that <code>mid * mid &lt;= x</code>.</p>
+<h3 id="ascii-diagram--sqrt-search-space">ASCII Diagram — Sqrt Search Space</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>x = 8, answer = 2 (2*2=4 &#x3C;= 8 but 3*3=9 > 8)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  mid=4 → 16>8 → hi=3    mid=1 → 1&#x3C;=8 → lo=2</span></span>
+<span class="line"><span>  mid=2 → 4&#x3C;=8 → lo=3    mid=3 → 9>8 → hi=2</span></span>
+<span class="line"><span>  lo>hi → answer = hi = 2</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Predicate: mid*mid &#x3C;= x (true for small, false for large)</span></span>
+<span class="line"><span>  Find LARGEST mid where predicate is true.</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> mySqrt</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> x</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (x </span><span style="color:#F97583">&#x3C;</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#E1E4E8"> x;  </span><span style="color:#6A737D">// sqrt(0)=0, sqrt(1)=1</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">, hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;  </span><span style="color:#6A737D">// sqrt(x) &#x3C;= x/2 for x >= 2</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> result </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (lo </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> hi) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> (hi </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> lo) </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#6A737D">            // Use division to avoid overflow: mid &#x3C;= x / mid</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (mid </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">/</span><span style="color:#E1E4E8"> mid) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                result </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid;</span></span>
+<span class="line"><span style="color:#E1E4E8">                lo </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">                hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity:</strong> O(log x) time, O(1) space.</p>
+<p><strong>Overflow note:</strong> <code>mid * mid</code> can overflow <code>int</code> for large <code>mid</code>. Using <code>mid &lt;= x / mid</code> (integer division) avoids this. Alternatively, cast to <code>long</code>: <code>(long) mid * mid &lt;= x</code>.</p>
+<hr>
+<h2 id="11-binary-search-on-functions">11. Binary Search on Functions</h2>
+<p>Several problems are phrased as “find the first position where a condition is true” over a range. These map directly to binary search.</p>
+<h3 id="search-insert-position-leetcode-35">Search Insert Position (LeetCode 35)</h3>
+<p>Given a sorted array and a target, return the index where the target should be inserted to maintain sorted order. This is equivalent to finding the leftmost position where <code>nums[i] &gt;= target</code>.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> searchInsert</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">nums</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> target</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nums.length;  </span><span style="color:#6A737D">// note: hi = length, not length-1</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (lo </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> hi) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> (hi </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> lo) </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (nums[mid] </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> target) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                lo </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">                hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid;  </span><span style="color:#6A737D">// nums[mid] >= target, candidate position</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> lo;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity:</strong> O(log n) time, O(1) space.</p>
+<p>This is the leftmost binary search in disguise — finding the first element <code>&gt;= target</code>. The range is <code>[0, n]</code> because the insert position could be after the last element.</p>
+<hr>
+<h3 id="first-bad-version-leetcode-278">First Bad Version (LeetCode 278)</h3>
+<p>You have <code>n</code> versions <code>[1, 2, ..., n]</code> and an API <code>isBadVersion(version)</code>. Once a version is bad, all subsequent versions are bad. Find the first bad version.</p>
+<p>This is a classic “find the first true” binary search. The predicate <code>isBadVersion(x)</code> is monotonically true once it becomes true.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Versions:  1  2  3  4  5</span></span>
+<span class="line"><span>isBad:     F  F  F  T  T</span></span>
+<span class="line"><span>                     ↑ first bad = 4</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  lo=1, hi=5, mid=3 → F → lo=4    lo=4, hi=5, mid=4 → T → hi=4</span></span>
+<span class="line"><span>  lo==hi==4 → first bad version = 4</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">public</span><span style="color:#F97583"> class</span><span style="color:#B392F0"> Solution</span><span style="color:#F97583"> extends</span><span style="color:#B392F0"> VersionControl</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> firstBadVersion</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> n</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">, hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> n;</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (lo </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> hi) {</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> (hi </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> lo) </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (</span><span style="color:#B392F0">isBadVersion</span><span style="color:#E1E4E8">(mid)) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                hi </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid;       </span><span style="color:#6A737D">// mid is bad, first bad is at mid or earlier</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">                lo </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mid </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;   </span><span style="color:#6A737D">// mid is good, first bad is after mid</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> lo;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Complexity:</strong> O(log n) time, O(1) space. <code>lo + (hi - lo) / 2</code> is critical here since <code>n</code> can be up to 2^31 - 1, making <code>lo + hi</code> overflow.</p>
+<hr>
+<h2 id="12-comparison-table--binary-search-variants">12. Comparison Table — Binary Search Variants</h2>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>Loop Condition</th>
+<th>lo Update</th>
+<th>hi Update</th>
+<th>Return</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Classic (find exact)</td>
+<td><code>lo &lt;= hi</code></td>
+<td><code>mid + 1</code></td>
+<td><code>mid - 1</code></td>
+<td><code>mid</code> or <code>-1</code></td>
+<td>Exact match in sorted array</td>
+</tr>
+<tr>
+<td>Leftmost (first &gt;=)</td>
+<td><code>lo &lt; hi</code></td>
+<td><code>mid + 1</code></td>
+<td><code>mid</code></td>
+<td><code>lo</code></td>
+<td>First occurrence, insert position</td>
+</tr>
+<tr>
+<td>Rightmost (last &lt;=)</td>
+<td><code>lo &lt; hi</code></td>
+<td><code>mid</code></td>
+<td><code>mid - 1</code></td>
+<td><code>lo</code> (with right-biased mid)</td>
+<td>Last occurrence</td>
+</tr>
+<tr>
+<td>Leftmost (with result var)</td>
+<td><code>lo &lt;= hi</code></td>
+<td><code>mid + 1</code></td>
+<td><code>mid - 1</code></td>
+<td><code>result</code></td>
+<td>First occurrence of exact target</td>
+</tr>
+<tr>
+<td>Rotated search</td>
+<td><code>lo &lt;= hi</code></td>
+<td><code>mid + 1</code></td>
+<td><code>mid - 1</code></td>
+<td><code>mid</code> or <code>-1</code></td>
+<td>Search in rotated array</td>
+</tr>
+<tr>
+<td>Find min rotated</td>
+<td><code>lo &lt; hi</code></td>
+<td><code>mid + 1</code></td>
+<td><code>mid</code></td>
+<td><code>nums[lo]</code></td>
+<td>Minimum in rotated array</td>
+</tr>
+<tr>
+<td>2D matrix</td>
+<td><code>lo &lt;= hi</code></td>
+<td><code>mid + 1</code></td>
+<td><code>mid - 1</code></td>
+<td><code>true/false</code></td>
+<td>Search sorted 2D matrix</td>
+</tr>
+<tr>
+<td>Binary search on answer</td>
+<td><code>lo &lt; hi</code></td>
+<td><code>mid + 1</code></td>
+<td><code>mid</code></td>
+<td><code>lo</code></td>
+<td>Min feasible value (capacity, speed)</td>
+</tr>
+<tr>
+<td>Peak element</td>
+<td><code>lo &lt; hi</code></td>
+<td><code>mid + 1</code></td>
+<td><code>mid</code></td>
+<td><code>lo</code></td>
+<td>Any peak in array</td>
+</tr>
+<tr>
+<td>First bad version</td>
+<td><code>lo &lt; hi</code></td>
+<td><code>mid + 1</code></td>
+<td><code>mid</code></td>
+<td><code>lo</code></td>
+<td>First true in monotonic predicate</td>
+</tr>
+<tr>
+<td>Sqrt (floor)</td>
+<td><code>lo &lt;= hi</code></td>
+<td><code>mid + 1</code></td>
+<td><code>mid - 1</code></td>
+<td><code>result</code></td>
+<td>Integer square root</td>
+</tr>
+<tr>
+<td>Median of two arrays</td>
+<td><code>lo &lt;= hi</code></td>
+<td><code>i + 1</code></td>
+<td><code>i - 1</code></td>
+<td>computed</td>
+<td>Median via partition search</td>
+</tr>
+</tbody>
+</table>
+<h3 id="template-selection-guide">Template Selection Guide</h3>
+<ul>
+<li><code>lo &lt;= hi</code> with <code>mid + 1</code> / <code>mid - 1</code>: when you check exact mid and can discard it.</li>
+<li><code>lo &lt; hi</code> with <code>mid + 1</code> / <code>mid</code> (left-biased mid): searching for a leftmost boundary.</li>
+<li><code>lo &lt; hi</code> with <code>mid</code> / <code>mid - 1</code> (right-biased mid: <code>lo + (hi - lo + 1) / 2</code>): searching for rightmost boundary.</li>
+<li>When in doubt, use the <code>result</code> variable approach — most robust, least prone to infinite loops.</li>
+</ul>
+<hr>
+<h2 id="13-pattern-recognition-table">13. Pattern Recognition Table</h2>
+<p>When you see these signals in a problem, consider the corresponding binary search pattern:</p>
+<table>
+<thead>
+<tr>
+<th>Signal in Problem</th>
+<th>Pattern</th>
+<th>Example Problems</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>“sorted array” + “find target”</td>
+<td>Classic binary search</td>
+<td>704, 35, 34</td>
+</tr>
+<tr>
+<td>“sorted array” + “rotated”</td>
+<td>Rotated array search</td>
+<td>33, 81, 153, 154</td>
+</tr>
+<tr>
+<td>“sorted” + “2D matrix” + “row start &gt; prev row end”</td>
+<td>Flatten to 1D, classic BS</td>
+<td>74</td>
+</tr>
+<tr>
+<td>“sorted” + “2D matrix” + “rows &amp; cols sorted”</td>
+<td>Staircase from top-right</td>
+<td>240</td>
+</tr>
+<tr>
+<td>“minimize max” or “maximize min”</td>
+<td>Binary search on answer</td>
+<td>410, 1011, 875</td>
+</tr>
+<tr>
+<td>“find minimum k such that…”</td>
+<td>Binary search on answer</td>
+<td>875, 1011, 410</td>
+</tr>
+<tr>
+<td>“monotonic predicate” (once true, stays true)</td>
+<td>Find first true</td>
+<td>278, 35</td>
+</tr>
+<tr>
+<td>“greater than neighbors” + “any peak”</td>
+<td>Peak element BS</td>
+<td>162, 852</td>
+</tr>
+<tr>
+<td>“two sorted arrays” + “O(log)”</td>
+<td>Partition binary search</td>
+<td>4</td>
+</tr>
+<tr>
+<td>“integer square root”</td>
+<td>BS on <code>[0, x/2]</code></td>
+<td>69, 367</td>
+</tr>
+<tr>
+<td>“sorted” + “duplicates” + “first/last”</td>
+<td>Leftmost/rightmost BS</td>
+<td>34</td>
+</tr>
+<tr>
+<td>“find smallest divisor” + “threshold”</td>
+<td>Binary search on answer</td>
+<td>1283</td>
+</tr>
+<tr>
+<td>“split array” + “k subarrays” + “minimize max sum”</td>
+<td>Binary search on answer</td>
+<td>410, 4</td>
+</tr>
+<tr>
+<td>“capacity” or “speed” or “threshold”</td>
+<td>Binary search on answer</td>
+<td>875, 1011, 1283</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="14-tips-for-interview-success">14. Tips for Interview Success</h2>
+<ol>
+<li><strong>Always use <code>lo + (hi - lo) / 2</code></strong> for midpoint — prevents overflow and shows edge-case awareness.</li>
+<li><strong>Articulate your invariant.</strong> Before coding, state: “At every step, the answer is in <code>[lo, hi]</code>.”</li>
+<li><strong>Match loop condition to your strategy.</strong> Use <code>lo &lt;= hi</code> when you discard mid and check it directly. Use <code>lo &lt; hi</code> when mid might be the answer and stays in range.</li>
+<li><strong>Match mid bias to your update.</strong> <code>hi = mid</code> → left-biased mid. <code>lo = mid</code> → right-biased mid (<code>lo + (hi - lo + 1) / 2</code>). Mismatching causes infinite loops.</li>
+<li><strong>For “binary search on answer,” write the <code>can(x)</code> predicate first.</strong> Then set <code>lo</code> (smallest possible answer) and <code>hi</code> (largest possible answer) correctly.</li>
+<li><strong>Test edge cases mentally:</strong> empty array, single element, target at boundaries, target not present, no rotation (fully sorted).</li>
+<li><strong>Watch for overflow in predicates.</strong> Use <code>long</code> for sum accumulation; use division instead of multiplication for sqrt.</li>
+<li><strong>Recognize “binary search on answer” even without “sorted” in the problem.</strong> Minimizing a maximum with a monotonic feasibility check is the telltale sign.</li>
+</ol>
+<hr>
+<h2 id="15-complexity-summary">15. Complexity Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Time</th>
+<th>Space</th>
+<th>Pattern</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Binary Search (704)</td>
+<td>O(log n)</td>
+<td>O(1)</td>
+<td>Classic BS</td>
+</tr>
+<tr>
+<td>Search Insert (35)</td>
+<td>O(log n)</td>
+<td>O(1)</td>
+<td>Leftmost BS</td>
+</tr>
+<tr>
+<td>Find First/Last (34)</td>
+<td>O(log n)</td>
+<td>O(1)</td>
+<td>Leftmost + Rightmost</td>
+</tr>
+<tr>
+<td>Rotated Search (33)</td>
+<td>O(log n)</td>
+<td>O(1)</td>
+<td>Rotated BS</td>
+</tr>
+<tr>
+<td>Find Min Rotated (153)</td>
+<td>O(log n)</td>
+<td>O(1)</td>
+<td>Rotated min BS</td>
+</tr>
+<tr>
+<td>Find Min Rotated II (154)</td>
+<td>O(n) worst</td>
+<td>O(1)</td>
+<td>Rotated min + duplicates</td>
+</tr>
+<tr>
+<td>2D Matrix (74)</td>
+<td>O(log(mn))</td>
+<td>O(1)</td>
+<td>Flatten + Classic BS</td>
+</tr>
+<tr>
+<td>2D Matrix II (240)</td>
+<td>O(m + n)</td>
+<td>O(1)</td>
+<td>Staircase</td>
+</tr>
+<tr>
+<td>Koko Eating (875)</td>
+<td>O(n log max)</td>
+<td>O(1)</td>
+<td>BS on answer</td>
+</tr>
+<tr>
+<td>Ship Packages (1011)</td>
+<td>O(n log(sum-max))</td>
+<td>O(1)</td>
+<td>BS on answer</td>
+</tr>
+<tr>
+<td>Split Array (410)</td>
+<td>O(n log(sum-max))</td>
+<td>O(1)</td>
+<td>BS on answer</td>
+</tr>
+<tr>
+<td>Peak Element (162)</td>
+<td>O(log n)</td>
+<td>O(1)</td>
+<td>Peak BS</td>
+</tr>
+<tr>
+<td>Median Two Arrays (4)</td>
+<td>O(log(min(m,n)))</td>
+<td>O(1)</td>
+<td>Partition BS</td>
+</tr>
+<tr>
+<td>Sqrt (69)</td>
+<td>O(log x)</td>
+<td>O(1)</td>
+<td>BS on answer range</td>
+</tr>
+<tr>
+<td>First Bad Version (278)</td>
+<td>O(log n)</td>
+<td>O(1)</td>
+<td>First true BS</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="16-final-notes">16. Final Notes</h2>
+<p>Binary search mastery comes in three levels:</p>
+<ol>
+<li><strong>Classic:</strong> Write a correct binary search on a sorted array — loop condition, midpoint, and bounds right every time.</li>
+<li><strong>Structural variants:</strong> Handle rotated arrays, 2D matrices, and peak finding. These modify comparison logic while keeping the halving structure.</li>
+<li><strong>Binary search on answer:</strong> Search over a range of possible answers rather than array indices. This is the most interview-relevant advanced pattern — recognize the “minimize max” or “maximize min” signal.</li>
+</ol>
+<p>The partition-based median of two sorted arrays sits at the highest difficulty tier. Understanding the approach — even if you can’t derive it from scratch — demonstrates deep mastery of binary search’s generality. Master these patterns and you’ll handle any binary search question in interviews.</p>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Standard binary search: O(log n), requires sorted input.</li>
+<li>Template: while (left &lt;= right), mid = left + (right-left)/2.</li>
+<li>Three variants: exact match, find first occurrence (continue left), find last occurrence (continue right).</li>
+<li>Binary search on answer: search the value space, not an array — “find minimum X such that condition(X) holds.”</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li><strong>How do you avoid integer overflow in mid calculation?</strong> — Use mid = left + (right - left) / 2, NOT mid = (left + right) / 2.</li>
+<li><strong>What’s binary search on answer?</strong> — When the problem asks “find the minimum/maximum value satisfying a condition,” binary search the value range. Example: “minimum capacity to ship packages in D days” — binary search capacity from max(weights) to sum(weights).</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Using while (left &lt; right) vs while (left &lt;= right). The choice depends on whether you’re looking for an exact match (use &lt;=) or a boundary/insertion point (use &lt;). Getting this wrong leads to infinite loops or missed elements.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/coding-interview/binary-search/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Binary%20Search%20%E2%80%94%20Complete%20Coding%20Interview%20Prep&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fcoding-interview%2Fbinary-search%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fcoding-interview%2Fbinary-search%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/coding-interview/binary-search" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/coding-interview/arrays-and-strings/" class="related-card"><div class="related-card-title">Arrays &amp; Strings — Interview Prep Guide</div><div class="related-card-meta">Coding Interview · 47 min</div></a><a href="/notes/coding-interview/backtracking/" class="related-card"><div class="related-card-title">Backtracking — Complete Interview Prep Guide</div><div class="related-card-meta">Coding Interview · 21 min</div></a><a href="/notes/coding-interview/big-o-and-pattern-recognition/" class="related-card"><div class="related-card-title">Big O Complexity &amp; Pattern Recognition</div><div class="related-card-meta">Coding Interview · 30 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/coding-interview/big-o-and-pattern-recognition" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Big O Complexity &amp; Pattern Recognition</span></a><a href="/notes/coding-interview/bit-manipulation" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Bit Manipulation — Coding Interview Prep</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Binary Search — Complete Coding Interview Prep" data-selector=".article-prose" data-article-slug="coding-interview/binary-search" data-article-title="Binary Search — Complete Coding Interview Prep" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

@@ -1,0 +1,728 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Rate Limiter · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview" class="toc-link" data-toc-link="overview" data-astro-cid-p33bl5ka>Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#throttling-vs-rate-limiting-vs-load-shedding" class="toc-link" data-toc-link="throttling-vs-rate-limiting-vs-load-shedding" data-astro-cid-p33bl5ka>Throttling vs Rate Limiting vs Load Shedding</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#core-algorithms" class="toc-link" data-toc-link="core-algorithms" data-astro-cid-p33bl5ka>Core Algorithms</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#algorithm-comparison" class="toc-link" data-toc-link="algorithm-comparison" data-astro-cid-p33bl5ka>Algorithm Comparison</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#token-bucket" class="toc-link" data-toc-link="token-bucket" data-astro-cid-p33bl5ka>Token Bucket</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#leaky-bucket" class="toc-link" data-toc-link="leaky-bucket" data-astro-cid-p33bl5ka>Leaky Bucket</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#fixed-window" class="toc-link" data-toc-link="fixed-window" data-astro-cid-p33bl5ka>Fixed Window</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#sliding-window" class="toc-link" data-toc-link="sliding-window" data-astro-cid-p33bl5ka>Sliding Window</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#distributed-rate-limiting" class="toc-link" data-toc-link="distributed-rate-limiting" data-astro-cid-p33bl5ka>Distributed Rate Limiting</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#redis-based-centralized-limiter" class="toc-link" data-toc-link="redis-based-centralized-limiter" data-astro-cid-p33bl5ka>Redis-Based Centralized Limiter</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#token-server--dedicated-limiter-service" class="toc-link" data-toc-link="token-server--dedicated-limiter-service" data-astro-cid-p33bl5ka>Token Server / Dedicated Limiter Service</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-fail-open-vs-fail-closed-decision" class="toc-link" data-toc-link="the-fail-open-vs-fail-closed-decision" data-astro-cid-p33bl5ka>The Fail-Open vs Fail-Closed Decision</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#enforcement-tier-client-server-gateway" class="toc-link" data-toc-link="enforcement-tier-client-server-gateway" data-astro-cid-p33bl5ka>Enforcement Tier: Client, Server, Gateway</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#keying-dimension-per-user-per-ip-per-api-key" class="toc-link" data-toc-link="keying-dimension-per-user-per-ip-per-api-key" data-astro-cid-p33bl5ka>Keying Dimension: Per-User, Per-IP, Per-API-Key</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#hierarchical-rate-limiting" class="toc-link" data-toc-link="hierarchical-rate-limiting" data-astro-cid-p33bl5ka>Hierarchical Rate Limiting</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#adaptive-rate-limiting" class="toc-link" data-toc-link="adaptive-rate-limiting" data-astro-cid-p33bl5ka>Adaptive Rate Limiting</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#response-headers-and-client-contract" class="toc-link" data-toc-link="response-headers-and-client-contract" data-astro-cid-p33bl5ka>Response Headers and Client Contract</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-estimation" class="toc-link" data-toc-link="capacity-estimation" data-astro-cid-p33bl5ka>Capacity Estimation</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#putting-it-together" class="toc-link" data-toc-link="putting-it-together" data-astro-cid-p33bl5ka>Putting It Together</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-question" class="toc-link" data-toc-link="interview-question" data-astro-cid-p33bl5ka>Interview Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Rate Limiter</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-intermediate" data-astro-cid-sgg5joot>intermediate</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 22 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 31 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>basics</span><span class="tag" data-astro-cid-sgg5joot>rate-limiting</span><span class="tag" data-astro-cid-sgg5joot>distributed-systems</span><span class="tag" data-astro-cid-sgg5joot>api-gateway</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="rate-limiter">Rate Limiter</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A system that controls request rate to protect services from overload, using algorithms like token bucket, sliding window, and fixed window at the API gateway level.</p>
+<p><strong>How it’s asked:</strong> “Design a distributed rate limiter for an API gateway handling 500K RPS across 3 regions. Choose the algorithm, handle clock skew, and ensure per-user limits are enforced globally.”</p>
+<h2 id="overview">Overview</h2>
+<p>A rate limiter is a mechanism that controls the rate at which a client or source can issue requests against a service within a defined time window. It is the first line of defense against abuse, whether accidental (a misconfigured retry loop in a partner’s cron job) or intentional (a credential-stuffing botnet, a scraper harvesting prices, a volumetric DDoS attack). Beyond pure protection, a well-designed rate limiter enforces fairness across tenants, keeps cost predictable when upstream providers bill per call, and gives operators a graceful degradation story under load: instead of the service collapsing under its own queue depth, the limiter rejects excess traffic early and keeps the system alive for the requests it does accept. At staff level, the interesting work is not “should we rate limit” — almost every public-facing API must — but choosing the right algorithm, the right keying dimension, the right enforcement tier, and a distributed implementation that is correct under contention without becoming the new bottleneck.</p>
+<h2 id="throttling-vs-rate-limiting-vs-load-shedding">Throttling vs Rate Limiting vs Load Shedding</h2>
+<p>These three terms are often used interchangeably but describe distinct behaviors, and conflating them in an interview signals shallow understanding.</p>
+<table>
+<thead>
+<tr>
+<th>Mechanism</th>
+<th>Scope</th>
+<th>Trigger</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rate Limiting</td>
+<td>Per-client</td>
+<td>Nth request exceeds quota</td>
+<td>Admission control against a configured quota</td>
+</tr>
+<tr>
+<td>Throttling</td>
+<td>Per-client</td>
+<td>Client has exceeded limit</td>
+<td>Shape behavior: slow down, degrade, retry-after</td>
+</tr>
+<tr>
+<td>Load Shedding</td>
+<td>Global</td>
+<td>System overloaded (p99, queue depth, dependency failure)</td>
+<td>System survival; protect critical capacity</td>
+</tr>
+</tbody>
+</table>
+<p>Rate limiting is a policy mechanism: it decides whether the Nth request in a window is allowed, based on a counter or token budget assigned to some identity. It is fundamentally about admission control against a configured quota. Throttling is a consequence or strategy layered on top: when a client exceeds its limit, the system can throttle that client by slowing it down — for example, by inserting deliberate delays (the “503 with Retry-After” pattern), by returning a queue position, or by degrading the response (returning a cached or lower-fidelity result) instead of hard-rejecting. Throttling is the softer, behavior-shaping cousin of a hard 429. Load shedding is something else again: it is a system-survival action taken when the service itself is overloaded, independent of any per-client quota. When latency p99 crosses a threshold, when a downstream dependency is failing, or when queue depth exceeds a safety margin, the service proactively drops or fast-fails work — even for clients well within their rate limit — to protect critical capacity.</p>
+<p>A good design uses all three: rate limiting for fairness and quota, throttling to shape client behavior politely, and load shedding as the last-resort circuit breaker that prioritizes keeping the system alive over serving every request. The key distinction interviewers probe is that rate limiting is per-client and policy-driven, while load shedding is global and capacity-driven.</p>
+<h2 id="core-algorithms">Core Algorithms</h2>
+<p>The choice of algorithm determines what traffic shape you can enforce, how much state you keep, and how the limiter behaves at boundaries and under bursts. Each makes a different trade-off between precision, memory, and burst tolerance.</p>
+<h3 id="algorithm-comparison">Algorithm Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Algorithm</th>
+<th>Burst Tolerance</th>
+<th>Memory</th>
+<th>Precision</th>
+<th>Boundary Issue</th>
+<th>Best For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Token Bucket</td>
+<td>High (up to capacity)</td>
+<td>O(1)</td>
+<td>Smooth, lazy refill</td>
+<td>None</td>
+<td>General API gateways (AWS, Stripe, GitHub)</td>
+</tr>
+<tr>
+<td>Leaky Bucket</td>
+<td>Low (queues bursts)</td>
+<td>O(queue size)</td>
+<td>Strict constant outflow</td>
+<td>None</td>
+<td>Downstream smoothing, strict no-spike targets</td>
+</tr>
+<tr>
+<td>Fixed Window</td>
+<td>None within window</td>
+<td>O(1)</td>
+<td>Counter</td>
+<td>2x burst at seam</td>
+<td>Low-stakes APIs, trivial Redis impl</td>
+</tr>
+<tr>
+<td>Sliding Window Log</td>
+<td>Bounded</td>
+<td>O(N)</td>
+<td>Exact</td>
+<td>None</td>
+<td>Low-throughput precision needs</td>
+</tr>
+<tr>
+<td>Sliding Window Counter</td>
+<td>Bounded</td>
+<td>O(1)</td>
+<td>Conservative approx</td>
+<td>None</td>
+<td>High-throughput production (Cloudflare, Redis)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="token-bucket">Token Bucket</h3>
+<p>The token bucket is the most widely deployed algorithm in production API gateways (AWS API Gateway, Stripe, GitHub all use variants of it). Each identity — a user, an IP, an API key — owns a logical bucket with a maximum capacity of tokens and a steady refill rate. Tokens are added to the bucket at the refill rate continuously (or in discrete ticks computed lazily), up to the capacity ceiling; any overflow is discarded. Each incoming request consumes one token; if the bucket has at least one token the request is admitted, and if it is empty the request is rejected (or queued/throttled).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>           Token Bucket  (capacity = 5, refill = 2 tokens/sec)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   refill ──►  ● ● ● ● ●          ← tokens accumulate up to capacity</span></span>
+<span class="line"><span>              █████████░░          (5/5 full; overflow discarded)</span></span>
+<span class="line"><span>              └──────┬──────┘</span></span>
+<span class="line"><span>                     │  lazy refill on each request:</span></span>
+<span class="line"><span>                     │  tokens = min(capacity, tokens + Δt * rate)</span></span>
+<span class="line"><span>                     ▼</span></span>
+<span class="line"><span>   request ─────► [ consume 1 token? ]</span></span>
+<span class="line"><span>                      ├── token available ──► ADMIT</span></span>
+<span class="line"><span>                      └── bucket empty    ──► REJECT / 429</span></span></code></pre>
+<p>The crucial property is burst tolerance: because the bucket can accumulate up to capacity tokens during idle periods, a client can issue a short burst of <code>capacity</code> requests instantly, then settle into the steady <code>refill_rate</code> rate. This models real API traffic well, where clients often batch requests at startup or on a user action and then go quiet. Refill is typically computed lazily on each request: <code>tokens = min(capacity, tokens + (now - last_refill) * rate)</code>, which avoids a background timer per bucket and makes the algorithm O(1) in memory and compute per request.</p>
+<p>Configuration parameters:</p>
+<ul>
+<li><strong>capacity</strong> — maximum tokens the bucket can hold; maps to “how big a burst”</li>
+<li><strong>refill_rate</strong> — tokens added per second; maps to “what sustained rate”</li>
+<li><strong>tokens</strong> — current count, decremented per request, refilled lazily</li>
+<li><strong>last_refill</strong> — timestamp of last refill computation (avoids per-bucket timers)</li>
+</ul>
+<p>The two parameters — capacity and refill rate — map intuitively to “how big a burst” and “what sustained rate,” which is why product and API teams find this model easy to reason about.</p>
+<h3 id="leaky-bucket">Leaky Bucket</h3>
+<p>The leaky bucket is the dual of the token bucket and is best understood as a smoothing queue. Requests arrive into a FIFO queue of fixed size; the queue “leaks” (processes) at a constant outflow rate. If the queue is full, new arrivals are dropped. Where token bucket allows a burst up to capacity and then enforces an average rate, leaky bucket enforces a strictly constant output rate regardless of input spikes — it transforms bursty traffic into a smooth stream. This makes it ideal for protecting downstream systems that cannot tolerate spikes at all, such as a legacy database with a fixed connection pool, or an upstream partner API that bills per-second concurrency. The trade-off is that legitimate bursts incur queueing latency, and under sustained overload the queue fills and every subsequent request is rejected until the queue drains, so the client sees all-or-nothing behavior rather than the token bucket’s “burst then steady” cadence. Leaky bucket is also the conceptual basis for the Guzzle-style concurrency limiter and for traffic shaping in network equipment; in API design it is less common than token bucket but appears wherever strict smoothing is the goal.</p>
+<h3 id="fixed-window">Fixed Window</h3>
+<p>Fixed window is the simplest counter-based algorithm. The timeline is divided into fixed, non-overlapping windows — typically aligned to clock boundaries (the minute starting at 12:00:00, the minute starting at 12:01:00). A per-identity counter is incremented for each request; when the counter exceeds the limit, further requests in that window are rejected. The counter resets to zero at the start of each new window. The appeal is extreme simplicity: one integer per identity per window, O(1) increment, trivial to implement in Redis with <code>INCR</code> and a TTL. The well-known flaw is boundary burst: if the limit is 100 requests per minute, a client can issue 100 requests at 11:59:59 and another 100 at 12:00:00, delivering 200 requests in one second across the window seam. For many low-stakes APIs this is acceptable, but for anything where a 2x burst at the boundary is dangerous (a payment API, an inference endpoint with a GPU cost), fixed window is the wrong choice. It also has a reset-time cliff: a client that exhausts its quota at 11:59:01 gets a fresh full quota one second later, which can produce a synchronized thundering herd at minute boundaries if many clients align on the same window.</p>
+<h3 id="sliding-window">Sliding Window</h3>
+<p>Sliding window eliminates the boundary-burst problem by avoiding fixed reset points. There are two implementations worth knowing.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   Sliding Window LOG  (precise, O(N) memory/time per request)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   timeline ──────────────────────────────────────────►</span></span>
+<span class="line"><span>           |&#x3C;──────────  window (60s)  ──────────>|</span></span>
+<span class="line"><span>     ●     ●    ●     ●         ●        ●     ●      ← stored timestamps</span></span>
+<span class="line"><span>     t=0   t=5  t=10  t=20      t=40     t=55  t=60</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   on each request: drop timestamps older than (now - window),</span></span>
+<span class="line"><span>                    count remaining, admit only if count &#x3C; limit.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Sliding Window COUNTER  (approx, O(1) memory, two counters)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   timeline ──────────────────────────────────────────►</span></span>
+<span class="line"><span>          |&#x3C;── prev window ──>|&#x3C;── curr window ──>|</span></span>
+<span class="line"><span>          t-60            t=0  t=now (30% in)</span></span>
+<span class="line"><span>          count_prev = 80      count_curr = 25</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   effective = count_curr + count_prev * (1 - position)</span></span>
+<span class="line"><span>             = 25 + 80 * (1 - 0.30)</span></span>
+<span class="line"><span>             = 25 + 56 = 81</span></span></code></pre>
+<p>The first is sliding window log: keep a timestamped list of every request in the current window, and on each new request drop timestamps older than the window length, count the remainder, and admit only if the count is under the limit. This is precise but costs O(N) memory and time per request where N is the number of requests in the window, which is unacceptable at high throughput. The second and far more common implementation is sliding window counter, which approximates the sliding window by combining two adjacent fixed windows weighted by position. If the current time is 30% into the current minute, the effective count is <code>count_current_window + count_previous_window * (1 - 0.30)</code>. This gives a smooth, bounded estimate that never allows more than the limit across any real sliding window, costs only two counters per identity, and is the algorithm most production “sliding window” rate limiters actually run (Redis’s own sliding-window-cell and the Cloudflare limiter use this approach). The approximation is conservative enough for virtually all API use cases and avoids the memory blowup of the log variant.</p>
+<h2 id="distributed-rate-limiting">Distributed Rate Limiting</h2>
+<p>A single-node rate limiter is trivial: an in-process map of counters or token buckets guarded by a mutex. The hard problem is enforcing a global limit across a fleet of API servers, because each node only sees the slice of traffic routed to it, and naive per-node limits compound (a 1000-rpm global limit split across 10 nodes becomes 10,000 rpm in practice). There are two dominant architectures for distributed rate limiting, plus a hybrid.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                     Distributed Rate Limiting Architecture</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>                          ┌──────────────────────────┐</span></span>
+<span class="line"><span>                          │     Redis Cluster         │</span></span>
+<span class="line"><span>                          │   (sharded by identity)   │</span></span>
+<span class="line"><span>                          │   Lua EVAL = atomic       │</span></span>
+<span class="line"><span>                          │   read-modify-write       │</span></span>
+<span class="line"><span>                          └─────────────┬────────────┘</span></span>
+<span class="line"><span>                   refill / reconcile    │   check (hot path)</span></span>
+<span class="line"><span>              ┌──────────────────────────┼──────────────────────────┐</span></span>
+<span class="line"><span>              │                          │                          │</span></span>
+<span class="line"><span>       ┌──────▼───────┐           ┌──────▼───────┐           ┌──────▼───────┐</span></span>
+<span class="line"><span>       │  API node 1  │           │  API node 2  │           │  API node N  │</span></span>
+<span class="line"><span>       │  local sub-  │           │  local sub-  │           │  local sub-  │</span></span>
+<span class="line"><span>       │  bucket/key  │           │  bucket/key  │           │  bucket/key  │</span></span>
+<span class="line"><span>       └──────┬───────┘           └──────┬───────┘           └──────┬───────┘</span></span>
+<span class="line"><span>              │                          │                          │</span></span>
+<span class="line"><span>              ▼                          ▼                          ▼</span></span>
+<span class="line"><span>          client A                   client B                   client C</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Common path: request → local sub-bucket (in-process) → admit/reject.</span></span>
+<span class="line"><span>   Periodic path: every ~100ms each node refills from Redis + reconciles.</span></span>
+<span class="line"><span>   Most requests never hit Redis; Redis only owns global correctness.</span></span></code></pre>
+<h3 id="redis-based-centralized-limiter">Redis-Based Centralized Limiter</h3>
+<p>The most common production pattern is a shared Redis (or Redis Cluster) instance holding the counters, with every API node issuing a read-modify-write to Redis on each request. The canonical implementation is the token bucket or sliding window counter expressed as a small Lua script executed atomically inside Redis via <code>EVAL</code>: the script reads the bucket, applies refill or window math, decrements or increments, writes back, and returns the remaining budget and reset time. Doing this in a Lua script is essential because Redis executes Lua atomically, eliminating the race where two concurrent requests both read an empty bucket and both admit. The cost is one Redis round-trip per request, typically 0.3–1ms in-region, which is acceptable for most APIs but becomes the dominant latency term for very fast endpoints. Redis Cluster shards by key so the limiter scales horizontally with the number of identities, but a single hot identity’s bucket is still single-threaded on one shard — a client hammering one key can saturate a Redis core. Mitigations include local pre-checks (a small per-node token sub-bucket refilled periodically from Redis, so most requests never hit Redis) and consistent-hashing the limiter across multiple Redis instances by key prefix.</p>
+<h3 id="token-server--dedicated-limiter-service">Token Server / Dedicated Limiter Service</h3>
+<p>For very high throughput or when Redis round-trips are too costly, teams run a dedicated rate limiter service — a cluster of stateful nodes, each owning a shard of the identity space by consistent hash, holding buckets in memory. API nodes make a fast RPC (often gRPC or a custom UDP/TCP protocol) to the limiter service, which responds in well under a millisecond since the state is hot in RAM. This is the architecture used by large platforms (Twitter’s limiter, Lyft’s ratelimit open-source service, Google’s internal limiter infrastructure). The trade-off is operational complexity: the limiter service is now a stateful system that must replicate or accept some loss on node failure, must be sized for the peak request rate, and becomes a hard dependency — if the limiter is down, every API call is blocked unless you implement a fail-open fallback. Many designs pin the limiter service to the same racks or availability zones as the API nodes and use local sub-buckets to absorb the majority of checks, calling the central service only for refill and reconciliation, which gets the failure domain small and the common-case latency to near zero.</p>
+<h3 id="the-fail-open-vs-fail-closed-decision">The Fail-Open vs Fail-Closed Decision</h3>
+<p>When the limiter dependency is unavailable, you must choose: fail open (admit all traffic, risking overload) or fail closed (reject all traffic, causing an outage of your own making).</p>
+<ul>
+<li><strong>Fail open</strong> — admit all traffic when the limiter is down. Preferred for non-critical/read endpoints; a brief period without rate limiting is better than a total outage, and downstream load shedding plus per-node soft limits provide a backstop.</li>
+<li><strong>Fail closed</strong> — reject all traffic when the limiter is down. Preferred for payment, fraud, and security-sensitive endpoints where the inability to enforce a limit is worse than degraded availability.</li>
+</ul>
+<p>Most public APIs fail open for non-critical endpoints. Payment, fraud, and security-sensitive endpoints often fail closed, treating the inability to enforce a limit as worse than degraded availability. This is a product and risk decision, not a purely technical one, and stating it explicitly in an interview distinguishes a senior candidate from one who has only read the happy-path docs.</p>
+<h2 id="enforcement-tier-client-server-gateway">Enforcement Tier: Client, Server, Gateway</h2>
+<p>Where the limiter runs shapes its capabilities, cost, and trust model.</p>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Location</th>
+<th>Context Available</th>
+<th>Server Cost</th>
+<th>Enforceable?</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Client-side</td>
+<td>Caller SDK / app</td>
+<td>None</td>
+<td>Zero</td>
+<td>No (advisory)</td>
+<td>Reduce 429 noise, partner hygiene</td>
+</tr>
+<tr>
+<td>Server-side</td>
+<td>Application / sidecar</td>
+<td>Full (plan tier, endpoint cost, user)</td>
+<td>App CPU + limiter RTT</td>
+<td>Yes</td>
+<td>Nuanced per-user, per-endpoint policy</td>
+</tr>
+<tr>
+<td>Gateway-level</td>
+<td>Reverse proxy / edge / CDN</td>
+<td>Path, API key, IP only</td>
+<td>Offloaded to infra</td>
+<td>Yes</td>
+<td>Coarse IP/key limits, absorb easy abuse</td>
+</tr>
+</tbody>
+</table>
+<p>Client-side rate limiting is advisory: the client (an SDK you ship, or the caller’s own throttle) counts its own requests and backs off before hitting the server. It is cheap, adds zero server load, and improves the client’s own retry hygiene, but it is unenforceable — any client can ignore it, and hostile clients will. It is useful as a first line for well-behaved partners and to reduce 429 noise, never as the actual control. Server-side rate limiting runs inside the application process or a sidecar: the service itself checks the limiter on each request before doing real work. This gives the deepest context — the handler knows the user’s plan tier, the endpoint’s cost, the request’s resource weight — and lets you apply heterogeneous limits (100 rpm for free users, 10,000 rpm for enterprise, 10 rpm for a /search endpoint that hits a GPU). The cost is application CPU and the Redis/limiter round-trip on the hot path. Gateway-level rate limiting runs in the reverse proxy, API gateway, or edge (NGINX with limit_req, AWS API Gateway, Cloudflare, Kong): the limiter rejects before the request ever reaches your origin, which protects the application entirely and offloads the work to infrastructure built for line-rate packet inspection. The limitation is context: the gateway typically knows the path, the API key, and the source IP, but not the user’s plan tier or the per-request cost, so gateway limits are coarser and usually serve as the blunt instrument while server-side limits apply the nuanced policy. Mature systems layer all three: client SDKs throttle themselves, the gateway enforces coarse IP and key limits to absorb the easiest abuse, and the application enforces fine-grained per-user, per-endpoint, per-plan limits using full request context.</p>
+<h2 id="keying-dimension-per-user-per-ip-per-api-key">Keying Dimension: Per-User, Per-IP, Per-API-Key</h2>
+<p>The identity you rate limit by determines who gets throttled and how easy it is to evade.</p>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Requires Auth</th>
+<th>Evasion Risk</th>
+<th>Best For</th>
+<th>Weakness</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Per-IP</td>
+<td>No</td>
+<td>High (botnet rotation, shared NAT)</td>
+<td>Anonymous traffic, DDoS protection</td>
+<td>Throttles legitimate users behind shared NAT</td>
+</tr>
+<tr>
+<td>Per-API-Key</td>
+<td>Yes (credential)</td>
+<td>Medium (key sharing/compromise)</td>
+<td>B2B, developer APIs, per-customer quotas</td>
+<td>One key may serve many internal services</td>
+</tr>
+<tr>
+<td>Per-User</td>
+<td>Yes (authenticated)</td>
+<td>Low (ties to real entity)</td>
+<td>App tier, plan-tier policy</td>
+<td>Auth must complete before limiter can key</td>
+</tr>
+</tbody>
+</table>
+<p>Per-IP is the default for anonymous traffic and DDoS protection: it requires no authentication, works at the network layer, and is the only option when you have no caller identity. Its fatal weakness is shared-NAT: a university dorm, a corporate office, or a mobile carrier gateway can sit behind one public IP, so a per-IP limit throttles legitimate users collectively because one of them is noisy. It is also trivially evaded by an attacker rotating across a botnet of residential IPs. Per-API-key ties the limit to a credential you issued, so you can set per-customer quotas, attribute abuse to a specific account, and revoke the key. This is the standard for B2B and developer APIs. The evasion risk is key sharing or a compromised key; the operational cost is key management and the fact that one key may be used by many backend services within a customer, so a per-key limit can throttle a customer’s own internal cross-talk. Per-user (authenticated user or account) is the highest-signal dimension: it ties limits to a real entity, survives IP rotation and key rotation, and lets you express policy like “1000 rpm per user regardless of how many keys they hold.” The cost is that it requires authentication to have completed before the limiter can key correctly, which means the auth check itself is not rate limited by user — a gap usually filled by a per-IP or per-anonymous-token pre-auth limit. The right answer in production is almost always a blend: a per-IP limit on unauthenticated and pre-auth traffic, a per-key limit for partner and developer access, and a per-user limit for the authenticated application tier, applied as a hierarchy so the tightest applicable limit wins.</p>
+<h2 id="hierarchical-rate-limiting">Hierarchical Rate Limiting</h2>
+<p>Real platforms rarely apply a single limit. A user on the Pro plan calling the /generate endpoint through a specific API key may be subject to several limits simultaneously, and a request must pass every level to be admitted — the effective limit is the minimum of all applicable budgets.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   Hierarchical Rate Limiting Flow</span></span>
+<span class="line"><span>   (one atomic Lua call checks all levels; min budget wins)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   request arrives</span></span>
+<span class="line"><span>        │</span></span>
+<span class="line"><span>        ▼</span></span>
+<span class="line"><span>   ┌─────────────────────┐</span></span>
+<span class="line"><span>   │  Global account     │   1M req/month   (billing ceiling)</span></span>
+<span class="line"><span>   │  limit              │</span></span>
+<span class="line"><span>   └─────────┬───────────┘</span></span>
+<span class="line"><span>             │ pass?</span></span>
+<span class="line"><span>             ▼</span></span>
+<span class="line"><span>   ┌─────────────────────┐</span></span>
+<span class="line"><span>   │  Per-key limit      │   10,000 rpm     (production key cap)</span></span>
+<span class="line"><span>   └─────────┬───────────┘</span></span>
+<span class="line"><span>             │ pass?</span></span>
+<span class="line"><span>             ▼</span></span>
+<span class="line"><span>   ┌─────────────────────┐</span></span>
+<span class="line"><span>   │  Per-endpoint limit │   /generate = 100 rpm  (expensive endpoint)</span></span>
+<span class="line"><span>   └─────────┬───────────┘</span></span>
+<span class="line"><span>             │ pass?</span></span>
+<span class="line"><span>             ▼</span></span>
+<span class="line"><span>   ┌─────────────────────┐</span></span>
+<span class="line"><span>   │  Per-IP limit       │   500 rpm        (office IP, runaway-script guard)</span></span>
+<span class="line"><span>   └─────────┬───────────┘</span></span>
+<span class="line"><span>             │ pass?</span></span>
+<span class="line"><span>             ▼</span></span>
+<span class="line"><span>        ADMIT  (effective limit = min of all budgets)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   any level fails ──► 429 + Retry-After = most restrictive reset time</span></span>
+<span class="line"><span>   (atomic multi-bucket check prevents token leakage across levels)</span></span></code></pre>
+<p>Hierarchical rate limiting is what lets you combine a billing/quota ceiling, a fairness ceiling, and a safety ceiling without them fighting each other. Implementing it well means computing all applicable limits in a single limiter call (one Lua script that checks and decrements every bucket in the hierarchy atomically, so you don’t burn a token at one level and then get rejected at another) and returning the most restrictive reset time in the response headers so the client backs off for the right duration. Without atomic multi-bucket checks, you get token leakage — a request rejected at the /generate level still consumed the account-level token — which distorts billing and customer-visible quotas.</p>
+<h2 id="adaptive-rate-limiting">Adaptive Rate Limiting</h2>
+<p>Static limits are tuned for a peak load that is a guess. Adaptive rate limiting adjusts the limit in real time based on observed system health, so the service admits more traffic when it is healthy and throttles earlier when it is struggling.</p>
+<p>Signals a controller typically consumes:</p>
+<ul>
+<li>p99 latency (and its trend)</li>
+<li>CPU utilization on service nodes</li>
+<li>Queue depth / in-flight request count</li>
+<li>Downstream dependency error rate</li>
+<li>Active connection count</li>
+</ul>
+<p>Controller strategies:</p>
+<ul>
+<li><strong>AIMD loop</strong> (additive increase, multiplicative decrease) — borrowed from TCP congestion control</li>
+<li><strong>Recomputed-capacity token bucket</strong> — capacity recalculated every few seconds from a moving average of the signals</li>
+<li><strong>Concurrency limiter</strong> — based on Little’s Law: <code>throughput = concurrency / latency</code>; estimate max sustainable concurrency, reject when in-flight exceeds it</li>
+<li><strong>Backpressure-aware limits</strong> — derived from downstream latency degradation</li>
+</ul>
+<p>The classic formulation is the concurrency limiter: estimate the service’s max sustainable concurrency from <code>Little's Law (throughput = concurrency / latency)</code>, measure the current latency, and reject requests when in-flight count exceeds the computed limit — this directly ties admission to the system’s actual capacity rather than a pre-set number. Adaptive limiting is what keeps a service alive during partial degradation: when a downstream dependency slows from 50ms to 500ms, the static limiter would keep admitting at the old rate until the queue fills and latency explodes, while the adaptive limiter sees the latency spike and cuts the admission rate by 10x within seconds, keeping the remaining requests fast. The risk is oscillation (the controller overcorrects, throttles too hard, then over-admits), which is why production implementations use smoothing, hysteresis (a deliberate buffer zone where the limit doesn’t change immediately, preventing rapid oscillation between over-throttling and over-admitting), and conservative decrease factors.</p>
+<h2 id="response-headers-and-client-contract">Response Headers and Client Contract</h2>
+<p>A rate limiter that returns a bare 429 is a poor citizen. The HTTP standard (RFC 6585) defines 429 Too Many Requests, and the convention across well-behaved APIs is to accompany it with headers that let the client back off correctly.</p>
+<p>Standard response headers:</p>
+<ul>
+<li><code>Retry-After</code> (RFC 7231) — seconds to wait before retrying, as delta-seconds or HTTP-date</li>
+<li><code>X-RateLimit-Limit</code> — total quota for the window</li>
+<li><code>X-RateLimit-Remaining</code> — tokens or count left</li>
+<li><code>X-RateLimit-Reset</code> — epoch second when the window resets and quota replenishes</li>
+<li><code>RateLimit-*</code> / <code>RateLimit-Policy</code> (draft, no X- prefix) — standardized, machine-parseable form; the direction the ecosystem is moving</li>
+</ul>
+<p>Returning these headers on every response — not just 429s — lets well-behaved clients proactively throttle themselves before hitting the limit, which is strictly better than forcing them to discover the limit by being rejected. Some newer APIs use the draft <code>RateLimit-*</code> (without the X- prefix) and <code>RateLimit-Policy</code> headers to express the limit and its policy in a standardized, machine-parseable form, which is worth mentioning as the direction the ecosystem is moving. On a 429, the best practice is to also include the limit and reset in the response body for clients that log bodies but not headers, and to use a distinguishable error code so the client can tell a rate-limit 429 from an auth 429 (some APIs return 429 only for rate limits and 403 for quota exhaustion to make the distinction explicit).</p>
+<h2 id="capacity-estimation">Capacity Estimation</h2>
+<p>Sizing a rate limiter is a capacity-planning exercise with a few moving parts.</p>
+<p>Demand-side inputs:</p>
+<ul>
+<li>Peak requests per second across all identities</li>
+<li>Number of distinct identities (sets memory footprint: each bucket/counter is a Redis key, so 10M users × a few hundred bytes ≈ a few GB)</li>
+<li>Desired burst headroom — capacity is usually 2–10x the sustained rate to absorb legitimate bursts without throttling good clients</li>
+</ul>
+<p>Supply-side throughput bounds (slowest of these wins):</p>
+<ul>
+<li><strong>Limiter node CPU</strong> — in-memory token server: low hundreds of thousands of checks/sec per core</li>
+<li><strong>Redis shard throughput</strong> — a single Redis core does ~100k ops/sec for small Lua scripts; a 1M rps global limit needs at least 10 shards keyed by identity</li>
+<li><strong>Network round-trip</strong> — a 0.5ms Redis RTT means a single in-flight check per connection caps you at 2000 rps per connection; need pipelining or connection pooling to go higher</li>
+</ul>
+<p>Practical sizing approach:</p>
+<ul>
+<li>Measure the p99 request rate</li>
+<li>Multiply by the number of availability zones you replicate across</li>
+<li>Add 50% headroom for failover (when one zone’s limiter dies, survivors absorb its traffic)</li>
+<li>Size the Redis cluster or token-server fleet to that number with CPU headroom below 70%</li>
+</ul>
+<p>For the application-side cost, assume one limiter check per request and budget the Redis RTT into your endpoint’s latency budget — if your endpoint’s SLO is 100ms p99 and the limiter adds 1ms, that is 1% of your budget gone before the handler runs, which matters at tight SLOs and is the reason high-throughput services move the limiter in-process with periodic Redis refill rather than checking Redis per request.</p>
+<h2 id="putting-it-together">Putting It Together</h2>
+<p>A staff-level design for a public API rate limiter usually lands on: token bucket as the core algorithm (burst tolerance matches real traffic), keyed by a hierarchy of IP → API key → user with the tightest limit winning, enforced at the gateway for coarse IP and key limits and at the application for per-user, per-endpoint, and plan-tier limits, backed by a Redis Cluster or dedicated token server sharded by identity, with local sub-buckets on each API node to absorb the majority of checks and avoid a Redis round-trip per request, adaptive capacity adjustments driven by p99 latency and downstream health, and a complete <code>X-RateLimit-*</code> plus <code>Retry-After</code> response contract. The limiter fails open for read endpoints and fail-closed for write and payment endpoints, with a per-node soft concurrency cap as the load-shedding backstop when the limiter itself is degraded. That is a design you can defend end-to-end: every choice has a reason, every component has a failure mode and a mitigation, and the system degrades gracefully at every layer.</p>
+<h2 id="interview-question">Interview Question</h2>
+<p><strong>Q: You run a multi-tenant SaaS API with 10,000 enterprise customers behind a fleet of 50 API servers. Each customer authenticates with an API key and has a negotiated rpm limit that varies by contract. Design the rate limiting. Specifically: where do you enforce it, what algorithm, how do you keep it correct under a Redis outage, and how do you handle a single customer whose traffic spikes 100x?</strong></p>
+<p><strong>Model answer:</strong> Enforce at two tiers. At the gateway (NGINX/Kong), apply a coarse per-API-key limit as the blunt instrument — this absorbs the easiest abuse and the 100x spike before it reaches the application. At the application, apply the contractual per-customer limit using a token bucket, because enterprise traffic is bursty (batch jobs, sync runs) and token bucket tolerates bursts up to the negotiated capacity while holding the sustained rate. Back the application limiter with Redis Cluster sharded by API key, using a Lua-script token bucket for atomic read-modify-write. To avoid a Redis round-trip on every request, give each of the 50 API nodes a local sub-bucket per key, refilled every 100ms from Redis: most checks hit the local bucket, and Redis only reconciles and refills periodically, cutting Redis load by ~100x. Under a Redis outage, fail open for read endpoints (a brief period without limiting is better than an outage, and the gateway’s coarse limit still applies) and fail closed for write and payment endpoints where the inability to enforce a contractual limit is a compliance problem. For the 100x spike on one customer: the token bucket naturally throttles them once their bucket drains — they get their negotiated burst, then 429s with <code>Retry-After</code> set to the bucket refill time. If the spike is so large it threatens the Redis shard that owns that key (a single hot key on one Redis core), the gateway’s per-key limit caps it at the edge and the local sub-buckets mean the spike is mostly absorbed in-process without Redis round-trips. If the customer’s spike is legitimately higher than their contract, the right answer is a contract conversation, not a technical change — the limiter is enforcing a business agreement.</p>
+<p><strong>Common pitfall:</strong> Reaching for a fixed window counter “because it’s simple” and deploying it on a per-node basis (each of 50 nodes applies the full customer limit independently). This compounds to 50x the negotiated limit in practice, and the fixed window allows 2x boundary bursts on top, so a customer contracted for 1,000 rpm can actually push 100,000 rpm at a window seam. The candidate who proposes this has missed both the distributed-correctness problem (limits must be global, not per-node) and the algorithm’s boundary flaw. A related pitfall is checking Redis per request with a naive GET-then-SET instead of an atomic Lua script: under concurrency two requests both read 1 remaining token and both admit, leaking 2x the limit. Atomicity is not optional.</p>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>[[Glossary#Token Bucket|Token bucket]] is the most widely deployed algorithm (AWS, Stripe, GitHub) because it tolerates bursts up to capacity while enforcing a sustained rate — O(1) memory and compute per request.</li>
+<li>Fixed window has a 2x boundary-burst flaw (100 req at 11:59:59 + 100 at 12:00:00 = 200 in one second); sliding window counter fixes this with two adjacent-window counters weighted by position.</li>
+<li>In a distributed system, per-node limits compound (50 nodes × 1000 rpm = 50,000 rpm actual). Use a shared Redis store with atomic Lua scripts (<code>EVAL</code>) for the read-modify-write to prevent race conditions where two concurrent requests both read one remaining token and both admit.</li>
+<li>Local sub-buckets on each API node (refilled periodically from Redis) cut Redis load by ~100x — most checks never hit Redis.</li>
+<li>Fail open for read endpoints (brief uncontrolled traffic is better than an outage); fail closed for write/payment endpoints (inability to enforce a limit is a compliance problem).</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li><em>How do you handle a single customer whose traffic spikes 100x?</em> — The token bucket naturally throttles them once their bucket drains. If the spike threatens the Redis shard owning that key (hot key on one core), the gateway’s per-key limit caps it at the edge and local sub-buckets absorb most checks in-process without Redis round-trips. If the spike exceeds their contract, it’s a business conversation, not a technical fix.</li>
+<li><em>What’s the difference between rate limiting, throttling, and load shedding?</em> — Rate limiting is per-client admission control against a quota. Throttling is the consequence: slowing down or degrading a client who exceeded their limit. Load shedding is a global, system-survival action (dropping work when the service itself is overloaded, regardless of per-client quotas).</li>
+<li><em>How do you enforce hierarchical limits (global → per-key → per-endpoint → per-IP)?</em> — Compute all applicable limits in a single atomic Lua call so you don’t burn a token at one level and get rejected at another (token leakage). Return the most restrictive <code>Retry-After</code> in the response so the client backs off for the right duration.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>The most common interview mistake is proposing a fixed window counter deployed on a per-node basis. Each of 50 nodes independently applies the full customer limit, compounding to 50x the negotiated limit — and the fixed window allows a 2x boundary burst on top, so a customer contracted for 1,000 rpm can actually push 100,000 rpm. The limiter must be global (shared state in Redis or a token server), and the algorithm must be atomically applied (Lua script, not naive GET-then-SET) to prevent concurrent requests from both admitting when only one token remains.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/rate-limiter/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Rate%20Limiter&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Frate-limiter%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Frate-limiter%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/rate-limiter" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/rag-pipeline-chunking-embeddings-retrieval-reranking" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>RAG Pipeline (Chunking, Embeddings, Retrieval, Reranking)</span></a><a href="/notes/system-design/rate-limiter-lld-focus" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Rate Limiter — LLD Focus</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Rate Limiter" data-selector=".article-prose" data-article-slug="system-design/rate-limiter" data-article-title="Rate Limiter" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

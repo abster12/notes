@@ -1,0 +1,818 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Design an Idempotent API · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview" class="toc-link" data-toc-link="overview" data-astro-cid-p33bl5ka>Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#key-requirements" class="toc-link" data-toc-link="key-requirements" data-astro-cid-p33bl5ka>Key Requirements</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#functional-requirements" class="toc-link" data-toc-link="functional-requirements" data-astro-cid-p33bl5ka>Functional Requirements</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#non-functional-requirements" class="toc-link" data-toc-link="non-functional-requirements" data-astro-cid-p33bl5ka>Non-Functional Requirements</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#the-idempotency-key" class="toc-link" data-toc-link="the-idempotency-key" data-astro-cid-p33bl5ka>The Idempotency Key</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#key-design" class="toc-link" data-toc-link="key-design" data-astro-cid-p33bl5ka>Key Design</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#client-generated-keys" class="toc-link" data-toc-link="client-generated-keys" data-astro-cid-p33bl5ka>Client-Generated Keys</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#server-side-deduplication" class="toc-link" data-toc-link="server-side-deduplication" data-astro-cid-p33bl5ka>Server-Side Deduplication</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-dedup-table-pattern" class="toc-link" data-toc-link="the-dedup-table-pattern" data-astro-cid-p33bl5ka>The Dedup Table Pattern</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#race-condition-handling" class="toc-link" data-toc-link="race-condition-handling" data-astro-cid-p33bl5ka>Race Condition Handling</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#idempotency-in-rest-vs-grpc" class="toc-link" data-toc-link="idempotency-in-rest-vs-grpc" data-astro-cid-p33bl5ka>Idempotency in REST vs gRPC</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#rest-idempotency-by-convention-and-header" class="toc-link" data-toc-link="rest-idempotency-by-convention-and-header" data-astro-cid-p33bl5ka>REST: Idempotency by Convention and Header</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#grpc-idempotency-in-the-service-definition" class="toc-link" data-toc-link="grpc-idempotency-in-the-service-definition" data-astro-cid-p33bl5ka>gRPC: Idempotency in the Service Definition</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#idempotency-for-payments" class="toc-link" data-toc-link="idempotency-for-payments" data-astro-cid-p33bl5ka>Idempotency for Payments</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#retry-safe-operations" class="toc-link" data-toc-link="retry-safe-operations" data-astro-cid-p33bl5ka>Retry-Safe Operations</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#idempotency-key-storage" class="toc-link" data-toc-link="idempotency-key-storage" data-astro-cid-p33bl5ka>Idempotency Key Storage</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#store-selection" class="toc-link" data-toc-link="store-selection" data-astro-cid-p33bl5ka>Store Selection</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#colocated-vs-separate-store--the-atomicity-gap" class="toc-link" data-toc-link="colocated-vs-separate-store--the-atomicity-gap" data-astro-cid-p33bl5ka>Colocated vs Separate Store — The Atomicity Gap</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#ttl-and-cleanup" class="toc-link" data-toc-link="ttl-and-cleanup" data-astro-cid-p33bl5ka>TTL and Cleanup</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#distributed-idempotency" class="toc-link" data-toc-link="distributed-idempotency" data-astro-cid-p33bl5ka>Distributed Idempotency</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#single-region-concurrency" class="toc-link" data-toc-link="single-region-concurrency" data-astro-cid-p33bl5ka>Single-Region Concurrency</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#multi-region-and-cross-region-collisions" class="toc-link" data-toc-link="multi-region-and-cross-region-collisions" data-astro-cid-p33bl5ka>Multi-Region and Cross-Region Collisions</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#conflict-resolution" class="toc-link" data-toc-link="conflict-resolution" data-astro-cid-p33bl5ka>Conflict Resolution</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#idempotency-vs-exactly-once" class="toc-link" data-toc-link="idempotency-vs-exactly-once" data-astro-cid-p33bl5ka>Idempotency vs Exactly-Once</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#practical-patterns" class="toc-link" data-toc-link="practical-patterns" data-astro-cid-p33bl5ka>Practical Patterns</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#transactional-outbox" class="toc-link" data-toc-link="transactional-outbox" data-astro-cid-p33bl5ka>Transactional Outbox</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#dedup-table-with-colocated-transaction" class="toc-link" data-toc-link="dedup-table-with-colocated-transaction" data-astro-cid-p33bl5ka>Dedup Table with Colocated Transaction</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#create-or-get-via-unique-constraint" class="toc-link" data-toc-link="create-or-get-via-unique-constraint" data-astro-cid-p33bl5ka>Create-or-Get via Unique Constraint</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-planning" class="toc-link" data-toc-link="capacity-planning" data-astro-cid-p33bl5ka>Capacity Planning</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#weaknesses--improvements" class="toc-link" data-toc-link="weaknesses--improvements" data-astro-cid-p33bl5ka>Weaknesses &amp; Improvements</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#-sharp-question--model-answer" class="toc-link" data-toc-link="-sharp-question--model-answer" data-astro-cid-p33bl5ka>⚡ Sharp Question + Model Answer</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#key-insight-to-remember" class="toc-link" data-toc-link="key-insight-to-remember" data-astro-cid-p33bl5ka>Key Insight to Remember</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#related" class="toc-link" data-toc-link="related" data-astro-cid-p33bl5ka>Related</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Design an Idempotent API</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 31 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 43 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>idempotency</span><span class="tag" data-astro-cid-sgg5joot>api-design</span><span class="tag" data-astro-cid-sgg5joot>distributed-systems</span><span class="tag" data-astro-cid-sgg5joot>payments</span><span class="tag" data-astro-cid-sgg5joot>at-least-once</span><span class="tag" data-astro-cid-sgg5joot>retry</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="design-an-idempotent-api">Design an Idempotent API</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>An API that produces the same result whether called once or many times, using client-generated idempotency keys to prevent duplicate side effects on retry. It stores keys with the response, enforces TTLs, and handles concurrent requests with the same key through locking or conditional writes.</p>
+<p><strong>How it’s asked:</strong> “Design an idempotent payment API that guarantees no double-charging even under network failures, retries, and concurrent requests. Handle idempotency key storage, TTL, and race conditions.”</p>
+<hr>
+<h2 id="overview">Overview</h2>
+<p><strong>Idempotency</strong> is the property of an operation where executing it one or more times produces the same observable result as executing it exactly once. In distributed systems — where networks drop packets, connections time out, and clients retry as a matter of course — idempotency is not a convenience feature but a correctness invariant. Without it, a single transient failure cascades into double charges, duplicate orders, orphaned inventory reservations, and support tickets that cost more than the infrastructure that caused them.</p>
+<p>The canonical example is payments: if Stripe, Adyen, or Square did not treat <code>POST /charges</code> as idempotent, every timeout-induced retry would create a fresh charge, and the resulting chargeback volume would be catastrophic. But the principle extends to any mutating RPC — order placement, email dispatch, user registration, webhook delivery, state-machine transitions — anywhere a retry could mutate state a second time.</p>
+<p>The subtlety that separates a junior answer from a staff-level one is this: idempotency is easy to describe and hard to implement correctly under concurrency, partial failure, and geographic distribution. The interview conversation moves quickly past “use an idempotency key” toward the real engineering questions:</p>
+<ul>
+<li>How do you guarantee the side effect executes at most once when your idempotency record and your business-logic database are two separate systems that cannot share an atomic transaction?</li>
+<li>How do you handle two identical requests arriving simultaneously at different replicas in different regions?</li>
+<li>What happens when the idempotency store itself loses data or becomes unavailable mid-request?</li>
+<li>How long must a key be retained, and what is the cost of retaining it too long or expiring it too early?</li>
+</ul>
+<p>These questions have no single universally correct answer; they involve trade-offs between latency, durability, consistency, and cost that must be reasoned about explicitly.</p>
+<h2 id="key-requirements">Key Requirements</h2>
+<h3 id="functional-requirements">Functional Requirements</h3>
+<p>The system must provide <strong>duplicate detection</strong>: a client retrying the same logical request with the same idempotency key must receive the same response — same status code, same body, same meaningful headers — without the underlying side effect executing a second time. This implies <strong>response caching</strong>, not merely status tracking; a retry must not return a 200 with a different body than the original call returned, because the client may have already acted on the first response.</p>
+<p>The system must provide <strong>concurrent safety</strong>: two requests carrying the same key that arrive at nearly the same instant (a common pattern when a client’s connection drops and it retries before the original request’s response arrives) must be serialized such that one executes the mutation and the other receives the cached or in-flight result.</p>
+<p>The system must enforce a <strong>key lifecycle</strong>: keys expire after a configurable retention window so storage does not grow unboundedly, but the window must be long enough to cover the maximum realistic client retry interval plus clock skew.</p>
+<p>Finally, the system must support <strong>post-completion recovery</strong>: a key that arrives after the original request has fully completed and its response already dispatched must still be recognized and replayed, not treated as a new request.</p>
+<h3 id="non-functional-requirements">Non-Functional Requirements</h3>
+<p>The idempotency check must be fast — ideally under five milliseconds at p99 — because it sits on the hot path of every mutating request and must not dominate end-to-end API latency. Key-to-response mappings must be durable enough to survive node crashes; losing the mapping for a completed payment is arguably worse than never having had idempotency at all, because it creates a false sense of safety.</p>
+<p>The default TTL is typically twenty-four hours for payment endpoints (covering the standard retry-backoff window of most HTTP clients and queue processors), but it should be configurable per endpoint. Throughput targets are on the order of one hundred thousand idempotency checks per second per shard in a high-volume payments system. Consistency is strong within a shard (a given key must resolve to exactly one outcome) and eventually consistent across regions, with careful handling of cross-region collisions.</p>
+<h2 id="the-idempotency-key">The Idempotency Key</h2>
+<h3 id="key-design">Key Design</h3>
+<p>The idempotency key is a <strong>client-supplied unique string</strong> that the server uses as the deduplication handle. It is most commonly transmitted in an <code>Idempotency-Key</code> HTTP header (the de facto convention popularized by Stripe) rather than in the request body, because keeping it out of the body allows the same middleware to enforce idempotency across heterogeneous endpoints without each handler parsing business logic.</p>
+<p>A good key is a <strong>UUID v4</strong> or a <strong>versioned ULID</strong> (which encodes a timestamp and is sortable, useful for TTL eviction and debugging). The key must be generated by the client <strong>before</strong> the first attempt and reused verbatim on every retry; the server must never generate keys on the client’s behalf, because a server-generated key returned in a response that the client never receives (due to a network drop) leaves the client with no key to retry with and forces a duplicate.</p>
+<p><strong>Idempotency key design rules:</strong></p>
+<ul>
+<li>Keys should be <strong>opaque to the server</strong> — the server should not attempt to parse semantic meaning out of them, because doing so creates a coupling between key format and business logic that breaks the moment a client changes its generation scheme.</li>
+<li>The only validation the server should perform is <strong>length bounds</strong> (reject keys longer than, say, 255 characters to prevent storage abuse) and <strong>character-set sanity</strong> (printable ASCII or UTF-8).</li>
+<li>Do <strong>not</strong> accept a content hash as an idempotency key; this conflates “same payload” with “same logical operation” and breaks when a client legitimately wants to issue two identical-looking operations (two separate $10 charges to the same card, minutes apart) or when a field like a client-side timestamp changes between retries without changing the logical intent.</li>
+<li>Prefer <strong>UUID v4</strong> (uniformly random, no collision coordination) or <strong>ULID</strong> (timestamp-prefixed, sortable, useful for TTL eviction and debugging).</li>
+<li>Generate the key <strong>client-side, before the first attempt</strong>, and reuse it verbatim on every retry.</li>
+<li>Never let the server generate keys on the client’s behalf — a server-generated key lost to a network drop leaves the client with no key to retry with.</li>
+<li>Keep the key in the <strong><code>Idempotency-Key</code> header</strong>, not the request body, so the same middleware can enforce idempotency across heterogeneous endpoints.</li>
+</ul>
+<h3 id="client-generated-keys">Client-Generated Keys</h3>
+<p>The decision to make keys <strong>client-generated</strong> is foundational and worth understanding deeply. The client is the only party that knows which retries correspond to which original request — the server sees only independent HTTP calls and cannot, in general, distinguish a retry from a new request by inspecting the payload. By forcing the client to attach a stable identifier, we externalize the “is this the same operation?” question to the party that actually knows the answer.</p>
+<p>This places a burden on the client: it must generate the key once, persist it locally (in memory, in a queue, in a database column alongside the pending operation), and reuse it across retries until a terminal response is received. A well-behaved client treats the key as part of the operation’s identity, on equal footing with the payload itself.</p>
+<p>The practical implication is that client SDKs and queue processors must be designed to carry the key forward:</p>
+<ul>
+<li>A <strong>message-queue consumer</strong> that dequeues a message, calls a downstream service, and re-enqueues on failure must store the idempotency key in the message metadata and reuse it on the next attempt.</li>
+<li>A <strong>mobile app</strong> that crashes mid-request must have persisted the key to disk so that on relaunch it can retry safely rather than abandoning the operation or blindly reissuing it.</li>
+<li><strong>Server-side SDKs</strong> that wrap idempotent endpoints should expose the key as a first-class parameter, not an optional header, to make the contract explicit.</li>
+</ul>
+<h2 id="server-side-deduplication">Server-Side Deduplication</h2>
+<h3 id="the-dedup-table-pattern">The Dedup Table Pattern</h3>
+<p>Server-side deduplication is implemented via a <strong>dedup table</strong> (also called an idempotency store) that maps each key to the state and eventual response of its request. The table has at minimum three columns: the key (primary key), a status field (<code>in_progress</code>, <code>completed</code>, or <code>failed</code>), and the serialized response (status code, headers, body) populated once the handler finishes. A <code>created_at</code> timestamp drives TTL eviction.</p>
+<p>On every incoming request, the server performs a <strong>conditional insert</strong> — an <code>INSERT ... ON CONFLICT DO NOTHING</code> (Postgres) or an equivalent atomic check-and-insert — keyed on the idempotency key. If the insert succeeds, this is a first-time request and the server proceeds to execute the business logic. If the insert fails because the key already exists, the server reads the existing row: if the status is <code>completed</code>, it replays the stored response; if <code>in_progress</code>, it either polls until completion or returns a <code>409 Conflict</code> / <code>409 Request In Progress</code> instructing the client to retry shortly.</p>
+<p><strong>Idempotency key flow (client → server → dedup table):</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  CLIENT                              API SERVER                         DEDUP TABLE (Postgres / Redis / DynamoDB)</span></span>
+<span class="line"><span>  ======                              =========                          ========================================</span></span>
+<span class="line"><span>  </span></span>
+<span class="line"><span>  1. Generate Idempotency-Key</span></span>
+<span class="line"><span>     (UUID v4 / ULID)</span></span>
+<span class="line"><span>        |                                                                 </span></span>
+<span class="line"><span>        |  POST /charges                                              +-------------------------+</span></span>
+<span class="line"><span>        |  Idempotency-Key: 7f3a-...                                  |  key  | status        |</span></span>
+<span class="line"><span>        +------------------------------------------------------------->| 7f3a  | in_progress   |</span></span>
+<span class="line"><span>        |                                  2. Conditional INSERT            |       | (payload_hash)|</span></span>
+<span class="line"><span>        |                                  INSERT ... ON CONFLICT            +-------------------------+</span></span>
+<span class="line"><span>        |                                  DO NOTHING                            |</span></span>
+<span class="line"><span>        |                                       | insert OK                     |</span></span>
+<span class="line"><span>        |                                       v                               |</span></span>
+<span class="line"><span>        |                              3. Execute business logic              |</span></span>
+<span class="line"><span>        |                                 (charge $10)                         |</span></span>
+<span class="line"><span>        |                                       |                               |</span></span>
+<span class="line"><span>        |                                       v                               |</span></span>
+<span class="line"><span>        |                              4. UPDATE row -> completed              v</span></span>
+<span class="line"><span>        |                                 store response              +-------------------------+</span></span>
+<span class="line"><span>        |                                       |                    | 7f3a  | completed     |</span></span>
+<span class="line"><span>        |                                       v                    |       | resp: 200... |</span></span>
+<span class="line"><span>        |  5. 200 OK + response &#x3C;----------------+                    +-------------------------+</span></span>
+<span class="line"><span>        |</span></span>
+<span class="line"><span>        |  *** network drop / timeout ***</span></span>
+<span class="line"><span>        |</span></span>
+<span class="line"><span>        |  6. Retry with SAME key</span></span>
+<span class="line"><span>        |  POST /charges</span></span>
+<span class="line"><span>        |  Idempotency-Key: 7f3a-...</span></span>
+<span class="line"><span>        +----------------------------------------------+</span></span>
+<span class="line"><span>                                                       |</span></span>
+<span class="line"><span>                                  7. INSERT -> conflict | (key exists)</span></span>
+<span class="line"><span>                                                       v</span></span>
+<span class="line"><span>                                  8. SELECT row -> status=completed</span></span>
+<span class="line"><span>                                                       |</span></span>
+<span class="line"><span>                                                       v</span></span>
+<span class="line"><span>        |  9. 200 OK (replayed response, NO re-charge) &#x3C;-+</span></span></code></pre>
+<p>The critical correctness property is that the conditional insert and the subsequent business-logic write must be <strong>ordered such that the dedup record is visible before the side effect can execute</strong>, and the response must be recorded <strong>in the same atomic boundary as the side effect</strong> whenever possible. When the dedup table and the business database are the same physical database (the <strong>colocated</strong> pattern), this is straightforward: a single transaction inserts the idempotency row, performs the mutation, and updates the row to <code>completed</code> with the response — all committing atomically. When they are separate systems (the <strong>separate-store</strong> pattern, common when using Redis or DynamoDB for the dedup table and Postgres for business data), atomicity across the two is impossible, and the system must use compensating actions, a transactional outbox, or accept a small window of inconsistency. This split-store problem is the single most common source of idempotency bugs at scale and is discussed in detail below.</p>
+<h3 id="race-condition-handling">Race Condition Handling</h3>
+<p>The two-simultaneous-request race is the textbook concurrency hazard. Without protection, both requests could pass the “does this key exist?” check, both proceed to execute the mutation, and both charge the customer. The conditional insert solves this atomically at the database level: only one insert wins, the other sees the conflict and takes the retry path.</p>
+<p>For the in-progress case, the losing request must wait for the winner to finish. Options include:</p>
+<ul>
+<li><strong>Busy polling</strong> the dedup row with a short sleep (simple, adds latency and database load).</li>
+<li><strong>Database row-level locks</strong> (<code>SELECT ... FOR UPDATE</code> on the existing row, which blocks until the holder commits).</li>
+<li><strong>A notification mechanism</strong> (Postgres <code>LISTEN/NOTIFY</code>, Redis pub/sub) that wakes waiters when the row transitions to <code>completed</code>.</li>
+</ul>
+<p>Row-level locking is the cleanest when the dedup table is in the same database as the business logic; pub/sub is preferable when the dedup store is Redis and the wait could span hundreds of milliseconds.</p>
+<p>A subtler race involves <strong>crash recovery mid-flight</strong>: the server inserts an <code>in_progress</code> row, begins the mutation, and then crashes before recording the response. The key is now stranded — the client retries, sees <code>in_progress</code>, and waits forever (or until the row’s TTL expires, which could be hours). The standard mitigation is a <strong>lease or heartbeat timeout</strong> on the <code>in_progress</code> state: each in-progress row has a <code>lease_expires_at</code> column, refreshed by a background heartbeat while the handler runs. If a retry arrives and the lease has expired, the server may <strong>claim</strong> the row by atomically updating its owner (a compare-and-set on <code>lease_expires_at &lt; now()</code>) and re-executing the operation. This introduces the possibility of double execution if the original handler is merely slow rather than dead, so leases must be tuned conservatively — long enough that a healthy handler never loses its lease, short enough that a crashed handler’s key is reclaimable in minutes, not hours.</p>
+<h2 id="idempotency-in-rest-vs-grpc">Idempotency in REST vs gRPC</h2>
+<h3 id="rest-idempotency-by-convention-and-header">REST: Idempotency by Convention and Header</h3>
+<p>In REST, idempotency is partially baked into the HTTP method semantics: <code>GET</code>, <code>PUT</code>, and <code>DELETE</code> are defined as idempotent by the HTTP specification, while <code>POST</code> and <code>PATCH</code> are not. This is a useful default but it is <strong>weak</strong> — it describes the intended semantics, not a guarantee. A naive <code>PUT /users/123</code> that does <code>user.balance += 100</code> is not idempotent despite the method, because the spec’s idempotency is about the server’s observable state, not about the client’s intent.</p>
+<p>Real-world idempotency for <code>POST</code> endpoints (the vast majority of mutating business operations) is achieved via the <code>Idempotency-Key</code> header convention, layered on top of the dedup-table machinery described above. REST’s flexibility is a double-edged sword: the header can be applied selectively to any endpoint, but nothing in the protocol enforces it, so a forgotten header on a critical endpoint is a silent bug.</p>
+<h3 id="grpc-idempotency-in-the-service-definition">gRPC: Idempotency in the Service Definition</h3>
+<p>gRPC bakes idempotency into the <strong>service definition</strong> via protobuf method options. A method can be annotated as <code>idempotent</code>, signaling to the client library that it is safe to retry the call transparently on transient failures. This is stronger than REST’s convention because the contract is machine-readable and the generated client stubs can enforce retry behavior automatically.</p>
+<p>However, gRPC’s idempotency annotation is a <strong>promise the server must keep</strong>; the framework does not implement deduplication for you. The server-side implementation still requires a dedup table or equivalent, often keyed by a combination of the gRPC method name and a client-generated request ID (gRPC metadata). The advantage is that the idempotency contract is visible in the <code>.proto</code> file, reviewable in code review, and enforceable by linters — whereas in REST, an endpoint’s idempotency status is often discoverable only by reading the implementation or a separate wiki page.</p>
+<p>A practical difference: gRPC streaming RPCs (client-streaming, bidi-streaming) do not map cleanly onto the request-response idempotency model, and idempotency for stream-based workflows typically requires application-level sequence numbers or a checkpoint mechanism rather than a simple key-per-call header. For unary RPCs, however, gRPC and REST idempotency are conceptually identical and differ only in plumbing.</p>
+<h2 id="idempotency-for-payments">Idempotency for Payments</h2>
+<p>Payments are the domain where idempotency is most scrutinized, because a bug has direct financial cost and regulatory consequences. The Stripe API is the most cited reference: every <code>POST</code> to a mutating endpoint accepts an <code>Idempotency-Key</code> header, and Stripe guarantees that retrying with the same key returns the cached response without creating a duplicate resource. Stripe stores idempotency keys for <strong>twenty-four hours</strong> by default, after which the key is evicted and a reuse is treated as a new request — a window chosen to cover all reasonable client retry backoffs. The key is scoped to the Stripe account and the endpoint, so the same key used on two different endpoints or two different accounts is treated independently.</p>
+<p>The payment-specific nuances go beyond the generic pattern:</p>
+<ul>
+<li><strong>Partial failures</strong> are more dangerous: a charge that succeeds at the processor but whose confirmation response is lost to a network drop leaves the client uncertain and retrying. The idempotency layer must query the processor (or its own record of the processor’s response) before reissuing the charge, because blindly reissuing could create a second charge if the first truly succeeded. This is why payment idempotency systems often store not just the API response but also the <strong>upstream processor reference</strong> — so a retry can reconcile against the processor’s state.</li>
+<li><strong>Amount and currency validation</strong>: a robust implementation rejects a retry whose payload (amount, currency, recipient) differs from the original request’s payload even though the key matches, returning a <code>422</code> or <code>409</code> with a clear message. This catches client bugs where a key is accidentally reused across logically distinct operations.</li>
+<li><strong>Refunds and credits</strong> need their own idempotency — a double refund is as costly as a double charge — and the same machinery applies, often with a longer TTL because refund reconciliation windows can span days.</li>
+</ul>
+<h2 id="retry-safe-operations">Retry-Safe Operations</h2>
+<p>Not all operations need an explicit idempotency key to be retry-safe. An operation is inherently idempotent if its effect is a pure function of its inputs and the target’s current state: <code>SET balance = 100</code> is idempotent (retrying sets the same value), whereas <code>balance += 100</code> is not. Designing APIs around <strong>absolute state transitions</strong> rather than <strong>relative mutations</strong> is the simplest path to retry safety and requires no dedup infrastructure at all. A <code>PUT /inventory/items/{sku}/reserved { quantity: 5 }</code> that sets the reservation to exactly five units is retry-safe by construction; a <code>POST /inventory/items/{sku}/reserve { quantity: 5 }</code> that increments is not.</p>
+<p>For operations that cannot be expressed as absolute sets — typically those that create new entities or append to an unbounded collection — the idempotency key is the standard tool. A useful middle ground is the <strong>client-side request ID combined with a natural-key uniqueness constraint</strong>: the server enforces a unique index on <code>(user_id, cart_id)</code> for order creation, so a duplicate insert fails at the database level even without a dedicated dedup table. This is cheaper and simpler than a full idempotency layer but works only when a natural unique key exists and when the response can be reconstructed by querying the created entity rather than caching it. The trade-off is that the client must handle the unique-constraint violation by fetching the existing entity, which requires the handler to be written in a “create-or-get” style rather than a “create-or-replay” style.</p>
+<p><strong>Retry-safe request lifecycle:</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   CLIENT                  NETWORK                API SERVER              DEDUP STORE          BUSINESS DB</span></span>
+<span class="line"><span>   ------                  -------                ---------                ----------          -----------</span></span>
+<span class="line"><span>   </span></span>
+<span class="line"><span>   [1] Create op + key</span></span>
+<span class="line"><span>        |</span></span>
+<span class="line"><span>        |  [2] POST + Idempotency-Key ----+========+ (timeout / drop)</span></span>
+<span class="line"><span>        |                                 |  N/W   |</span></span>
+<span class="line"><span>        |   &#x3C;--- retry? client unsure --->|  FAIL  |</span></span>
+<span class="line"><span>        |                                 +========+</span></span>
+<span class="line"><span>        |  [3] Retry SAME key ---------------> [4] Conditional INSERT ----->[5] insert OK</span></span>
+<span class="line"><span>        |                                                                   (row: in_progress)</span></span>
+<span class="line"><span>        |                                                                   [6] lease/heartbeat set</span></span>
+<span class="line"><span>        |                                                                        |</span></span>
+<span class="line"><span>        |                                                                        | [7] BEGIN txn</span></span>
+<span class="line"><span>        |                                                                        |     run business logic</span></span>
+<span class="line"><span>        |                                                                        |     UPDATE row -> completed</span></span>
+<span class="line"><span>        |                                                                        |     COMMIT</span></span>
+<span class="line"><span>        |                                                                        v</span></span>
+<span class="line"><span>        |                                                                   [8] row: completed</span></span>
+<span class="line"><span>        |  [9] 200 OK (replayed) &#x3C;---------------- [10] SELECT -> completed &#x3C;-+</span></span>
+<span class="line"><span>        |                                       </span></span>
+<span class="line"><span>        |  *** OR, first attempt actually finished late ***</span></span>
+<span class="line"><span>        |</span></span>
+<span class="line"><span>        |  client gets response from [1] OR [3]; dedup ensures</span></span>
+<span class="line"><span>        |  business logic ran exactly once; client sees one</span></span>
+<span class="line"><span>        |  consistent response regardless of path.</span></span></code></pre>
+<h2 id="idempotency-key-storage">Idempotency Key Storage</h2>
+<h3 id="store-selection">Store Selection</h3>
+<p>The idempotency store is chosen based on the consistency, latency, and durability requirements of the workload.</p>
+<p><strong>Postgres (or MySQL) colocated with the business database</strong> is the gold standard for correctness: the dedup table and the business mutation share a transaction, so the key record and the side effect commit atomically. This eliminates the entire class of “dedup says completed but business logic didn’t run” (or vice versa) inconsistencies. The cost is that the dedup table competes for the same database’s capacity and its TTL eviction requires either a cron-driven <code>DELETE WHERE created_at &lt; ...</code> or a partitioned table with daily partitions that can be dropped wholesale.</p>
+<p><strong>Redis</strong> is attractive for latency-sensitive workloads: a <code>SET NX</code> (set-if-not-exists) with a TTL is a one-millisecond idempotency check, and Redis’s built-in key expiration eliminates the cleanup problem entirely. The trade-off is that Redis is not the same system as the business database, so atomicity across the two is impossible, and a crash between the Redis <code>SET</code> and the Postgres <code>COMMIT</code> (or vice versa) creates a window where the key is marked used but the operation did not complete, or the operation completed but the key was never recorded. Mitigations include writing the idempotency record to Postgres as a fallback (a “belt and suspenders” approach), using Redis only as a fast-path cache with Postgres as the authoritative store, or accepting the small inconsistency window for non-financial operations where the cost of a duplicate is bounded.</p>
+<p><strong>DynamoDB</strong> (or Cassandra) is the typical choice for very high-throughput, globally distributed systems where a single-region relational database cannot keep up. DynamoDB’s conditional write (<code>PutItem</code> with a <code>ConditionExpression</code> of <code>attribute_not_exists(pk)</code>) provides the atomic check-and-insert, and TTL on the item handles cleanup. The consistency model is per-partition strong consistency (with <code>consistent read</code> enabled), which is sufficient for single-key dedup. Cross-region replication in DynamoDB Global Tables is eventually consistent, so a key written in us-east-1 may not be visible in eu-west-1 for a second or two — a window during which a cross-region retry could slip through. For payment-grade idempotency, cross-region dedup requires either routing all retries for a given key to a single “home” region (via a consistent hash of the key) or accepting a small duplicate rate and reconciling after the fact.</p>
+<p><strong>Storage backend comparison:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Store</th>
+<th>Atomicity w/ Business Logic</th>
+<th>Latency (p99)</th>
+<th>TTL / Cleanup</th>
+<th>Durability</th>
+<th>Best Fit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Postgres (colocated)</td>
+<td>Strong — single txn</td>
+<td>~2-5 ms</td>
+<td>Partition drops or batched DELETE</td>
+<td>High (durable WAL)</td>
+<td>Correctness-first workloads; payments</td>
+</tr>
+<tr>
+<td>Redis (separate)</td>
+<td>None — atomicity gap</td>
+<td>~1 ms</td>
+<td>Native TTL (auto)</td>
+<td>Volatile (can lose on crash)</td>
+<td>Latency-sensitive, non-financial</td>
+</tr>
+<tr>
+<td>DynamoDB (separate)</td>
+<td>None — atomicity gap</td>
+<td>~5-10 ms</td>
+<td>Native TTL (best-effort)</td>
+<td>High (replicated)</td>
+<td>High-throughput, globally distributed</td>
+</tr>
+<tr>
+<td>MySQL (colocated)</td>
+<td>Strong — single txn</td>
+<td>~2-5 ms</td>
+<td>Partition drops or batched DELETE</td>
+<td>High (durable)</td>
+<td>MySQL shops; same as Postgres</td>
+</tr>
+<tr>
+<td>Cassandra (separate)</td>
+<td>None — atomicity gap</td>
+<td>~5-10 ms</td>
+<td>Native TTL</td>
+<td>High (replicated)</td>
+<td>Write-heavy, globally distributed</td>
+</tr>
+<tr>
+<td>Postgres + Redis (hybrid)</td>
+<td>Eventual via outbox</td>
+<td>~1 ms fast path</td>
+<td>Redis TTL + Postgres partition</td>
+<td>High</td>
+<td>Latency + durability compromise</td>
+</tr>
+</tbody>
+</table>
+<h3 id="colocated-vs-separate-store--the-atomicity-gap">Colocated vs Separate Store — The Atomicity Gap</h3>
+<p>The colocated pattern (dedup table in the same Postgres database as the business tables) is strongly preferred whenever feasible because it eliminates the atomicity gap. In a single transaction, the handler inserts the idempotency row in <code>in_progress</code> state, performs the business mutation, updates the row to <code>completed</code> with the serialized response, and commits. Either all of it happens or none of it does. A retry arriving after commit sees <code>completed</code> and replays the response; a retry arriving during the transaction blocks on the row lock. A crash leaves no durable trace of the <code>in_progress</code> row (the transaction rolls back), so the client’s retry creates a fresh row and re-executes cleanly. This is the cleanest possible model and is what Stripe and most payment platforms use internally.</p>
+<p>The separate-store pattern (Redis or DynamoDB for dedup, Postgres for business) is chosen when the business database cannot absorb the dedup-table write load, when the dedup store must be globally distributed while the business database is regional, or when the API gateway layer (which enforces idempotency) is operated by a different team than the service layer (which owns the business database). The atomicity gap here is real and must be managed. The safest approach is the <strong>transactional outbox pattern</strong>: the business transaction writes the idempotency-completion record into an outbox table within the same Postgres transaction, and a background process drains the outbox and mirrors the records into the separate dedup store. This guarantees that the dedup store is eventually consistent with the business state, though there is a brief window after commit and before the outbox drain during which a retry will not find the key and may re-execute. For payment-grade guarantees, the outbox drain must be fast (sub-second) and the client retry interval must be longer than the drain latency.</p>
+<h2 id="ttl-and-cleanup">TTL and Cleanup</h2>
+<p>Idempotency keys cannot live forever — storage is finite, and a table that grows by one row per mutating request will eventually degrade query performance and exhaust disk. Every key has a <strong>TTL</strong> after which it is eligible for deletion. The TTL must be longer than the maximum realistic retry interval for the workload:</p>
+<ul>
+<li>For <strong>HTTP clients with exponential backoff</strong>, typically a few minutes to an hour.</li>
+<li>For <strong>queue-based retries with long backoff and dead-letter handling</strong>, it can be hours.</li>
+<li>For <strong>payment reconciliation</strong>, twenty-four hours is the industry default.</li>
+</ul>
+<p>Setting the TTL too short means a slow client retry (e.g., a mobile app that reconnects after a network outage) arrives after the key has expired and creates a duplicate. Setting it too long wastes storage and slows eviction. The TTL should be <strong>per-endpoint configurable</strong> because a webhook-delivery endpoint and a charge endpoint have very different retry profiles.</p>
+<p>Cleanup is implemented in one of three ways:</p>
+<ul>
+<li><strong>Redis and DynamoDB</strong> provide native TTL expiration — the store evicts expired keys automatically with no application code, though the eviction is best-effort and expired keys may linger briefly.</li>
+<li><strong>Postgres without partitioning</strong> requires a periodic background job (<code>DELETE FROM idempotency_keys WHERE created_at &lt; now() - interval '24 hours'</code>) run every few minutes; the deletion must be batched (delete in chunks of a few thousand rows with a <code>LIMIT</code>) to avoid long-running transactions and lock contention on a high-write table.</li>
+<li><strong>Postgres with range partitioning</strong> by <code>created_at</code> (daily partitions) is the cleanest at scale: a cron job drops yesterday’s oldest partition in a single metadata operation, which is O(1) regardless of row count and produces no vacuum bloat. This is the pattern used by high-volume platforms — partition by day, retain N days, drop the oldest partition daily.</li>
+</ul>
+<p>A subtle operational concern: the dedup table is on the write hot path, so its size directly affects insert latency. A table with hundreds of millions of rows (a year of unpruned keys) will have slower index maintenance and inserts than a table pruned to twenty-four hours. This is an argument for shorter TTLs where the business permits, and for partitioning where longer retention is required for audit or compliance.</p>
+<h2 id="distributed-idempotency">Distributed Idempotency</h2>
+<h3 id="single-region-concurrency">Single-Region Concurrency</h3>
+<p>Within a single region, the dedup table (whether Postgres, Redis, or DynamoDB) provides a single serialization point per key. The conditional insert is atomic at the row or key level, so two concurrent requests with the same key are guaranteed that exactly one wins the insert. The loser takes the retry or wait path. This holds regardless of how many API replicas are fronting the table, because the deduplication is delegated to the storage layer’s own concurrency control. The only requirement is that all replicas in the region share the same dedup store — a per-replica in-memory cache is not sufficient and will allow duplicates whenever a retry lands on a different replica.</p>
+<h3 id="multi-region-and-cross-region-collisions">Multi-Region and Cross-Region Collisions</h3>
+<p>Multi-region idempotency is where the design gets genuinely hard. If the dedup store is replicated asynchronously across regions (DynamoDB Global Tables, Postgres logical replication), a key written in region A is not visible in region B until replication completes — typically tens to hundreds of milliseconds, but up to seconds under degraded conditions. During that window, a client that fails over from region A to region B (because A’s endpoint returned a timeout) and retries with the same key will not find the key in B’s store, and B will re-execute the operation. This is the <strong>cross-region duplicate window</strong>, and it is the primary reason that globally distributed idempotency is harder than single-region idempotency.</p>
+<p><strong>Distributed idempotency — cross-region duplicate window and strategies:</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                            GLOBAL CLIENT</span></span>
+<span class="line"><span>                                  |</span></span>
+<span class="line"><span>                 failover (A timed out) on retry w/ same key</span></span>
+<span class="line"><span>                                  |</span></span>
+<span class="line"><span>        +-------------------------+-------------------------+</span></span>
+<span class="line"><span>        | REGION A (us-east-1)    |   REGION B (eu-west-1)  |</span></span>
+<span class="line"><span>        |                         |                         |</span></span>
+<span class="line"><span>        |  API -> Dedup Store_A   |   API -> Dedup Store_B  |</span></span>
+<span class="line"><span>        |   [key 7f3a: completed] |    [key 7f3a: NOT FOUND]|</span></span>
+<span class="line"><span>        |          |              |           |             |</span></span>
+<span class="line"><span>        |          |              |           | (replication lag: 50ms-2s)</span></span>
+<span class="line"><span>        |          |   async      |           |             |</span></span>
+<span class="line"><span>        |          +--replicate-->+-----------+             |</span></span>
+<span class="line"><span>        |             (Global     |                         |</span></span>
+<span class="line"><span>        |              Tables /   |   >>> DUPLICATE RISK &#x3C;&#x3C;&#x3C;|</span></span>
+<span class="line"><span>        |              logical    |   retry re-executes     |</span></span>
+<span class="line"><span>        |              replication)   business logic        |</span></span>
+<span class="line"><span>        |                         |                         |</span></span>
+<span class="line"><span>        +-------------------------+-------------------------+</span></span>
+<span class="line"><span>                                  |</span></span>
+<span class="line"><span>        THREE MITIGATION STRATEGIES:</span></span>
+<span class="line"><span>        </span></span>
+<span class="line"><span>        (1) KEY-AFFINITY ROUTING                (2) SYNC CROSS-REGION DEDUP</span></span>
+<span class="line"><span>            hash(key) -> "home" region              write to ALL regions before exec</span></span>
+<span class="line"><span>            ALL retries -> home region              via Raft/Paxos consensus</span></span>
+<span class="line"><span>            + zero cross-region window              + strong global dedup</span></span>
+<span class="line"><span>            - cross-region latency                  - 50-150ms added per write</span></span>
+<span class="line"><span>            - requires deterministic routing        - acceptable for payments</span></span>
+<span class="line"><span>        </span></span>
+<span class="line"><span>        (3) ACCEPT WINDOW + RECONCILE</span></span>
+<span class="line"><span>            allow small duplicate rate</span></span>
+<span class="line"><span>            async job detects duplicates -> refunds</span></span>
+<span class="line"><span>            + simple, no consensus</span></span>
+<span class="line"><span>            - financial cost of rare duplicates</span></span>
+<span class="line"><span>            - only viable when duplicate is recoverable</span></span></code></pre>
+<p>Three strategies address this:</p>
+<ul>
+<li><strong>Key-affinity routing</strong>: hash the idempotency key to a “home” region and route all requests for that key (including retries) to the home region, even under regional failover for other traffic. This eliminates the cross-region window for a given key at the cost of higher latency for cross-region clients and the need for a deterministic routing layer.</li>
+<li><strong>Synchronous cross-region dedup</strong>: write the idempotency record to all regions synchronously before executing the operation, using a consensus protocol (Raft, Paxos) across regions. This provides strong global deduplication but adds the cross-region round-trip latency to every mutating request — often 50–150 ms — which is acceptable for payments and unacceptable for high-throughput low-latency endpoints.</li>
+<li><strong>Accept the window and reconcile</strong>: allow a small duplicate rate and run an asynchronous reconciliation job that detects duplicates (e.g., by scanning for multiple charges with the same client reference within a window) and issues compensating refunds. This is the pragmatic choice for systems where the duplicate cost is financial rather than safety-critical, and where the operational complexity of global consensus is not justified.</li>
+</ul>
+<h2 id="conflict-resolution">Conflict Resolution</h2>
+<p>A conflict arises when a retry arrives with a key that already exists but the <strong>payload differs</strong> from the original. This is almost always a client bug — the client generated a new idempotency key for a different operation (correct) but accidentally reused an old key, or it mutated the payload between retries (incorrect). The server’s response defines the system’s conflict-resolution posture.</p>
+<p>The safest and most common choice is to <strong>reject with a 422 Unprocessable Entity</strong> (or 409), returning a clear error message that the idempotency key has already been used with a different request body, and including a hash or summary of the original request so the client can diagnose the mismatch. Silently replaying the old response (ignoring the new payload) is dangerous because it masks the client bug; the client believes its updated payload was processed when in fact the original was. Silently executing the new payload (overwriting the old) is worse because it breaks the idempotency guarantee for the original operation.</p>
+<p>For the in-progress conflict (same key, same payload, original still running), the correct response is either a <code>409 Conflict</code> with a <code>Retry-After</code> header (telling the client to back off and retry in N seconds) or a long-poll that blocks until the original completes and then returns its response. The long-poll approach is friendlier to clients but ties up a server connection and must have a timeout (typically 10–30 seconds) after which it falls back to the 409-and-retry model. The choice depends on the expected original-request duration: for sub-second operations, block; for multi-second operations (e.g., a payment that calls a slow processor), return 409 immediately.</p>
+<h2 id="idempotency-vs-exactly-once">Idempotency vs Exactly-Once</h2>
+<p>A common interview confusion is equating idempotency with exactly-once delivery. They are related but distinct. <strong>Idempotency</strong> is a property of an operation: applying it N times has the same effect as applying it once. <strong>Exactly-once delivery</strong> is a property of a messaging system: a message is delivered to the receiver once and only once, with no duplicates and no losses.</p>
+<p>True exactly-once delivery across an asynchronous network is <strong>impossible</strong> in the general case (the Two Generals Problem and the FLP impossibility result establish that you cannot guarantee both safety and liveness under network partitions and failures). What systems actually provide is <strong>effectively-once processing</strong>: the message may be delivered more than once (at-least-once delivery), but the receiver’s processing is idempotent, so the observable effect is as if it were processed once.</p>
+<p><strong>Idempotency vs exactly-once comparison:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Idempotency</th>
+<th>Exactly-Once Delivery</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>What it is</td>
+<td>Property of an <em>operation</em></td>
+<td>Property of a <em>messaging system</em></td>
+</tr>
+<tr>
+<td>Definition</td>
+<td>Applying N times == applying once</td>
+<td>Message delivered once and only once</td>
+</tr>
+<tr>
+<td>Network feasibility</td>
+<td>Achievable on any network</td>
+<td>Impossible in general (Two Generals, FLP)</td>
+</tr>
+<tr>
+<td>Where implemented</td>
+<td>Receiver-side (dedup table, key)</td>
+<td>Transport-level (dedup at delivery)</td>
+</tr>
+<tr>
+<td>Realistic pattern</td>
+<td>At-least-once delivery + idempotent receiver</td>
+<td>“Effectively-once processing” via the two combined</td>
+</tr>
+<tr>
+<td>Engineering effort</td>
+<td>Bounded, robust</td>
+<td>Fool’s errand at the transport level</td>
+</tr>
+<tr>
+<td>Duplicate delivery allowed?</td>
+<td>Yes (handled by receiver)</td>
+<td>No (theoretically)</td>
+</tr>
+<tr>
+<td>Example</td>
+<td><code>SET x = 5</code> (replays are safe)</td>
+<td>True exactly-once: provably impossible</td>
+</tr>
+<tr>
+<td>Combined effect</td>
+<td>Same observable outcome as exactly-once</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>This distinction matters because it tells you where to invest engineering effort. Trying to build an exactly-once delivery layer (deduplicating at the transport level, never sending a duplicate) is a fool’s errand that fights fundamental distributed-systems limits. Building an at-least-once delivery layer with an idempotent receiver is achievable, robust, and is the pattern used by every serious payments, order-management, and event-processing system.</p>
+<p>The idempotency machinery described in this document — dedup tables, idempotency keys, conditional inserts — is the receiver-side component of effectively-once processing. The delivery side (message queues with acknowledgments and redelivery) provides at-least-once. Together they yield the exactly-once effect the business requires, without pretending to solve the impossible transport-level problem.</p>
+<h2 id="practical-patterns">Practical Patterns</h2>
+<h3 id="transactional-outbox">Transactional Outbox</h3>
+<p>The <strong>transactional outbox pattern</strong> solves the dual-write problem that arises when a single business operation must atomically update a database and publish a message (to Kafka, SNS, etc.) — or, in the idempotency context, when it must atomically commit the business mutation and record the idempotency completion.</p>
+<p>The pattern: within the same database transaction that performs the business mutation, the handler also inserts a row into an <code>outbox</code> table describing the idempotency-completion record (or the event to publish). Because both writes are in one transaction, they commit atomically. A separate background process (the “outbox drainer” or “relay”) reads unprocessed outbox rows and mirrors them to the external system (the Redis dedup store, the Kafka topic), then marks the outbox row as processed. If the drain fails, the outbox row remains and is retried; the business state and the outbox row are consistent because they committed together.</p>
+<p><strong>Transactional outbox pattern (idempotency + Kafka event):</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  API HANDLER (single Postgres txn)                       OUTBOX DRAINER (background)</span></span>
+<span class="line"><span>  ================================                       ==========================</span></span>
+<span class="line"><span>  </span></span>
+<span class="line"><span>   BEGIN;</span></span>
+<span class="line"><span>     [1] INSERT idempotency_keys                          +-----------------+</span></span>
+<span class="line"><span>         (key, in_progress) ----+                         |  OUTBOX TABLE   |</span></span>
+<span class="line"><span>                               |                          | (in same txn)   |</span></span>
+<span class="line"><span>     [2] perform business      |                          |  id | event     |  processed</span></span>
+<span class="line"><span>         mutation (charge)     |                          |  ---+-----------+  ---------+</span></span>
+<span class="line"><span>                               |                          |  1  | {resp...}  |  false   |</span></span>
+<span class="line"><span>     [3] INSERT outbox row ----+--->                      |  2  | {resp...}  |  false   |</span></span>
+<span class="line"><span>         (event + event ID)                               +-----------------+         |</span></span>
+<span class="line"><span>                               |                                       |               |</span></span>
+<span class="line"><span>     [4] UPDATE idempotency_keys -> completed                         |               |</span></span>
+<span class="line"><span>         (store response)                                              |               |</span></span>
+<span class="line"><span>   COMMIT;  &#x3C;---- all atomic ----+                                    |               |</span></span>
+<span class="line"><span>                                  |                                    v               |</span></span>
+<span class="line"><span>                                  |                         [5] poll unprocessed     |</span></span>
+<span class="line"><span>                                  |                             rows                 |</span></span>
+<span class="line"><span>                                  |                                    |               |</span></span>
+<span class="line"><span>                                  |                             [6] publish to        |</span></span>
+<span class="line"><span>                                  |                                 Kafka (event ID   |</span></span>
+<span class="line"><span>                                  |                                 as msg key)       |</span></span>
+<span class="line"><span>                                  |                                    |               |</span></span>
+<span class="line"><span>                                  |                             [7] mark outbox row   |</span></span>
+<span class="line"><span>                                  |                                 processed = true  |</span></span>
+<span class="line"><span>                                  v                                    |               |</span></span>
+<span class="line"><span>   Postgres = source of truth ---------------------------------->  Kafka consumers dedup</span></span>
+<span class="line"><span>   (idempotency row + outbox row committed atomically)           on event ID; effectively-once</span></span>
+<span class="line"><span>                                                                 event emission achieved.</span></span></code></pre>
+<p>For idempotency, the outbox pattern means: the Postgres transaction inserts the <code>in_progress</code> idempotency row, performs the mutation, writes an outbox row containing the final response, updates the idempotency row to <code>completed</code>, and commits. The outbox drainer then mirrors the <code>completed</code> record to the Redis or DynamoDB dedup store for cross-service visibility. The business database is the source of truth; the external dedup store is a fast-path cache that is eventually consistent with it. Retries that hit the Postgres table get immediate, authoritative answers; retries that hit the external store get fast answers that are correct except in the brief pre-drain window.</p>
+<h3 id="dedup-table-with-colocated-transaction">Dedup Table with Colocated Transaction</h3>
+<p>When the dedup table lives in the same Postgres database as the business tables, the implementation is a single transaction and the outbox machinery is unnecessary. The handler executes:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#F97583">BEGIN</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">INSERT INTO</span><span style="color:#E1E4E8"> idempotency_keys (</span><span style="color:#F97583">key</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">status</span><span style="color:#E1E4E8">, payload_hash)</span></span>
+<span class="line"><span style="color:#F97583">  VALUES</span><span style="color:#E1E4E8"> (..., </span><span style="color:#9ECBFF">'in_progress'</span><span style="color:#E1E4E8">, ...)</span></span>
+<span class="line"><span style="color:#F97583">  ON</span><span style="color:#E1E4E8"> CONFLICT DO NOTHING;</span></span>
+<span class="line"><span style="color:#6A737D">-- if insert succeeded, perform business logic;</span></span>
+<span class="line"><span style="color:#F97583">UPDATE</span><span style="color:#E1E4E8"> idempotency_keys</span></span>
+<span class="line"><span style="color:#F97583">  SET</span><span style="color:#F97583"> status=</span><span style="color:#9ECBFF">'completed'</span><span style="color:#E1E4E8">, response</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">...</span></span>
+<span class="line"><span style="color:#F97583">  WHERE</span><span style="color:#F97583"> key=</span><span style="color:#E1E4E8">...;</span></span>
+<span class="line"><span style="color:#F97583">COMMIT</span><span style="color:#E1E4E8">;</span></span></code></pre>
+<p>If the <code>ON CONFLICT DO NOTHING</code> insert affected zero rows, the key already exists and the handler reads the existing row and replays or waits. This is the simplest correct implementation and should be the default choice for any service whose business logic already runs in a relational database. The dedup table is range-partitioned by <code>created_at</code> for efficient TTL eviction, and the <code>key</code> column is the primary key within each partition.</p>
+<h3 id="create-or-get-via-unique-constraint">Create-or-Get via Unique Constraint</h3>
+<p>For entity-creation endpoints where a natural unique key exists (e.g., <code>(tenant_id, client_request_id)</code> for order creation), a unique constraint on the business table itself provides deduplication without a separate idempotency table. The handler attempts <code>INSERT INTO orders (...) VALUES (...)</code>, and on a unique-constraint violation, it queries for the existing order by the natural key and returns it.</p>
+<p>This is cheaper (no extra table, no extra write) and naturally idempotent, but it requires that the response can be reconstructed from the persisted entity (not a cached response blob) and that the natural key is truly unique across all dimensions that matter. It is less flexible than a dedicated dedup layer because it cannot cache arbitrary response metadata (headers, computed fields) and cannot enforce payload-match validation, but for straightforward create endpoints it is an elegant and low-overhead choice.</p>
+<h2 id="capacity-planning">Capacity Planning</h2>
+<p>Sizing the idempotency store requires estimating the <strong>write rate</strong> (one dedup insert per mutating request), the <strong>retention volume</strong> (write rate × TTL in seconds), and the <strong>read rate</strong> (one dedup check per request, including retries — typically 1.0–1.3× the write rate depending on the retry ratio). For a service handling 10,000 mutating requests per second with a 24-hour TTL, the steady-state dedup table size is 10,000 × 86,400 = 864 million rows. At ~200 bytes per row (key, status, response hash, timestamps), that is ~170 GB of dedup data — non-trivial and a strong argument for partitioning and aggressive TTL pruning where the business permits.</p>
+<p>For Postgres, the key capacity considerations are:</p>
+<ul>
+<li><strong>Write throughput</strong> — the dedup table is append-mostly with occasional updates, which is WAL-heavy.</li>
+<li><strong>Index size</strong> — the primary key on the idempotency key is a B-tree that must fit in memory for low insert latency; aim for the hottest working set (the last hour or two of keys) to fit in <code>shared_buffers</code>.</li>
+<li><strong>Vacuum overhead</strong> — if using <code>DELETE</code>-based cleanup rather than partition drops, the dead tuples from mass deletes must be vacuumed, which competes with the write load. Partitioning by day and dropping old partitions eliminates the vacuum problem entirely.</li>
+</ul>
+<p>For Redis, the consideration is memory: the dedup dataset must fit in RAM, and the TTL-based eviction means memory usage is bounded by write-rate × TTL × average-value-size. For DynamoDB, the considerations are write-capacity-unit provisioning (or on-demand cost) and the hot-partition risk if keys are not uniformly distributed — UUID v4 keys distribute uniformly by construction, but sequential or timestamp-based keys can create hot partitions.</p>
+<p>A capacity-planning pitfall: the <strong>retry storm</strong>. Under a downstream outage, the retry ratio can spike from 1.1× to 5–10× as every client retries aggressively. The dedup store must be provisioned for the retry-storm peak, not the steady state, because the dedup check is the first thing every retry hits — and if the dedup store is overloaded, it becomes the bottleneck that prevents the system from recovering (the retries pile up at the dedup layer before they even reach the business logic). Over-provisioning the dedup store by 3–5× steady-state capacity is prudent for any system where retry storms are plausible, which is to say, any system with clients that retry.</p>
+<h2 id="weaknesses--improvements">Weaknesses &amp; Improvements</h2>
+<p>The idempotency layer is itself a single point of failure: if the dedup store is down, every mutating request either fails (if the service refuses to process without a dedup check) or proceeds without deduplication (if the service degrades to non-idempotent mode, risking duplicates). The correct failure mode depends on the business:</p>
+<ul>
+<li>For <strong>payments</strong>, <strong>fail closed</strong> (reject the request rather than risk a duplicate charge).</li>
+<li>For a <strong>low-stakes notification endpoint</strong>, <strong>fail open</strong> (send the notification, accept the rare duplicate).</li>
+</ul>
+<p>This decision should be explicit and configurable, not an accident of implementation. A robust system also monitors the <strong>dedup hit rate</strong> (the ratio of retries to first attempts) — a rising hit rate signals upstream instability (clients retrying more, indicating timeout or error problems) and is an early warning signal worth alerting on.</p>
+<p>Another weakness is <strong>key reuse across operations</strong>: if a client generates idempotency keys by incrementing a counter and the counter resets (a bug, a redeploy without persistent state), it will reuse keys across logically distinct operations, and the server will incorrectly replay old responses. Server-side <strong>payload-hash validation</strong> (storing a hash of the original request and rejecting mismatches) catches this class of bug at the cost of an extra stored field and a comparison per retry. This is strongly recommended for any endpoint where the cost of an incorrect replay is high.</p>
+<h2 id="-sharp-question--model-answer">⚡ Sharp Question + Model Answer</h2>
+<p><strong>Question:</strong> Your idempotency table is in Postgres and your business logic writes to the same Postgres, so you use a single colocated transaction — great. But now you need to publish an event to Kafka after the payment succeeds, and you cannot have a duplicate event (downstream consumers are not all idempotent). The Kafka publish and the Postgres commit are not atomic. How do you prevent a duplicate event without losing one?</p>
+<p><strong>Model Answer:</strong> Use the transactional outbox pattern. Within the same Postgres transaction that performs the charge and updates the idempotency row to <code>completed</code>, insert a row into an <code>outbox</code> table containing the event payload and a unique event ID (which can be derived from the idempotency key, so the event itself is idempotently identifiable). Commit the transaction — the charge, the idempotency record, and the outbox row all commit atomically.</p>
+<p>A separate outbox-drainer process reads unprocessed outbox rows, publishes them to Kafka with the event ID as the Kafka message key (so Kafka’s log compaction and downstream consumer dedup can work), and marks the outbox row as published. If the drainer crashes after publishing but before marking the row, it re-publishes on restart — but because the event ID is deterministic and downstream consumers can dedup on it (or Kafka’s producer is idempotent with <code>enable.idempotence=true</code>, which prevents duplicate messages within a producer session), the duplicate publish is harmless. If the drainer crashes before publishing, the outbox row is still there and will be published on restart — no event lost.</p>
+<p>The key insight is that the outbox table, being in the same transaction as the business mutation, inherits its atomicity, and the drainer provides at-least-once delivery to Kafka, which combined with the idempotent event ID yields effectively-once event emission. This is the standard pattern for reconciling transactional databases with non-transactional downstream systems, and it is exactly the same principle as the idempotency layer itself: accept at-least-once delivery, make the receiver idempotent.</p>
+<p><strong>Common Pitfall:</strong> The most common idempotency bug in production is the <strong>“completed but not really” window</strong> in the separate-store pattern: the handler marks the idempotency key as <code>completed</code> in Redis, then crashes before committing the Postgres transaction (or the Postgres commit fails). The client retries, sees <code>completed</code> in Redis, and receives a replayed response for an operation that never actually committed. The business state is inconsistent with the idempotency record, and the client has no way to detect it.</p>
+<p>The fix is to never mark the key <code>completed</code> in the separate store until <strong>after</strong> the business transaction commits — and to do that marking via a transactional outbox drainer so that the completion record is durable and eventually consistent with the business state. Naive implementations that update Redis first (for latency) and Postgres second (for durability) get this backwards and create exactly the class of bug that idempotency was supposed to prevent.</p>
+<h2 id="key-insight-to-remember">Key Insight to Remember</h2>
+<p>Idempotency is not a header you add; it is a distributed-systems invariant you engineer. The header is the easy part. The hard part is guaranteeing that the side effect and the idempotency record commit atomically — or, when they cannot, designing the reconciliation and outbox machinery that makes the gap small and recoverable.</p>
+<p>Always ask:</p>
+<ul>
+<li>What happens if a crash occurs between every pair of steps?</li>
+<li>What does the retry see?</li>
+<li>Is the response replayed or reconstructed, and are they identical?</li>
+</ul>
+<p>If you cannot answer these for every failure point, your idempotency layer has a bug you have not found yet.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li>[[Transactional Outbox Pattern]]</li>
+<li>[[At-Least-Once, At-Most-Once, Exactly-Once]]</li>
+<li>[[Distributed Cache (Redis-Memcached)]]</li>
+<li>[[Message Queue (Kafka-RabbitMQ)]]</li>
+<li>[[Database Sharding &amp; Replication]]</li>
+<li>[[Circuit Breakers &amp; Bulkheads]]</li>
+<li>[[Event Sourcing &amp; CQRS]]</li>
+</ul>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>An idempotent API produces the same result whether called once or many times — the key is a client-generated idempotency key</li>
+<li>Server stores the idempotency key + response for a TTL period; on retry, returns the stored response instead of re-executing</li>
+<li>Idempotency keys must be per-request, not per-session — each unique operation gets its own key</li>
+<li>For payment systems, idempotency is non-negotiable: a retried checkout must never double-charge</li>
+<li>The idempotency layer must be outside the business logic — check the key before entering the transaction</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“Where do you store idempotency keys?” — In a fast key-value store (Redis) with TTL, or in the same database as the business data (for transactional consistency).</li>
+<li>“What happens if the idempotency key store is down?” — Fail open (allow the request through, accept rare duplicates) or fail closed (reject the request). The choice depends on the business cost of duplicates vs. the cost of unavailability.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Idempotency is not the same as deduplication. Idempotency prevents re-execution; deduplication removes duplicates after they occur. You need idempotency at the API layer, not deduplication at the database layer.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/design-an-idempotent-api/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Design%20an%20Idempotent%20API&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fdesign-an-idempotent-api%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fdesign-an-idempotent-api%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/design-an-idempotent-api" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/database-indexing-and-query-optimization" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Database Indexing &amp; Query Optimization</span></a><a href="/notes/system-design/distributed-cache-redis-memcached" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Distributed Cache (Redis/Memcached)</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Design an Idempotent API" data-selector=".article-prose" data-article-slug="system-design/design-an-idempotent-api" data-article-title="Design an Idempotent API" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

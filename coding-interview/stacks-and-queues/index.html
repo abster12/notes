@@ -1,0 +1,1316 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Stacks &amp; Queues — Coding Interview Prep · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link active" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-why-stacks--queues-matter" class="toc-link" data-toc-link="1-why-stacks--queues-matter" data-astro-cid-p33bl5ka>1. Why Stacks &amp; Queues Matter</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#stack-fundamentals" class="toc-link" data-toc-link="stack-fundamentals" data-astro-cid-p33bl5ka>Stack Fundamentals</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#queue-fundamentals" class="toc-link" data-toc-link="queue-fundamentals" data-astro-cid-p33bl5ka>Queue Fundamentals</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-monotonic-stack--the-workhorse-pattern" class="toc-link" data-toc-link="2-monotonic-stack--the-workhorse-pattern" data-astro-cid-p33bl5ka>2. Monotonic Stack — The Workhorse Pattern</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#when-to-use" class="toc-link" data-toc-link="when-to-use" data-astro-cid-p33bl5ka>When to Use</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#two-flavors" class="toc-link" data-toc-link="two-flavors" data-astro-cid-p33bl5ka>Two Flavors</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ascii-diagram-monotonic-stack-next-greater-element" class="toc-link" data-toc-link="ascii-diagram-monotonic-stack-next-greater-element" data-astro-cid-p33bl5ka>ASCII Diagram: Monotonic Stack (Next Greater Element)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-template-next-greater-element" class="toc-link" data-toc-link="java-template-next-greater-element" data-astro-cid-p33bl5ka>Java Template (Next Greater Element)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#classic-problem-1-daily-temperatures-leetcode-739" class="toc-link" data-toc-link="classic-problem-1-daily-temperatures-leetcode-739" data-astro-cid-p33bl5ka>Classic Problem 1: Daily Temperatures (LeetCode 739)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#classic-problem-2-largest-rectangle-in-histogram-leetcode-84" class="toc-link" data-toc-link="classic-problem-2-largest-rectangle-in-histogram-leetcode-84" data-astro-cid-p33bl5ka>Classic Problem 2: Largest Rectangle in Histogram (LeetCode 84)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#classic-problem-3-online-stock-span-leetcode-901" class="toc-link" data-toc-link="classic-problem-3-online-stock-span-leetcode-901" data-astro-cid-p33bl5ka>Classic Problem 3: Online Stock Span (LeetCode 901)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-min-stack--max-stack--augmented-stack-design" class="toc-link" data-toc-link="3-min-stack--max-stack--augmented-stack-design" data-astro-cid-p33bl5ka>3. Min Stack / Max Stack — Augmented Stack Design</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#when-to-use-1" class="toc-link" data-toc-link="when-to-use-1" data-astro-cid-p33bl5ka>When to Use</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach" class="toc-link" data-toc-link="approach" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-template-auxiliary-stack" class="toc-link" data-toc-link="java-template-auxiliary-stack" data-astro-cid-p33bl5ka>Java Template (Auxiliary Stack)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#classic-problem-1-min-stack-leetcode-155" class="toc-link" data-toc-link="classic-problem-1-min-stack-leetcode-155" data-astro-cid-p33bl5ka>Classic Problem 1: Min Stack (LeetCode 155)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#classic-problem-2-max-stack-leetcode-716" class="toc-link" data-toc-link="classic-problem-2-max-stack-leetcode-716" data-astro-cid-p33bl5ka>Classic Problem 2: Max Stack (LeetCode 716)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#4-balanced-parentheses" class="toc-link" data-toc-link="4-balanced-parentheses" data-astro-cid-p33bl5ka>4. Balanced Parentheses</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#when-to-use-2" class="toc-link" data-toc-link="when-to-use-2" data-astro-cid-p33bl5ka>When to Use</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-1" class="toc-link" data-toc-link="approach-1" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#classic-problem-1-valid-parentheses-leetcode-20" class="toc-link" data-toc-link="classic-problem-1-valid-parentheses-leetcode-20" data-astro-cid-p33bl5ka>Classic Problem 1: Valid Parentheses (LeetCode 20)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#classic-problem-2-minimum-add-to-make-parentheses-valid-leetcode-945" class="toc-link" data-toc-link="classic-problem-2-minimum-add-to-make-parentheses-valid-leetcode-945" data-astro-cid-p33bl5ka>Classic Problem 2: Minimum Add to Make Parentheses Valid (LeetCode 945)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#classic-problem-3-valid-parenthesis-string-leetcode-678" class="toc-link" data-toc-link="classic-problem-3-valid-parenthesis-string-leetcode-678" data-astro-cid-p33bl5ka>Classic Problem 3: Valid Parenthesis String (LeetCode 678)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#5-evaluate-reverse-polish-notation" class="toc-link" data-toc-link="5-evaluate-reverse-polish-notation" data-astro-cid-p33bl5ka>5. Evaluate Reverse Polish Notation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#when-to-use-3" class="toc-link" data-toc-link="when-to-use-3" data-astro-cid-p33bl5ka>When to Use</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-2" class="toc-link" data-toc-link="approach-2" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#classic-problem-evaluate-rpn-leetcode-150" class="toc-link" data-toc-link="classic-problem-evaluate-rpn-leetcode-150" data-astro-cid-p33bl5ka>Classic Problem: Evaluate RPN (LeetCode 150)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#6-basic-calculator--infix-expression-evaluation" class="toc-link" data-toc-link="6-basic-calculator--infix-expression-evaluation" data-astro-cid-p33bl5ka>6. Basic Calculator — Infix Expression Evaluation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#when-to-use-4" class="toc-link" data-toc-link="when-to-use-4" data-astro-cid-p33bl5ka>When to Use</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-3" class="toc-link" data-toc-link="approach-3" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#classic-problem-1-basic-calculator-ii-leetcode-227" class="toc-link" data-toc-link="classic-problem-1-basic-calculator-ii-leetcode-227" data-astro-cid-p33bl5ka>Classic Problem 1: Basic Calculator II (LeetCode 227)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#classic-problem-2-basic-calculator-leetcode-224" class="toc-link" data-toc-link="classic-problem-2-basic-calculator-leetcode-224" data-astro-cid-p33bl5ka>Classic Problem 2: Basic Calculator (LeetCode 224)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#7-sliding-window-maximum--monotonic-deque" class="toc-link" data-toc-link="7-sliding-window-maximum--monotonic-deque" data-astro-cid-p33bl5ka>7. Sliding Window Maximum — Monotonic Deque</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#when-to-use-5" class="toc-link" data-toc-link="when-to-use-5" data-astro-cid-p33bl5ka>When to Use</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-4" class="toc-link" data-toc-link="approach-4" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ascii-diagram-sliding-window-maximum" class="toc-link" data-toc-link="ascii-diagram-sliding-window-maximum" data-astro-cid-p33bl5ka>ASCII Diagram: Sliding Window Maximum</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-template" class="toc-link" data-toc-link="java-template" data-astro-cid-p33bl5ka>Java Template</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#classic-problem-sliding-window-maximum-leetcode-239" class="toc-link" data-toc-link="classic-problem-sliding-window-maximum-leetcode-239" data-astro-cid-p33bl5ka>Classic Problem: Sliding Window Maximum (LeetCode 239)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#variant-sliding-window-minimum" class="toc-link" data-toc-link="variant-sliding-window-minimum" data-astro-cid-p33bl5ka>Variant: Sliding Window Minimum</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#variant-sliding-window-median-leetcode-480" class="toc-link" data-toc-link="variant-sliding-window-median-leetcode-480" data-astro-cid-p33bl5ka>Variant: Sliding Window Median (LeetCode 480)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#8-queue-using-stacks" class="toc-link" data-toc-link="8-queue-using-stacks" data-astro-cid-p33bl5ka>8. Queue Using Stacks</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#when-to-use-6" class="toc-link" data-toc-link="when-to-use-6" data-astro-cid-p33bl5ka>When to Use</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-5" class="toc-link" data-toc-link="approach-5" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#amortized-o1" class="toc-link" data-toc-link="amortized-o1" data-astro-cid-p33bl5ka>Amortized O(1)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#classic-problem-implement-queue-using-stacks-leetcode-232" class="toc-link" data-toc-link="classic-problem-implement-queue-using-stacks-leetcode-232" data-astro-cid-p33bl5ka>Classic Problem: Implement Queue Using Stacks (LeetCode 232)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#inverse-stack-using-queues-leetcode-225" class="toc-link" data-toc-link="inverse-stack-using-queues-leetcode-225" data-astro-cid-p33bl5ka>Inverse: Stack Using Queues (LeetCode 225)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#9-valid-stack-sequences" class="toc-link" data-toc-link="9-valid-stack-sequences" data-astro-cid-p33bl5ka>9. Valid Stack Sequences</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#when-to-use-7" class="toc-link" data-toc-link="when-to-use-7" data-astro-cid-p33bl5ka>When to Use</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-6" class="toc-link" data-toc-link="approach-6" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#classic-problem-validate-stack-sequences-leetcode-946" class="toc-link" data-toc-link="classic-problem-validate-stack-sequences-leetcode-946" data-astro-cid-p33bl5ka>Classic Problem: Validate Stack Sequences (LeetCode 946)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#10-asteroid-collision" class="toc-link" data-toc-link="10-asteroid-collision" data-astro-cid-p33bl5ka>10. Asteroid Collision</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#when-to-use-8" class="toc-link" data-toc-link="when-to-use-8" data-astro-cid-p33bl5ka>When to Use</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#approach-7" class="toc-link" data-toc-link="approach-7" data-astro-cid-p33bl5ka>Approach</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#classic-problem-asteroid-collision-leetcode-735" class="toc-link" data-toc-link="classic-problem-asteroid-collision-leetcode-735" data-astro-cid-p33bl5ka>Classic Problem: Asteroid Collision (LeetCode 735)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#11-nested-parsing--stack-based-string-problems" class="toc-link" data-toc-link="11-nested-parsing--stack-based-string-problems" data-astro-cid-p33bl5ka>11. Nested Parsing &amp; Stack-Based String Problems</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#when-to-use-9" class="toc-link" data-toc-link="when-to-use-9" data-astro-cid-p33bl5ka>When to Use</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#classic-problem-decode-string-leetcode-394" class="toc-link" data-toc-link="classic-problem-decode-string-leetcode-394" data-astro-cid-p33bl5ka>Classic Problem: Decode String (LeetCode 394)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#12-expression-parsing-with-precedence-advanced" class="toc-link" data-toc-link="12-expression-parsing-with-precedence-advanced" data-astro-cid-p33bl5ka>12. Expression Parsing with Precedence (Advanced)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#classic-problem-basic-calculator-iii-leetcode-772" class="toc-link" data-toc-link="classic-problem-basic-calculator-iii-leetcode-772" data-astro-cid-p33bl5ka>Classic Problem: Basic Calculator III (LeetCode 772)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#pattern-reference-table" class="toc-link" data-toc-link="pattern-reference-table" data-astro-cid-p33bl5ka>Pattern Reference Table</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#quick-reference-monotonic-stack-variants" class="toc-link" data-toc-link="quick-reference-monotonic-stack-variants" data-astro-cid-p33bl5ka>Quick-Reference: Monotonic Stack Variants</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#quick-reference-common-mistakes" class="toc-link" data-toc-link="quick-reference-common-mistakes" data-astro-cid-p33bl5ka>Quick-Reference: Common Mistakes</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-strategy-checklist" class="toc-link" data-toc-link="interview-strategy-checklist" data-astro-cid-p33bl5ka>Interview Strategy Checklist</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#extended-problem-set-by-pattern" class="toc-link" data-toc-link="extended-problem-set-by-pattern" data-astro-cid-p33bl5ka>Extended Problem Set by Pattern</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#monotonic-stack" class="toc-link" data-toc-link="monotonic-stack" data-astro-cid-p33bl5ka>Monotonic Stack</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#parentheses--matching" class="toc-link" data-toc-link="parentheses--matching" data-astro-cid-p33bl5ka>Parentheses / Matching</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#calculator--expression" class="toc-link" data-toc-link="calculator--expression" data-astro-cid-p33bl5ka>Calculator / Expression</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#design" class="toc-link" data-toc-link="design" data-astro-cid-p33bl5ka>Design</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#simulation--deque" class="toc-link" data-toc-link="simulation--deque" data-astro-cid-p33bl5ka>Simulation / Deque</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/coding-interview/" class="article-category" data-astro-cid-sgg5joot>Coding Interview</a><h1 class="article-title" data-astro-cid-sgg5joot>Stacks &amp; Queues — Coding Interview Prep</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-medium" data-astro-cid-sgg5joot>Medium</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 23 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 32 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>coding-interview</span><span class="tag" data-astro-cid-sgg5joot>stacks</span><span class="tag" data-astro-cid-sgg5joot>queues</span><span class="tag" data-astro-cid-sgg5joot>java</span><span class="tag" data-astro-cid-sgg5joot>algorithms</span><span class="tag" data-astro-cid-sgg5joot>monotonic-stack</span><span class="tag" data-astro-cid-sgg5joot>bfs</span><span class="tag" data-astro-cid-sgg5joot>dfs</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="stacks--queues--coding-interview-prep">Stacks &amp; Queues — Coding Interview Prep</h1>
+<p>A comprehensive guide to stack and queue patterns for coding interviews. Each section covers when to use the pattern, a reusable Java template, and 2-3 classic problems with full solutions.</p>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>LIFO and FIFO data structures — stacks for DFS/parentheses/monotonic patterns, queues for BFS/scheduling, deques for sliding window max.</p>
+<p><strong>How it’s asked:</strong> “Valid parentheses, daily temperatures, largest rectangle in histogram, sliding window maximum, implement queue using stacks — problems involving LIFO/FIFO processing order.”</p>
+<hr>
+<h2 id="1-why-stacks--queues-matter">1. Why Stacks &amp; Queues Matter</h2>
+<p>Stacks (LIFO) and queues (FIFO) are the backbone of many interview patterns. They appear in:</p>
+<ul>
+<li>Parsing and expression evaluation (parentheses, calculators, RPN)</li>
+<li>Range queries over arrays (next greater/smaller element, stock span)</li>
+<li>Sliding window extremum queries (deque)</li>
+<li>Simulation problems (asteroid collision, valid stack sequences)</li>
+<li>Design problems (min stack, queue from stacks)</li>
+</ul>
+<p>The key insight: whenever a problem asks for “next/previous greater/smaller” or involves nested/ordered structure, reach for a stack. Whenever you need a sliding extremum, reach for a deque.</p>
+<h3 id="stack-fundamentals">Stack Fundamentals</h3>
+<p>A stack supports push, pop, peek, and isEmpty — all in O(1). In Java, <code>Deque&lt;Integer&gt;</code> (implemented by <code>ArrayDeque</code>) is preferred over the legacy <code>Stack</code> class, which is synchronized and slow.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   push(3)   push(7)   push(1)    pop() -> 1</span></span>
+<span class="line"><span>   ┌───┐     ┌───┐     ┌───┐      ┌───┐</span></span>
+<span class="line"><span>   │ 3 │     │ 7 │     │ 1 │ top  │ 7 │ top</span></span>
+<span class="line"><span>   │   │     │ 3 │     │ 3 │      │ 3 │</span></span>
+<span class="line"><span>   └───┘     └───┘     └───┘      └───┘</span></span>
+<span class="line"><span>   bottom    bottom    bottom     bottom</span></span></code></pre>
+<h3 id="queue-fundamentals">Queue Fundamentals</h3>
+<p>A queue supports offer, poll, peek — all O(1). Use <code>ArrayDeque</code> or <code>LinkedList</code> as a <code>Deque</code>.</p>
+<hr>
+<h2 id="2-monotonic-stack--the-workhorse-pattern">2. Monotonic Stack — The Workhorse Pattern</h2>
+<h3 id="when-to-use">When to Use</h3>
+<p>Use a monotonic stack when the problem asks for:</p>
+<ul>
+<li>Next greater / next smaller element</li>
+<li>Previous greater / previous smaller element</li>
+<li>Largest rectangle in histogram</li>
+<li>Stock span / daily temperatures</li>
+<li>Any query where you need, for each element, the nearest element to its left or right that satisfies an inequality</li>
+</ul>
+<p>The stack maintains elements in monotonic (increasing or decreasing) order. When a new element violates the order, we pop until order is restored, and each pop reveals a relationship between the popped element and the new element.</p>
+<h3 id="two-flavors">Two Flavors</h3>
+<ul>
+<li><strong>Monotonically decreasing stack</strong> (top is smallest): used for “next greater element.” We pop while <code>stack.top() &lt; current</code>, and for each popped element, <code>current</code> is its next greater.</li>
+<li><strong>Monotonically increasing stack</strong> (top is largest): used for “next smaller element.” We pop while <code>stack.top() &gt; current</code>.</li>
+</ul>
+<h3 id="ascii-diagram-monotonic-stack-next-greater-element">ASCII Diagram: Monotonic Stack (Next Greater Element)</h3>
+<p>Input: [2, 1, 2, 4, 3]  — finding next greater for each element.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Element 2: stack empty        -> push 2     Stack: [2]</span></span>
+<span class="line"><span>Element 1: 1 &#x3C;= 2 (top)       -> push 1     Stack: [2, 1]</span></span>
+<span class="line"><span>Element 2: 1 &#x3C; 2 -> pop 1     -> result[1]=2</span></span>
+<span class="line"><span>           2 &#x3C;= 2 (top)       -> push 2     Stack: [2, 2]</span></span>
+<span class="line"><span>Element 4: 2 &#x3C; 4 -> pop 2     -> result[2]=4</span></span>
+<span class="line"><span>           2 &#x3C; 4 -> pop 2     -> result[0]=4</span></span>
+<span class="line"><span>           stack empty        -> push 4     Stack: [4]</span></span>
+<span class="line"><span>Element 3: 3 &#x3C;= 4 (top)       -> push 3     Stack: [4, 3]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Remaining in stack have no next greater -> result = -1</span></span>
+<span class="line"><span>Final result: [4, 2, 4, -1, -1]</span></span></code></pre>
+<p>The invariant: the stack always holds indices whose “next greater” has not yet been found, in decreasing order of their values.</p>
+<h3 id="java-template-next-greater-element">Java Template (Next Greater Element)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">public</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[] </span><span style="color:#B392F0">nextGreaterElements</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] nums) {</span></span>
+<span class="line"><span style="color:#F97583">    int</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nums.length;</span></span>
+<span class="line"><span style="color:#F97583">    int</span><span style="color:#E1E4E8">[] result </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[n];</span></span>
+<span class="line"><span style="color:#E1E4E8">    Arrays.</span><span style="color:#B392F0">fill</span><span style="color:#E1E4E8">(result, </span><span style="color:#F97583">-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">    Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> stack </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>(); </span><span style="color:#6A737D">// stores indices</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> n; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">stack.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> nums[stack.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">()] </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> nums[i]) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            result[stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">()] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nums[i];</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">        stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(i);</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#6A737D">    // remaining indices have no next greater -> already -1</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>Time: O(n) — each element pushed and popped at most once. Space: O(n).</p>
+<h3 id="classic-problem-1-daily-temperatures-leetcode-739">Classic Problem 1: Daily Temperatures (LeetCode 739)</h3>
+<p>Given temperatures array, for each day return the number of days until a warmer temperature. If none, return 0.</p>
+<p>This is a “next greater element” problem where we store the distance (index difference) instead of the value.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[] </span><span style="color:#B392F0">dailyTemperatures</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">temperatures</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> temperatures.length;</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[] answer </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[n];</span></span>
+<span class="line"><span style="color:#E1E4E8">        Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> stack </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>(); </span><span style="color:#6A737D">// indices, monotonic decreasing by temp</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> n; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            while</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">stack.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> temperatures[stack.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">()] </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> temperatures[i]) {</span></span>
+<span class="line"><span style="color:#F97583">                int</span><span style="color:#E1E4E8"> prevIndex </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">                answer[prevIndex] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> prevIndex;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">            stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(i);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> answer;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>Walkthrough for [73, 74, 75, 71, 69, 72, 76, 73]:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>i=0 (73): stack=[0]</span></span>
+<span class="line"><span>i=1 (74): 73&#x3C;74 -> pop 0, ans[0]=1; push 1       stack=[1]</span></span>
+<span class="line"><span>i=2 (75): 74&#x3C;75 -> pop 1, ans[1]=1; push 2       stack=[2]</span></span>
+<span class="line"><span>i=3 (71): 75>71 -> push 3                        stack=[2,3]</span></span>
+<span class="line"><span>i=4 (69): 71>69 -> push 4                        stack=[2,3,4]</span></span>
+<span class="line"><span>i=5 (72): 69&#x3C;72 -> pop 4, ans[4]=1; 71&#x3C;72 -> pop 3, ans[3]=2; push 5  stack=[2,5]</span></span>
+<span class="line"><span>i=6 (76): 72&#x3C;76 -> pop 5, ans[5]=1; 75&#x3C;76 -> pop 2, ans[2]=4; push 6  stack=[6]</span></span>
+<span class="line"><span>i=7 (73): 76>73 -> push 7                        stack=[6,7]</span></span>
+<span class="line"><span>Answer: [1,1,4,2,1,1,0,0]</span></span></code></pre>
+<h3 id="classic-problem-2-largest-rectangle-in-histogram-leetcode-84">Classic Problem 2: Largest Rectangle in Histogram (LeetCode 84)</h3>
+<p>Given bar heights, find the area of the largest rectangle in the histogram. This is the quintessential monotonic stack problem.</p>
+<p>Key idea: for each bar, the largest rectangle using that bar’s full height extends from the “previous smaller” index + 1 to the “next smaller” index - 1. We use an increasing stack to find both boundaries in one pass.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> largestRectangleArea</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">heights</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> heights.length;</span></span>
+<span class="line"><span style="color:#E1E4E8">        Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> stack </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>(); </span><span style="color:#6A737D">// increasing stack of indices</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> maxArea </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> n; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6A737D">            // sentinel: when i == n, height is 0, forcing all remaining pops</span></span>
+<span class="line"><span style="color:#F97583">            int</span><span style="color:#E1E4E8"> h </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> n) </span><span style="color:#F97583">?</span><span style="color:#79B8FF"> 0</span><span style="color:#F97583"> :</span><span style="color:#E1E4E8"> heights[i];</span></span>
+<span class="line"><span style="color:#F97583">            while</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">stack.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> heights[stack.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">()] </span><span style="color:#F97583">></span><span style="color:#E1E4E8"> h) {</span></span>
+<span class="line"><span style="color:#F97583">                int</span><span style="color:#E1E4E8"> height </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> heights[stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">()];</span></span>
+<span class="line"><span style="color:#6A737D">                // width: from the element just below the popped (left boundary)</span></span>
+<span class="line"><span style="color:#6A737D">                // to i (right boundary, exclusive)</span></span>
+<span class="line"><span style="color:#F97583">                int</span><span style="color:#E1E4E8"> width </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">?</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">                maxArea </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(maxArea, height </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> width);</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">            stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(i);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> maxArea;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>ASCII walkthrough for heights = [2, 1, 5, 6, 2, 3]:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>i=0 (h=2): stack empty -> push 0         Stack: [0]</span></span>
+<span class="line"><span>i=1 (h=1): 2>1 -> pop 0, height=2, width=1, area=2; push 1  Stack: [1]</span></span>
+<span class="line"><span>i=2 (h=5): 1&#x3C;5 -> push 2                 Stack: [1,2]</span></span>
+<span class="line"><span>i=3 (h=6): 5&#x3C;6 -> push 3                 Stack: [1,2,3]</span></span>
+<span class="line"><span>i=4 (h=2): 6>2 -> pop 3, height=6, width=1, area=6</span></span>
+<span class="line"><span>           5>2 -> pop 2, height=5, width=2, area=10</span></span>
+<span class="line"><span>           1&#x3C;2 -> push 4                 Stack: [1,4]</span></span>
+<span class="line"><span>i=5 (h=3): 2&#x3C;3 -> push 5                 Stack: [1,4,5]</span></span>
+<span class="line"><span>i=6 (h=0): 3>0 -> pop 5, height=3, width=1, area=3</span></span>
+<span class="line"><span>           2>0 -> pop 4, height=2, width=4, area=8</span></span>
+<span class="line"><span>           1>0 -> pop 1, height=1, width=6, area=6</span></span>
+<span class="line"><span>Max area = 10</span></span></code></pre>
+<p>The rectangle of height 5 (bars at index 2 and 3) gives area 10 — the correct answer.</p>
+<h3 id="classic-problem-3-online-stock-span-leetcode-901">Classic Problem 3: Online Stock Span (LeetCode 901)</h3>
+<p>Design a class that, for each day’s price, returns the span: the maximum number of consecutive days (including today) where the price was &lt;= today’s price.</p>
+<p>This is a “previous greater element” problem. We maintain a decreasing stack of (price, span). When a new price arrives, we pop all smaller-or-equal prices, accumulating their spans.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> StockSpanner</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">    Deque&#x3C;</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[]> stack; </span><span style="color:#6A737D">// [price, span]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#B392F0"> StockSpanner</span><span style="color:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#E1E4E8">        stack </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> next</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> price</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> span </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">stack.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">()[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> price) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            span </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">()[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">        stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[]{price, span});</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> span;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>Why this works: when we pop a (price, span) pair, all the days it represented are also &lt;= the current price, so we can absorb its entire span. The stack stays strictly decreasing by price.</p>
+<hr>
+<h2 id="3-min-stack--max-stack--augmented-stack-design">3. Min Stack / Max Stack — Augmented Stack Design</h2>
+<h3 id="when-to-use-1">When to Use</h3>
+<p>When a problem requires a stack that also supports retrieving the minimum (or maximum) element in O(1). This appears in design questions and as a building block in more complex problems.</p>
+<h3 id="approach">Approach</h3>
+<p>Two common techniques:</p>
+<ol>
+<li><strong>Auxiliary stack</strong>: maintain a parallel stack that tracks the min/max at each level. Push the current min/max alongside every push; pop both together.</li>
+<li><strong>Value encoding</strong>: store the difference between the value and the current min in the main stack, recovering the min during pop. Saves space but is error-prone.</li>
+</ol>
+<h3 id="java-template-auxiliary-stack">Java Template (Auxiliary Stack)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> MinStack</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#E1E4E8"> Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> stack;</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#E1E4E8"> Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> minStack;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#B392F0"> MinStack</span><span style="color:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#E1E4E8">        stack </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">        minStack </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> push</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> val</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(val);</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (minStack.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">||</span><span style="color:#E1E4E8"> val </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> minStack.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            minStack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(val);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> pop</span><span style="color:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> val </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (val </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> minStack.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            minStack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> top</span><span style="color:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> getMin</span><span style="color:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> minStack.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>Note: the <code>&lt;=</code> in push is critical to handle duplicate minimums correctly.</p>
+<h3 id="classic-problem-1-min-stack-leetcode-155">Classic Problem 1: Min Stack (LeetCode 155)</h3>
+<p>The template above is the full solution. Push, pop, top, and getMin all run in O(1).</p>
+<p>ASCII showing the two stacks in sync:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Operation      main stack      min stack</span></span>
+<span class="line"><span>push(5)        [5]             [5]</span></span>
+<span class="line"><span>push(3)        [5, 3]          [5, 3]</span></span>
+<span class="line"><span>push(7)        [5, 3, 7]       [5, 3]      &#x3C;- 7 not pushed to min stack</span></span>
+<span class="line"><span>push(3)        [5, 3, 7, 3]    [5, 3, 3]   &#x3C;- duplicate min, pushed</span></span>
+<span class="line"><span>pop() -> 3     [5, 3, 7]       [5, 3]</span></span>
+<span class="line"><span>pop() -> 7     [5, 3]          [5, 3]</span></span>
+<span class="line"><span>getMin() -> 3</span></span>
+<span class="line"><span>pop() -> 3     [5]             [5]</span></span>
+<span class="line"><span>getMin() -> 5</span></span></code></pre>
+<h3 id="classic-problem-2-max-stack-leetcode-716">Classic Problem 2: Max Stack (LeetCode 716)</h3>
+<p>Same idea but tracking the maximum. A harder variant asks for <code>popMax()</code> which removes the maximum element (not necessarily the top). This requires a doubly-linked list plus a sorted map, or a second stack.</p>
+<p>Simpler version (push, pop, top, peekMax):</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> MaxStack</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#E1E4E8"> Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> stack;</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#E1E4E8"> Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> maxStack;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#B392F0"> MaxStack</span><span style="color:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#E1E4E8">        stack </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">        maxStack </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> push</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> x</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(x);</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (maxStack.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">||</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">>=</span><span style="color:#E1E4E8"> maxStack.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            maxStack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(x);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> pop</span><span style="color:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (x </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> maxStack.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">()) maxStack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> x;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> top</span><span style="color:#E1E4E8">() { </span><span style="color:#F97583">return</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">(); }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> peekMax</span><span style="color:#E1E4E8">() { </span><span style="color:#F97583">return</span><span style="color:#E1E4E8"> maxStack.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">(); }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>For <code>popMax()</code>: find the max, pop elements above it into a buffer, remove the max, then push the buffer back.</p>
+<hr>
+<h2 id="4-balanced-parentheses">4. Balanced Parentheses</h2>
+<h3 id="when-to-use-2">When to Use</h3>
+<p>Whenever a problem involves matching, nesting, or validating paired delimiters: <code>()</code>, <code>[]</code>, <code>{}</code>, <code>&lt;&gt;</code>, or even custom open/close tokens.</p>
+<h3 id="approach-1">Approach</h3>
+<ul>
+<li>Push opening brackets onto the stack.</li>
+<li>On a closing bracket, check that the stack top is the matching opening bracket; if not, invalid.</li>
+<li>At the end, the stack must be empty.</li>
+</ul>
+<h3 id="classic-problem-1-valid-parentheses-leetcode-20">Classic Problem 1: Valid Parentheses (LeetCode 20)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> isValid</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Deque&#x3C;</span><span style="color:#F97583">Character</span><span style="color:#E1E4E8">> stack </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">toCharArray</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> '('</span><span style="color:#E1E4E8">) stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">')'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">            else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> '['</span><span style="color:#E1E4E8">) stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">']'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">            else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> '{'</span><span style="color:#E1E4E8">) stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'}'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">            else</span><span style="color:#E1E4E8"> { </span><span style="color:#6A737D">// closing bracket</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (stack.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">||</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">!=</span><span style="color:#E1E4E8"> c) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>Trick: instead of storing the opening bracket, store the expected closing bracket. This makes the comparison trivial.</p>
+<p>ASCII for input “{[()]}”:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Char  '{' -> push '}'  Stack: [}]</span></span>
+<span class="line"><span>Char  '[' -> push ']'  Stack: [}, ]]</span></span>
+<span class="line"><span>Char  '(' -> push ')'  Stack: [}, ], )]</span></span>
+<span class="line"><span>Char  ')' -> pop ')'   matches!  Stack: [}, ]]</span></span>
+<span class="line"><span>Char  ']' -> pop ']'   matches!  Stack: [}]</span></span>
+<span class="line"><span>Char  '}' -> pop '}'   matches!  Stack: []</span></span>
+<span class="line"><span>Valid!</span></span></code></pre>
+<h3 id="classic-problem-2-minimum-add-to-make-parentheses-valid-leetcode-945">Classic Problem 2: Minimum Add to Make Parentheses Valid (LeetCode 945)</h3>
+<p>Count unmatched open and close parentheses without a full stack:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> minAddToMakeValid</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> open </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, additions </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">toCharArray</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> '('</span><span style="color:#E1E4E8">) open</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (open </span><span style="color:#F97583">></span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) open</span><span style="color:#F97583">--</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">                else</span><span style="color:#E1E4E8"> additions</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">; </span><span style="color:#6A737D">// need an opening paren</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> additions </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> open; </span><span style="color:#6A737D">// open = unmatched, need closing parens</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="classic-problem-3-valid-parenthesis-string-leetcode-678">Classic Problem 3: Valid Parenthesis String (LeetCode 678)</h3>
+<p>String with ‘(’, ‘)’, ‘<em>’ where ‘</em>’ can be ‘(’, ‘)’, or empty. Use a range [lo, hi] of possible open-count:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> checkValidString</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, hi </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">toCharArray</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> '('</span><span style="color:#E1E4E8">) { lo</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">; hi</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">; }</span></span>
+<span class="line"><span style="color:#F97583">            else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> ')'</span><span style="color:#E1E4E8">) { lo </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, lo </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">); hi</span><span style="color:#F97583">--</span><span style="color:#E1E4E8">; }</span></span>
+<span class="line"><span style="color:#F97583">            else</span><span style="color:#E1E4E8"> { lo </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Math.</span><span style="color:#B392F0">max</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, lo </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">); hi</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">; } </span><span style="color:#6A737D">// '*'</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (hi </span><span style="color:#F97583">&#x3C;</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> lo </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<hr>
+<h2 id="5-evaluate-reverse-polish-notation">5. Evaluate Reverse Polish Notation</h2>
+<h3 id="when-to-use-3">When to Use</h3>
+<p>Postfix expression evaluation. Also applies to building/evaluating expression trees.</p>
+<h3 id="approach-2">Approach</h3>
+<p>Scan tokens left to right. Push operands. On an operator, pop the required number of operands, apply the operator, push the result.</p>
+<h3 id="classic-problem-evaluate-rpn-leetcode-150">Classic Problem: Evaluate RPN (LeetCode 150)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> evalRPN</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">String</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">tokens</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> stack </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (String t </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> tokens) {</span></span>
+<span class="line"><span style="color:#F97583">            switch</span><span style="color:#E1E4E8"> (t) {</span></span>
+<span class="line"><span style="color:#F97583">                case</span><span style="color:#9ECBFF"> "+"</span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">()); </span><span style="color:#F97583">break</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">                case</span><span style="color:#9ECBFF"> "-"</span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">                    int</span><span style="color:#E1E4E8"> b </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">(), a </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">                    stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(a </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> b); </span><span style="color:#F97583">break</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">                }</span></span>
+<span class="line"><span style="color:#F97583">                case</span><span style="color:#9ECBFF"> "*"</span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">()); </span><span style="color:#F97583">break</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">                case</span><span style="color:#9ECBFF"> "/"</span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">                    int</span><span style="color:#E1E4E8"> b </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">(), a </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">                    stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(a </span><span style="color:#F97583">/</span><span style="color:#E1E4E8"> b); </span><span style="color:#F97583">break</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">                }</span></span>
+<span class="line"><span style="color:#F97583">                default:</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(Integer.</span><span style="color:#B392F0">parseInt</span><span style="color:#E1E4E8">(t));</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>Critical: for non-commutative operators (- and /), pop order matters. The first pop is the right operand, the second pop is the left operand.</p>
+<p>ASCII for [“2”, “1”, “+”, “3”, “*”]:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>"2"  -> push 2          Stack: [2]</span></span>
+<span class="line"><span>"1"  -> push 1          Stack: [2, 1]</span></span>
+<span class="line"><span>"+"  -> pop 1, pop 2, push 3   Stack: [3]</span></span>
+<span class="line"><span>"3"  -> push 3          Stack: [3, 3]</span></span>
+<span class="line"><span>"*"  -> pop 3, pop 3, push 9   Stack: [9]</span></span>
+<span class="line"><span>Result: 9   (which is (2+1)*3)</span></span></code></pre>
+<hr>
+<h2 id="6-basic-calculator--infix-expression-evaluation">6. Basic Calculator — Infix Expression Evaluation</h2>
+<h3 id="when-to-use-4">When to Use</h3>
+<p>When evaluating expressions with parentheses, operator precedence, and possibly unary minus. This is a harder variant of RPN where you must handle precedence on the fly.</p>
+<h3 id="approach-3">Approach</h3>
+<p>Maintain two stacks: one for values, one for operators. Process the string character by character:</p>
+<ul>
+<li>Digit: accumulate the full number, push to value stack.</li>
+<li>‘(’: push to operator stack.</li>
+<li>‘)’: evaluate until ‘(’.</li>
+<li>Operator: while the operator stack top has &gt;= precedence, evaluate it first, then push.</li>
+</ul>
+<p>For unary minus, track the sign context (after ‘(’ or at start).</p>
+<h3 id="classic-problem-1-basic-calculator-ii-leetcode-227">Classic Problem 1: Basic Calculator II (LeetCode 227)</h3>
+<p>Handles +, -, *, / with precedence (no parentheses):</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> calculate</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> stack </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> num </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        char</span><span style="color:#E1E4E8"> op </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> '+'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">(); i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(i);</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (Character.</span><span style="color:#B392F0">isDigit</span><span style="color:#E1E4E8">(c)) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                num </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> num </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 10</span><span style="color:#F97583"> +</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> '0'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> '+'</span><span style="color:#F97583"> ||</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> '-'</span><span style="color:#F97583"> ||</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> '*'</span><span style="color:#F97583"> ||</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> '/'</span><span style="color:#F97583"> ||</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">                switch</span><span style="color:#E1E4E8"> (op) {</span></span>
+<span class="line"><span style="color:#F97583">                    case</span><span style="color:#9ECBFF"> '+'</span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(num); </span><span style="color:#F97583">break</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">                    case</span><span style="color:#9ECBFF"> '-'</span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">num); </span><span style="color:#F97583">break</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">                    case</span><span style="color:#9ECBFF"> '*'</span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> num); </span><span style="color:#F97583">break</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">                    case</span><span style="color:#9ECBFF"> '/'</span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">/</span><span style="color:#E1E4E8"> num); </span><span style="color:#F97583">break</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">                }</span></span>
+<span class="line"><span style="color:#E1E4E8">                op </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> c;</span></span>
+<span class="line"><span style="color:#E1E4E8">                num </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> result </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">stack.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">()) result </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>Insight: for * and /, we immediately compute (higher precedence). For + and -, we defer by pushing signed values, then sum at the end.</p>
+<h3 id="classic-problem-2-basic-calculator-leetcode-224">Classic Problem 2: Basic Calculator (LeetCode 224)</h3>
+<p>Handles +, -, and parentheses with unary minus:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> calculate</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> stack </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> result </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, num </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">, sign </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">(); i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">            char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(i);</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (Character.</span><span style="color:#B392F0">isDigit</span><span style="color:#E1E4E8">(c)) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                num </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> num </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 10</span><span style="color:#F97583"> +</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> '0'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> '+'</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                result </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> sign </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> num;</span></span>
+<span class="line"><span style="color:#E1E4E8">                num </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; sign </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> '-'</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                result </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> sign </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> num;</span></span>
+<span class="line"><span style="color:#E1E4E8">                num </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; sign </span><span style="color:#F97583">=</span><span style="color:#F97583"> -</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> '('</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(result);</span></span>
+<span class="line"><span style="color:#E1E4E8">                stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(sign);</span></span>
+<span class="line"><span style="color:#E1E4E8">                result </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; sign </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> ')'</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                result </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> sign </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> num;</span></span>
+<span class="line"><span style="color:#E1E4E8">                num </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">                result </span><span style="color:#F97583">*=</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">(); </span><span style="color:#6A737D">// sign before '('</span></span>
+<span class="line"><span style="color:#E1E4E8">                result </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">(); </span><span style="color:#6A737D">// result before '('</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">        result </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> sign </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> num;</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>The stack stores the accumulated result and sign before entering a parenthesis group, restoring them on ‘)’.</p>
+<hr>
+<h2 id="7-sliding-window-maximum--monotonic-deque">7. Sliding Window Maximum — Monotonic Deque</h2>
+<h3 id="when-to-use-5">When to Use</h3>
+<p>When you need the maximum (or minimum) in every sliding window of size k over an array. A deque stores candidate indices in decreasing order of value, so the front always holds the current window’s max.</p>
+<h3 id="approach-4">Approach</h3>
+<p>Maintain a deque of indices such that their corresponding values are monotonically decreasing. For each new element:</p>
+<ol>
+<li>Remove indices from the front that are outside the window (index &lt;= i - k).</li>
+<li>Remove indices from the back whose values are &lt;= current (they can never be the max while current is in the window).</li>
+<li>Push the current index to the back.</li>
+<li>The front of the deque is the max for the current window.</li>
+</ol>
+<h3 id="ascii-diagram-sliding-window-maximum">ASCII Diagram: Sliding Window Maximum</h3>
+<p>Array = [1, 3, -1, -3, 5, 3, 6, 7], k = 3</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>i=0 (1):   deque=[0(1)]                    window not full</span></span>
+<span class="line"><span>i=1 (3):   1&#x3C;=3 -> pop back 0; push 1       deque=[1(3)]</span></span>
+<span class="line"><span>i=2 (-1):  -1&#x3C;=3 ok; push 2                 deque=[1(3),2(-1)]  max=nums[1]=3  -> output 3</span></span>
+<span class="line"><span>i=3 (-3):  1 in range? idx1>0 yes</span></span>
+<span class="line"><span>           -3&#x3C;=-1 pop back 2; -3&#x3C;=3 push    deque=[1(3),3(-3)]  max=nums[1]=3  -> output 3</span></span>
+<span class="line"><span>i=4 (5):   1 out of range (1 &#x3C;= 4-3=1) -> pop front</span></span>
+<span class="line"><span>           -3&#x3C;=5 pop 3; 3&#x3C;=5 pop 1; push 4  deque=[4(5)]        max=nums[4]=5  -> output 5</span></span>
+<span class="line"><span>i=5 (3):   3&#x3C;=5 ok; push 5                  deque=[4(5),5(3)]   max=nums[4]=5  -> output 5</span></span>
+<span class="line"><span>i=6 (6):   3&#x3C;=6 pop 5; 5&#x3C;=6 pop 4; push 6   deque=[6(6)]        max=nums[6]=6  -> output 6</span></span>
+<span class="line"><span>i=7 (7):   6&#x3C;=7 pop 6; push 7               deque=[7(7)]        max=nums[7]=7  -> output 7</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Output: [3, 3, 5, 5, 6, 7]</span></span></code></pre>
+<p>The deque front is always the index of the maximum in the current window. Elements behind it are “waiting in line” — they’ll become the max once the larger elements leave the window.</p>
+<h3 id="java-template">Java Template</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">public</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[] </span><span style="color:#B392F0">maxSlidingWindow</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] nums, </span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> k) {</span></span>
+<span class="line"><span style="color:#F97583">    int</span><span style="color:#E1E4E8"> n </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nums.length;</span></span>
+<span class="line"><span style="color:#F97583">    int</span><span style="color:#E1E4E8">[] result </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[n </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> k </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">];</span></span>
+<span class="line"><span style="color:#E1E4E8">    Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> deque </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>(); </span><span style="color:#6A737D">// indices, values decreasing</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> n; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6A737D">        // 1. Remove indices outside the window</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">deque.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> deque.</span><span style="color:#B392F0">peekFirst</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> k) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            deque.</span><span style="color:#B392F0">pollFirst</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#6A737D">        // 2. Remove smaller elements from the back (they're useless now)</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">deque.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> nums[deque.</span><span style="color:#B392F0">peekLast</span><span style="color:#E1E4E8">()] </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> nums[i]) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            deque.</span><span style="color:#B392F0">pollLast</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#6A737D">        // 3. Add current index</span></span>
+<span class="line"><span style="color:#E1E4E8">        deque.</span><span style="color:#B392F0">offerLast</span><span style="color:#E1E4E8">(i);</span></span>
+<span class="line"><span style="color:#6A737D">        // 4. Record max once first window is complete</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">>=</span><span style="color:#E1E4E8"> k </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            result[i </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> k </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nums[deque.</span><span style="color:#B392F0">peekFirst</span><span style="color:#E1E4E8">()];</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>Time: O(n) — each element added and removed from the deque at most once. Space: O(k).</p>
+<h3 id="classic-problem-sliding-window-maximum-leetcode-239">Classic Problem: Sliding Window Maximum (LeetCode 239)</h3>
+<p>The template above is the full solution.</p>
+<h3 id="variant-sliding-window-minimum">Variant: Sliding Window Minimum</h3>
+<p>Change <code>&lt;=</code> to <code>&gt;=</code> in step 2 to maintain an increasing deque (front holds the min).</p>
+<h3 id="variant-sliding-window-median-leetcode-480">Variant: Sliding Window Median (LeetCode 480)</h3>
+<p>For median, a deque alone is not enough. Use two heaps (or a TreeSet/balanced BST) to track the window. This is harder and often solved with two <code>TreeMap</code>-based multisets or a sorted container.</p>
+<hr>
+<h2 id="8-queue-using-stacks">8. Queue Using Stacks</h2>
+<h3 id="when-to-use-6">When to Use</h3>
+<p>A classic design problem testing understanding of amortized analysis. Implement a FIFO queue using only LIFO stack operations.</p>
+<h3 id="approach-5">Approach</h3>
+<p>Use two stacks: an <code>input</code> stack for push and an <code>output</code> stack for pop/peek. When pop/peek is called and <code>output</code> is empty, transfer all elements from <code>input</code> to <code>output</code> (which reverses their order, making the oldest element the new top).</p>
+<h3 id="amortized-o1">Amortized O(1)</h3>
+<p>Each element is moved from input to output exactly once. Over n operations, the total transfer cost is O(n), so amortized cost per operation is O(1).</p>
+<h3 id="classic-problem-implement-queue-using-stacks-leetcode-232">Classic Problem: Implement Queue Using Stacks (LeetCode 232)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> MyQueue</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#E1E4E8"> Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> input;</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#E1E4E8"> Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> output;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#B392F0"> MyQueue</span><span style="color:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#E1E4E8">        input </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">        output </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> push</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> x</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        input.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(x);</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> pop</span><span style="color:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#B392F0">        peek</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> output.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> peek</span><span style="color:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (output.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#F97583">            while</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">input.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                output.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(input.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">());</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> output.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> empty</span><span style="color:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> input.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> output.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>ASCII showing the transfer:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>push(1), push(2), push(3):</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  input stack        output stack</span></span>
+<span class="line"><span>  [3] (top)</span></span>
+<span class="line"><span>  [2]</span></span>
+<span class="line"><span>  [1]</span></span>
+<span class="line"><span>  ----               ---- (empty)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>After peek() triggers transfer:</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  input stack        output stack</span></span>
+<span class="line"><span>  ----               [1] (top) &#x3C;- now FIFO order</span></span>
+<span class="line"><span>                     [2]</span></span>
+<span class="line"><span>                     [3]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>pop() -> 1 (oldest element, now on top of output)</span></span>
+<span class="line"><span>pop() -> 2</span></span>
+<span class="line"><span>pop() -> 3</span></span></code></pre>
+<h3 id="inverse-stack-using-queues-leetcode-225">Inverse: Stack Using Queues (LeetCode 225)</h3>
+<p>Push: add to queue, then rotate all prior elements behind it (poll and re-offer n-1 times). This makes the new element the front.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> MyStack</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#E1E4E8"> Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> queue;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#B392F0"> MyStack</span><span style="color:#E1E4E8">() { queue </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>(); }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> push</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#FFAB70"> x</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        queue.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(x);</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> queue.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            queue.</span><span style="color:#B392F0">offer</span><span style="color:#E1E4E8">(queue.</span><span style="color:#B392F0">poll</span><span style="color:#E1E4E8">());</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> pop</span><span style="color:#E1E4E8">() { </span><span style="color:#F97583">return</span><span style="color:#E1E4E8"> queue.</span><span style="color:#B392F0">poll</span><span style="color:#E1E4E8">(); }</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> top</span><span style="color:#E1E4E8">() { </span><span style="color:#F97583">return</span><span style="color:#E1E4E8"> queue.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">(); }</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> empty</span><span style="color:#E1E4E8">() { </span><span style="color:#F97583">return</span><span style="color:#E1E4E8"> queue.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">(); }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<hr>
+<h2 id="9-valid-stack-sequences">9. Valid Stack Sequences</h2>
+<h3 id="when-to-use-7">When to Use</h3>
+<p>When checking whether a target permutation could be the output of a stack given a specific input order. This models real-world scenarios like train shunting, function call validation, and push/pop sequence verification.</p>
+<h3 id="approach-6">Approach</h3>
+<p>Simulate the push sequence. Maintain a stack. For each value in <code>pushed</code>, push it, then pop as many as match the next expected value in <code>popped</code>. If at the end the stack is empty, the sequence is valid.</p>
+<h3 id="classic-problem-validate-stack-sequences-leetcode-946">Classic Problem: Validate Stack Sequences (LeetCode 946)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> boolean</span><span style="color:#B392F0"> validateStackSequences</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">pushed</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">popped</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> stack </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> popIndex </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> pushed) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(x);</span></span>
+<span class="line"><span style="color:#F97583">            while</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">stack.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> popped[popIndex]) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">                popIndex</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>ASCII for pushed = [1,2,3,4,5], popped = [4,5,3,2,1]:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>push 1: stack=[1],    top=1 != 4</span></span>
+<span class="line"><span>push 2: stack=[1,2],  top=2 != 4</span></span>
+<span class="line"><span>push 3: stack=[1,2,3], top=3 != 4</span></span>
+<span class="line"><span>push 4: stack=[1,2,3,4], top=4 == 4 -> pop, popIdx=1</span></span>
+<span class="line"><span>        stack=[1,2,3], top=3 != 5</span></span>
+<span class="line"><span>push 5: stack=[1,2,3,5], top=5 == 5 -> pop, popIdx=2</span></span>
+<span class="line"><span>        top=3 == 3 -> pop, popIdx=3</span></span>
+<span class="line"><span>        top=2 == 2 -> pop, popIdx=4</span></span>
+<span class="line"><span>        top=1 == 1 -> pop, popIdx=5</span></span>
+<span class="line"><span>        stack empty -> true</span></span></code></pre>
+<p>Time: O(n), Space: O(n).</p>
+<hr>
+<h2 id="10-asteroid-collision">10. Asteroid Collision</h2>
+<h3 id="when-to-use-8">When to Use</h3>
+<p>When simulating interactions between elements moving in opposite directions, where collisions destroy smaller elements. The stack tracks surviving elements; a new right-moving asteroid may collide with left-moving ones on the stack.</p>
+<h3 id="approach-7">Approach</h3>
+<ul>
+<li>Positive asteroid (moving right): push onto stack (could collide later).</li>
+<li>Negative asteroid (moving left): collide with positive asteroids on top of the stack.
+<ul>
+<li>If top is smaller, it explodes (pop); continue checking.</li>
+<li>If equal, both explode (pop, don’t push).</li>
+<li>If top is larger, the new asteroid explodes (don’t push).</li>
+<li>If stack is empty or top is negative, the new asteroid survives (push).</li>
+</ul>
+</li>
+</ul>
+<h3 id="classic-problem-asteroid-collision-leetcode-735">Classic Problem: Asteroid Collision (LeetCode 735)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[] </span><span style="color:#B392F0">asteroidCollision</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">int</span><span style="color:#E1E4E8">[] </span><span style="color:#FFAB70">asteroids</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> stack </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> a </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> asteroids) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (a </span><span style="color:#F97583">></span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(a);</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#6A737D">                // a &#x3C; 0: collide with positives on top</span></span>
+<span class="line"><span style="color:#F97583">                while</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">stack.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">></span><span style="color:#79B8FF"> 0</span><span style="color:#F97583"> &#x26;&#x26;</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x3C;</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8">a) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                    stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">                }</span></span>
+<span class="line"><span style="color:#F97583">                if</span><span style="color:#E1E4E8"> (stack.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">||</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x3C;</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                    stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(a);</span></span>
+<span class="line"><span style="color:#E1E4E8">                } </span><span style="color:#F97583">else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (stack.</span><span style="color:#B392F0">peek</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">==</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8">a) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                    stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">(); </span><span style="color:#6A737D">// both explode</span></span>
+<span class="line"><span style="color:#E1E4E8">                }</span></span>
+<span class="line"><span style="color:#6A737D">                // else: top > -a, new asteroid explodes, do nothing</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8">[] result </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8">[stack.</span><span style="color:#B392F0">size</span><span style="color:#E1E4E8">()];</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> result.length </span><span style="color:#F97583">-</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">>=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i</span><span style="color:#F97583">--</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            result[i] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>ASCII for asteroids = [5, 10, -5]:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  5  ->  10  -> -5  -></span></span>
+<span class="line"><span> [5]   [5,10]      10 > 5? yes, 10 > 5, 5 explodes</span></span>
+<span class="line"><span>                    10 vs 5: top(10) > 5 -> -5 explodes</span></span>
+<span class="line"><span>                    Stack: [5, 10]  (wait, let me redo)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Actually: 5 > 5? No: stack.peek()=10, |a|=5, 10 > 5 so -5 explodes.</span></span>
+<span class="line"><span>Result: [5, 10]</span></span></code></pre>
+<p>Corrected walkthrough for [5, 10, -5]:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>a=5:   push 5              Stack: [5]</span></span>
+<span class="line"><span>a=10:  push 10             Stack: [5, 10]</span></span>
+<span class="line"><span>a=-5:  top=10 > 0 and 10 > 5 -> -5 explodes (don't push)</span></span>
+<span class="line"><span>       Stack: [5, 10]</span></span>
+<span class="line"><span>Result: [5, 10]</span></span></code></pre>
+<p>For [8, -8]: both explode -&gt; []. For [10, 2, -5]: 2 explodes, then -5 vs 10: 10 &gt; 5, -5 explodes -&gt; [10].</p>
+<p>Time: O(n), Space: O(n).</p>
+<hr>
+<h2 id="11-nested-parsing--stack-based-string-problems">11. Nested Parsing &amp; Stack-Based String Problems</h2>
+<h3 id="when-to-use-9">When to Use</h3>
+<p>When a string has nested structure — repeated groups, nested tags, or recursive patterns — and you need to track depth or expand/decode levels.</p>
+<h3 id="classic-problem-decode-string-leetcode-394">Classic Problem: Decode String (LeetCode 394)</h3>
+<p>Input like “3[a2[c]]” -&gt; “accaccacc”. Use two stacks: one for repeat counts, one for the string built so far.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> String </span><span style="color:#B392F0">decodeString</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> countStack </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">        Deque&#x3C;</span><span style="color:#F97583">StringBuilder</span><span style="color:#E1E4E8">> strStack </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>();</span></span>
+<span class="line"><span style="color:#E1E4E8">        StringBuilder current </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> StringBuilder</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> k </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">toCharArray</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (Character.</span><span style="color:#B392F0">isDigit</span><span style="color:#E1E4E8">(c)) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                k </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> k </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 10</span><span style="color:#F97583"> +</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> '0'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> '['</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                countStack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(k);</span></span>
+<span class="line"><span style="color:#E1E4E8">                strStack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(current);</span></span>
+<span class="line"><span style="color:#E1E4E8">                current </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> StringBuilder</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">                k </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> ']'</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">                int</span><span style="color:#E1E4E8"> repeat </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> countStack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">                StringBuilder decoded </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> strStack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">                for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> repeat; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                    decoded.</span><span style="color:#B392F0">append</span><span style="color:#E1E4E8">(current);</span></span>
+<span class="line"><span style="color:#E1E4E8">                }</span></span>
+<span class="line"><span style="color:#E1E4E8">                current </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> decoded;</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">                current.</span><span style="color:#B392F0">append</span><span style="color:#E1E4E8">(c);</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> current.</span><span style="color:#B392F0">toString</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>On ‘[’: save the current string and repeat count, start fresh for the nested group. On ‘]’: repeat the nested string and append to the parent.</p>
+<hr>
+<h2 id="12-expression-parsing-with-precedence-advanced">12. Expression Parsing with Precedence (Advanced)</h2>
+<h3 id="classic-problem-basic-calculator-iii-leetcode-772">Classic Problem: Basic Calculator III (LeetCode 772)</h3>
+<p>Combines +, -, *, /, parentheses, and unary minus. This unifies the patterns from sections 5 and 6.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> Solution</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> int</span><span style="color:#B392F0"> calculate</span><span style="color:#E1E4E8">(String </span><span style="color:#FFAB70">s</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">        Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> stack </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> ArrayDeque&#x3C;>();</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> num </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        char</span><span style="color:#E1E4E8"> op </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> '+'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">length</span><span style="color:#E1E4E8">()) {</span></span>
+<span class="line"><span style="color:#F97583">            char</span><span style="color:#E1E4E8"> c </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> s.</span><span style="color:#B392F0">charAt</span><span style="color:#E1E4E8">(i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> (Character.</span><span style="color:#B392F0">isDigit</span><span style="color:#E1E4E8">(c)) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                num </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> num </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 10</span><span style="color:#F97583"> +</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">-</span><span style="color:#9ECBFF"> '0'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> '('</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">                num </span><span style="color:#F97583">=</span><span style="color:#B392F0"> calculate</span><span style="color:#E1E4E8">(s); </span><span style="color:#6A737D">// recurse on sub-expression</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> ')'</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">                break</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            } </span><span style="color:#F97583">else</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> (c </span><span style="color:#F97583">!=</span><span style="color:#9ECBFF"> ' '</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#B392F0">                applyOp</span><span style="color:#E1E4E8">(stack, op, num);</span></span>
+<span class="line"><span style="color:#E1E4E8">                op </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> c;</span></span>
+<span class="line"><span style="color:#E1E4E8">                num </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">            }</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#B392F0">        applyOp</span><span style="color:#E1E4E8">(stack, op, num);</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> result </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        while</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">stack.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">()) result </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> result;</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> applyOp</span><span style="color:#E1E4E8">(Deque&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">> </span><span style="color:#FFAB70">stack</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">char</span><span style="color:#FFAB70"> op</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> num</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        switch</span><span style="color:#E1E4E8"> (op) {</span></span>
+<span class="line"><span style="color:#F97583">            case</span><span style="color:#9ECBFF"> '+'</span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(num); </span><span style="color:#F97583">break</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            case</span><span style="color:#9ECBFF"> '-'</span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">num); </span><span style="color:#F97583">break</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            case</span><span style="color:#9ECBFF"> '*'</span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> num); </span><span style="color:#F97583">break</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">            case</span><span style="color:#9ECBFF"> '/'</span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> stack.</span><span style="color:#B392F0">push</span><span style="color:#E1E4E8">(stack.</span><span style="color:#B392F0">pop</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">/</span><span style="color:#E1E4E8"> num); </span><span style="color:#F97583">break</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>The recursion on ‘(’ naturally handles nested parentheses, and the deferred-evaluation pattern handles precedence.</p>
+<hr>
+<h2 id="pattern-reference-table">Pattern Reference Table</h2>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>When to Use</th>
+<th>Key Data Structure</th>
+<th>Time</th>
+<th>Classic Problems</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Monotonic Stack (Decreasing)</td>
+<td>Next greater element, stock span, daily temperatures</td>
+<td>Deque (decreasing by value)</td>
+<td>O(n)</td>
+<td>LC 739, 901, 496, 503</td>
+</tr>
+<tr>
+<td>Monotonic Stack (Increasing)</td>
+<td>Next smaller element, largest rectangle in histogram</td>
+<td>Deque (increasing by value)</td>
+<td>O(n)</td>
+<td>LC 84, 42, 85</td>
+</tr>
+<tr>
+<td>Min/Max Stack</td>
+<td>O(1) min/max retrieval on a stack</td>
+<td>Main stack + auxiliary stack</td>
+<td>O(1) per op</td>
+<td>LC 155, 716</td>
+</tr>
+<tr>
+<td>Balanced Parentheses</td>
+<td>Matching/nesting validation</td>
+<td>Stack of expected closers</td>
+<td>O(n)</td>
+<td>LC 20, 945, 678, 2116</td>
+</tr>
+<tr>
+<td>RPN Evaluation</td>
+<td>Postfix expression evaluation</td>
+<td>Operand stack</td>
+<td>O(n)</td>
+<td>LC 150, 1444</td>
+</tr>
+<tr>
+<td>Infix Calculator</td>
+<td>Expression with precedence and parens</td>
+<td>Value stack + operator stack</td>
+<td>O(n)</td>
+<td>LC 224, 227, 772</td>
+</tr>
+<tr>
+<td>Monotonic Deque (Sliding Max)</td>
+<td>Max/min in sliding window</td>
+<td>Deque of indices (decreasing)</td>
+<td>O(n)</td>
+<td>LC 239, 862</td>
+</tr>
+<tr>
+<td>Queue from Stacks</td>
+<td>Amortized O(1) queue from stacks</td>
+<td>Two stacks (input + output)</td>
+<td>Amortized O(1)</td>
+<td>LC 232, 225</td>
+</tr>
+<tr>
+<td>Valid Stack Sequences</td>
+<td>Validate push/pop permutation</td>
+<td>Simulation stack</td>
+<td>O(n)</td>
+<td>LC 946, 1003</td>
+</tr>
+<tr>
+<td>Asteroid Collision</td>
+<td>Opposite-direction collision simulation</td>
+<td>Stack of survivors</td>
+<td>O(n)</td>
+<td>LC 735</td>
+</tr>
+<tr>
+<td>Nested String Decoding</td>
+<td>Recursive string expansion</td>
+<td>Count stack + string stack</td>
+<td>O(n)</td>
+<td>LC 394, 856</td>
+</tr>
+<tr>
+<td>Two-Stack Expression</td>
+<td>Full arithmetic with precedence</td>
+<td>Two stacks + recursion</td>
+<td>O(n)</td>
+<td>LC 224, 772, 1087</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="quick-reference-monotonic-stack-variants">Quick-Reference: Monotonic Stack Variants</h2>
+<table>
+<thead>
+<tr>
+<th>Goal</th>
+<th>Stack Order</th>
+<th>Comparison</th>
+<th>What You Store</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Next greater</td>
+<td>Decreasing</td>
+<td>pop while top &lt; current</td>
+<td>Indices</td>
+</tr>
+<tr>
+<td>Next smaller</td>
+<td>Increasing</td>
+<td>pop while top &gt; current</td>
+<td>Indices</td>
+</tr>
+<tr>
+<td>Previous greater</td>
+<td>Decreasing</td>
+<td>check before push</td>
+<td>Indices</td>
+</tr>
+<tr>
+<td>Previous smaller</td>
+<td>Increasing</td>
+<td>check before push</td>
+<td>Indices</td>
+</tr>
+<tr>
+<td>Largest rectangle</td>
+<td>Increasing</td>
+<td>pop while top &gt; current (sentinel 0 at end)</td>
+<td>Indices</td>
+</tr>
+<tr>
+<td>Stock span</td>
+<td>Decreasing</td>
+<td>pop while top &lt;= current</td>
+<td>(price, span) pairs</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="quick-reference-common-mistakes">Quick-Reference: Common Mistakes</h2>
+<ul>
+<li><strong>Duplicate handling in min stack</strong>: use <code>&lt;=</code> not <code>&lt;</code> when deciding whether to push to the min stack, or duplicate minimums will break.</li>
+<li><strong>RPN operand order</strong>: for <code>-</code> and <code>/</code>, the first pop is the right operand. Always do <code>a - b</code> where <code>b = pop()</code> first, <code>a = pop()</code> second.</li>
+<li><strong>Sliding window deque index check</strong>: compare <code>deque.peekFirst() &lt;= i - k</code> (use <code>&lt;=</code> not <code>&lt;</code>) to remove out-of-window indices.</li>
+<li><strong>Histogram sentinel</strong>: append a 0 (or use <code>i == n</code> as a virtual 0-height bar) to force popping all remaining bars at the end.</li>
+<li><strong>Asteroid equal size</strong>: when <code>|a| == top</code>, both explode — don’t forget to pop AND skip pushing.</li>
+<li><strong>ArrayDeque vs Stack</strong>: prefer <code>Deque&lt;Integer&gt; stack = new ArrayDeque&lt;&gt;()</code> over <code>Stack&lt;Integer&gt;</code>. The legacy <code>Stack</code> is synchronized and slower.</li>
+<li><strong>Empty stack checks</strong>: always guard <code>peek()</code>/<code>pop()</code> with <code>isEmpty()</code> to avoid exceptions.</li>
+</ul>
+<hr>
+<h2 id="interview-strategy-checklist">Interview Strategy Checklist</h2>
+<ol>
+<li><strong>Identify the pattern</strong>: Does the problem ask for “next/previous greater/smaller”? -&gt; Monotonic stack. Sliding extremum? -&gt; Monotonic deque. Matching/nesting? -&gt; Parentheses stack. Expression evaluation? -&gt; Calculator pattern.</li>
+<li><strong>Choose stack order</strong>: For “next greater”, use a decreasing stack. For “next smaller”, increasing. Store indices (not values) when you need position info.</li>
+<li><strong>Handle boundaries</strong>: Use sentinels (virtual elements at start/end) to simplify edge cases, especially in histogram problems.</li>
+<li><strong>Verify with a small example</strong>: Trace through 5-6 elements to confirm the stack invariant holds.</li>
+<li><strong>Check for circular or wrapped arrays</strong>: For “next greater element II” (circular array), iterate <code>2n</code> times and use <code>i % n</code>.</li>
+<li><strong>Consider space</strong>: Most stack solutions use O(n) space. Can you reduce to O(1) with running variables (e.g., parentheses counting)?</li>
+</ol>
+<hr>
+<h2 id="extended-problem-set-by-pattern">Extended Problem Set by Pattern</h2>
+<h3 id="monotonic-stack">Monotonic Stack</h3>
+<ul>
+<li>LeetCode 496: Next Greater Element I</li>
+<li>LeetCode 503: Next Greater Element II (circular)</li>
+<li>LeetCode 739: Daily Temperatures</li>
+<li>LeetCode 901: Online Stock Span</li>
+<li>LeetCode 84: Largest Rectangle in Histogram</li>
+<li>LeetCode 85: Maximal Rectangle (histogram per row)</li>
+<li>LeetCode 42: Trapping Rain Water (two-pointer or stack)</li>
+<li>LeetCode 402: Remove K Digits (increasing stack)</li>
+<li>LeetCode 316: Remove Duplicate Letters (stack + last-occurrence)</li>
+<li>LeetCode 1081: Smallest Subsequence of Distinct Characters</li>
+</ul>
+<h3 id="parentheses--matching">Parentheses / Matching</h3>
+<ul>
+<li>LeetCode 20: Valid Parentheses</li>
+<li>LeetCode 22: Generate Parentheses (backtracking)</li>
+<li>LeetCode 32: Longest Valid Parentheses</li>
+<li>LeetCode 945: Minimum Add to Make Parentheses Valid</li>
+<li>LeetCode 678: Valid Parenthesis String</li>
+<li>LeetCode 2116: Check if a Parentheses String Can Be Valid</li>
+</ul>
+<h3 id="calculator--expression">Calculator / Expression</h3>
+<ul>
+<li>LeetCode 150: Evaluate Reverse Polish Notation</li>
+<li>LeetCode 224: Basic Calculator</li>
+<li>LeetCode 227: Basic Calculator II</li>
+<li>LeetCode 772: Basic Calculator III</li>
+<li>LeetCode 394: Decode String</li>
+</ul>
+<h3 id="design">Design</h3>
+<ul>
+<li>LeetCode 155: Min Stack</li>
+<li>LeetCode 716: Max Stack</li>
+<li>LeetCode 232: Implement Queue Using Stacks</li>
+<li>LeetCode 225: Implement Stack Using Queues</li>
+<li>LeetCode 1381: Design a Stack With Increment Operation</li>
+</ul>
+<h3 id="simulation--deque">Simulation / Deque</h3>
+<ul>
+<li>LeetCode 239: Sliding Window Maximum</li>
+<li>LeetCode 862: Shortest Subarray with Sum at Least K (deque + prefix sum)</li>
+<li>LeetCode 946: Validate Stack Sequences</li>
+<li>LeetCode 735: Asteroid Collision</li>
+<li>LeetCode 1047: Remove All Adjacent Duplicates In String</li>
+</ul>
+<hr>
+<p>This covers the core stack and queue patterns you’ll encounter in interviews. The monotonic stack and monotonic deque are the highest-leverage patterns — master those first, as they appear in the most “surprising” contexts and are often the difference between an O(n^2) brute force and an O(n) optimal solution.</p>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Stack (LIFO): push/pop/peek all O(1). Use for: balanced parentheses, eval expressions, DFS, monotonic stack (next greater element).</li>
+<li>Queue (FIFO): enqueue/dequeue O(1). Use for: BFS, level-order traversal, scheduling.</li>
+<li>Monotonic stack: maintain stack in increasing/decreasing order — used for next greater/smaller element, largest rectangle in histogram.</li>
+<li>Deque: double-ended queue, O(1) at both ends — used for sliding window maximum.</li>
+<li>Prefer <code>Deque&lt;Integer&gt; stack = new ArrayDeque&lt;&gt;()</code> over the legacy synchronized <code>Stack</code> class.</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you implement a stack using queues?” — Two queues: push to q1, pop by transferring all but last element to q2, pop the last. O(n) pop, O(1) push (or vice versa with one-queue approach).</li>
+<li>“What’s a monotonic stack?” — A stack where elements are maintained in sorted order. When pushing, pop all elements that violate the order. Used for O(n) “next greater element” problems.</li>
+</ul>
+<p><strong>Gotcha:</strong> Using a stack when a queue is needed (or vice versa). BFS uses a QUEUE (FIFO — explore level by level). DFS uses a STACK (LIFO — explore deeply first). Mixing them up changes the traversal order and gives wrong results.</p>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/coding-interview/stacks-and-queues/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Stacks%20%26%20Queues%20%E2%80%94%20Coding%20Interview%20Prep&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fcoding-interview%2Fstacks-and-queues%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fcoding-interview%2Fstacks-and-queues%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/coding-interview/stacks-and-queues" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/coding-interview/arrays-and-strings/" class="related-card"><div class="related-card-title">Arrays &amp; Strings — Interview Prep Guide</div><div class="related-card-meta">Coding Interview · 47 min</div></a><a href="/notes/coding-interview/backtracking/" class="related-card"><div class="related-card-title">Backtracking — Complete Interview Prep Guide</div><div class="related-card-meta">Coding Interview · 21 min</div></a><a href="/notes/coding-interview/big-o-and-pattern-recognition/" class="related-card"><div class="related-card-title">Big O Complexity &amp; Pattern Recognition</div><div class="related-card-meta">Coding Interview · 30 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/coding-interview/sorting" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Sorting — Coding Interview Prep</span></a><a href="/notes/coding-interview/trees" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Trees — Coding Interview Prep</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Stacks &amp; Queues — Coding Interview Prep" data-selector=".article-prose" data-article-slug="coding-interview/stacks-and-queues" data-article-title="Stacks &amp; Queues — Coding Interview Prep" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

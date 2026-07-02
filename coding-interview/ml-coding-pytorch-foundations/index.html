@@ -1,0 +1,1035 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>ML Coding - PyTorch Foundations · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link active" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#tensors--the-foundation" class="toc-link" data-toc-link="tensors--the-foundation" data-astro-cid-p33bl5ka>Tensors — The Foundation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#shape-dtype-device" class="toc-link" data-toc-link="shape-dtype-device" data-astro-cid-p33bl5ka>Shape, dtype, device</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#common-constructors" class="toc-link" data-toc-link="common-constructors" data-astro-cid-p33bl5ka>Common constructors</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#shape-manipulation" class="toc-link" data-toc-link="shape-manipulation" data-astro-cid-p33bl5ka>Shape manipulation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#indexing-and-slicing" class="toc-link" data-toc-link="indexing-and-slicing" data-astro-cid-p33bl5ka>Indexing and slicing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#tensor-operations" class="toc-link" data-toc-link="tensor-operations" data-astro-cid-p33bl5ka>Tensor Operations</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#element-wise-ops" class="toc-link" data-toc-link="element-wise-ops" data-astro-cid-p33bl5ka>Element-wise ops</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#broadcasting-rules" class="toc-link" data-toc-link="broadcasting-rules" data-astro-cid-p33bl5ka>Broadcasting rules</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#matrix-multiplication" class="toc-link" data-toc-link="matrix-multiplication" data-astro-cid-p33bl5ka>Matrix multiplication</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#einsum" class="toc-link" data-toc-link="einsum" data-astro-cid-p33bl5ka>Einsum</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#reductions" class="toc-link" data-toc-link="reductions" data-astro-cid-p33bl5ka>Reductions</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#autograd-and-backpropagation" class="toc-link" data-toc-link="autograd-and-backpropagation" data-astro-cid-p33bl5ka>Autograd and Backpropagation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#basic-usage" class="toc-link" data-toc-link="basic-usage" data-astro-cid-p33bl5ka>Basic usage</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#requires_grad-and-no_grad" class="toc-link" data-toc-link="requires_grad-and-no_grad" data-astro-cid-p33bl5ka>requires_grad and no_grad</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-backward-pass" class="toc-link" data-toc-link="the-backward-pass" data-astro-cid-p33bl5ka>The backward pass</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#accumulating-gradients" class="toc-link" data-toc-link="accumulating-gradients" data-astro-cid-p33bl5ka>Accumulating gradients</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#gradient-checkpointing" class="toc-link" data-toc-link="gradient-checkpointing" data-astro-cid-p33bl5ka>Gradient checkpointing</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#detaching-from-the-graph" class="toc-link" data-toc-link="detaching-from-the-graph" data-astro-cid-p33bl5ka>Detaching from the graph</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#building-nnmodule-subclasses" class="toc-link" data-toc-link="building-nnmodule-subclasses" data-astro-cid-p33bl5ka>Building nn.Module Subclasses</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#basic-structure" class="toc-link" data-toc-link="basic-structure" data-astro-cid-p33bl5ka>Basic structure</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-parameter-lifecycle" class="toc-link" data-toc-link="the-parameter-lifecycle" data-astro-cid-p33bl5ka>The parameter lifecycle</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#parameter-initialization" class="toc-link" data-toc-link="parameter-initialization" data-astro-cid-p33bl5ka>Parameter initialization</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-forward-method" class="toc-link" data-toc-link="the-forward-method" data-astro-cid-p33bl5ka>The forward method</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#saving-and-loading" class="toc-link" data-toc-link="saving-and-loading" data-astro-cid-p33bl5ka>Saving and loading</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#training-loop-from-scratch" class="toc-link" data-toc-link="training-loop-from-scratch" data-astro-cid-p33bl5ka>Training Loop From Scratch</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#gradient-clipping" class="toc-link" data-toc-link="gradient-clipping" data-astro-cid-p33bl5ka>Gradient clipping</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#learning-rate-scheduling" class="toc-link" data-toc-link="learning-rate-scheduling" data-astro-cid-p33bl5ka>Learning rate scheduling</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#mixed-precision-training" class="toc-link" data-toc-link="mixed-precision-training" data-astro-cid-p33bl5ka>Mixed precision training</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#custom-autograd-functions" class="toc-link" data-toc-link="custom-autograd-functions" data-astro-cid-p33bl5ka>Custom Autograd Functions</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#evaluation-patterns" class="toc-link" data-toc-link="evaluation-patterns" data-astro-cid-p33bl5ka>Evaluation Patterns</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-eval-loop" class="toc-link" data-toc-link="the-eval-loop" data-astro-cid-p33bl5ka>The eval loop</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#handling-variable-length-sequences" class="toc-link" data-toc-link="handling-variable-length-sequences" data-astro-cid-p33bl5ka>Handling variable-length sequences</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#common-interview-problems" class="toc-link" data-toc-link="common-interview-problems" data-astro-cid-p33bl5ka>Common Interview Problems</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#problem-1-implement-a-custom-loss-function" class="toc-link" data-toc-link="problem-1-implement-a-custom-loss-function" data-astro-cid-p33bl5ka>Problem 1: Implement a custom loss function</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#problem-2-implement-learning-rate-warmup" class="toc-link" data-toc-link="problem-2-implement-learning-rate-warmup" data-astro-cid-p33bl5ka>Problem 2: Implement learning rate warmup</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#problem-3-implement-a-custom-optimizer-sgd-with-momentum" class="toc-link" data-toc-link="problem-3-implement-a-custom-optimizer-sgd-with-momentum" data-astro-cid-p33bl5ka>Problem 3: Implement a custom optimizer (SGD with momentum)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#problem-4-implement-a-simple-vae-encoder" class="toc-link" data-toc-link="problem-4-implement-a-simple-vae-encoder" data-astro-cid-p33bl5ka>Problem 4: Implement a simple VAE encoder</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#performance-and-profiling" class="toc-link" data-toc-link="performance-and-profiling" data-astro-cid-p33bl5ka>Performance and Profiling</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#moving-to-gpu" class="toc-link" data-toc-link="moving-to-gpu" data-astro-cid-p33bl5ka>Moving to GPU</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#dataloader-performance" class="toc-link" data-toc-link="dataloader-performance" data-astro-cid-p33bl5ka>DataLoader performance</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#profiling" class="toc-link" data-toc-link="profiling" data-astro-cid-p33bl5ka>Profiling</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#common-pitfalls" class="toc-link" data-toc-link="common-pitfalls" data-astro-cid-p33bl5ka>Common Pitfalls</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#1-cross-entropy-expects-raw-logits" class="toc-link" data-toc-link="1-cross-entropy-expects-raw-logits" data-astro-cid-p33bl5ka>1. Cross-entropy expects raw logits</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#2-softmax-dim" class="toc-link" data-toc-link="2-softmax-dim" data-astro-cid-p33bl5ka>2. Softmax dim</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#3-reduction-default" class="toc-link" data-toc-link="3-reduction-default" data-astro-cid-p33bl5ka>3. Reduction default</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#4-in-place-operations" class="toc-link" data-toc-link="4-in-place-operations" data-astro-cid-p33bl5ka>4. In-place operations</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#5-view-vs-reshape" class="toc-link" data-toc-link="5-view-vs-reshape" data-astro-cid-p33bl5ka>5. View vs reshape</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-checklist" class="toc-link" data-toc-link="interview-checklist" data-astro-cid-p33bl5ka>Interview Checklist</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/coding-interview/" class="article-category" data-astro-cid-sgg5joot>Coding Interview</a><h1 class="article-title" data-astro-cid-sgg5joot>ML Coding - PyTorch Foundations</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 17 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 24 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>pytorch</span><span class="tag" data-astro-cid-sgg5joot>ml-coding</span><span class="tag" data-astro-cid-sgg5joot>deep-learning</span><span class="tag" data-astro-cid-sgg5joot>tensors</span><span class="tag" data-astro-cid-sgg5joot>autograd</span><span class="tag" data-astro-cid-sgg5joot>nn-module</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="ml-coding-interview-prep--part-1-pytorch-foundations">ML Coding Interview Prep — Part 1: PyTorch Foundations</h1>
+<p>The most common ML coding interview questions ask you to implement core components from scratch: a transformer layer, an attention mechanism, a training loop, a loss function. You need to be able to do these in PyTorch (or NumPy for the truly from-scratch versions) without looking anything up. This doc covers the foundational PyTorch machinery you’ll use in every ML coding interview.</p>
+<p>The companion doc, <em>ML Coding - Transformer</em>, covers transformer-specific implementations. This one is about PyTorch itself.</p>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>The PyTorch fundamentals needed to implement neural network components from scratch — tensors, autograd, nn.Module, and training loops.</p>
+<p><strong>How it’s asked:</strong> “Implement a custom layer, write a training loop, debug a gradient flow — ML coding interviews test whether you can build, not just call APIs.”</p>
+<hr>
+<h2 id="tensors--the-foundation">Tensors — The Foundation</h2>
+<p>Every PyTorch computation revolves around <code>torch.Tensor</code>, a multi-dimensional array similar to NumPy’s <code>ndarray</code> but with GPU support and autograd integration. If you understand NumPy, you understand most of what tensors can do.</p>
+<h3 id="shape-dtype-device">Shape, dtype, device</h3>
+<p>Every tensor has three fundamental attributes you must always know:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> torch</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">)  </span><span style="color:#6A737D"># 2x3x4 random tensor</span></span>
+<span class="line"><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(x.shape)   </span><span style="color:#6A737D"># torch.Size([2, 3, 4])</span></span>
+<span class="line"><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(x.dtype)   </span><span style="color:#6A737D"># torch.float32 (default)</span></span>
+<span class="line"><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(x.device)  </span><span style="color:#6A737D"># cpu (or cuda:0 if moved to GPU)</span></span></code></pre>
+<p>These three attributes are the first thing you check when debugging a shape mismatch or dtype error. In interviews, the interviewer will often give you a tensor and expect you to reason about its shape, dtype, and what operations preserve/change each.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌─────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│  torch.Tensor                                             │</span></span>
+<span class="line"><span>│  ┌─────────────────────────────────────────────────┐    │</span></span>
+<span class="line"><span>│  │  data:    raw bytes (contiguous or strided)      │    │</span></span>
+<span class="line"><span>│  │  shape:   torch.Size([2, 3, 4])                   │    │</span></span>
+<span class="line"><span>│  │  dtype:   torch.float32 / .int64 / .bool etc.    │    │</span></span>
+<span class="line"><span>│  │  device:  cpu / cuda:0 / cuda:1 / mps             │    │</span></span>
+<span class="line"><span>│  │  requires_grad: True/False                        │    │</span></span>
+<span class="line"><span>│  │  grad_fn: &#x3C;AddBackward0> (set after autograd ops) │    │</span></span>
+<span class="line"><span>│  └─────────────────────────────────────────────────┘    │</span></span>
+<span class="line"><span>└─────────────────────────────────────────────────────────┘</span></span></code></pre>
+<h3 id="common-constructors">Common constructors</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">torch.zeros(</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)           </span><span style="color:#6A737D"># All zeros</span></span>
+<span class="line"><span style="color:#E1E4E8">torch.ones(</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)            </span><span style="color:#6A737D"># All ones</span></span>
+<span class="line"><span style="color:#E1E4E8">torch.empty(</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)           </span><span style="color:#6A737D"># Uninitialized (faster than zeros)</span></span>
+<span class="line"><span style="color:#E1E4E8">torch.full((</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">), </span><span style="color:#79B8FF">7</span><span style="color:#E1E4E8">)       </span><span style="color:#6A737D"># All 7s</span></span>
+<span class="line"><span style="color:#E1E4E8">torch.eye(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)                </span><span style="color:#6A737D"># 3x3 identity</span></span>
+<span class="line"><span style="color:#E1E4E8">torch.arange(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">10</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">)      </span><span style="color:#6A737D"># [0, 2, 4, 6, 8]</span></span>
+<span class="line"><span style="color:#E1E4E8">torch.linspace(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">)     </span><span style="color:#6A737D"># [0, 0.25, 0.5, 0.75, 1.0]</span></span>
+<span class="line"><span style="color:#E1E4E8">torch.tensor([</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">])     </span><span style="color:#6A737D"># From Python list</span></span>
+<span class="line"><span style="color:#E1E4E8">torch.randn(</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)           </span><span style="color:#6A737D"># Normal(0, 1)</span></span>
+<span class="line"><span style="color:#E1E4E8">torch.randint(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">10</span><span style="color:#E1E4E8">, (</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)) </span><span style="color:#6A737D"># Uniform [0, 10)</span></span></code></pre>
+<h3 id="shape-manipulation">Shape manipulation</h3>
+<p>Reshaping is the most error-prone operation in tensor code. The key is to always know what the new shape means.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">)   </span><span style="color:#6A737D"># shape: (2, 3, 4)</span></span>
+<span class="line"><span style="color:#E1E4E8">x.view(</span><span style="color:#79B8FF">6</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">)                </span><span style="color:#6A737D"># Reshape: total elements must match</span></span>
+<span class="line"><span style="color:#E1E4E8">x.view(</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">12</span><span style="color:#E1E4E8">)               </span><span style="color:#6A737D"># Same: 2*3*4 = 24 elements</span></span>
+<span class="line"><span style="color:#E1E4E8">x.reshape(</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">12</span><span style="color:#E1E4E8">)            </span><span style="color:#6A737D"># Same as view but allows non-contiguous</span></span>
+<span class="line"><span style="color:#E1E4E8">x.transpose(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)           </span><span style="color:#6A737D"># Swap dims 0 and 1, shape: (3, 2, 4)</span></span>
+<span class="line"><span style="color:#E1E4E8">x.permute(</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)          </span><span style="color:#6A737D"># Reorder to (4, 2, 3) — common in image processing</span></span>
+<span class="line"><span style="color:#E1E4E8">x.squeeze()                 </span><span style="color:#6A737D"># Remove all dims of size 1</span></span>
+<span class="line"><span style="color:#E1E4E8">x.unsqueeze(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">)              </span><span style="color:#6A737D"># Add dim at position 0, shape: (1, 2, 3, 4)</span></span>
+<span class="line"><span style="color:#E1E4E8">x.flatten()                 </span><span style="color:#6A737D"># Collapse all dims into one</span></span></code></pre>
+<p>The interview question: “Given a tensor of shape <code>(B, T, C)</code>, reshape it to <code>(B, T*C)</code>.” Answer: <code>x.view(B, T*C)</code> or <code>x.reshape(B, T*C)</code>. The trap is that the memory must be contiguous for <code>view</code>; if not, use <code>reshape</code> (which copies if needed) or <code>contiguous().view()</code>.</p>
+<h3 id="indexing-and-slicing">Indexing and slicing</h3>
+<p>PyTorch indexing follows NumPy semantics. This is the source of countless bugs.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">)    </span><span style="color:#6A737D"># (3, 4, 5)</span></span>
+<span class="line"><span style="color:#E1E4E8">x[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]                         </span><span style="color:#6A737D"># First batch: (4, 5)</span></span>
+<span class="line"><span style="color:#E1E4E8">x[:, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, :]                   </span><span style="color:#6A737D"># All batches, first row, all cols: (3, 5)</span></span>
+<span class="line"><span style="color:#E1E4E8">x[</span><span style="color:#79B8FF">...</span><span style="color:#E1E4E8">, :</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">]                   </span><span style="color:#6A737D"># Ellipsis: (3, 4, 2) — last dim sliced</span></span>
+<span class="line"><span style="color:#E1E4E8">x[x </span><span style="color:#F97583">></span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">]                     </span><span style="color:#6A737D"># Boolean mask, returns 1D tensor</span></span>
+<span class="line"><span style="color:#E1E4E8">x[[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]]                 </span><span style="color:#6A737D"># Fancy indexing: reorders first dim</span></span></code></pre>
+<p>The interview trap: <code>x[0]</code> removes a dimension, but <code>x[0:1]</code> keeps it as shape <code>(1, 4, 5)</code>. This matters when you’re broadcasting with another tensor.</p>
+<hr>
+<h2 id="tensor-operations">Tensor Operations</h2>
+<h3 id="element-wise-ops">Element-wise ops</h3>
+<p>Element-wise operations preserve shape and apply independently to each element. They include <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>**</code>, <code>torch.add</code>, <code>torch.mul</code>, etc.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.tensor([</span><span style="color:#79B8FF">1.0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2.0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3.0</span><span style="color:#E1E4E8">])</span></span>
+<span class="line"><span style="color:#E1E4E8">y </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.tensor([</span><span style="color:#79B8FF">4.0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">5.0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">6.0</span><span style="color:#E1E4E8">])</span></span>
+<span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> y       </span><span style="color:#6A737D"># [5, 7, 9]</span></span>
+<span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> y       </span><span style="color:#6A737D"># [4, 10, 18] (element-wise, not dot product)</span></span>
+<span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">**</span><span style="color:#79B8FF"> 2</span><span style="color:#6A737D">      # [1, 4, 9]</span></span>
+<span class="line"><span style="color:#E1E4E8">torch.sin(x)  </span><span style="color:#6A737D"># [0.84, 0.91, 0.14]</span></span></code></pre>
+<p>All element-wise operations support <strong>broadcasting</strong> — smaller tensors are virtually expanded to match the larger shape, without copying data. This is convenient but a common source of bugs.</p>
+<h3 id="broadcasting-rules">Broadcasting rules</h3>
+<p>Broadcasting follows two rules:</p>
+<ol>
+<li>If tensors have different ranks, prepend 1s to the shape of the lower-rank tensor</li>
+<li>For each dim, sizes must either be equal or one of them must be 1</li>
+</ol>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># (3, 1) + (1, 4) → (3, 4)</span></span>
+<span class="line"><span style="color:#E1E4E8">a </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">b </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">c </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> a </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> b   </span><span style="color:#6A737D"># shape (3, 4), each (i, j) = a[i, 0] + b[0, j]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Common pattern: per-row bias</span></span>
+<span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">32</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">128</span><span style="color:#E1E4E8">)      </span><span style="color:#6A737D"># batch of 32 vectors of dim 128</span></span>
+<span class="line"><span style="color:#E1E4E8">bias </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">128</span><span style="color:#E1E4E8">)        </span><span style="color:#6A737D"># one bias vector</span></span>
+<span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> bias                      </span><span style="color:#6A737D"># bias is broadcast across batch dim: (32, 128)</span></span></code></pre>
+<p>The interview trap: <code>(B, T) + (T,)</code> works (bias broadcast over batch) but <code>(B, T) + (B,)</code> fails because the last dim doesn’t match.</p>
+<h3 id="matrix-multiplication">Matrix multiplication</h3>
+<p>Three ways to do matrix multiplication in PyTorch. Know all three.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># 1. torch.matmul / @ — the standard way</span></span>
+<span class="line"><span style="color:#E1E4E8">a </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">b </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">c </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> a </span><span style="color:#F97583">@</span><span style="color:#E1E4E8"> b                    </span><span style="color:#6A737D"># shape (3, 5)</span></span>
+<span class="line"><span style="color:#E1E4E8">torch.matmul(a, b)           </span><span style="color:#6A737D"># same</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># 2. torch.mm — for 2D tensors only</span></span>
+<span class="line"><span style="color:#E1E4E8">torch.mm(a, b)               </span><span style="color:#6A737D"># shape (3, 5), fails for batched input</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># 3. torch.bmm — for batched 3D tensors</span></span>
+<span class="line"><span style="color:#E1E4E8">a_batch </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">8</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">b_batch </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">8</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">c_batch </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.bmm(a_batch, b_batch)  </span><span style="color:#6A737D"># shape (8, 3, 5)</span></span></code></pre>
+<p>For higher-dim batched matmul, use <code>matmul</code> or <code>einsum</code>. Einsum is the most flexible and is the interview-preferred way to express complex tensor operations clearly.</p>
+<h3 id="einsum">Einsum</h3>
+<p>Einsum is a way to express tensor operations as sums over labeled indices. Once you learn it, you’ll use it everywhere.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># Matrix multiply: 'ik,kj->ij'</span></span>
+<span class="line"><span style="color:#E1E4E8">A </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">B </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">C </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.einsum(</span><span style="color:#9ECBFF">'ik,kj->ij'</span><span style="color:#E1E4E8">, A, B)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Batched matrix multiply: 'bik,bkj->bij'</span></span>
+<span class="line"><span style="color:#E1E4E8">A </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">8</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">B </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">8</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">C </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.einsum(</span><span style="color:#9ECBFF">'bik,bkj->bij'</span><span style="color:#E1E4E8">, A, B)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Attention scores: 'bhid,bhjd->bhij'  (Q @ K^T)</span></span>
+<span class="line"><span style="color:#E1E4E8">B, H, I, J, D </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">8</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">10</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">10</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">64</span></span>
+<span class="line"><span style="color:#E1E4E8">Q </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(B, H, I, D)</span></span>
+<span class="line"><span style="color:#E1E4E8">K </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(B, H, J, D)</span></span>
+<span class="line"><span style="color:#E1E4E8">scores </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.einsum(</span><span style="color:#9ECBFF">'bhid,bhjd->bhij'</span><span style="color:#E1E4E8">, Q, K)  </span><span style="color:#6A737D"># (B, H, I, J)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Sum over a dim: 'bij->bi' or 'bij->b' or 'bij->'</span></span>
+<span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">torch.einsum(</span><span style="color:#9ECBFF">'bij->bi'</span><span style="color:#E1E4E8">, x)   </span><span style="color:#6A737D"># Sum over j: (2, 3)</span></span>
+<span class="line"><span style="color:#E1E4E8">torch.einsum(</span><span style="color:#9ECBFF">'bij->b'</span><span style="color:#E1E4E8">, x)    </span><span style="color:#6A737D"># Sum over ij: (2,)</span></span>
+<span class="line"><span style="color:#E1E4E8">torch.einsum(</span><span style="color:#9ECBFF">'bij->'</span><span style="color:#E1E4E8">, x)     </span><span style="color:#6A737D"># Sum all: scalar</span></span></code></pre>
+<p>The interview advantage: einsum makes complex operations self-documenting. If you can read the equation, you can write the einsum.</p>
+<h3 id="reductions">Reductions</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">x.sum()                      </span><span style="color:#6A737D"># Scalar</span></span>
+<span class="line"><span style="color:#E1E4E8">x.sum(</span><span style="color:#FFAB70">dim</span><span style="color:#F97583">=</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">)                 </span><span style="color:#6A737D"># Sum over dim 0: (4, 5)</span></span>
+<span class="line"><span style="color:#E1E4E8">x.sum(</span><span style="color:#FFAB70">dim</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">))            </span><span style="color:#6A737D"># Sum over dims 0 and 2: (4,)</span></span>
+<span class="line"><span style="color:#E1E4E8">x.mean(</span><span style="color:#FFAB70">dim</span><span style="color:#F97583">=-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)                </span><span style="color:#6A737D"># Mean over last dim</span></span>
+<span class="line"><span style="color:#E1E4E8">x.max(</span><span style="color:#FFAB70">dim</span><span style="color:#F97583">=</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)                 </span><span style="color:#6A737D"># Returns (values, indices)</span></span>
+<span class="line"><span style="color:#E1E4E8">x.argmax(</span><span style="color:#FFAB70">dim</span><span style="color:#F97583">=</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)              </span><span style="color:#6A737D"># Indices only</span></span>
+<span class="line"><span style="color:#E1E4E8">x.softmax(</span><span style="color:#FFAB70">dim</span><span style="color:#F97583">=-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)            </span><span style="color:#6A737D"># Along last dim</span></span>
+<span class="line"><span style="color:#E1E4E8">x.log_softmax(</span><span style="color:#FFAB70">dim</span><span style="color:#F97583">=-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">x.topk(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">dim</span><span style="color:#F97583">=-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)             </span><span style="color:#6A737D"># Top-3 values and indices</span></span></code></pre>
+<p>The <code>dim</code> argument is what you reduce over. The output shape is the input shape with <code>dim</code> removed. <code>keepdim=True</code> keeps the reduced dim as size 1.</p>
+<hr>
+<h2 id="autograd-and-backpropagation">Autograd and Backpropagation</h2>
+<p>Autograd is PyTorch’s automatic differentiation engine. You write forward-pass code as usual, and PyTorch builds a computation graph on the fly. Calling <code>.backward()</code> on a scalar traverses the graph backward and computes gradients for every tensor that has <code>requires_grad=True</code>.</p>
+<h3 id="basic-usage">Basic usage</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.tensor([</span><span style="color:#79B8FF">2.0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3.0</span><span style="color:#E1E4E8">], </span><span style="color:#FFAB70">requires_grad</span><span style="color:#F97583">=</span><span style="color:#79B8FF">True</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">y </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">**</span><span style="color:#79B8FF"> 2</span><span style="color:#6A737D">                    # y = [4, 9]</span></span>
+<span class="line"><span style="color:#E1E4E8">z </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> y.sum()                   </span><span style="color:#6A737D"># z = 13</span></span>
+<span class="line"><span style="color:#E1E4E8">z.backward()                  </span><span style="color:#6A737D"># Compute dz/dx for each x[i]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(x.grad)                  </span><span style="color:#6A737D"># [4, 6] (because dz/dx_i = 2*x_i)</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Forward pass:</span></span>
+<span class="line"><span>x ──► x² ──► y ──► sum ──► z</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Backward pass (z.backward()):</span></span>
+<span class="line"><span>∂z/∂x = ∂z/∂y · ∂y/∂x = 1 · 2x = [4, 6]</span></span></code></pre>
+<h3 id="requires_grad-and-no_grad">requires_grad and no_grad</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># Default: tensors don't track gradients</span></span>
+<span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">)         </span><span style="color:#6A737D"># requires_grad=False</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Enable gradient tracking</span></span>
+<span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">requires_grad</span><span style="color:#F97583">=</span><span style="color:#79B8FF">True</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">x.requires_grad                </span><span style="color:#6A737D"># True</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Context manager: disable for evaluation</span></span>
+<span class="line"><span style="color:#F97583">with</span><span style="color:#E1E4E8"> torch.no_grad():</span></span>
+<span class="line"><span style="color:#E1E4E8">    y </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> model(x)              </span><span style="color:#6A737D"># No grad tracking, less memory</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Equivalent: detach a tensor from the graph</span></span>
+<span class="line"><span style="color:#E1E4E8">y </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> model(x).detach()         </span><span style="color:#6A737D"># No grad tracking for y</span></span></code></pre>
+<p>The interview question: “Why do we use <code>torch.no_grad()</code> during evaluation?” Answer: It saves memory (no graph stored), speeds up computation, and prevents accidental gradient updates. For inference, you don’t need gradients.</p>
+<h3 id="the-backward-pass">The backward pass</h3>
+<p><code>.backward()</code> works on scalar tensors by default. For non-scalar outputs, pass <code>gradient</code> argument (the upstream gradient, which is usually ones_like(output) for simple cases).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.tensor([</span><span style="color:#79B8FF">2.0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3.0</span><span style="color:#E1E4E8">], </span><span style="color:#FFAB70">requires_grad</span><span style="color:#F97583">=</span><span style="color:#79B8FF">True</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">y </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> x </span><span style="color:#F97583">**</span><span style="color:#79B8FF"> 2</span><span style="color:#6A737D">                    # shape (2,)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># This works: y is a tensor, not scalar, so we need gradient argument</span></span>
+<span class="line"><span style="color:#E1E4E8">y.backward(</span><span style="color:#FFAB70">gradient</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">torch.ones_like(y))</span></span>
+<span class="line"><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(x.grad)                  </span><span style="color:#6A737D"># [4, 6]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Common pattern: sum then backward (scalar output)</span></span>
+<span class="line"><span style="color:#E1E4E8">loss </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> y.sum()</span></span>
+<span class="line"><span style="color:#E1E4E8">loss.backward()                </span><span style="color:#6A737D"># No gradient argument needed</span></span></code></pre>
+<h3 id="accumulating-gradients">Accumulating gradients</h3>
+<p>Gradients accumulate by default. If you don’t zero them between batches, they sum up.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># WRONG: gradients accumulate</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> x, y </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> dataloader:</span></span>
+<span class="line"><span style="color:#E1E4E8">    pred </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> model(x)</span></span>
+<span class="line"><span style="color:#E1E4E8">    loss </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> criterion(pred, y)</span></span>
+<span class="line"><span style="color:#E1E4E8">    loss.backward()           </span><span style="color:#6A737D"># grad accumulates</span></span>
+<span class="line"><span style="color:#E1E4E8">    optimizer.step()          </span><span style="color:#6A737D"># update</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># CORRECT: zero gradients each iteration</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> x, y </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> dataloader:</span></span>
+<span class="line"><span style="color:#E1E4E8">    optimizer.zero_grad()      </span><span style="color:#6A737D"># Reset to 0</span></span>
+<span class="line"><span style="color:#E1E4E8">    pred </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> model(x)</span></span>
+<span class="line"><span style="color:#E1E4E8">    loss </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> criterion(pred, y)</span></span>
+<span class="line"><span style="color:#E1E4E8">    loss.backward()</span></span>
+<span class="line"><span style="color:#E1E4E8">    optimizer.step()</span></span></code></pre>
+<p>The interview classic: “Why do we need to zero gradients?” Because <code>.backward()</code> accumulates into <code>.grad</code> rather than overwriting. This is intentional (it enables gradient accumulation across batches) but is a footgun for beginners.</p>
+<h3 id="gradient-checkpointing">Gradient checkpointing</h3>
+<p>A memory-saving technique: instead of storing all intermediate activations, recompute them during backward. Trades ~30% more compute for ~10x less activation memory.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> torch.utils.checkpoint </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> checkpoint</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> BigModel</span><span style="color:#E1E4E8">(</span><span style="color:#B392F0">nn</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">Module</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __init__</span><span style="color:#E1E4E8">(self):</span></span>
+<span class="line"><span style="color:#79B8FF">        super</span><span style="color:#E1E4E8">().</span><span style="color:#79B8FF">__init__</span><span style="color:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.layer1 </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nn.Linear(</span><span style="color:#79B8FF">1024</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1024</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.layer2 </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nn.Linear(</span><span style="color:#79B8FF">1024</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1024</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#6A737D">        # ... many more layers</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> forward</span><span style="color:#E1E4E8">(self, x):</span></span>
+<span class="line"><span style="color:#6A737D">        # Without checkpointing: all activations stored</span></span>
+<span class="line"><span style="color:#E1E4E8">        x </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.layer1(x)</span></span>
+<span class="line"><span style="color:#E1E4E8">        x </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.layer2(x)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        # With checkpointing: only layer inputs/outputs stored</span></span>
+<span class="line"><span style="color:#E1E4E8">        x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> checkpoint(</span><span style="color:#79B8FF">self</span><span style="color:#E1E4E8">.layer1, x, </span><span style="color:#FFAB70">use_reentrant</span><span style="color:#F97583">=</span><span style="color:#79B8FF">False</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">        x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> checkpoint(</span><span style="color:#79B8FF">self</span><span style="color:#E1E4E8">.layer2, x, </span><span style="color:#FFAB70">use_reentrant</span><span style="color:#F97583">=</span><span style="color:#79B8FF">False</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> x</span></span></code></pre>
+<p>This is essential for fitting large models in GPU memory. Modern training frameworks (HF Trainer, etc.) enable it by default for big models.</p>
+<h3 id="detaching-from-the-graph">Detaching from the graph</h3>
+<p>Sometimes you want to use a tensor’s value in a new computation but don’t want gradients to flow back through it. Use <code>.detach()</code>.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">requires_grad</span><span style="color:#F97583">=</span><span style="color:#79B8FF">True</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">y </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> x.detach()                 </span><span style="color:#6A737D"># y is a new tensor with no grad tracking</span></span>
+<span class="line"><span style="color:#6A737D"># Now operations on y don't contribute to x's gradient</span></span></code></pre>
+<p>The classic use case: target networks in RL, EMA models, gradient accumulation with detached loss values.</p>
+<hr>
+<h2 id="building-nnmodule-subclasses">Building nn.Module Subclasses</h2>
+<p>Every model in PyTorch subclasses <code>nn.Module</code>. The class wraps the parameters and defines the forward pass.</p>
+<h3 id="basic-structure">Basic structure</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> torch</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> torch.nn </span><span style="color:#F97583">as</span><span style="color:#E1E4E8"> nn</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> torch.nn.functional </span><span style="color:#F97583">as</span><span style="color:#E1E4E8"> F</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> SimpleClassifier</span><span style="color:#E1E4E8">(</span><span style="color:#B392F0">nn</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">Module</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __init__</span><span style="color:#E1E4E8">(self, input_dim, hidden_dim, num_classes):</span></span>
+<span class="line"><span style="color:#79B8FF">        super</span><span style="color:#E1E4E8">().</span><span style="color:#79B8FF">__init__</span><span style="color:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.fc1 </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nn.Linear(input_dim, hidden_dim)</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.fc2 </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nn.Linear(hidden_dim, hidden_dim)</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.fc3 </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nn.Linear(hidden_dim, num_classes)</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.dropout </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nn.Dropout(</span><span style="color:#79B8FF">0.1</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> forward</span><span style="color:#E1E4E8">(self, x):</span></span>
+<span class="line"><span style="color:#E1E4E8">        x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> F.relu(</span><span style="color:#79B8FF">self</span><span style="color:#E1E4E8">.fc1(x))</span></span>
+<span class="line"><span style="color:#E1E4E8">        x </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.dropout(x)</span></span>
+<span class="line"><span style="color:#E1E4E8">        x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> F.relu(</span><span style="color:#79B8FF">self</span><span style="color:#E1E4E8">.fc2(x))</span></span>
+<span class="line"><span style="color:#E1E4E8">        x </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.dropout(x)</span></span>
+<span class="line"><span style="color:#E1E4E8">        x </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.fc3(x)        </span><span style="color:#6A737D"># No softmax — use CrossEntropyLoss</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> x</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">model </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> SimpleClassifier(</span><span style="color:#79B8FF">784</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">256</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">10</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">sum</span><span style="color:#E1E4E8">(p.numel() </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> p </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> model.parameters()))  </span><span style="color:#6A737D"># Total parameter count</span></span></code></pre>
+<p>The interview trap: forgetting to call <code>super().__init__()</code>. The parent class registers the module, makes parameters discoverable, and sets up the buffers. Without it, <code>model.parameters()</code> returns an empty iterator and the model won’t train.</p>
+<h3 id="the-parameter-lifecycle">The parameter lifecycle</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>nn.Linear(10, 5) creates a module with:</span></span>
+<span class="line"><span>- self.weight: Parameter of shape (5, 10)</span></span>
+<span class="line"><span>- self.bias: Parameter of shape (5,)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>When you do model.to(device), all parameters move.</span></span>
+<span class="line"><span>When you do model.parameters(), you get an iterator over all Parameters.</span></span>
+<span class="line"><span>When you do model.state_dict(), you get a dict of all parameters and buffers.</span></span></code></pre>
+<h3 id="parameter-initialization">Parameter initialization</h3>
+<p>PyTorch’s default initialization is decent but rarely optimal. For transformers, careful initialization is important.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> MyModel</span><span style="color:#E1E4E8">(</span><span style="color:#B392F0">nn</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">Module</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __init__</span><span style="color:#E1E4E8">(self):</span></span>
+<span class="line"><span style="color:#79B8FF">        super</span><span style="color:#E1E4E8">().</span><span style="color:#79B8FF">__init__</span><span style="color:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.linear </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nn.Linear(</span><span style="color:#79B8FF">10</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">._init_weights()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> _init_weights</span><span style="color:#E1E4E8">(self):</span></span>
+<span class="line"><span style="color:#6A737D">        # Linear layers: small normal init</span></span>
+<span class="line"><span style="color:#E1E4E8">        nn.init.normal_(</span><span style="color:#79B8FF">self</span><span style="color:#E1E4E8">.linear.weight, </span><span style="color:#FFAB70">std</span><span style="color:#F97583">=</span><span style="color:#79B8FF">0.02</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.linear.bias </span><span style="color:#F97583">is</span><span style="color:#F97583"> not</span><span style="color:#79B8FF"> None</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#E1E4E8">            nn.init.zeros_(</span><span style="color:#79B8FF">self</span><span style="color:#E1E4E8">.linear.bias)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> forward</span><span style="color:#E1E4E8">(self, x):</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.linear(x)</span></span></code></pre>
+<p>Common initialization schemes:</p>
+<ul>
+<li><strong>Default for <code>nn.Linear</code></strong>: Kaiming uniform (good for ReLU)</li>
+<li><strong>For transformers</strong>: Normal with std=0.02 (GPT-2 style)</li>
+<li><strong>For residual streams</strong>: Scale by <code>1/sqrt(2*n_layers)</code> to keep residual magnitudes stable</li>
+</ul>
+<h3 id="the-forward-method">The forward method</h3>
+<p>The <code>forward</code> method takes the input and returns the output. PyTorch calls it when you do <code>model(x)</code>. It should never be called directly — always use <code>model(x)</code> (which goes through hooks and the proper call path).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> MyModel</span><span style="color:#E1E4E8">(</span><span style="color:#B392F0">nn</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">Module</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __init__</span><span style="color:#E1E4E8">(self):</span></span>
+<span class="line"><span style="color:#79B8FF">        super</span><span style="color:#E1E4E8">().</span><span style="color:#79B8FF">__init__</span><span style="color:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.fc </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nn.Linear(</span><span style="color:#79B8FF">10</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> forward</span><span style="color:#E1E4E8">(self, x):</span></span>
+<span class="line"><span style="color:#6A737D">        # Add your forward pass logic here</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.fc(x)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">model </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> MyModel()</span></span>
+<span class="line"><span style="color:#E1E4E8">output </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> model(x)              </span><span style="color:#6A737D"># Correct — calls forward through __call__</span></span>
+<span class="line"><span style="color:#E1E4E8">output </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> model.forward(x)      </span><span style="color:#6A737D"># Works but bypasses hooks — don't do this</span></span></code></pre>
+<h3 id="saving-and-loading">Saving and loading</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># Save the full model (less portable)</span></span>
+<span class="line"><span style="color:#E1E4E8">torch.save(model, </span><span style="color:#9ECBFF">'model.pt'</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">model </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.load(</span><span style="color:#9ECBFF">'model.pt'</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Save just the state dict (preferred — portable)</span></span>
+<span class="line"><span style="color:#E1E4E8">torch.save(model.state_dict(), </span><span style="color:#9ECBFF">'model.pt'</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">model </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> MyModel()</span></span>
+<span class="line"><span style="color:#E1E4E8">model.load_state_dict(torch.load(</span><span style="color:#9ECBFF">'model.pt'</span><span style="color:#E1E4E8">))</span></span>
+<span class="line"><span style="color:#E1E4E8">model.eval()                    </span><span style="color:#6A737D"># Set to eval mode (disables dropout, etc.)</span></span></code></pre>
+<p>The interview trap: forgetting <code>model.eval()</code>. Without it, dropout is active during inference, producing noisy predictions. The reverse is also true: forgetting <code>model.train()</code> during training disables dropout and other training-specific behaviors.</p>
+<hr>
+<h2 id="training-loop-from-scratch">Training Loop From Scratch</h2>
+<p>You should be able to write a complete training loop from memory. This is the most common ML coding interview question.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> torch</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> torch.nn </span><span style="color:#F97583">as</span><span style="color:#E1E4E8"> nn</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> torch.nn.functional </span><span style="color:#F97583">as</span><span style="color:#E1E4E8"> F</span></span>
+<span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> torch.utils.data </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> DataLoader, TensorDataset</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># 1. Data</span></span>
+<span class="line"><span style="color:#E1E4E8">X </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">1000</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">10</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">y </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randint(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, (</span><span style="color:#79B8FF">1000</span><span style="color:#E1E4E8">,))</span></span>
+<span class="line"><span style="color:#E1E4E8">dataset </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> TensorDataset(X, y)</span></span>
+<span class="line"><span style="color:#E1E4E8">loader </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> DataLoader(dataset, </span><span style="color:#FFAB70">batch_size</span><span style="color:#F97583">=</span><span style="color:#79B8FF">32</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">shuffle</span><span style="color:#F97583">=</span><span style="color:#79B8FF">True</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># 2. Model, loss, optimizer</span></span>
+<span class="line"><span style="color:#E1E4E8">model </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nn.Sequential(nn.Linear(</span><span style="color:#79B8FF">10</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">64</span><span style="color:#E1E4E8">), nn.ReLU(), nn.Linear(</span><span style="color:#79B8FF">64</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">))</span></span>
+<span class="line"><span style="color:#E1E4E8">criterion </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nn.CrossEntropyLoss()</span></span>
+<span class="line"><span style="color:#E1E4E8">optimizer </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.optim.AdamW(model.parameters(), </span><span style="color:#FFAB70">lr</span><span style="color:#F97583">=</span><span style="color:#79B8FF">1e-3</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">weight_decay</span><span style="color:#F97583">=</span><span style="color:#79B8FF">0.01</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># 3. Training loop</span></span>
+<span class="line"><span style="color:#E1E4E8">num_epochs </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 10</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> epoch </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(num_epochs):</span></span>
+<span class="line"><span style="color:#E1E4E8">    model.train()                       </span><span style="color:#6A737D"># Set to training mode</span></span>
+<span class="line"><span style="color:#E1E4E8">    total_loss </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    for</span><span style="color:#E1E4E8"> batch_x, batch_y </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> loader:</span></span>
+<span class="line"><span style="color:#6A737D">        # Zero gradients from previous iteration</span></span>
+<span class="line"><span style="color:#E1E4E8">        optimizer.zero_grad()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        # Forward pass</span></span>
+<span class="line"><span style="color:#E1E4E8">        logits </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> model(batch_x)</span></span>
+<span class="line"><span style="color:#E1E4E8">        loss </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> criterion(logits, batch_y)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        # Backward pass</span></span>
+<span class="line"><span style="color:#E1E4E8">        loss.backward()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        # Optional: gradient clipping (common in LM training)</span></span>
+<span class="line"><span style="color:#E1E4E8">        torch.nn.utils.clip_grad_norm_(model.parameters(), </span><span style="color:#FFAB70">max_norm</span><span style="color:#F97583">=</span><span style="color:#79B8FF">1.0</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">        # Update parameters</span></span>
+<span class="line"><span style="color:#E1E4E8">        optimizer.step()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">        total_loss </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> loss.item()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">    avg_loss </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> total_loss </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> len</span><span style="color:#E1E4E8">(loader)</span></span>
+<span class="line"><span style="color:#79B8FF">    print</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">f</span><span style="color:#9ECBFF">"Epoch </span><span style="color:#79B8FF">{</span><span style="color:#E1E4E8">epoch</span><span style="color:#F97583">+</span><span style="color:#79B8FF">1}</span><span style="color:#9ECBFF">/</span><span style="color:#79B8FF">{</span><span style="color:#E1E4E8">num_epochs</span><span style="color:#79B8FF">}</span><span style="color:#9ECBFF">, Loss: </span><span style="color:#79B8FF">{</span><span style="color:#E1E4E8">avg_loss</span><span style="color:#F97583">:.4f</span><span style="color:#79B8FF">}</span><span style="color:#9ECBFF">"</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># 4. Evaluation</span></span>
+<span class="line"><span style="color:#E1E4E8">model.eval()</span></span>
+<span class="line"><span style="color:#F97583">with</span><span style="color:#E1E4E8"> torch.no_grad():</span></span>
+<span class="line"><span style="color:#E1E4E8">    test_logits </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> model(X[:</span><span style="color:#79B8FF">10</span><span style="color:#E1E4E8">])</span></span>
+<span class="line"><span style="color:#E1E4E8">    test_preds </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> test_logits.argmax(</span><span style="color:#FFAB70">dim</span><span style="color:#F97583">=-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">    test_acc </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (test_preds </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> y[:</span><span style="color:#79B8FF">10</span><span style="color:#E1E4E8">]).float().mean()</span></span>
+<span class="line"><span style="color:#79B8FF">    print</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">f</span><span style="color:#9ECBFF">"Test accuracy on 10 samples: </span><span style="color:#79B8FF">{</span><span style="color:#E1E4E8">test_acc</span><span style="color:#F97583">:.2f</span><span style="color:#79B8FF">}</span><span style="color:#9ECBFF">"</span><span style="color:#E1E4E8">)</span></span></code></pre>
+<p>This template covers everything: data loading, model setup, training loop with gradient zeroing, gradient clipping, and evaluation. Memorize it.</p>
+<h3 id="gradient-clipping">Gradient clipping</h3>
+<p>For LM training, gradient clipping is essential. Without it, occasional large gradients cause catastrophic parameter updates that destroy the model.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># Norm-based clipping: if total grad norm > max_norm, scale all grads down</span></span>
+<span class="line"><span style="color:#E1E4E8">torch.nn.utils.clip_grad_norm_(model.parameters(), </span><span style="color:#FFAB70">max_norm</span><span style="color:#F97583">=</span><span style="color:#79B8FF">1.0</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Value-based clipping: clip each gradient element independently</span></span>
+<span class="line"><span style="color:#E1E4E8">torch.nn.utils.clip_grad_value_(model.parameters(), </span><span style="color:#FFAB70">clip_value</span><span style="color:#F97583">=</span><span style="color:#79B8FF">0.5</span><span style="color:#E1E4E8">)</span></span></code></pre>
+<p>Norm-based clipping preserves the direction of the gradient; value-based clipping preserves the relative scale. Norm-based is more common for LM training.</p>
+<h3 id="learning-rate-scheduling">Learning rate scheduling</h3>
+<p>The standard pattern: linear warmup then cosine decay. Modern training frameworks make this easy.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> torch.optim.lr_scheduler </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> LambdaLR</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> math</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> lr_lambda</span><span style="color:#E1E4E8">(step):</span></span>
+<span class="line"><span style="color:#E1E4E8">    warmup_steps </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1000</span></span>
+<span class="line"><span style="color:#E1E4E8">    total_steps </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 10000</span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> step </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> warmup_steps:</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> step </span><span style="color:#F97583">/</span><span style="color:#E1E4E8"> warmup_steps</span></span>
+<span class="line"><span style="color:#E1E4E8">    progress </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (step </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> warmup_steps) </span><span style="color:#F97583">/</span><span style="color:#E1E4E8"> (total_steps </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> warmup_steps)</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#79B8FF"> 0.5</span><span style="color:#F97583"> *</span><span style="color:#E1E4E8"> (</span><span style="color:#79B8FF">1</span><span style="color:#F97583"> +</span><span style="color:#E1E4E8"> math.cos(math.pi </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> progress))</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">scheduler </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> LambdaLR(optimizer, lr_lambda)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># In training loop</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> step, (x, y) </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> enumerate</span><span style="color:#E1E4E8">(loader):</span></span>
+<span class="line"><span style="color:#6A737D">    # ... forward, backward, step ...</span></span>
+<span class="line"><span style="color:#E1E4E8">    optimizer.step()</span></span>
+<span class="line"><span style="color:#E1E4E8">    scheduler.step()        </span><span style="color:#6A737D"># Update LR</span></span></code></pre>
+<p>Common schedules:</p>
+<ul>
+<li><strong>Constant</strong>: same LR throughout</li>
+<li><strong>Warmup + constant</strong>: ramp up, then constant (good for fine-tuning)</li>
+<li><strong>Warmup + cosine decay</strong>: standard for training from scratch</li>
+<li><strong>Warmup + linear decay</strong>: simpler alternative to cosine</li>
+<li><strong>Inverse sqrt</strong>: used in Transformer original paper</li>
+</ul>
+<h3 id="mixed-precision-training">Mixed precision training</h3>
+<p>Train with FP16/BF16 instead of FP32 to halve memory and speed up on modern GPUs. Use <code>torch.cuda.amp</code>.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> torch.cuda.amp </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> autocast, GradScaler</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">scaler </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> GradScaler()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> batch_x, batch_y </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> loader:</span></span>
+<span class="line"><span style="color:#E1E4E8">    optimizer.zero_grad()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">    # Forward in mixed precision</span></span>
+<span class="line"><span style="color:#F97583">    with</span><span style="color:#E1E4E8"> autocast():</span></span>
+<span class="line"><span style="color:#E1E4E8">        logits </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> model(batch_x)</span></span>
+<span class="line"><span style="color:#E1E4E8">        loss </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> criterion(logits, batch_y)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">    # Backward (scaler handles the loss scaling)</span></span>
+<span class="line"><span style="color:#E1E4E8">    scaler.scale(loss).backward()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">    # Unscale before clipping</span></span>
+<span class="line"><span style="color:#E1E4E8">    scaler.unscale_(optimizer)</span></span>
+<span class="line"><span style="color:#E1E4E8">    torch.nn.utils.clip_grad_norm_(model.parameters(), </span><span style="color:#FFAB70">max_norm</span><span style="color:#F97583">=</span><span style="color:#79B8FF">1.0</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">    # Step</span></span>
+<span class="line"><span style="color:#E1E4E8">    scaler.step(optimizer)</span></span>
+<span class="line"><span style="color:#E1E4E8">    scaler.update()</span></span></code></pre>
+<p>For BF16, no scaler is needed (BF16 has the same exponent range as FP32). Just use <code>with autocast(dtype=torch.bfloat16):</code>.</p>
+<hr>
+<h2 id="custom-autograd-functions">Custom Autograd Functions</h2>
+<p>Sometimes you need to implement a custom operation with a custom backward pass. PyTorch lets you wrap any function with custom gradients.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> CustomReLU</span><span style="color:#E1E4E8">(</span><span style="color:#B392F0">torch</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">autograd</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">Function</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#B392F0">    @</span><span style="color:#79B8FF">staticmethod</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> forward</span><span style="color:#E1E4E8">(ctx, x):</span></span>
+<span class="line"><span style="color:#6A737D">        # Save tensors needed for backward</span></span>
+<span class="line"><span style="color:#E1E4E8">        ctx.save_for_backward(x)</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> x.clamp(</span><span style="color:#FFAB70">min</span><span style="color:#F97583">=</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#B392F0">    @</span><span style="color:#79B8FF">staticmethod</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> backward</span><span style="color:#E1E4E8">(ctx, grad_output):</span></span>
+<span class="line"><span style="color:#6A737D">        # Receive gradient from downstream</span></span>
+<span class="line"><span style="color:#E1E4E8">        x, </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> ctx.saved_tensors</span></span>
+<span class="line"><span style="color:#6A737D">        # ReLU backward: pass through if x > 0, else 0</span></span>
+<span class="line"><span style="color:#E1E4E8">        grad_input </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> grad_output.clone()</span></span>
+<span class="line"><span style="color:#E1E4E8">        grad_input[x </span><span style="color:#F97583">&#x3C;</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> grad_input</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Use it like a regular function</span></span>
+<span class="line"><span style="color:#E1E4E8">y </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> CustomReLU.apply(x)</span></span></code></pre>
+<p>The interview question: “Implement the backward pass for a custom operation.” The pattern is:</p>
+<ol>
+<li><code>forward</code> saves what’s needed for backward via <code>ctx.save_for_backward</code></li>
+<li><code>backward</code> receives the upstream gradient and returns the gradient w.r.t. each input</li>
+<li>Use <code>.apply()</code> to call it</li>
+</ol>
+<p>The most common use cases: implementing custom kernels, custom loss functions with non-standard gradients, or approximating a non-differentiable operation.</p>
+<hr>
+<h2 id="evaluation-patterns">Evaluation Patterns</h2>
+<h3 id="the-eval-loop">The eval loop</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">model.eval()</span></span>
+<span class="line"><span style="color:#E1E4E8">total_correct </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span></span>
+<span class="line"><span style="color:#E1E4E8">total_samples </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span></span>
+<span class="line"><span style="color:#E1E4E8">total_loss </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">with</span><span style="color:#E1E4E8"> torch.no_grad():</span></span>
+<span class="line"><span style="color:#F97583">    for</span><span style="color:#E1E4E8"> batch_x, batch_y </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> test_loader:</span></span>
+<span class="line"><span style="color:#E1E4E8">        logits </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> model(batch_x)</span></span>
+<span class="line"><span style="color:#E1E4E8">        loss </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> criterion(logits, batch_y)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">        preds </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> logits.argmax(</span><span style="color:#FFAB70">dim</span><span style="color:#F97583">=-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">        total_correct </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> (preds </span><span style="color:#F97583">==</span><span style="color:#E1E4E8"> batch_y).sum().item()</span></span>
+<span class="line"><span style="color:#E1E4E8">        total_samples </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> batch_y.size(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">        total_loss </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> loss.item() </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> batch_y.size(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">accuracy </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> total_correct </span><span style="color:#F97583">/</span><span style="color:#E1E4E8"> total_samples</span></span>
+<span class="line"><span style="color:#E1E4E8">avg_loss </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> total_loss </span><span style="color:#F97583">/</span><span style="color:#E1E4E8"> total_samples</span></span>
+<span class="line"><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">f</span><span style="color:#9ECBFF">"Accuracy: </span><span style="color:#79B8FF">{</span><span style="color:#E1E4E8">accuracy</span><span style="color:#F97583">:.2%</span><span style="color:#79B8FF">}</span><span style="color:#9ECBFF">, Loss: </span><span style="color:#79B8FF">{</span><span style="color:#E1E4E8">avg_loss</span><span style="color:#F97583">:.4f</span><span style="color:#79B8FF">}</span><span style="color:#9ECBFF">"</span><span style="color:#E1E4E8">)</span></span></code></pre>
+<p>The four essential pieces: <code>model.eval()</code> (disables dropout), <code>torch.no_grad()</code> (no grad tracking), <code>argmax</code> for classification, and the running counters for accuracy.</p>
+<h3 id="handling-variable-length-sequences">Handling variable-length sequences</h3>
+<p>For NLP, sequences in a batch have different lengths. Two common approaches:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># 1. Pad to max length in batch</span></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> collate_fn</span><span style="color:#E1E4E8">(batch):</span></span>
+<span class="line"><span style="color:#6A737D">    # batch is list of (sequence, label)</span></span>
+<span class="line"><span style="color:#E1E4E8">    sequences, labels </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> zip</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">*</span><span style="color:#E1E4E8">batch)</span></span>
+<span class="line"><span style="color:#E1E4E8">    max_len </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> max</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">len</span><span style="color:#E1E4E8">(s) </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> s </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> sequences)</span></span>
+<span class="line"><span style="color:#E1E4E8">    padded </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.zeros(</span><span style="color:#79B8FF">len</span><span style="color:#E1E4E8">(batch), max_len, </span><span style="color:#FFAB70">dtype</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">torch.long)</span></span>
+<span class="line"><span style="color:#F97583">    for</span><span style="color:#E1E4E8"> i, seq </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> enumerate</span><span style="color:#E1E4E8">(sequences):</span></span>
+<span class="line"><span style="color:#E1E4E8">        padded[i, :</span><span style="color:#79B8FF">len</span><span style="color:#E1E4E8">(seq)] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> seq</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> padded, torch.tensor(labels)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># 2. Use torch.nn.utils.rnn.pad_sequence</span></span>
+<span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> torch.nn.utils.rnn </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> pad_sequence</span></span>
+<span class="line"><span style="color:#E1E4E8">padded </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> pad_sequence(sequences, </span><span style="color:#FFAB70">batch_first</span><span style="color:#F97583">=</span><span style="color:#79B8FF">True</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">padding_value</span><span style="color:#F97583">=</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">)</span></span></code></pre>
+<p>Don’t forget to use a padding mask in attention so the model ignores pad tokens.</p>
+<hr>
+<h2 id="common-interview-problems">Common Interview Problems</h2>
+<h3 id="problem-1-implement-a-custom-loss-function">Problem 1: Implement a custom loss function</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> FocalLoss</span><span style="color:#E1E4E8">(</span><span style="color:#B392F0">nn</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">Module</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#9ECBFF">    """</span></span>
+<span class="line"><span style="color:#9ECBFF">    Focal Loss for addressing class imbalance.</span></span>
+<span class="line"><span style="color:#9ECBFF">    Loss = -alpha * (1-p)^gamma * log(p)</span></span>
+<span class="line"><span style="color:#9ECBFF">    Down-weights easy examples, focuses on hard ones.</span></span>
+<span class="line"><span style="color:#9ECBFF">    """</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __init__</span><span style="color:#E1E4E8">(self, alpha</span><span style="color:#F97583">=</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, gamma</span><span style="color:#F97583">=</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#79B8FF">        super</span><span style="color:#E1E4E8">().</span><span style="color:#79B8FF">__init__</span><span style="color:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.alpha </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> alpha</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.gamma </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> gamma</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> forward</span><span style="color:#E1E4E8">(self, logits, targets):</span></span>
+<span class="line"><span style="color:#6A737D">        # logits: (B, C), targets: (B,)</span></span>
+<span class="line"><span style="color:#E1E4E8">        ce </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> F.cross_entropy(logits, targets, </span><span style="color:#FFAB70">reduction</span><span style="color:#F97583">=</span><span style="color:#9ECBFF">'none'</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">        pt </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.exp(</span><span style="color:#F97583">-</span><span style="color:#E1E4E8">ce)                  </span><span style="color:#6A737D"># Probability of true class</span></span>
+<span class="line"><span style="color:#E1E4E8">        focal </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.alpha </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> (</span><span style="color:#79B8FF">1</span><span style="color:#F97583"> -</span><span style="color:#E1E4E8"> pt) </span><span style="color:#F97583">**</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.gamma </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> ce</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> focal.mean()</span></span></code></pre>
+<p>The interview tests: do you know <code>F.cross_entropy</code> accepts logits directly (no need to softmax first), do you know <code>reduction='none'</code> gives per-sample loss, and do you understand the focal loss formula.</p>
+<h3 id="problem-2-implement-learning-rate-warmup">Problem 2: Implement learning rate warmup</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> get_lr</span><span style="color:#E1E4E8">(step, warmup_steps, base_lr, total_steps):</span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> step </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> warmup_steps:</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> base_lr </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> (step </span><span style="color:#F97583">/</span><span style="color:#E1E4E8"> warmup_steps)</span></span>
+<span class="line"><span style="color:#6A737D">    # Cosine decay</span></span>
+<span class="line"><span style="color:#E1E4E8">    progress </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (step </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> warmup_steps) </span><span style="color:#F97583">/</span><span style="color:#E1E4E8"> (total_steps </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> warmup_steps)</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> base_lr </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 0.5</span><span style="color:#F97583"> *</span><span style="color:#E1E4E8"> (</span><span style="color:#79B8FF">1</span><span style="color:#F97583"> +</span><span style="color:#E1E4E8"> math.cos(math.pi </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> progress))</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># In training loop</span></span>
+<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> step, (x, y) </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> enumerate</span><span style="color:#E1E4E8">(loader):</span></span>
+<span class="line"><span style="color:#E1E4E8">    lr </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> get_lr(step, </span><span style="color:#FFAB70">warmup_steps</span><span style="color:#F97583">=</span><span style="color:#79B8FF">1000</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">base_lr</span><span style="color:#F97583">=</span><span style="color:#79B8FF">1e-3</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">total_steps</span><span style="color:#F97583">=</span><span style="color:#79B8FF">10000</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">    for</span><span style="color:#E1E4E8"> param_group </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> optimizer.param_groups:</span></span>
+<span class="line"><span style="color:#E1E4E8">        param_group[</span><span style="color:#9ECBFF">'lr'</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> lr</span></span>
+<span class="line"><span style="color:#6A737D">    # ... rest of training</span></span></code></pre>
+<h3 id="problem-3-implement-a-custom-optimizer-sgd-with-momentum">Problem 3: Implement a custom optimizer (SGD with momentum)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> SGDMomentum</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __init__</span><span style="color:#E1E4E8">(self, params, lr</span><span style="color:#F97583">=</span><span style="color:#79B8FF">0.01</span><span style="color:#E1E4E8">, momentum</span><span style="color:#F97583">=</span><span style="color:#79B8FF">0.9</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.params </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> list</span><span style="color:#E1E4E8">(params)</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.lr </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> lr</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.momentum </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> momentum</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.velocities </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [torch.zeros_like(p) </span><span style="color:#F97583">for</span><span style="color:#E1E4E8"> p </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.params]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> step</span><span style="color:#E1E4E8">(self):</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> param, velocity </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> zip</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">self</span><span style="color:#E1E4E8">.params, </span><span style="color:#79B8FF">self</span><span style="color:#E1E4E8">.velocities):</span></span>
+<span class="line"><span style="color:#E1E4E8">            velocity.mul_(</span><span style="color:#79B8FF">self</span><span style="color:#E1E4E8">.momentum).add_(param.grad)</span></span>
+<span class="line"><span style="color:#E1E4E8">            param.data.add_(velocity, </span><span style="color:#FFAB70">alpha</span><span style="color:#F97583">=-</span><span style="color:#79B8FF">self</span><span style="color:#E1E4E8">.lr)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> zero_grad</span><span style="color:#E1E4E8">(self):</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> param </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.params:</span></span>
+<span class="line"><span style="color:#F97583">            if</span><span style="color:#E1E4E8"> param.grad </span><span style="color:#F97583">is</span><span style="color:#F97583"> not</span><span style="color:#79B8FF"> None</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#E1E4E8">                param.grad.zero_()</span></span></code></pre>
+<p>This tests whether you understand the momentum update rule: <code>v = momentum * v + grad; param -= lr * v</code>. Adam adds per-parameter adaptive learning rates on top of this.</p>
+<h3 id="problem-4-implement-a-simple-vae-encoder">Problem 4: Implement a simple VAE encoder</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">class</span><span style="color:#B392F0"> VAEEncoder</span><span style="color:#E1E4E8">(</span><span style="color:#B392F0">nn</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">Module</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#79B8FF"> __init__</span><span style="color:#E1E4E8">(self, input_dim, hidden_dim, latent_dim):</span></span>
+<span class="line"><span style="color:#79B8FF">        super</span><span style="color:#E1E4E8">().</span><span style="color:#79B8FF">__init__</span><span style="color:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.fc1 </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nn.Linear(input_dim, hidden_dim)</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.fc_mu </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nn.Linear(hidden_dim, latent_dim)</span></span>
+<span class="line"><span style="color:#79B8FF">        self</span><span style="color:#E1E4E8">.fc_logvar </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nn.Linear(hidden_dim, latent_dim)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    def</span><span style="color:#B392F0"> forward</span><span style="color:#E1E4E8">(self, x):</span></span>
+<span class="line"><span style="color:#E1E4E8">        h </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> F.relu(</span><span style="color:#79B8FF">self</span><span style="color:#E1E4E8">.fc1(x))</span></span>
+<span class="line"><span style="color:#E1E4E8">        mu </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.fc_mu(h)</span></span>
+<span class="line"><span style="color:#E1E4E8">        logvar </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> self</span><span style="color:#E1E4E8">.fc_logvar(h)</span></span>
+<span class="line"><span style="color:#6A737D">        # Reparameterization trick: z = mu + std * eps</span></span>
+<span class="line"><span style="color:#E1E4E8">        std </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.exp(</span><span style="color:#79B8FF">0.5</span><span style="color:#F97583"> *</span><span style="color:#E1E4E8"> logvar)</span></span>
+<span class="line"><span style="color:#E1E4E8">        eps </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn_like(std)</span></span>
+<span class="line"><span style="color:#E1E4E8">        z </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> mu </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> std </span><span style="color:#F97583">*</span><span style="color:#E1E4E8"> eps</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> z, mu, logvar</span></span></code></pre>
+<p>The reparameterization trick is the key insight: sampling <code>z ~ N(mu, var)</code> is differentiable w.r.t. <code>mu</code> and <code>var</code> if you express it as <code>z = mu + std * eps</code> where <code>eps ~ N(0, 1)</code>. Without this, gradients can’t flow through the sampling step.</p>
+<hr>
+<h2 id="performance-and-profiling">Performance and Profiling</h2>
+<h3 id="moving-to-gpu">Moving to GPU</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># Move model to GPU</span></span>
+<span class="line"><span style="color:#E1E4E8">device </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.device(</span><span style="color:#9ECBFF">'cuda'</span><span style="color:#F97583"> if</span><span style="color:#E1E4E8"> torch.cuda.is_available() </span><span style="color:#F97583">else</span><span style="color:#9ECBFF"> 'cpu'</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">model </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> model.to(device)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Move tensors to GPU</span></span>
+<span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> x.to(device)</span></span>
+<span class="line"><span style="color:#E1E4E8">y </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> y.to(device)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Verify everything is on the same device</span></span>
+<span class="line"><span style="color:#F97583">assert</span><span style="color:#E1E4E8"> x.device </span><span style="color:#F97583">==</span><span style="color:#79B8FF"> next</span><span style="color:#E1E4E8">(model.parameters()).device</span></span></code></pre>
+<p>The common bug: forgetting to move either the model or the data to the same device. The error is <code>RuntimeError: Expected all tensors to be on the same device</code>.</p>
+<h3 id="dataloader-performance">DataLoader performance</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> torch.utils.data </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> DataLoader</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">loader </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> DataLoader(</span></span>
+<span class="line"><span style="color:#E1E4E8">    dataset,</span></span>
+<span class="line"><span style="color:#FFAB70">    batch_size</span><span style="color:#F97583">=</span><span style="color:#79B8FF">32</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#FFAB70">    shuffle</span><span style="color:#F97583">=</span><span style="color:#79B8FF">True</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#FFAB70">    num_workers</span><span style="color:#F97583">=</span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">,            </span><span style="color:#6A737D"># Parallel data loading</span></span>
+<span class="line"><span style="color:#FFAB70">    pin_memory</span><span style="color:#F97583">=</span><span style="color:#79B8FF">True</span><span style="color:#E1E4E8">,          </span><span style="color:#6A737D"># Faster GPU transfer</span></span>
+<span class="line"><span style="color:#FFAB70">    prefetch_factor</span><span style="color:#F97583">=</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">,        </span><span style="color:#6A737D"># Prefetch 2 batches per worker</span></span>
+<span class="line"><span style="color:#FFAB70">    persistent_workers</span><span style="color:#F97583">=</span><span style="color:#79B8FF">True</span><span style="color:#E1E4E8">,  </span><span style="color:#6A737D"># Keep workers alive across epochs</span></span>
+<span class="line"><span style="color:#E1E4E8">)</span></span></code></pre>
+<p><code>num_workers=0</code> (default) means data loading happens in the main process, blocking training. <code>num_workers=4-8</code> is usually optimal. <code>pin_memory=True</code> enables faster CPU-to-GPU transfer.</p>
+<h3 id="profiling">Profiling</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">from</span><span style="color:#E1E4E8"> torch.profiler </span><span style="color:#F97583">import</span><span style="color:#E1E4E8"> profile, ProfilerActivity</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">with</span><span style="color:#E1E4E8"> profile(</span><span style="color:#FFAB70">activities</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">[ProfilerActivity.</span><span style="color:#79B8FF">CPU</span><span style="color:#E1E4E8">, ProfilerActivity.</span><span style="color:#79B8FF">CUDA</span><span style="color:#E1E4E8">]) </span><span style="color:#F97583">as</span><span style="color:#E1E4E8"> prof:</span></span>
+<span class="line"><span style="color:#F97583">    for</span><span style="color:#E1E4E8"> batch </span><span style="color:#F97583">in</span><span style="color:#E1E4E8"> loader:</span></span>
+<span class="line"><span style="color:#E1E4E8">        output </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> model(batch)</span></span>
+<span class="line"><span style="color:#E1E4E8">        loss </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> criterion(output, target)</span></span>
+<span class="line"><span style="color:#E1E4E8">        loss.backward()</span></span>
+<span class="line"><span style="color:#E1E4E8">        optimizer.step()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#79B8FF">print</span><span style="color:#E1E4E8">(prof.key_averages().table(</span><span style="color:#FFAB70">sort_by</span><span style="color:#F97583">=</span><span style="color:#9ECBFF">"cuda_time_total"</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">row_limit</span><span style="color:#F97583">=</span><span style="color:#79B8FF">10</span><span style="color:#E1E4E8">))</span></span></code></pre>
+<p>This shows where time is being spent: data loading, forward pass, backward pass, optimizer step, or GPU synchronization.</p>
+<hr>
+<h2 id="common-pitfalls">Common Pitfalls</h2>
+<h3 id="1-cross-entropy-expects-raw-logits">1. Cross-entropy expects raw logits</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># WRONG: double softmax</span></span>
+<span class="line"><span style="color:#E1E4E8">logits </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> model(x)</span></span>
+<span class="line"><span style="color:#E1E4E8">probs </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> F.softmax(logits, </span><span style="color:#FFAB70">dim</span><span style="color:#F97583">=-</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">loss </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> F.cross_entropy(probs, targets)  </span><span style="color:#6A737D"># Wrong! probs are not logits</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># CORRECT</span></span>
+<span class="line"><span style="color:#E1E4E8">logits </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> model(x)</span></span>
+<span class="line"><span style="color:#E1E4E8">loss </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> F.cross_entropy(logits, targets)  </span><span style="color:#6A737D"># Applies softmax internally</span></span></code></pre>
+<p><code>F.cross_entropy</code> and <code>nn.CrossEntropyLoss</code> expect raw logits and apply softmax internally. Applying softmax first and then calling cross-entropy is wrong.</p>
+<h3 id="2-softmax-dim">2. Softmax dim</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># WRONG: softmax over wrong dim</span></span>
+<span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">F.softmax(x, </span><span style="color:#FFAB70">dim</span><span style="color:#F97583">=</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">)          </span><span style="color:#6A737D"># Softmax over batch dim (probably not what you want)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># CORRECT: softmax over feature dim</span></span>
+<span class="line"><span style="color:#E1E4E8">F.softmax(x, </span><span style="color:#FFAB70">dim</span><span style="color:#F97583">=</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)          </span><span style="color:#6A737D"># Softmax over the 5-class dim</span></span></code></pre>
+<p><code>dim=-1</code> is the most common (and safest) choice because it works regardless of input shape.</p>
+<h3 id="3-reduction-default">3. Reduction default</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># Default: returns mean</span></span>
+<span class="line"><span style="color:#E1E4E8">loss </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> F.cross_entropy(logits, targets)  </span><span style="color:#6A737D"># Scalar (mean over batch)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Per-sample: useful when you want to weight or filter</span></span>
+<span class="line"><span style="color:#E1E4E8">loss_per_sample </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> F.cross_entropy(logits, targets, </span><span style="color:#FFAB70">reduction</span><span style="color:#F97583">=</span><span style="color:#9ECBFF">'none'</span><span style="color:#E1E4E8">)  </span><span style="color:#6A737D"># (B,)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Sum: sometimes used for accumulation</span></span>
+<span class="line"><span style="color:#E1E4E8">loss </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> F.cross_entropy(logits, targets, </span><span style="color:#FFAB70">reduction</span><span style="color:#F97583">=</span><span style="color:#9ECBFF">'sum'</span><span style="color:#E1E4E8">)</span></span></code></pre>
+<h3 id="4-in-place-operations">4. In-place operations</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D"># WRONG: in-place relu can break autograd</span></span>
+<span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> F.relu(x, </span><span style="color:#FFAB70">inplace</span><span style="color:#F97583">=</span><span style="color:#79B8FF">True</span><span style="color:#E1E4E8">)  </span><span style="color:#6A737D"># x might be needed for backward</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Usually fine: nn.ReLU has inplace param</span></span>
+<span class="line"><span style="color:#79B8FF">self</span><span style="color:#E1E4E8">.relu </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nn.ReLU(</span><span style="color:#FFAB70">inplace</span><span style="color:#F97583">=</span><span style="color:#79B8FF">True</span><span style="color:#E1E4E8">)</span></span></code></pre>
+<p>In-place ops save memory but can break autograd if the modified tensor is needed for the backward pass. Use with caution.</p>
+<h3 id="5-view-vs-reshape">5. View vs reshape</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">x </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> torch.randn(</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">y </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> x.permute(</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">)       </span><span style="color:#6A737D"># Not contiguous</span></span>
+<span class="line"><span style="color:#E1E4E8">y.view(</span><span style="color:#79B8FF">8</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)                </span><span style="color:#6A737D"># ERROR: not contiguous</span></span>
+<span class="line"><span style="color:#E1E4E8">y.reshape(</span><span style="color:#79B8FF">8</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)             </span><span style="color:#6A737D"># Works: makes a copy if needed</span></span>
+<span class="line"><span style="color:#E1E4E8">y.contiguous().view(</span><span style="color:#79B8FF">8</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">)   </span><span style="color:#6A737D"># Works: explicit copy</span></span></code></pre>
+<p>If you’ve done <code>permute</code> or <code>transpose</code>, the tensor is not contiguous and <code>.view()</code> will fail. Use <code>.reshape()</code> or <code>.contiguous().view()</code>.</p>
+<hr>
+<h2 id="interview-checklist">Interview Checklist</h2>
+<p>Before submitting any PyTorch solution, verify:</p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> Model is on the correct device (<code>model.to(device)</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled> Data is on the same device</li>
+<li class="task-list-item"><input type="checkbox" disabled> <code>optimizer.zero_grad()</code> called before backward</li>
+<li class="task-list-item"><input type="checkbox" disabled> <code>model.train()</code> for training, <code>model.eval()</code> for evaluation</li>
+<li class="task-list-item"><input type="checkbox" disabled> <code>torch.no_grad()</code> context for inference</li>
+<li class="task-list-item"><input type="checkbox" disabled> Correct loss: <code>F.cross_entropy</code> expects raw logits, not probabilities</li>
+<li class="task-list-item"><input type="checkbox" disabled> Correct softmax dim: usually <code>dim=-1</code> or <code>dim=1</code></li>
+<li class="task-list-item"><input type="checkbox" disabled> Gradient clipping for LMs (max_norm=1.0 typical)</li>
+<li class="task-list-item"><input type="checkbox" disabled> Memory cleanup: <code>del</code> intermediate tensors, <code>torch.cuda.empty_cache()</code> if needed</li>
+<li class="task-list-item"><input type="checkbox" disabled> Mixed precision where appropriate</li>
+<li class="task-list-item"><input type="checkbox" disabled> DataLoader with <code>num_workers &gt; 0</code> for training speed</li>
+</ul>
+<p>The next doc, <em>ML Coding - Transformer</em>, builds on these foundations to implement the transformer architecture from scratch — the most common ML coding interview question.</p>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Tensors = multi-dimensional arrays, the foundation of all PyTorch operations.</li>
+<li>Autograd = automatic differentiation, tracks operations for backprop.</li>
+<li>nn.Module = base class for all models, defines forward().</li>
+<li>Training loop: forward → loss → backward → step → zero_grad.</li>
+<li>Device management: .to(device) for GPU/CPU. Always use torch.no_grad() for inference.</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How does autograd work?” — PyTorch builds a computational graph during forward pass. Each tensor tracks its operations. backward() traverses the graph in reverse, computing gradients via chain rule.</li>
+<li>“What’s the difference between tensor.view() and tensor.reshape()?” — view() requires contiguous memory, reshape() doesn’t (may copy). Use reshape() when unsure.</li>
+</ul>
+<p><strong>Gotcha:</strong> Forgetting to call optimizer.zero_grad() before backward(). Without this, gradients accumulate across iterations (PyTorch sums gradients by default), causing incorrect updates and training instability.</p>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/coding-interview/ml-coding-pytorch-foundations/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=ML%20Coding%20-%20PyTorch%20Foundations&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fcoding-interview%2Fml-coding-pytorch-foundations%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fcoding-interview%2Fml-coding-pytorch-foundations%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/coding-interview/ml-coding-pytorch-foundations" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/coding-interview/arrays-and-strings/" class="related-card"><div class="related-card-title">Arrays &amp; Strings — Interview Prep Guide</div><div class="related-card-meta">Coding Interview · 47 min</div></a><a href="/notes/coding-interview/backtracking/" class="related-card"><div class="related-card-title">Backtracking — Complete Interview Prep Guide</div><div class="related-card-meta">Coding Interview · 21 min</div></a><a href="/notes/coding-interview/big-o-and-pattern-recognition/" class="related-card"><div class="related-card-title">Big O Complexity &amp; Pattern Recognition</div><div class="related-card-meta">Coding Interview · 30 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/coding-interview/ml-glossary" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>ML &amp; GenAI Glossary</span></a><a href="/notes/coding-interview/ml-coding-transformer" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>ML Coding - Transformer</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="ML Coding - PyTorch Foundations" data-selector=".article-prose" data-article-slug="coding-interview/ml-coding-pytorch-foundations" data-article-title="ML Coding - PyTorch Foundations" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

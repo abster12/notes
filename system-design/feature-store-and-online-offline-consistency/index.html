@@ -1,0 +1,833 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Feature Store &amp; Online/Offline Consistency · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#1-overview" class="toc-link" data-toc-link="1-overview" data-astro-cid-p33bl5ka>1. Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#2-key-requirements" class="toc-link" data-toc-link="2-key-requirements" data-astro-cid-p33bl5ka>2. Key Requirements</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#functional-requirements" class="toc-link" data-toc-link="functional-requirements" data-astro-cid-p33bl5ka>Functional Requirements</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#non-functional-requirements-slas" class="toc-link" data-toc-link="non-functional-requirements-slas" data-astro-cid-p33bl5ka>Non-Functional Requirements (SLAs)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#3-capacity-planning" class="toc-link" data-toc-link="3-capacity-planning" data-astro-cid-p33bl5ka>3. Capacity Planning</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#4-data-model" class="toc-link" data-toc-link="4-data-model" data-astro-cid-p33bl5ka>4. Data Model</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#5-core-design" class="toc-link" data-toc-link="5-core-design" data-astro-cid-p33bl5ka>5. Core Design</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#51-the-training-serving-skew-problem" class="toc-link" data-toc-link="51-the-training-serving-skew-problem" data-astro-cid-p33bl5ka>5.1 The Training-Serving Skew Problem</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#52-api-contract" class="toc-link" data-toc-link="52-api-contract" data-astro-cid-p33bl5ka>5.2 API Contract</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#53-architectural-decisions" class="toc-link" data-toc-link="53-architectural-decisions" data-astro-cid-p33bl5ka>5.3 Architectural Decisions</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#54-the-online-store-architecture" class="toc-link" data-toc-link="54-the-online-store-architecture" data-astro-cid-p33bl5ka>5.4 The Online Store Architecture</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#6-scaling--bottlenecks" class="toc-link" data-toc-link="6-scaling--bottlenecks" data-astro-cid-p33bl5ka>6. Scaling &amp; Bottlenecks</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#read-path-online-serving" class="toc-link" data-toc-link="read-path-online-serving" data-astro-cid-p33bl5ka>Read Path (online serving)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#write-path-materialization" class="toc-link" data-toc-link="write-path-materialization" data-astro-cid-p33bl5ka>Write Path (materialization)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#7-consistency--replication" class="toc-link" data-toc-link="7-consistency--replication" data-astro-cid-p33bl5ka>7. Consistency &amp; Replication</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#consistency-model" class="toc-link" data-toc-link="consistency-model" data-astro-cid-p33bl5ka>Consistency Model</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-key-invariant" class="toc-link" data-toc-link="the-key-invariant" data-astro-cid-p33bl5ka>The key invariant</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#conflict-resolution" class="toc-link" data-toc-link="conflict-resolution" data-astro-cid-p33bl5ka>Conflict resolution</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#8-caching-strategy" class="toc-link" data-toc-link="8-caching-strategy" data-astro-cid-p33bl5ka>8. Caching Strategy</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#9-weaknesses--improvements" class="toc-link" data-toc-link="9-weaknesses--improvements" data-astro-cid-p33bl5ka>9. Weaknesses &amp; Improvements</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#10-sharp-question" class="toc-link" data-toc-link="10-sharp-question" data-astro-cid-p33bl5ka>10. Sharp Question</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#common-pitfall" class="toc-link" data-toc-link="common-pitfall" data-astro-cid-p33bl5ka>Common Pitfall</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#11-self-check-questions-cron-session" class="toc-link" data-toc-link="11-self-check-questions-cron-session" data-astro-cid-p33bl5ka>11. Self-Check Questions (Cron Session)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#related" class="toc-link" data-toc-link="related" data-astro-cid-p33bl5ka>Related</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Feature Store &amp; Online/Offline Consistency</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 19 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 27 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>ai-ml</span><span class="tag" data-astro-cid-sgg5joot>feature-store</span><span class="tag" data-astro-cid-sgg5joot>ml-infrastructure</span><span class="tag" data-astro-cid-sgg5joot>training-serving-skew</span><span class="tag" data-astro-cid-sgg5joot>feast</span><span class="tag" data-astro-cid-sgg5joot>tecton</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="feature-store--onlineoffline-consistency">Feature Store &amp; Online/Offline Consistency</h1>
+<blockquote>
+<p><strong>Staff-Engineer Focus:</strong> “We use a feature store to serve features for our models” is the senior-MLE answer. <strong>The staff engineer doesn’t ask whether to use a feature store. They ask: “We have 800 models in production, each consuming 200 features on average — 160,000 feature definitions across 47 feature groups. Our online store handles 2 million feature vector lookups per second at P99 &lt; 5ms, while our offline store generates 50 TB of training data nightly. The fraud detection team just discovered that their model’s AUC dropped 8 points in prod because the <code>user_7d_avg_transaction_amount</code> feature was computed with a 24-hour aggregation window in training but a sliding 7-day window at serving — classic training-serving skew from a misconfigured feature definition. Walk me through: (a) how you’d design a feature registry that guarantees bitwise-identical feature computation across training and serving, including how you’d version feature definitions so that model v3 trained on feature v1.2 can still be served when the feature is now at v2.0, (b) your point-in-time join strategy when <code>user_profile</code> was updated at T=10:00, <code>transaction_count</code> was computed hourly and last ran at T=9:00, and the training label <code>fraud_report</code> arrived at T=10:15 — what timestamp does each feature get, and how do you prevent future leakage when joining these three sources, (c) the online store’s failure mode at 2AM when the offline backfill job accidentally writes 500M stale feature rows with TTL=0, flooding the online store and evicting genuinely fresh features — how does your serving layer distinguish ‘stale but valid’ from ‘stale and should fall back to default,’ and (d) how you’d detect the skew before the model’s AUC drops — what distribution-comparison tests run on the online vs. offline feature distributions, at what cadence, and what’s the p-value threshold that pages the on-call before the business metric moves?”</strong> The interview question isn’t “What is a feature store?” It’s: “You’re building an ML platform for a company with 50 data scientists deploying models to a real-time fraud detection pipeline and a nightly batch recommendation pipeline. The fraud models need features computed over 7-day, 30-day, and 90-day windows with sub-millisecond lookup. The recommendation models train on 2 years of historical data with complex temporal joins. Design a feature store that guarantees the same feature values in training and serving. What consistency model do you pick? Where does it break?”**</p>
+</blockquote>
+<hr>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A centralized repository for ML features that bridges offline training and online serving, ensuring identical feature computation in both paths. It provides a feature registry for versioned definitions, an online store for sub-ms serving lookups, an offline store for point-in-time correct training joins, and skew detection between the two.</p>
+<p><strong>How it’s asked:</strong> “Design a feature store for 500 ML models consuming 200 features each, with sub-ms online lookups, point-in-time correct training joins, and training-serving skew detection.”</p>
+<hr>
+<h2 id="1-overview">1. Overview</h2>
+<p>A feature store is the central interface between data engineering and model serving. It solves a deceptively simple problem: when you train a model, you compute features from historical data; when you serve predictions, you compute features from live data. If those two computations differ by even one bit, you have training-serving skew — the model is answering a different question than the one it was trained on. This is arguably the most expensive silent failure mode in production ML because it doesn’t throw exceptions, doesn’t crash pods, and doesn’t trigger latency alerts. It just quietly makes your model worse, dollar by dollar.</p>
+<p>The feature store’s job is to be the single source of truth for three things: feature definitions (the transformation logic), feature values (the actual computed numbers for a given entity at a given time), and feature metadata (lineage, freshness, statistics). By centralizing these, the feature store guarantees that <code>compute_feature("user_7d_avg_spend", user_id=42, as_of=timestamp)</code> returns the same value whether you call it from a Spark job at 3 AM or from a gRPC serving endpoint at 3 PM.</p>
+<p>The consistency problem sits at the heart of this. Offline training is batch, high-throughput, tolerant of minutes of latency. Online serving is real-time, low-latency, and must never block. The feature store must bridge these two worlds while maintaining a consistency guarantee strong enough that data scientists trust it — if they can’t trust the feature store, they’ll compute features ad hoc in their serving code, and you’re back to square one.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                       FEATURE STORE — HIGH LEVEL                          │</span></span>
+<span class="line"><span>│                                                                           │</span></span>
+<span class="line"><span>│  ┌─────────────────┐         ┌──────────────────────┐                     │</span></span>
+<span class="line"><span>│  │  Data Sources    │         │   Feature Registry    │                     │</span></span>
+<span class="line"><span>│  │  (Kafka, DB, S3) │────────▶│   (definitions,       │                     │</span></span>
+<span class="line"><span>│  └─────────────────┘         │    versions, lineage)  │                     │</span></span>
+<span class="line"><span>│         │                    └──────────┬─────────────┘                     │</span></span>
+<span class="line"><span>│         │                               │                                   │</span></span>
+<span class="line"><span>│         ▼                               ▼                                   │</span></span>
+<span class="line"><span>│  ┌─────────────────┐         ┌──────────────────────┐                     │</span></span>
+<span class="line"><span>│  │  Transformation  │────────▶│   Offline Store       │──▶ Training (Spark) │</span></span>
+<span class="line"><span>│  │  (Spark/Flink)   │         │   (Parquet/Iceberg)   │                     │</span></span>
+<span class="line"><span>│  └────────┬────────┘         └──────────────────────┘                     │</span></span>
+<span class="line"><span>│           │                                                                │</span></span>
+<span class="line"><span>│           ▼                                                                │</span></span>
+<span class="line"><span>│  ┌─────────────────┐         ┌──────────────────────┐                     │</span></span>
+<span class="line"><span>│  │  Ingestion Job   │────────▶│   Online Store        │──▶ Serving (gRPC)  │</span></span>
+<span class="line"><span>│  │  (materialize    │         │   (Redis/DynamoDB)    │   &#x3C; 5ms P99        │</span></span>
+<span class="line"><span>│  │   to online)     │         └──────────────────────┘                     │</span></span>
+<span class="line"><span>│  └─────────────────┘                                                       │</span></span>
+<span class="line"><span>│                                                                           │</span></span>
+<span class="line"><span>│                    ┌──────────────────────┐                               │</span></span>
+<span class="line"><span>│                    │   Monitoring          │                               │</span></span>
+<span class="line"><span>│                    │   (drift, freshness,   │                               │</span></span>
+<span class="line"><span>│                    │    distribution tests) │                               │</span></span>
+<span class="line"><span>│                    └──────────────────────┘                               │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<hr>
+<h2 id="2-key-requirements">2. Key Requirements</h2>
+<h3 id="functional-requirements">Functional Requirements</h3>
+<ul>
+<li>Define features once, use everywhere (training, serving, evaluation)</li>
+<li>Point-in-time correct feature retrieval — “give me features for user X as they existed at timestamp T”</li>
+<li>Support for batch (offline) and real-time (online) feature serving</li>
+<li>Feature versioning — model v3 trained on feature def v1.2 must produce identical values at serving</li>
+<li>Feature discovery — data scientists search/browse available features and understand their lineage</li>
+<li>Backfill — regenerate historical feature values when a bug is discovered in the transformation logic</li>
+</ul>
+<h3 id="non-functional-requirements-slas">Non-Functional Requirements (SLAs)</h3>
+<ul>
+<li><strong>Online serving latency:</strong> P99 &lt; 5ms for single-entity lookup, P99 &lt; 50ms for batch of 100 entities</li>
+<li><strong>Online serving throughput:</strong> 1M+ lookups/second (horizontal scaling)</li>
+<li><strong>Offline training throughput:</strong> TB-scale nightly jobs completing within SLA window (4 hours typical)</li>
+<li><strong>Consistency:</strong> Training-serving skew must be zero (identical computation) by design; point-in-time accuracy bounded by source data granularity</li>
+<li><strong>Freshness:</strong> Online features updated within 1 minute of source data change for real-time use cases, hourly for batch use cases</li>
+<li><strong>Availability:</strong> Online store 99.99% — serving must degrade gracefully (stale features &gt; no features)</li>
+</ul>
+<hr>
+<h2 id="3-capacity-planning">3. Capacity Planning</h2>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Estimate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Number of feature groups (distinct entity types)</td>
+<td>100–500</td>
+</tr>
+<tr>
+<td>Features per group</td>
+<td>10–200</td>
+</tr>
+<tr>
+<td>Total feature definitions</td>
+<td>5,000–50,000</td>
+</tr>
+<tr>
+<td>Online store QPS (reads)</td>
+<td>500K–2M</td>
+</tr>
+<tr>
+<td>Online store write QPS (materialization)</td>
+<td>10K–50K</td>
+</tr>
+<tr>
+<td>Offline training data generated nightly</td>
+<td>10 TB–100 TB</td>
+</tr>
+<tr>
+<td>Online store size (hot features only)</td>
+<td>50 GB–500 GB (Redis cluster)</td>
+</tr>
+<tr>
+<td>Feature TTL range</td>
+<td>1 min (real-time) to 30 days (slow-moving)</td>
+</tr>
+<tr>
+<td>Point-in-time lookback window</td>
+<td>2 years for training; 30 days for online fallback</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="4-data-model">4. Data Model</h2>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>FeatureGroup (entity type)</span></span>
+<span class="line"><span>  - name: "user_features"</span></span>
+<span class="line"><span>  - entity_id_type: "user_uuid"</span></span>
+<span class="line"><span>  - online_ttl: 3600s</span></span>
+<span class="line"><span>  - features: [FeatureDef, ...]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>FeatureDef</span></span>
+<span class="line"><span>  - name: "user_7d_avg_transaction_amount"</span></span>
+<span class="line"><span>  - version: "1.2"</span></span>
+<span class="line"><span>  - dtype: float64</span></span>
+<span class="line"><span>  - transformation: transformation_id → references source tables/queries</span></span>
+<span class="line"><span>  - aggregation_window: 7d</span></span>
+<span class="line"><span>  - depends_on: ["transactions_stream", "user_profiles"]</span></span>
+<span class="line"><span>  - owner_team: "fraud-ml"</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>FeatureValue (online store — key-value)</span></span>
+<span class="line"><span>  - key: "user_features:{user_uuid}:{feature_name}"</span></span>
+<span class="line"><span>  - value: float64/int64/bytes</span></span>
+<span class="line"><span>  - written_at: epoch_ms</span></span>
+<span class="line"><span>  - ttl: seconds</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>FeatureVector (offline store — columnar)</span></span>
+<span class="line"><span>  - entity_id: user_uuid</span></span>
+<span class="line"><span>  - event_timestamp: when this feature snapshot was valid</span></span>
+<span class="line"><span>  - processed_timestamp: when it was computed</span></span>
+<span class="line"><span>  - features: {f1: v1, f2: v2, ...}</span></span></code></pre>
+<p><strong>Storage Choice:</strong></p>
+<ul>
+<li><strong>Online store:</strong> Redis Cluster (latency) or DynamoDB (managed, consistent) for hot-path key-value lookups. Redis is ideal for sub-ms P50 latency with hash-tag-based sharding on entity_id. DynamoDB is preferred when the ops burden of Redis isn’t justified, trading ~2ms P99 for zero maintenance.</li>
+<li><strong>Offline store:</strong> Apache Iceberg or Delta Lake on S3/GCS. Columnar format (Parquet) for efficient training reads. Time-partitioned by event_timestamp for point-in-time filtering.</li>
+<li><strong>Registry:</strong> PostgreSQL or a Git-based registry (declarative YAML in a monorepo, with CI/CD for validation).</li>
+</ul>
+<hr>
+<h2 id="5-core-design">5. Core Design</h2>
+<h3 id="51-the-training-serving-skew-problem">5.1 The Training-Serving Skew Problem</h3>
+<p>This is the central problem the feature store solves. Training-serving skew occurs whenever the code path that computes features during training produces different results than the code path that computes features during serving. There are three categories:</p>
+<p><strong>Code skew (most common).</strong> The data scientist writes feature engineering in a Python notebook for training, then an ML engineer reimplements it in Java/Go for the serving layer. Subtle differences in rounding, null handling, or aggregation window boundaries produce different outputs. The feature store eliminates this by storing the transformation definition once and executing it identically in both paths.</p>
+<p><strong>Data skew (harder).</strong> The training data is a static snapshot from last week; the serving data is live. If the underlying data distribution shifts (e.g., a new payment method launches and transaction patterns change), the model sees feature distributions it never trained on. The feature store mitigates this with distribution monitoring, but it can’t eliminate it — this is the domain of model retraining cadence.</p>
+<p><strong>Temporal skew (hardest).</strong> During training, you join features from multiple time windows and must ensure temporal consistency. If you train on <code>user_profile</code> from Tuesday but <code>transaction_count</code> from Wednesday, you’ve introduced leakage — the model learned from the future. The feature store enforces point-in-time correctness to prevent this.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌───────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                    TRAINING-SERVING SKEW DETECTION                     │</span></span>
+<span class="line"><span>│                                                                        │</span></span>
+<span class="line"><span>│   Training Pipeline            Serving Pipeline                        │</span></span>
+<span class="line"><span>│   ┌──────────────┐             ┌──────────────┐                        │</span></span>
+<span class="line"><span>│   │ Raw Data     │             │ Live Event    │                        │</span></span>
+<span class="line"><span>│   │ (S3/DB)      │             │ (Kafka/gRPC)  │                        │</span></span>
+<span class="line"><span>│   └──────┬───────┘             └──────┬────────┘                        │</span></span>
+<span class="line"><span>│          │                            │                                 │</span></span>
+<span class="line"><span>│          ▼                            ▼                                 │</span></span>
+<span class="line"><span>│   ┌──────────────┐             ┌──────────────┐                        │</span></span>
+<span class="line"><span>│   │ Feature      │             │ Feature       │                        │</span></span>
+<span class="line"><span>│   │ Transform    │    SAME     │ Transform     │  ◄── Registry ensures  │</span></span>
+<span class="line"><span>│   │ (Spark UDF)  │◄───CODE────│ (Online calc) │      identical code    │</span></span>
+<span class="line"><span>│   └──────┬───────┘             └──────┬────────┘                        │</span></span>
+<span class="line"><span>│          │                            │                                 │</span></span>
+<span class="line"><span>│          ▼                            ▼                                 │</span></span>
+<span class="line"><span>│   ┌──────────────┐             ┌──────────────┐                        │</span></span>
+<span class="line"><span>│   │ Offline Store│             │ Online Store  │                        │</span></span>
+<span class="line"><span>│   │ (Parquet)    │             │ (Redis)       │                        │</span></span>
+<span class="line"><span>│   └──────┬───────┘             └──────┬────────┘                        │</span></span>
+<span class="line"><span>│          │                            │                                 │</span></span>
+<span class="line"><span>│          ▼                            ▼                                 │</span></span>
+<span class="line"><span>│   ┌──────────────┐             ┌──────────────┐                        │</span></span>
+<span class="line"><span>│   │ Trainer       │             │ Model Server  │                        │</span></span>
+<span class="line"><span>│   └──────────────┘             └──────────────┘                        │</span></span>
+<span class="line"><span>│          │                            │                                 │</span></span>
+<span class="line"><span>│          └──────────┬─────────────────┘                                 │</span></span>
+<span class="line"><span>│                     ▼                                                   │</span></span>
+<span class="line"><span>│            ┌─────────────────┐                                         │</span></span>
+<span class="line"><span>│            │ Distribution     │                                         │</span></span>
+<span class="line"><span>│            │ Comparison Test  │  ◄── KS test / Jensen-Shannon / PSI     │</span></span>
+<span class="line"><span>│            │ (hourly batch)   │      Alert if divergence > threshold     │</span></span>
+<span class="line"><span>│            └─────────────────┘                                         │</span></span>
+<span class="line"><span>└───────────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<h3 id="52-api-contract">5.2 API Contract</h3>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/features/{entity_type}/{entity_id}</code></td>
+<td>GET</td>
+<td>Online: fetch all features for an entity</td>
+</tr>
+<tr>
+<td><code>/features/{entity_type}/{entity_id}?names=f1,f2</code></td>
+<td>GET</td>
+<td>Online: fetch specific features</td>
+</tr>
+<tr>
+<td><code>/features/batch</code></td>
+<td>POST</td>
+<td>Online: fetch features for up to 100 entities</td>
+</tr>
+<tr>
+<td><code>/features/materialize</code></td>
+<td>POST (internal)</td>
+<td>Write computed features to online store</td>
+</tr>
+<tr>
+<td><code>/registry/features</code></td>
+<td>GET/POST</td>
+<td>CRUD for feature definitions</td>
+</tr>
+<tr>
+<td><code>/registry/features/{name}/versions</code></td>
+<td>GET</td>
+<td>List versions of a feature definition</td>
+</tr>
+<tr>
+<td><code>/offline/features?entity_type=X&amp;start=T1&amp;end=T2</code></td>
+<td>GET</td>
+<td>Offline: retrieve training dataset</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-architectural-decisions">5.3 Architectural Decisions</h3>
+<blockquote>
+<p><strong>Key Choice #1: Online materialization vs. Online computation.</strong> Should the online store hold pre-computed feature values (push model), or should the serving layer compute features on the fly from source data (pull model)?</p>
+</blockquote>
+<p><strong>Push model (pre-materialized):</strong> A batch job (Spark/Flink) continuously computes features and writes them to the online store (Redis). The serving layer does a simple KV lookup. This gives predictable latency — the computation cost is paid upfront. The downside is staleness: if the batch job runs every 5 minutes, features are up to 5 minutes stale. This works for 95% of features.</p>
+<p><strong>Pull model (on-demand computation):</strong> The serving layer calls source systems directly (e.g., query the transactions DB for the last 7 days of data and compute the average). This gives fresh results but introduces latency (source system call) and availability coupling (if the transactions DB is slow, your model is slow). Use this only for real-time features that absolutely cannot tolerate staleness, and wrap in a circuit breaker.</p>
+<p><strong>The pragmatic answer — hybrid.</strong> The feature store pre-materializes all features on a configurable cadence (1 min, 5 min, 1 hour, or 1 day) based on each feature’s freshness SLA. For the rare feature that requires sub-second freshness, the online layer falls back to on-demand computation, but only if the cached value’s age &gt; the feature’s declared max_staleness. The key insight: 80% of features can tolerate minutes of staleness. Don’t build real-time infrastructure for features that don’t need it.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│              MATERIALIZATION STRATEGY — PUSH VS PULL                  │</span></span>
+<span class="line"><span>│                                                                       │</span></span>
+<span class="line"><span>│  Feature Freshness SLA:                                               │</span></span>
+<span class="line"><span>│                                                                       │</span></span>
+<span class="line"><span>│  ┌──────────────────┬──────────────┬──────────────┬───────────────┐  │</span></span>
+<span class="line"><span>│  │  Max Staleness   │  Strategy    │  Latency P99 │  Availability  │  │</span></span>
+<span class="line"><span>│  ├──────────────────┼──────────────┼──────────────┼───────────────┤  │</span></span>
+<span class="line"><span>│  │  &#x3C; 1 sec         │  Pull (live) │  10-50ms     │  Depends on    │  │</span></span>
+<span class="line"><span>│  │                  │              │              │  source        │  │</span></span>
+<span class="line"><span>│  ├──────────────────┼──────────────┼──────────────┼───────────────┤  │</span></span>
+<span class="line"><span>│  │  1 sec – 5 min   │  Push (Flink)│  &#x3C; 1ms       │  Redis only    │  │</span></span>
+<span class="line"><span>│  ├──────────────────┼──────────────┼──────────────┼───────────────┤  │</span></span>
+<span class="line"><span>│  │  5 min – 1 hr    │  Push (Spark)│  &#x3C; 1ms       │  Redis only    │  │</span></span>
+<span class="line"><span>│  ├──────────────────┼──────────────┼──────────────┼───────────────┤  │</span></span>
+<span class="line"><span>│  │  > 1 hr          │  Push (daily)│  &#x3C; 1ms       │  Redis only    │  │</span></span>
+<span class="line"><span>│  └──────────────────┴──────────────┴──────────────┴───────────────┘  │</span></span>
+<span class="line"><span>│                                                                       │</span></span>
+<span class="line"><span>│  Fallback chain when online key misses:                               │</span></span>
+<span class="line"><span>│    1. Serve from offline store (Parquet → Redis cache)                │</span></span>
+<span class="line"><span>│    2. Compute on-demand (if freshness SLA requires it)                │</span></span>
+<span class="line"><span>│    3. Return default value (with "feature_stale" flag in response)    │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<blockquote>
+<p><strong>Key Choice #2: Point-in-time correctness — how do you join features temporally?</strong></p>
+</blockquote>
+<p>This is the hardest consistency problem in feature stores. Consider a fraud model that needs three features for user U at 2026-06-25 10:00:00:</p>
+<ul>
+<li><code>user_account_age</code>: sourced from <code>user_profiles</code> table, updated at 2026-06-25 08:30:00</li>
+<li><code>user_7d_txn_count</code>: aggregated from <code>transactions</code> stream, last computed at 2026-06-25 09:00:00</li>
+<li><code>user_device_os</code>: sourced from <code>login_events</code>, last event at 2026-06-25 09:55:00</li>
+</ul>
+<p>The naive approach joins the “latest” value of each, producing a feature vector mixing data from 08:30, 09:00, and 09:55. This isn’t necessarily wrong, but it’s not point-in-time consistent — you’re answering “what do we know about this user right now?” not “what did we know about this user at 10:00?”</p>
+<p><strong>Point-in-time join (the correct approach):</strong> Each feature value in the offline store carries an <code>event_timestamp</code> (when the source event occurred) and a <code>processed_timestamp</code> (when we computed it). When training, you specify <code>as_of = label_timestamp - ε</code>, and every feature retrieval returns the value that would have been observable at that moment — no future leakage. Implementation:</p>
+<ol>
+<li>For each feature group, maintain time-partitioned Parquet files keyed by <code>event_timestamp</code>.</li>
+<li>When generating a training example at time T, query each feature group with <code>WHERE event_timestamp &lt;= T ORDER BY event_timestamp DESC LIMIT 1</code> — this is an as-of join.</li>
+<li>The label (e.g., <code>fraud_report</code>) has its own timestamp T_label. All features must be queried as-of <code>T_label - 1 second</code> to prevent the model from seeing the label as a feature.</li>
+</ol>
+<p>This is computationally expensive — an as-of join over 50 feature groups with 2 years of data is a heavy Spark job. Optimizations: pre-join feature groups that share the same entity and timestamp granularity; use Z-ordering on event_timestamp in the Parquet files; maintain snapshot tables that denormalize the as-of state at daily/hourly boundaries for common lookback windows.</p>
+<blockquote>
+<p><strong>Key Choice #3: Feature versioning and backward compatibility.</strong></p>
+</blockquote>
+<p>Features evolve. A data scientist improves <code>user_7d_avg_transaction_amount</code> from a simple average (v1.0) to an exponentially weighted moving average (v1.1). Model v3 was trained on v1.0. Model v4 is trained on v1.1. At serving time, the feature store must serve v1.0 to model v3 and v1.1 to model v4 simultaneously.</p>
+<p><strong>Strategy:</strong> The model deployment manifest declares which feature versions it requires. The serving layer appends the version to the online store key: <code>user_features:{user_uuid}:user_7d_avg_txn:v1.0</code> and <code>user_features:{user_uuid}:user_7d_avg_txn:v1.1</code>. Both are materialized independently. A feature version is deprecated (materialization stops) only when no live model references it. This burns 2× the online store memory during the migration window — the price of safe rollbacks.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌──────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│                    FEATURE VERSIONING LIFECYCLE                       │</span></span>
+<span class="line"><span>│                                                                       │</span></span>
+<span class="line"><span>│   v1.0 ─────────────────────────────────────────────▶ deprecated      │</span></span>
+<span class="line"><span>│          │                                                             │</span></span>
+<span class="line"><span>│          │ model_v3 (trained on v1.0)                                  │</span></span>
+<span class="line"><span>│          │   └── serving: fetches v1.0 ◄── still materialized          │</span></span>
+<span class="line"><span>│                                                                        │</span></span>
+<span class="line"><span>│   v1.1 ─────────────────────────────────────────────▶ active           │</span></span>
+<span class="line"><span>│          │                                                             │</span></span>
+<span class="line"><span>│          │ model_v4 (trained on v1.1)                                  │</span></span>
+<span class="line"><span>│          │   └── serving: fetches v1.1                                 │</span></span>
+<span class="line"><span>│                                                                        │</span></span>
+<span class="line"><span>│   v1.2 ─────────────────────────────────────────────▶ active (latest)  │</span></span>
+<span class="line"><span>│                                                                        │</span></span>
+<span class="line"><span>│   Rule: A version is safe to deprecate when:                          │</span></span>
+<span class="line"><span>│     1. Zero live models reference it (from model registry)            │</span></span>
+<span class="line"><span>│     2. Grace period (7 days) has elapsed since last model              │</span></span>
+<span class="line"><span>│        stopped referencing it (allows rollback)                        │</span></span>
+<span class="line"><span>└──────────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<h3 id="54-the-online-store-architecture">5.4 The Online Store Architecture</h3>
+<p>The online store is the hot path. Every model prediction hits it. The design constraints:</p>
+<ul>
+<li><strong>Latency:</strong> At P99 &lt; 5ms, you’re in Redis territory. DynamoDB can achieve ~2ms P99 with DAX but it’s more expensive. A Redis Cluster sharded by <code>{entity_type}:{entity_id}</code> keeps all features for one entity on one shard, enabling single-round-trip lookups.</li>
+<li><strong>Key design:</strong> <code>{entity_type}:{entity_id}:{feature_name}:{version}</code> — hash-tagged on <code>{entity_type}:{entity_id}</code> for co-location. A single <code>HGETALL {entity_type}:{entity_id}:*</code> fetches all features in one command if you use Redis Hashes per entity.</li>
+<li><strong>Write path:</strong> A Flink/Spark streaming job reads from Kafka, computes features, and writes to Redis via pipeline batches (500–1000 keys per pipeline). The write path must never block the read path — use separate Redis connection pools or even separate Redis instances for ingestion vs. serving.</li>
+<li><strong>Eviction:</strong> Features carry TTLs. Redis key expiration handles most of this. But a sudden flood of stale writes (e.g., a backfill job gone wrong) can evict fresh keys. Mitigation: the ingestion job sets TTL only on keys it genuinely intends to expire; backfill jobs write with TTL=0 (no expiry) or explicitly skip keys that already have a fresher value (check <code>written_at</code> before overwriting).</li>
+</ul>
+<hr>
+<h2 id="6-scaling--bottlenecks">6. Scaling &amp; Bottlenecks</h2>
+<h3 id="read-path-online-serving">Read Path (online serving)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Client ──gRPC──▶ Feature Service ──Redis Pipeline──▶ Redis Cluster</span></span>
+<span class="line"><span>                                             │</span></span>
+<span class="line"><span>                                    ┌────────┴────────┐</span></span>
+<span class="line"><span>                                    │  Shard 0        │</span></span>
+<span class="line"><span>                                    │  Shard 1        │</span></span>
+<span class="line"><span>                                    │  ...            │</span></span>
+<span class="line"><span>                                    │  Shard N        │</span></span>
+<span class="line"><span>                                    └─────────────────┘</span></span></code></pre>
+<ul>
+<li><strong>Bottleneck #1 — Redis hot keys.</strong> If 80% of traffic is for 5% of entities (power users, popular products), those Redis shards become hot. Solution: client-side in-process caching with a short TTL (1–5 seconds). With 1M QPS and a 5-second cache TTL, a 10% cache hit rate removes 100K QPS from Redis.</li>
+<li><strong>Bottleneck #2 — Serialization overhead.</strong> Protobuf/gRPC serialization adds 0.5–1ms per request. For high-throughput, use a binary protocol or pre-serialize feature vectors into byte arrays in Redis.</li>
+<li><strong>Bottleneck #3 — Missing keys.</strong> A cache miss in Redis triggers a fallback chain (offline store → on-demand compute → default). If the miss rate spikes (e.g., new entity type deployed without pre-materialization), the fallback chain’s latency blows the P99. Solution: pre-warm the online store before deploying models; monitor miss rate by feature group; circuit-break the fallback chain at &gt;1% miss rate and serve defaults.</li>
+</ul>
+<h3 id="write-path-materialization">Write Path (materialization)</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Kafka ──▶ Flink ──▶ Feature Transform ──▶ Redis Pipeline ──▶ Online Store</span></span>
+<span class="line"><span>                           │</span></span>
+<span class="line"><span>                           ▼</span></span>
+<span class="line"><span>                     Offline Store (S3/Parquet)</span></span></code></pre>
+<ul>
+<li><strong>Bottleneck #1 — Window aggregation.</strong> Computing <code>user_90d_avg_spend</code> requires reading 90 days of transactions per user. At 100M users, that’s infeasible per-event. Solution: maintain intermediate aggregates (daily rollups) so the 90-day feature is a weighted average of 90 daily values, not 90 × N raw transactions.</li>
+<li><strong>Bottleneck #2 — Backfill storms.</strong> When a feature definition changes, all historical values must be recomputed. This can saturate the Spark cluster. Solution: backfill in priority order (active models first, deprecated models later), rate-limit the online store writes, and use separate compute pools for backfill vs. steady-state materialization.</li>
+</ul>
+<hr>
+<h2 id="7-consistency--replication">7. Consistency &amp; Replication</h2>
+<h3 id="consistency-model">Consistency Model</h3>
+<p>The feature store spans three consistency domains:</p>
+<table>
+<thead>
+<tr>
+<th>Domain</th>
+<th>Consistency</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Feature Registry (definitions)</td>
+<td>Strong (Git/DB)</td>
+<td>Must be the single source of truth; eventual consistency means two models could see different versions of the same feature</td>
+</tr>
+<tr>
+<td>Offline Store (training data)</td>
+<td>Eventual (batch)</td>
+<td>Training is a nightly batch job; data is valid as of the job’s start time. Point-in-time consistency is guaranteed within the batch</td>
+</tr>
+<tr>
+<td>Online Store (serving)</td>
+<td>Eventual (sub-minute)</td>
+<td>Features are pre-materialized; staleness is bounded by the materialization interval. Different Redis replicas may diverge for seconds</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-key-invariant">The key invariant</h3>
+<p><strong>A model’s prediction at time T should use feature values that the model COULD have seen during training.</strong> This is a weaker guarantee than strong consistency — we don’t need every serving replica to agree on the exact value, we just need the value to be within the distribution the model was trained on. This is why distribution monitoring (KS test, PSI) matters more than byte-level consistency in practice.</p>
+<h3 id="conflict-resolution">Conflict resolution</h3>
+<p>Feature stores don’t have write-write conflicts in the traditional sense — each feature value is keyed by entity + feature name + version, and writes are last-writer-wins by <code>written_at</code> timestamp. The real conflict is semantic: two teams defining different transformations for the same feature name. The registry prevents this with ownership (each feature has exactly one owner team) and code review for definition changes.</p>
+<hr>
+<h2 id="8-caching-strategy">8. Caching Strategy</h2>
+<table>
+<thead>
+<tr>
+<th>Cache Layer</th>
+<th>Technology</th>
+<th>TTL</th>
+<th>Invalidation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Client-side (gRPC)</td>
+<td>In-process LRU</td>
+<td>5–30 seconds</td>
+<td>TTL-based; no invalidation</td>
+</tr>
+<tr>
+<td>Online Store</td>
+<td>Redis Cluster</td>
+<td>1 min – 30 days (per feature)</td>
+<td>Key-level TTL; explicit DELETE on source data correction</td>
+</tr>
+<tr>
+<td>Offline Store cache</td>
+<td>Redis (read-through)</td>
+<td>1 hour</td>
+<td>TTL; cleared after nightly training job completes</td>
+</tr>
+<tr>
+<td>Feature definition cache</td>
+<td>In-memory (per pod)</td>
+<td>5 minutes</td>
+<td>Poll registry; reload on version bump event</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The golden rule of feature caching:</strong> never set a cache TTL shorter than the feature’s natural staleness. If <code>user_account_age</code> changes once a year, caching it for 24 hours costs nothing and saves Redis load. If <code>user_session_clicks</code> changes every second, cache for 1 second or don’t cache at all.</p>
+<hr>
+<h2 id="9-weaknesses--improvements">9. Weaknesses &amp; Improvements</h2>
+<ul>
+<li><strong>Training-serving skew detection is reactive.</strong> Distribution tests catch skew after features have been served, not before. Improvement: add a “shadow serving” path that computes features using the offline code path in real-time (side-by-side with online path) and compares outputs. This detects code skew before it affects predictions.</li>
+<li><strong>Registry is a single point of failure for the platform.</strong> If the registry is down, new feature deployments are blocked. Improvement: the serving layer caches the full registry and can operate in “static mode” for hours without the registry, using a baked-in snapshot.</li>
+<li><strong>Cost of dual storage.</strong> Every feature value exists in both Parquet (offline) and Redis (online), roughly doubling storage costs. Improvement: for features with &gt;1 hour staleness, serve directly from the offline store with a Parquet-to-Redis read-through cache, eliminating the separate materialization job.</li>
+<li><strong>Multi-tenancy is hard.</strong> When 50 teams share the same Redis cluster, a single team’s misconfigured backfill can degrade latency for everyone. Improvement: hard partition Redis by team or criticality tier (fraud gets dedicated nodes, experimentation shares a pool).</li>
+</ul>
+<hr>
+<h2 id="10-sharp-question">10. Sharp Question</h2>
+<p><strong>Q:</strong> Your feature store serves 500K QPS of online lookups. The fraud team deploys a new model that adds a feature <code>user_90d_merchant_diversity</code> — a count of distinct merchants the user transacted with in 90 days. This feature was never materialized before. The model goes live immediately. At T+10 minutes, P99 latency spikes from 3ms to 800ms. What happened? How do you fix it without taking the model offline?</p>
+<p><strong>Model Answer:</strong></p>
+<p>The online store has no pre-materialized values for the new feature. Every lookup misses Redis and falls through the fallback chain: try offline store (slow S3 scan) → try on-demand compute (90-day aggregation over Kafka stream, even slower) → return default. The fallback chain’s latency — especially the on-demand compute path reading 90 days of transaction data — is blowing the P99.</p>
+<p><strong>Immediate fix:</strong> Push a config change that sets <code>fallback_on_miss=false</code> and <code>default_value=0.0</code> for this feature, overriding the fallback chain. The model’s accuracy will degrade for this one feature (it sees zeros instead of real values), but predictions continue at normal latency — graceful degradation.</p>
+<p><strong>Permanent fix:</strong> Trigger an emergency backfill job that computes <code>user_90d_merchant_diversity</code> for the top 100K users (by transaction volume) and writes to Redis. Once the online store has &gt;95% coverage, re-enable the fallback chain with a tight timeout (50ms max). Going forward, materialization of new features must happen BEFORE model deployment — the deployment pipeline should gate on “feature coverage &gt; 99%” in the online store.</p>
+<h3 id="common-pitfall">Common Pitfall</h3>
+<p><strong>“Just increase the Redis timeout.”</strong> Candidates often suggest bumping the Redis client timeout to mask the latency. This doesn’t fix the problem — every request still waits for the full timeout before falling through, and the model server’s thread pool saturates waiting for Redis, cascading the latency to ALL models, not just the fraud model. The correct answer is to fail fast and degrade gracefully, not to wait longer.</p>
+<hr>
+<h2 id="11-self-check-questions-cron-session">11. Self-Check Questions (Cron Session)</h2>
+<blockquote>
+<p>These are for you to self-assess. Answer each out loud (or in writing) before continuing to the next.</p>
+</blockquote>
+<ol>
+<li>
+<p><strong>Explain the three types of training-serving skew</strong> (code skew, data skew, temporal skew). For each, describe a real scenario where it could happen and how a feature store prevents or detects it.</p>
+</li>
+<li>
+<p><strong>Point-in-time join:</strong> You’re training a churn model. The label “user churned” is timestamped at 2026-06-25. Feature A (<code>user_login_count_30d</code>) was last computed at 2026-06-26 (one day AFTER the label). If you join these naively, is there leakage? Why or why not? What timestamp should the AS-OF join use?</p>
+</li>
+<li>
+<p><strong>Materialization cadence tradeoff:</strong> A feature has <code>max_staleness = 1 second</code> but the materialization job (Flink) runs every 60 seconds. What happens? What are your options, and which one would you implement for a payments fraud model where 1 second of staleness means a fraudulent transaction goes undetected?</p>
+</li>
+<li>
+<p><strong>Backfill safety:</strong> A bug is discovered in <code>user_7d_avg_txn:v1.2</code> — it was undercounting by 20%. You fix the code and deploy v1.3. Describe the backfill process: what data gets recomputed, how do you ensure the online store isn’t corrupted during the backfill, and how do you validate correctness before switching the model to v1.3?</p>
+</li>
+<li>
+<p><strong>Design a distribution drift detection system</strong> that compares online vs. offline feature distributions. What statistical test would you use? At what cadence? What’s the p-value threshold for alerting? How do you prevent alert fatigue when 800 models are each producing weekly false positives?</p>
+</li>
+</ol>
+<hr>
+<h2 id="related">Related</h2>
+<ul>
+<li>[[topic-queue]]</li>
+<li>[[Vector Database Internals (HNSW, IVF, Sharding)]]</li>
+<li>[[RAG Pipeline (Chunking, Embeddings, Retrieval, Reranking)]]</li>
+<li>[[Weakness Vault/Day-50-Feature-Store]]</li>
+</ul>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>The feature store bridges training (offline, batch) and serving (online, low-latency) with identical feature definitions</li>
+<li>Training-serving skew is the #1 failure mode — same feature must compute identically in both paths</li>
+<li>Online store: Redis/ DynamoDB for sub-ms lookups. Offline store: Parquet/Iceberg on S3 for batch training</li>
+<li>Point-in-time correctness prevents future leakage — features must be joined using the event timestamp, not the query timestamp</li>
+<li>Feature versioning: model trained on feature v1.2 must be servable even when feature is at v2.0</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you detect training-serving skew?” — Compare online and offline feature distributions using KS tests or population stability index (PSI). Alert when PSI &gt; 0.2.</li>
+<li>“What happens when the online store is down?” — Fall back to default feature values (model trained with defaults) or cached features from the last successful lookup.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>The same feature definition can produce different values if the aggregation window differs between training (e.g., 7-day calendar window) and serving (e.g., 7-day rolling window). The code must be shared, not just the definition.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/feature-store-and-online-offline-consistency/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Feature%20Store%20%26%20Online%2FOffline%20Consistency&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Ffeature-store-and-online-offline-consistency%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Ffeature-store-and-online-offline-consistency%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/feature-store-and-online-offline-consistency" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/event-sourcing-and-cqrs" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Event Sourcing &amp; CQRS</span></a><a href="/notes/system-design/fine-tuning-infrastructure-lora-qlora-distributed-training" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Fine-Tuning Infrastructure (LoRA, QLoRA, Distributed Training)</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Feature Store &amp; Online/Offline Consistency" data-selector=".article-prose" data-article-slug="system-design/feature-store-and-online-offline-consistency" data-article-title="Feature Store &amp; Online/Offline Consistency" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

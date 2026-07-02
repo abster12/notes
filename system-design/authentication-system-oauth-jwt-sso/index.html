@@ -1,0 +1,849 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Authentication System (OAuth, JWT, SSO) · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview" class="toc-link" data-toc-link="overview" data-astro-cid-p33bl5ka>Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#the-fundamental-problem-http-is-stateless" class="toc-link" data-toc-link="the-fundamental-problem-http-is-stateless" data-astro-cid-p33bl5ka>The Fundamental Problem: HTTP Is Stateless</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#session-based-vs-token-based-authentication" class="toc-link" data-toc-link="session-based-vs-token-based-authentication" data-astro-cid-p33bl5ka>Session-Based vs Token-Based Authentication</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#session-vs-token--side-by-side" class="toc-link" data-toc-link="session-vs-token--side-by-side" data-astro-cid-p33bl5ka>Session vs Token — Side by Side</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#jwt-structure-and-claims" class="toc-link" data-toc-link="jwt-structure-and-claims" data-astro-cid-p33bl5ka>JWT Structure and Claims</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#jwt-structure-breakdown" class="toc-link" data-toc-link="jwt-structure-breakdown" data-astro-cid-p33bl5ka>JWT Structure Breakdown</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#jwt-signing-algorithms-hs256-vs-rs256" class="toc-link" data-toc-link="jwt-signing-algorithms-hs256-vs-rs256" data-astro-cid-p33bl5ka>JWT Signing Algorithms: HS256 vs RS256</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#jwt-signing-algorithm-comparison" class="toc-link" data-toc-link="jwt-signing-algorithm-comparison" data-astro-cid-p33bl5ka>JWT Signing Algorithm Comparison</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#refresh-token-rotation" class="toc-link" data-toc-link="refresh-token-rotation" data-astro-cid-p33bl5ka>Refresh Token Rotation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#refresh-token-rotation-flow" class="toc-link" data-toc-link="refresh-token-rotation-flow" data-astro-cid-p33bl5ka>Refresh Token Rotation Flow</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#oauth-20-flows" class="toc-link" data-toc-link="oauth-20-flows" data-astro-cid-p33bl5ka>OAuth 2.0 Flows</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#authorization-code-flow" class="toc-link" data-toc-link="authorization-code-flow" data-astro-cid-p33bl5ka>Authorization Code Flow</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#authorization-code-with-pkce" class="toc-link" data-toc-link="authorization-code-with-pkce" data-astro-cid-p33bl5ka>Authorization Code with PKCE</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#oauth-20-authorization-code-flow-with-pkce" class="toc-link" data-toc-link="oauth-20-authorization-code-flow-with-pkce" data-astro-cid-p33bl5ka>OAuth 2.0 Authorization Code Flow with PKCE</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#client-credentials-flow" class="toc-link" data-toc-link="client-credentials-flow" data-astro-cid-p33bl5ka>Client Credentials Flow</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#openid-connect" class="toc-link" data-toc-link="openid-connect" data-astro-cid-p33bl5ka>OpenID Connect</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#sso-architecture-saml-vs-oidc" class="toc-link" data-toc-link="sso-architecture-saml-vs-oidc" data-astro-cid-p33bl5ka>SSO Architecture: SAML vs OIDC</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#sso-architecture--saml-20-vs-oidc-side-by-side" class="toc-link" data-toc-link="sso-architecture--saml-20-vs-oidc-side-by-side" data-astro-cid-p33bl5ka>SSO Architecture — SAML 2.0 vs OIDC Side by Side</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#multi-factor-authentication" class="toc-link" data-toc-link="multi-factor-authentication" data-astro-cid-p33bl5ka>Multi-Factor Authentication</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#password-storage" class="toc-link" data-toc-link="password-storage" data-astro-cid-p33bl5ka>Password Storage</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#rate-limiting-auth-endpoints" class="toc-link" data-toc-link="rate-limiting-auth-endpoints" data-astro-cid-p33bl5ka>Rate Limiting Auth Endpoints</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#token-revocation" class="toc-link" data-toc-link="token-revocation" data-astro-cid-p33bl5ka>Token Revocation</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#distributed-session-management" class="toc-link" data-toc-link="distributed-session-management" data-astro-cid-p33bl5ka>Distributed Session Management</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#security-considerations" class="toc-link" data-toc-link="security-considerations" data-astro-cid-p33bl5ka>Security Considerations</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#authentication-security-checklist" class="toc-link" data-toc-link="authentication-security-checklist" data-astro-cid-p33bl5ka>Authentication Security Checklist</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-planning" class="toc-link" data-toc-link="capacity-planning" data-astro-cid-p33bl5ka>Capacity Planning</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-question" class="toc-link" data-toc-link="interview-question" data-astro-cid-p33bl5ka>Interview Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Authentication System (OAuth, JWT, SSO)</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 35 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 49 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>basics</span><span class="tag" data-astro-cid-sgg5joot>authentication</span><span class="tag" data-astro-cid-sgg5joot>oauth</span><span class="tag" data-astro-cid-sgg5joot>jwt</span><span class="tag" data-astro-cid-sgg5joot>sso</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="authentication-system-oauth-jwt-sso">Authentication System (OAuth, JWT, SSO)</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A system that verifies user identity and controls access using OAuth 2.0 (authorization), JWT (stateless tokens), and SSO (single login across services). It handles token issuance, refresh, and revocation, plus service-to-service authentication.</p>
+<p><strong>How it’s asked:</strong> “Design an authentication system supporting OAuth, JWT tokens, and SSO for a platform with 100M users. Handle token refresh, revocation, and service-to-service auth.”</p>
+<hr>
+<h2 id="overview">Overview</h2>
+<p>Authentication answers the question “who are you?” while authorization answers “what are you allowed to do?” These are separate concerns that interviewers deliberately conflate to test whether you recognize the boundary. In a system design interview, the authentication layer is the front door to every other component — a mistake here compromises the entire system regardless of how elegant your downstream architecture is. This note covers the full spectrum from the stateless HTTP problem through modern OAuth 2.0 and OpenID Connect flows, SSO architectures, password storage, token revocation, distributed session management, rate limiting, capacity planning, and the security trade-offs that govern each decision.</p>
+<h2 id="the-fundamental-problem-http-is-stateless">The Fundamental Problem: HTTP Is Stateless</h2>
+<p>Every HTTP request is independent. The protocol carries no memory of previous requests from the same client, so without an explicit mechanism to anchor identity, users would need to re-authenticate on every single request. The web solved this with cookies, but cookies are just a transport — the real question is what you put inside them and where the authoritative state lives. Two architectures emerged: server-side sessions, where the server keeps a record and the cookie holds only a lookup key, and self-contained tokens, where the cookie or header carries a signed credential that the server can verify without any backing store. Each choice cascades into different trade-offs around revocation, scaling, latency, and cross-service propagation that define the rest of the design.</p>
+<h2 id="session-based-vs-token-based-authentication">Session-Based vs Token-Based Authentication</h2>
+<p>In a session-based architecture, the client posts credentials to a login endpoint, the server validates them and creates a session record in a database or cache, then returns a cookie containing only the session ID. On subsequent requests the browser attaches the cookie automatically, and the server performs a lookup to resolve the session to a user context. The strength of this model is revocation: deleting the session record immediately invalidates the credential, and because the payload is a short opaque string, there is no risk of leaking claims to the client. The weakness is scaling. In a multi-instance deployment you need either sticky sessions — which constrain load balancing and complicate failover — or a shared session store such as Redis, which becomes a network hop on every authenticated request and a single point of failure if not carefully replicated.</p>
+<p>Token-based authentication flips the state ownership. The server issues a signed token — typically a JWT — that contains the user’s identity and claims directly in the payload. The client presents this token on every request, usually in an Authorization header, and any server that holds the verification key can validate it locally without a database lookup. This is the natural fit for microservices and stateless APIs: identity propagates across service boundaries without a shared session store, and horizontal scaling is trivial because any instance can verify any token. The cost is revocation. A signed token is valid until its expiry, and there is no server-side record to delete. You must either keep tokens short-lived, maintain a denylist, or accept that a stolen token remains usable until it expires. The payload is also visible to the client — Base64 encoding is not encryption — so you must never place secrets inside a JWT.</p>
+<p>The choice between sessions and tokens is rarely binary in production systems. A common hybrid pattern uses a short-lived access token for API calls paired with a refresh token stored in an HttpOnly cookie, giving you the stateless verification of tokens for hot-path requests while preserving server-side control over the refresh lifecycle. Another hybrid issues a JWT but tracks a session record keyed by the token’s JTI for revocation and audit, checking it only on sensitive operations to avoid the per-request Redis hit.</p>
+<h3 id="session-vs-token--side-by-side">Session vs Token — Side by Side</h3>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Session-Based</th>
+<th>Token-Based (JWT)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>State location</td>
+<td>Server-side store (Redis/DB)</td>
+<td>Self-contained in the token</td>
+</tr>
+<tr>
+<td>What the client holds</td>
+<td>Opaque session ID (cookie)</td>
+<td>Signed JWT (cookie or <code>Authorization</code> header)</td>
+</tr>
+<tr>
+<td>Verification cost</td>
+<td>Network lookup per request</td>
+<td>Local CPU signature check</td>
+</tr>
+<tr>
+<td>Revocation</td>
+<td>Delete the record — immediate</td>
+<td>Hard; needs short TTL, denylist, or introspection</td>
+</tr>
+<tr>
+<td>Scaling</td>
+<td>Needs shared store or sticky sessions</td>
+<td>Trivial — any instance can verify</td>
+</tr>
+<tr>
+<td>Payload visibility to client</td>
+<td>Hidden (opaque ID)</td>
+<td>Visible (Base64URL, not encrypted)</td>
+</tr>
+<tr>
+<td>Cross-service propagation</td>
+<td>Requires shared store or token exchange</td>
+<td>Pass the token; verify locally</td>
+</tr>
+<tr>
+<td>Best fit</td>
+<td>Traditional web apps, monoliths</td>
+<td>Microservices, stateless APIs, mobile/SPAs</td>
+</tr>
+<tr>
+<td>Blast radius of token theft</td>
+<td>Revoked instantly</td>
+<td>Valid until <code>exp</code> or denylist propagation</td>
+</tr>
+<tr>
+<td>Operational dependency</td>
+<td>Session store must be HA</td>
+<td>Verification key (JWKS) must be distributed</td>
+</tr>
+</tbody>
+</table>
+<h2 id="jwt-structure-and-claims">JWT Structure and Claims</h2>
+<p>A JSON Web Token is a compact, URL-safe string with three Base64URL-encoded segments separated by dots: header, payload, and signature. The header declares the signing algorithm and token type. The payload carries the claims — statements about the subject and the token’s own metadata. The signature is computed over the header and payload using the declared algorithm and a secret or private key, producing a value the receiver can recompute to confirm integrity.</p>
+<h3 id="jwt-structure-breakdown">JWT Structure Breakdown</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  header            payload                       signature</span></span>
+<span class="line"><span>  ┌─────────────┐   ┌───────────────────────────┐  ┌────────────────────────┐</span></span>
+<span class="line"><span>  │ {           │   │ {                         │  │ HMAC-SHA256(            │</span></span>
+<span class="line"><span>  │   "alg":    │   │   "sub":"1234567890",     │  │   base64url(header) +   │</span></span>
+<span class="line"><span>  │    "RS256", │   │   "name":"John Doe",      │  │   "." +                 │</span></span>
+<span class="line"><span>  │   "typ":"JWT"│  │   "iat":1516239022,       │  │   base64url(payload),   │</span></span>
+<span class="line"><span>  │ }           │   │   "exp":1516242622,       │  │   private_key          │</span></span>
+<span class="line"><span>  └─────────────┘   │   "iss":"auth.example",   │  │ )                      │</span></span>
+<span class="line"><span>                    │   "aud":"api.example",    │  └────────────────────────┘</span></span>
+<span class="line"><span>                    │   "jti":"a3f1b2c9"        │</span></span>
+<span class="line"><span>                    │ }                         │</span></span>
+<span class="line"><span>                    └───────────────────────────┘</span></span>
+<span class="line"><span>          │                   │                          │</span></span>
+<span class="line"><span>          ▼                   ▼                          ▼</span></span>
+<span class="line"><span>   base64url(        base64url(                   base64url(</span></span>
+<span class="line"><span>     header )          payload )                    signature )</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9 . eyJzdWIiOiIxMjM0... . SflKxwRJSMeKKF2QT4fwp...</span></span>
+<span class="line"><span>   \_________________________ header _______________________/ \________ payload ______/ \____ sig ____/</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Decoded by receiver:</span></span>
+<span class="line"><span>     1. Split on "."</span></span>
+<span class="line"><span>     2. base64url-decode each segment</span></span>
+<span class="line"><span>     3. Recompute signature over header.payload with the verification key</span></span>
+<span class="line"><span>     4. Compare; if equal AND exp/nbf/aud/iss valid -> ACCEPT, else -> REJECT</span></span></code></pre>
+<p>Claims fall into three categories. Registered claims are the standard set defined by RFC 7519: <code>iss</code> (issuer), <code>sub</code> (subject, typically the user ID), <code>aud</code> (intended audience), <code>exp</code> (expiry timestamp), <code>nbf</code> (not-before timestamp), <code>iat</code> (issued-at timestamp), and <code>jti</code> (a unique token identifier used for deduplication and revocation). Private claims are application-specific, such as <code>roles</code>, <code>scope</code>, <code>tenant_id</code>, or <code>email_verified</code>. Public claims are registered in the IANA JWT claims registry to avoid collisions across systems. The receiver must validate not only the signature but also the <code>exp</code>, <code>nbf</code>, <code>aud</code>, and <code>iss</code> claims — a correctly signed token that has expired or was issued for a different audience is still invalid. A frequent mistake is verifying only the signature and trusting the payload unconditionally; claim validation is part of correctness, not an optional nicety.</p>
+<p>A critical point for interviews: the payload is Base64URL-decoded, not encrypted. Anyone who intercepts the token can read every claim. If you need confidentiality, use JWE (JSON Web Encryption) rather than a standard signed JWT, or simply keep sensitive data out of the token and look it up server-side when needed. Tokens should be lean — including entire permission trees or large profile objects inflates every request and increases the blast radius of interception.</p>
+<h2 id="jwt-signing-algorithms-hs256-vs-rs256">JWT Signing Algorithms: HS256 vs RS256</h2>
+<p>The signing algorithm determines how the signature is produced and verified, and this choice has significant implications for key distribution and security. HS256 uses a symmetric secret shared between the issuer and all verifiers. The same key signs and validates, which is simple to deploy in a monolith but becomes a liability in a multi-service system: every service that verifies tokens holds the secret, and if any one of them is compromised the attacker can forge tokens for the entire platform. RS256 uses an asymmetric key pair. The authorization server signs with its private key; services verify with the public key, which can be freely distributed and cached. Compromising a verifier does not let an attacker mint tokens — only the private key can do that, and it lives in one tightly controlled place.</p>
+<p>In practice, RS256 (or its stronger cousin RS512) is the standard for any system with more than one verifying service or any OAuth 2.0 authorization server, because it enforces separation of concerns: only the identity service can create identity assertions, while every other service can independently trust them. ES256, which uses elliptic curve cryptography, is gaining adoption because it produces smaller signatures with equivalent security, reducing token size for bandwidth-constrained environments. Regardless of algorithm, you must whitelist the expected algorithm server-side and reject tokens that declare anything else. The classic algorithm confusion attack exploits a server that naively trusts the <code>alg</code> header: an attacker takes an RS256-signed token, changes the header to <code>HS256</code>, and re-signs the payload using the server’s public key as the HMAC secret — a key the attacker legitimately has access to. If the server accepts <code>HS256</code> and uses its RSA public key as the HMAC secret, the forgery validates. Pinning the algorithm per key eliminates this entire class of attack.</p>
+<h3 id="jwt-signing-algorithm-comparison">JWT Signing Algorithm Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Algorithm</th>
+<th>Key Type</th>
+<th>Sign / Verify Keys</th>
+<th>Compromise Impact</th>
+<th>Token Size</th>
+<th>Best Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HS256</td>
+<td>Symmetric</td>
+<td>Same secret signs &amp; verifies</td>
+<td>Any verifier compromise → attacker can forge tokens for the whole platform</td>
+<td>Smallest</td>
+<td>Single-service monolith, one verifier</td>
+</tr>
+<tr>
+<td>RS256</td>
+<td>Asymmetric (RSA)</td>
+<td>Private key signs; public key verifies</td>
+<td>Verifier compromise ≠ token minting; only private key can forge</td>
+<td>Larger (RSA signatures)</td>
+<td>Multi-service systems, OAuth 2.0 AS</td>
+</tr>
+<tr>
+<td>RS512</td>
+<td>Asymmetric (RSA)</td>
+<td>Private key signs; public key verifies</td>
+<td>Same as RS256, stronger</td>
+<td>Largest</td>
+<td>High-security enterprise tokens</td>
+</tr>
+<tr>
+<td>ES256</td>
+<td>Asymmetric (ECDSA)</td>
+<td>Private key signs; public key verifies</td>
+<td>Same isolation as RS256</td>
+<td>Smaller than RS256</td>
+<td>Bandwidth-constrained, mobile, modern systems</td>
+</tr>
+<tr>
+<td>ES512</td>
+<td>Asymmetric (ECDSA)</td>
+<td>Private key signs; public key verifies</td>
+<td>Same isolation</td>
+<td>Medium</td>
+<td>High-security, smaller than RS512</td>
+</tr>
+<tr>
+<td>none</td>
+<td>—</td>
+<td>No signature</td>
+<td>Tokens can be tampered freely</td>
+<td>Smallest</td>
+<td>Never use for auth (debug only)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Algorithm confusion attack mitigation:</strong> Pin the expected <code>alg</code> per key server-side and reject any token that declares a different algorithm. Never let the <code>alg</code> header choose the verification routine.</p>
+<h2 id="refresh-token-rotation">Refresh Token Rotation</h2>
+<p>Access tokens should be short-lived — fifteen minutes to one hour — so that the window of exposure after theft is bounded. But forcing users to re-authenticate every fifteen minutes is unacceptable, so the system issues a longer-lived refresh token alongside the access token. When the access token expires, the client sends the refresh token to a token endpoint and receives a new access token without user interaction. This decouples the short exposure window of access tokens from the long convenience window of the session.</p>
+<p>Refresh token rotation is the practice of issuing a brand-new refresh token every time the refresh endpoint is called and invalidating the old one. If an attacker steals a refresh token and uses it, the legitimate client’s next refresh attempt fails because the token it holds has already been rotated out — the system detects the anomaly and can revoke the entire token family. Without rotation, a stolen refresh token remains valid for days or weeks, giving the attacker persistent access that silently survives password changes. The most robust implementation tracks token families: every refresh chain descends from an original login, and if a token from the middle of a chain is replayed, the entire family is revoked immediately on the assumption that the chain has been compromised. This is called automatic reuse detection and is the mechanism that makes refresh token rotation a security control rather than just a convenience feature.</p>
+<h3 id="refresh-token-rotation-flow">Refresh Token Rotation Flow</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   LEGITIMATE CLIENT                                    ATTACKER IN POSSESSION OF RT_1</span></span>
+<span class="line"><span>   ─────────────────                                    ──────────────────────────────</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   1. Login ──────────────────────► Auth Server</span></span>
+<span class="line"><span>      ◄──────── access_token(AT_1) + refresh_token(RT_1)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   2. AT_1 expires; send RT_1 ───► /token</span></span>
+<span class="line"><span>      ◄──────── new AT_2 + new RT_2   (RT_1 invalidated, RT_2 issued)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   3. AT_2 expires; send RT_2 ───► /token</span></span>
+<span class="line"><span>      ◄──────── new AT_3 + new RT_3   (RT_2 invalidated, RT_3 issued)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>       ...rotation continues; each RT is single-use...</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   ATTACK SCENARIO — RT_1 was stolen (e.g. from a leaked log):</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   A. Attacker uses RT_1 ─────────► /token</span></span>
+<span class="line"><span>      ◄──────── new AT_x + new RT_x   (server marks RT_1 as "used")</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   B. Legit client still holds RT_1 (stale copy) ──► /token</span></span>
+<span class="line"><span>      ◄──────── 400 REJECT: RT_1 already rotated!</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   C. Server detects reuse of RT_1 ──► REVOKE ENTIRE TOKEN FAMILY</span></span>
+<span class="line"><span>      (all descendants of the original login RT are invalidated)</span></span>
+<span class="line"><span>      ├─ attacker's RT_x  ─► revoked</span></span>
+<span class="line"><span>      └─ legit client forced to re-authenticate</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Token family lineage:</span></span>
+<span class="line"><span>     login ─► RT_1 ─► RT_2 ─► RT_3 ─► RT_4 ─► ...</span></span>
+<span class="line"><span>                ▲</span></span>
+<span class="line"><span>                └── replay of any used token ⇒ kill the whole chain</span></span></code></pre>
+<p>Refresh tokens for public clients — SPAs and mobile apps that cannot hold a client secret — must be sender-constrained or use proof-of-possession mechanisms such as DPoP (Demonstrating Proof-of-Possession) or mTLS certificate-bound tokens, so that interception alone is not sufficient to use the token. For confidential clients with a backend, the refresh token is paired with the client secret at every refresh, adding a second factor that the browser never sees.</p>
+<h2 id="oauth-20-flows">OAuth 2.0 Flows</h2>
+<p>OAuth 2.0 is an authorization delegation framework, not an authentication protocol. It defines how a resource owner grants a client application access to their resources hosted on a resource server, without the client ever seeing the resource owner’s credentials. The framework defines four roles — resource owner (the user), client (the application), authorization server (issues tokens), and resource server (hosts protected APIs) — and several grant types that suit different client profiles and trust levels.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   ┌──────────────┐   ┌──────────────┐   ┌───────────────────┐   ┌──────────────────┐</span></span>
+<span class="line"><span>   │  Resource    │   │   Client     │   │  Authorization    │   │   Resource       │</span></span>
+<span class="line"><span>   │   Owner      │   │ (app)        │   │    Server         │   │    Server        │</span></span>
+<span class="line"><span>   │   (user)     │   │              │   │  (issues tokens)  │   │  (protected API) │</span></span>
+<span class="line"><span>   └──────────────┘   └──────────────┘   └───────────────────┘   └──────────────────┘</span></span></code></pre>
+<h3 id="authorization-code-flow">Authorization Code Flow</h3>
+<p>The authorization code flow is the workhorse of server-side web applications and the most secure of the user-facing flows. The user clicks a login link and is redirected to the authorization server’s <code>/authorize</code> endpoint with the client ID, requested scopes, a redirect URI, and a random state value. The user authenticates with the authorization server and consents to the requested scopes. The authorization server redirects back to the client’s pre-registered callback URI with a short-lived authorization code. The client’s backend then exchanges this code at the <code>/token</code> endpoint, presenting the code along with its client secret, and receives the access and refresh tokens. The two-step indirection — code first, then token — keeps tokens off the browser’s URL bar and front-end JavaScript. The code is single-use and expires within minutes, and the client secret never touches the browser. The state parameter binds the callback to the initiating request, preventing CSRF and authorization code injection attacks. This flow should be the default for any web application with a backend.</p>
+<h3 id="authorization-code-with-pkce">Authorization Code with PKCE</h3>
+<p>PKCE (Proof Key for Code Exchange) extends the authorization code flow for public clients that cannot safely hold a client secret — single-page applications, mobile apps, and desktop applications. The client generates a high-entropy <code>code_verifier</code> and derives a <code>code_challenge</code> by hashing it (S256 method). The challenge is sent with the initial authorization request; the verifier is sent with the token exchange. The authorization server rejects the exchange if the verifier does not hash to the challenge it stored. This means that even if an attacker intercepts the authorization code — say, by abusing a custom URL scheme on a mobile device or a redirect on a malicious browser extension — they cannot complete the exchange because they do not have the verifier, which lives only in the client’s memory. PKCE is now recommended for all OAuth 2.0 flows regardless of client type, and modern best-current-practice documents (OAuth 2.1) make it mandatory rather than optional.</p>
+<h3 id="oauth-20-authorization-code-flow-with-pkce">OAuth 2.0 Authorization Code Flow with PKCE</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  ┌──────────────┐      ┌──────────────────┐      ┌───────────────────┐</span></span>
+<span class="line"><span>  │  Resource    │      │  Client (SPA /   │      │ Authorization     │</span></span>
+<span class="line"><span>  │   Owner      │      │  Mobile / Web)   │      │    Server         │</span></span>
+<span class="line"><span>  │   (user +    │      │  — public client │      │                   │</span></span>
+<span class="line"><span>  │   browser)   │      │  no client secret│      │                   │</span></span>
+<span class="line"><span>  └──────┬───────┘      └────────┬─────────┘      └─────────┬─────────┘</span></span>
+<span class="line"><span>         │                       │                          │</span></span>
+<span class="line"><span>         │ 1. Client generates:                             │</span></span>
+<span class="line"><span>         │    code_verifier  = random 43-128 char string    │</span></span>
+<span class="line"><span>         │    code_challenge = BASE64URL(SHA256(verifier))  │</span></span>
+<span class="line"><span>         │                       │                          │</span></span>
+<span class="line"><span>         │ 2. Redirect to /authorize ──────────────────────►│</span></span>
+<span class="line"><span>         │    ?response_type=code                            │</span></span>
+<span class="line"><span>         │    &#x26;client_id=PUBLIC_CLIENT_ID                    │</span></span>
+<span class="line"><span>         │    &#x26;redirect_uri=https://app/cb                   │</span></span>
+<span class="line"><span>         │    &#x26;scope=openid profile                          │</span></span>
+<span class="line"><span>         │    &#x26;state=RANDOM_CSRF_TOKEN                       │</span></span>
+<span class="line"><span>         │    &#x26;code_challenge=BASE64URL(SHA256(verifier))    │</span></span>
+<span class="line"><span>         │    &#x26;code_challenge_method=S256                    │</span></span>
+<span class="line"><span>         │                       │                          │</span></span>
+<span class="line"><span>         │ ◄─────── 3. Auth prompt + consent  ──────────────│</span></span>
+<span class="line"><span>         │                       │                          │</span></span>
+<span class="line"><span>         │ 4. User authenticates &#x26; consents ───────────────►│</span></span>
+<span class="line"><span>         │                       │                          │</span></span>
+<span class="line"><span>         │                       │ 5. Server stores         │</span></span>
+<span class="line"><span>         │                       │    code_challenge        │</span></span>
+<span class="line"><span>         │                       │    bound to the code     │</span></span>
+<span class="line"><span>         │                       │                          │</span></span>
+<span class="line"><span>         │ 6. Redirect back to callback ────────────────────│</span></span>
+<span class="line"><span>         │    https://app/cb?code=AUTH_CODE                  │</span></span>
+<span class="line"><span>         │              &#x26;state=RANDOM_CSRF_TOKEN             │</span></span>
+<span class="line"><span>         │    (verify state == original)                     │</span></span>
+<span class="line"><span>         │                       │                          │</span></span>
+<span class="line"><span>         │                       │ 7. POST /token ─────────►│</span></span>
+<span class="line"><span>         │                       │    grant_type=           │</span></span>
+<span class="line"><span>         │                       │      authorization_code  │</span></span>
+<span class="line"><span>         │                       │    code=AUTH_CODE        │</span></span>
+<span class="line"><span>         │                       │    client_id=...         │</span></span>
+<span class="line"><span>         │                       │    code_verifier=        │</span></span>
+<span class="line"><span>         │                       │      &#x3C;original verifier> │</span></span>
+<span class="line"><span>         │                       │                          │</span></span>
+<span class="line"><span>         │                       │ 8. Server checks:        │</span></span>
+<span class="line"><span>         │                       │    BASE64URL(SHA256(     │</span></span>
+<span class="line"><span>         │                       │      code_verifier))     │</span></span>
+<span class="line"><span>         │                       │      == stored challenge?│</span></span>
+<span class="line"><span>         │                       │    AND code unused?      │</span></span>
+<span class="line"><span>         │                       │    AND not expired?      │</span></span>
+<span class="line"><span>         │                       │                          │</span></span>
+<span class="line"><span>         │                       │ ◄── 9. access_token ─────│</span></span>
+<span class="line"><span>         │                       │     refresh_token        │</span></span>
+<span class="line"><span>         │                       │     id_token (if OIDC)   │</span></span>
+<span class="line"><span>         │                       │                          │</span></span>
+<span class="line"><span>         │                       │ 10. Call API with        │</span></span>
+<span class="line"><span>         │                       │     Authorization:       │</span></span>
+<span class="line"><span>         │                       │       Bearer access_token│</span></span>
+<span class="line"><span>         ▼                       ▼                          ▼</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Why PKCE helps:</span></span>
+<span class="line"><span>    • Attacker steals AUTH_CODE (e.g. via malicious redirect/custom scheme)</span></span>
+<span class="line"><span>    • Attacker calls /token with the code but CANNOT produce code_verifier</span></span>
+<span class="line"><span>    • SHA256(verifier) ≠ stored challenge  →  exchange rejected</span></span>
+<span class="line"><span>    • The verifier lives only in the client's memory — never on the wire</span></span></code></pre>
+<h3 id="client-credentials-flow">Client Credentials Flow</h3>
+<p>The client credentials flow is for machine-to-machine communication where there is no user involved at all. A backend service authenticates directly to the authorization server with its client ID and secret — or a mutually authenticated TLS connection — and receives an access token scoped to its own permissions. This is how a scheduled job calls an internal API, how a microservice fetches a token to call another microservice, and how service-to-service authentication works in a zero-trust architecture. There is no refresh token in this flow because the client can simply request a new access token whenever it needs one using its own credentials. Scopes are assigned to the client itself rather than derived from a user session, and the authorization server enforces that the token’s scopes are a subset of what the client is allowed to request.</p>
+<h2 id="openid-connect">OpenID Connect</h2>
+<p>OpenID Connect is a thin identity layer built on top of OAuth 2.0. Pure OAuth 2.0 gives you an access token that authorizes API calls but tells you nothing reliable about who the user is — the access token is opaque to the client and is meant for the resource server. OIDC adds an <code>id_token</code>, which is a signed JWT containing identity claims such as <code>sub</code>, <code>email</code>, <code>name</code>, and <code>email_verified</code>, issued alongside the access token. The client can verify the id_token locally and use it to establish a session without calling the authorization server again. OIDC also defines a <code>/userinfo</code> endpoint for fetching richer profile information and a standard discovery mechanism via <code>/.well-known/openid-configuration</code> that publishes the server’s endpoints, supported scopes, and signing keys. The <code>nonce</code> parameter binds the id_token to the authentication request, preventing token replay and injection. In modern systems, when someone says “login with Google” or “login with GitHub,” they almost always mean OIDC, not raw OAuth 2.0 — the access token is a side effect; the id_token is the actual authentication artifact.</p>
+<h2 id="sso-architecture-saml-vs-oidc">SSO Architecture: SAML vs OIDC</h2>
+<p>Single sign-on allows a user to authenticate once with an identity provider and access multiple independent service providers without re-entering credentials. The two dominant protocols are SAML 2.0 and OIDC, and they reflect different eras of the web.</p>
+<p>SAML 2.0 is XML-based and was designed for enterprise federated identity in the early 2000s. The flow can be service-provider-initiated — the user hits a service, gets redirected to the identity provider, authenticates, and is redirected back with a signed XML assertion — or identity-provider-initiated, where the user starts at a portal and clicks through to services they are already authorized for. SAML assertions are signed with XML digital signatures, which are notoriously easy to get wrong (XML signature wrapping attacks are a recurring vulnerability class), and the protocol’s verbosity and tooling complexity make it expensive to implement from scratch. It persists in enterprise environments because of deep integration with corporate directories, Active Directory Federation Services, and legacy SaaS that only supports SAML. Okta, OneLogin, and Azure AD are the common identity providers.</p>
+<p>OIDC-based SSO is the modern equivalent and uses the same OAuth 2.0 plus OIDC flows described above, with the identity provider acting as the authorization server and each service acting as an OIDC relying party. It is JSON-native, RESTful, dramatically simpler to implement, and works naturally with mobile apps and SPAs in ways SAML cannot. For greenfield systems, OIDC is the default choice. The main reason to choose SAML is a hard requirement to integrate with an existing enterprise identity provider or an application that only speaks SAML. Many identity providers support both, acting as a protocol bridge so that a single authentication event can produce either a SAML assertion or an OIDC id_token depending on what the downstream service expects.</p>
+<h3 id="sso-architecture--saml-20-vs-oidc-side-by-side">SSO Architecture — SAML 2.0 vs OIDC Side by Side</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>   ════════════════════════════════════════════════════════════════════════════</span></span>
+<span class="line"><span>   SAML 2.0  (enterprise, XML, ~2005)              OIDC  (modern, JSON/REST)</span></span>
+<span class="line"><span>   ════════════════════════════════════════════════════════════════════════════</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Service-Provider-initiated flow:              RP (Relying Party)-initiated flow:</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   ┌──────────┐  ┌─────────┐  ┌────────┐         ┌──────────┐  ┌─────────┐  ┌────────┐</span></span>
+<span class="line"><span>   │  User /  │  │ Service │  │Identity│         │  User /  │  │Relying  │  │Identity│</span></span>
+<span class="line"><span>   │ Browser  │  │Provider │  │Provider│         │ Browser  │  │ Party   │  │Provider│</span></span>
+<span class="line"><span>   │ (UA)     │  │  (SP)   │  │  (IdP) │         │ (UA)     │  │ (RP)    │  │  (IdP) │</span></span>
+<span class="line"><span>   └────┬─────┘  └────┬────┘  └───┬────┘         └────┬─────┘  └────┬────┘  └───┬────┘</span></span>
+<span class="line"><span>        │             │           │                    │             │           │</span></span>
+<span class="line"><span>   1. GET /app ──────►│           │              1. GET /app ──────►│           │</span></span>
+<span class="line"><span>        │             │           │                    │             │           │</span></span>
+<span class="line"><span>        │ 2. 302 → IdP with                       2. 302 → /authorize with        │</span></span>
+<span class="line"><span>        │    SAMLRequest (XML)                     client_id, redirect_uri,      │</span></span>
+<span class="line"><span>        │    (signed AuthnRequest)                 scope=openid, state, nonce    │</span></span>
+<span class="line"><span>        │  ─────────────────────────────►│         │  ─────────────────────────►│</span></span>
+<span class="line"><span>        │             │           │                    │             │           │</span></span>
+<span class="line"><span>        │ 3. IdP prompts user;                    3. IdP prompts user;           │</span></span>
+<span class="line"><span>        │    user logs in                          user logs in + consents       │</span></span>
+<span class="line"><span>        │             │           │                    │             │           │</span></span>
+<span class="line"><span>        │ 4. 302 → SP ACS endpoint               4. 302 → callback with code    │</span></span>
+<span class="line"><span>        │    SAMLResponse (signed XML ────────────│    + state ─────────────────►│</span></span>
+<span class="line"><span>        │    assertion)          │           │         (RP verifies state)       │</span></span>
+<span class="line"><span>        │ ◄──────────────────────│           │                    │             │</span></span>
+<span class="line"><span>        │             │           │                    │             │           │</span></span>
+<span class="line"><span>        │             │ 5. SP validates                │ 5. RP POSTs /token      │</span></span>
+<span class="line"><span>        │             │    XML signature,              │    code → id_token +    │</span></span>
+<span class="line"><span>        │             │    audience, time ─────────────────────────────────────►│</span></span>
+<span class="line"><span>        │             │    → establishes session        │ ◄── id_token (JWT) +   │</span></span>
+<span class="line"><span>        │             │           │                    │     access_token        │</span></span>
+<span class="line"><span>        │             │           │                    │ 6. RP verifies JWT sig │</span></span>
+<span class="line"><span>        │             │           │                    │    (JWKS), nonce, exp   │</span></span>
+<span class="line"><span>        │             │           │                    │    → establishes session│</span></span>
+<span class="line"><span>        ▼             ▼           ▼                    ▼             ▼           ▼</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Key artifacts:  signed XML &#x3C;Assertion>            Key artifacts:  id_token (JWT) + access_token</span></span>
+<span class="line"><span>   Binding:        HTTP-Redirect / POST / Artifact   Binding:        HTTP 302 redirects + JSON REST</span></span>
+<span class="line"><span>   Identity claim: &#x3C;saml:Subject> inside XML         Identity claim: sub/email in JWT payload</span></span>
+<span class="line"><span>   Signing:        XML Digital Signature (DSig)      Signing:        JWS (HS256/RS256/ES256)</span></span>
+<span class="line"><span>   Discovery:      SP metadata XML                   Discovery:      /.well-known/openid-configuration</span></span>
+<span class="line"><span>   Logout:         LogoutRequest/LogoutResponse      Logout:         RP-initiated + back-channel (emerging)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   ┌──────────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>   │  Choose SAML when:  enterprise IdP (AD FS), legacy SaaS, no SPA/mobile    │</span></span>
+<span class="line"><span>   │  Choose OIDC when:  greenfield, mobile/SPA, JSON-native, RESTful          │</span></span>
+<span class="line"><span>   │  Many IdPs (Okta, Azure AD) bridge both: one login → either assertion     │</span></span>
+<span class="line"><span>   └──────────────────────────────────────────────────────────────────────────┘</span></span></code></pre>
+<p>A design subtlety in SSO is the global logout problem. When a user logs out of one service, should they be logged out of all services? SAML defines partial solutions via <code>LogoutRequest</code> and <code>LogoutResponse</code> messages; OIDC has an emerging RP-initiated logout and back-channel logout spec, but neither is universally implemented. In practice, many SSO systems accept that logout is best-effort: the local session is destroyed, the SSO session at the identity provider is terminated, and relying parties are notified where possible, but a service that holds a long-lived local session or a valid access token may still serve the user until that token expires.</p>
+<h2 id="multi-factor-authentication">Multi-Factor Authentication</h2>
+<p>Password-only authentication is insufficient for any system with meaningful attack surface. Multi-factor authentication requires the user to present evidence from at least two of three categories: something they know (a password or PIN), something they have (a device or hardware key), and something they are (a biometric). The most common second factor is a TOTP code generated by an authenticator app like Google Authenticator or Authy, based on a shared secret provisioned at enrollment via a QR code. TOTP is offline, standardized in RFC 6238, and free to operate, but it is phishable — a convincing login page can capture both the password and the one-time code.</p>
+<p>The strongest factor types are phishing-resistant. WebAuthn and FIDO2 use public-key cryptography where the authenticator (a hardware key like YubiKey, or a platform authenticator like Touch ID or Windows Hello) signs a challenge from the relying party, bound to the origin of the request. Because the signature is origin-bound and never leaves the authenticator, a phishing site on a different domain cannot collect a valid assertion — the browser ensures the authenticator only signs for the real origin. Passkeys are the consumer-friendly packaging of this technology, synced across a user’s devices via the platform’s key chain, removing the “I lost my hardware key” problem while preserving phishing resistance. For high-security systems, WebAuthn with hardware keys is the gold standard; for consumer applications, passkeys or TOTP with push-based number matching are reasonable middle grounds.</p>
+<p>A critical design consideration is step-up authentication: not every operation needs MFA. A user reading their dashboard can be satisfied by a single factor, while transferring money or changing account settings should require a second factor at the moment of the sensitive action, rather than gating every login. This reduces friction and MFA fatigue — the phenomenon where users approve every push notification without reading it because they are prompted too often. Number-matching push notifications, where the user must type a number displayed on the login screen into their phone, mitigate fatigue attacks by requiring active engagement.</p>
+<h2 id="password-storage">Password Storage</h2>
+<p>If your system still uses passwords — and most do — they must never be stored in plaintext or with reversible encryption. The standard is to hash passwords with a slow, deliberately expensive key-derivation function that includes a unique per-user salt. The salt defeats precomputed rainbow table attacks by ensuring that two users with the same password produce different hashes, and it should be stored alongside the hash since its purpose is uniqueness, not secrecy.</p>
+<p>Bcrypt has been the long-standing default. It incorporates a salt and a configurable cost factor that determines how many rounds of the Blowfish cipher to run, making each hash verification deliberately slow — typically tens of milliseconds at cost factor 12. The cost factor is stored in the hash output, so you can increase it over time without re-architecting: when a user logs in, if their stored cost factor is below the current target, you re-hash the password they just provided at the new cost factor and replace the stored hash transparently. Bcrypt’s weakness is a 72-byte input limit on the password, which can silently truncate long passphrases; modern implementations pre-hash with SHA-256 to avoid this, though that introduces its own subtle issues with null bytes.</p>
+<p>Argon2id is the current recommendation from the Password Hashing Competition and the OWASP guidelines. It is memory-hard as well as CPU-hard, meaning it requires a significant amount of RAM to compute — this specifically defeats GPU and ASIC acceleration, which are how attackers parallelize bcrypt cracking at scale. Argon2id parameters include memory cost, time cost, and parallelism, all tunable to the target latency and available hardware. For new systems, Argon2id is the right default; for existing bcrypt systems, a migration plan that re-hashes on next login and eventually deprecates bcrypt is the path forward. PBKDF2 remains acceptable only when Argon2 and bcrypt are unavailable due to platform constraints, because it is faster to crack on GPUs than either alternative.</p>
+<p>A related consideration is password breach detection. Services like HaveIBeenPwned offer a k-anonymity API where you send the first five characters of a password hash and receive suffixes to compare locally, allowing you to reject passwords that appear in known breach corpora without ever sending the full password to a third party. This is cheap insurance that significantly improves the effective strength of user-chosen passwords.</p>
+<h2 id="rate-limiting-auth-endpoints">Rate Limiting Auth Endpoints</h2>
+<p>Authentication endpoints are the primary target for credential stuffing, brute force, and account takeover attacks, and they must be rate limited with more rigor than ordinary API endpoints. The strategy should be layered. At the network edge, a WAF or CDN applies IP-based rate limiting to blunt volumetric attacks and distribute the load across edge points of presence. At the application layer, rate limiting should be keyed to multiple dimensions: per IP address to catch distributed attacks from a single source, per account (email or username) to catch targeted brute force against a specific user, and per device fingerprint or client identifier to catch attacks that rotate across IP addresses via botnets. A single dimension is insufficient — an attacker behind a rotating proxy defeats IP-only limits, and an attacker rotating target usernames defeats account-only limits.</p>
+<p>When a limit is exceeded, the system should not simply return a 429 and stop. It should implement progressive delays or exponential backoff in the response, return a Retry-After header, and optionally trigger a CAPTCHA or require MFA for subsequent attempts — escalating friction rather than hard-blocking, which can lock out legitimate users during an attack against their account. Account lockout policies must be designed carefully: a permanent lockout after a small number of failed attempts creates a denial-of-service vector where an attacker intentionally locks out accounts by spraying wrong passwords. Time-based lockouts (five minutes after five failures) or adaptive lockouts that scale with the attack pattern are safer. All failed login attempts should be logged with enough context — IP, user agent, timestamp, target account — to feed anomaly detection and enable post-incident forensics, but without logging the password or password hash.</p>
+<p>A particularly dangerous endpoint that is often overlooked is the password reset flow. The reset-request endpoint can be abused to enumerate accounts (different responses for existing vs non-existing emails) or to flood a victim’s inbox with reset emails. The token-validation and token-consumption endpoints must rate limit per token and per account to prevent brute force of the reset token itself, and reset tokens must be single-use, short-lived, and invalidated on use.</p>
+<h2 id="token-revocation">Token Revocation</h2>
+<p>The fundamental tension in JWT-based systems is that a correctly signed token is valid until its <code>exp</code> claim, and there is no server-side record to delete. This means that logout, session termination, credential compromise, and role-change propagation all require an explicit revocation strategy on top of the base JWT.</p>
+<p>The simplest approach is to keep access tokens very short-lived — fifteen minutes or less — so that revocation is effectively achieved by waiting out the expiry. This is acceptable for many systems but does not help when you need immediate termination, such as when an employee is terminated or a token is known to be compromised. For immediate revocation, the standard pattern is a denylist in a fast, shared store like Redis, keyed by the token’s <code>jti</code> claim. On logout or revocation, the JTI is written to the denylist with a TTL equal to the token’s remaining lifetime, so the entry self-expires when the token would have expired anyway, bounding the memory cost. Every verifying service checks the denylist before accepting a token, which reintroduces the per-request Redis lookup that stateless JWTs were supposed to eliminate. To mitigate this, services can cache denylist checks with a short TTL — accepting that a revocation takes up to that TTL to propagate — or only check the denylist for high-risk operations, trusting short token lifetimes for ordinary requests.</p>
+<p>Refresh token revocation is simpler and more impactful because refresh tokens are long-lived and few in number. Maintaining a server-side record of all issued refresh tokens — or at least their IDs and status — allows you to revoke a session by deleting or marking its refresh token invalid, which prevents renewal of the access token and effectively ends the session at the next access-token expiry. This is why the hybrid pattern of stateless access tokens plus stateful refresh tokens is so common: it preserves local verification for hot-path requests while keeping a server-side control point for the lifecycle decisions that matter.</p>
+<p>For OAuth 2.0, RFC 7009 defines a standard token revocation endpoint that clients can call to invalidate access and refresh tokens. RFC 8417 defines token revocation events via SET (Security Event Tokens) for back-channel notification, allowing an authorization server to push revocation events to resource servers in near-real-time rather than relying on poll-based denylist checks. These mechanisms are increasingly important in enterprise deployments where a compromised token must be killed across dozens of downstream services within seconds.</p>
+<h2 id="distributed-session-management">Distributed Session Management</h2>
+<p>In a single-instance deployment, session management is trivial — store sessions in local memory. The moment you have more than one instance, you face the question of how a request hitting instance B can validate a session created on instance A. Three architectural options address this, each with different trade-offs.</p>
+<p>Sticky sessions use a load balancer to route all requests from a given client to the same instance that issued the session, keeping the session in local memory. This is simple but fragile: if that instance dies, the user is logged out; scaling out requires redistributing sessions; and it couples load balancing to session state rather than letting the balancer optimize for capacity. It is acceptable only for small systems with tolerant users.</p>
+<p>A shared session store externalizes session state to a clustered cache such as Redis or Memcached. Every instance reads and writes sessions to the shared store, so any instance can serve any request. This is the standard approach for session-based architectures at scale, but it adds a network hop to every authenticated request and makes the session store a critical dependency that must be highly available. Redis Cluster or a replicated Memcached pool handles the availability requirement, but the latency cost remains — typically one to three milliseconds per request in a well-tuned setup, which adds up across a deep microservice call chain.</p>
+<p>For token-based architectures, distributed session management is largely a non-issue for the access token itself, because verification is local. The distributed state that remains is the refresh token store and the denylist, both of which are low-frequency (refresh happens hourly or less; denylist checks can be cached) and tolerate the network hop. The most sophisticated pattern is token introspection via RFC 7662, where resource servers call a centralized introspection endpoint on the authorization server to validate opaque tokens and get back their active status and claims. This centralizes control but reintroduces the per-request dependency, so it is typically paired with short-lived caching of introspection results.</p>
+<p>A subtlety in distributed session management is clock skew. JWT validation depends on <code>exp</code>, <code>nbf</code>, and <code>iat</code> timestamps, and if different services have clocks that drift by more than a few seconds, tokens may be rejected as not-yet-valid or accepted past their intended expiry. Production systems must run NTP or a comparable time synchronization service on every node and configure a small leeway (typically 30 to 60 seconds) in JWT validators to absorb minor drift. This is an operational concern that interviewers probe to test whether you have shipped auth to production, not just designed it on a whiteboard.</p>
+<h2 id="security-considerations">Security Considerations</h2>
+<p>Beyond the specific mechanisms above, several cross-cutting security principles govern authentication system design. The principle of least privilege applies to scopes and claims: a token should carry only the permissions the current operation needs, not the user’s full permission set. Service-to-service tokens should be scoped to the calling service’s role, and user tokens propagated to downstream services should be exchanged for service-scoped tokens with reduced claims rather than passed through verbatim. This limits blast radius — if a downstream service is compromised, the attacker holds only that service’s scoped token, not the user’s full identity.</p>
+<p>Token transport security is non-negotiable. Tokens must travel over HTTPS exclusively, with HSTS enforced to prevent protocol downgrade. Cookies must carry the <code>Secure</code> flag (never sent over HTTP), the <code>HttpOnly</code> flag (inaccessible to JavaScript, mitigating XSS token theft), and the <code>SameSite</code> attribute set to <code>Lax</code> or <code>Strict</code> to mitigate CSRF. For APIs that use bearer tokens in headers, CORS must be configured to restrict which origins can make authenticated requests, since a permissive CORS policy lets any website make authenticated requests on behalf of a logged-in user.</p>
+<p>Redirect URI validation in OAuth flows must be exact-match against pre-registered values, not prefix or wildcard match. Open redirectors and permissive matching have been the root cause of numerous real-world token theft incidents, including high-profile breaches at major platforms. The state parameter must be a cryptographically random value generated per request and validated on callback, not a static or predictable value. Client secrets for confidential clients must be stored in a secrets manager — not in source code, not in environment files in the repository, not in CI logs — and rotated on a regular schedule and on personnel turnover.</p>
+<p>Logging and monitoring must capture authentication events without capturing credentials. Every login, failed attempt, token issuance, token refresh, and revocation should be logged with enough context to reconstruct an attack timeline. Anomaly detection on these events — impossible travel (a login from New York and one from Tokyo an hour later), velocity spikes (thousands of failed logins against one account), and geographic outliers — should trigger automated responses ranging from step-up MFA to temporary account freeze. These signals feed into a SIEM for correlation across services and into automated incident response for containment.</p>
+<p>Finally, defense in depth: no single control is sufficient. A system that relies only on passwords fails when passwords leak. A system that relies only on JWTs fails when a token is stolen. A system that relies only on rate limiting fails when the attack comes from a slow, distributed source. Layering password hashing, MFA, short token lifetimes, rotation, denylists, rate limiting, anomaly detection, and network-level controls means that the failure of any one control does not compromise the system.</p>
+<h3 id="authentication-security-checklist">Authentication Security Checklist</h3>
+<p><strong>Least privilege &amp; token design</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> Tokens carry only the scopes/claims needed for the current operation — never the user’s full permission set</li>
+<li class="task-list-item"><input type="checkbox" disabled> Service-to-service tokens are scoped to the calling service’s role</li>
+<li class="task-list-item"><input type="checkbox" disabled> User tokens are exchanged for service-scoped tokens at service boundaries, not passed through verbatim</li>
+<li class="task-list-item"><input type="checkbox" disabled> Tokens stay lean — no entire permission trees or large profile objects in the payload</li>
+<li class="task-list-item"><input type="checkbox" disabled> Sensitive data kept server-side; JWE used only when confidentiality is truly required</li>
+</ul>
+<p><strong>Token transport</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> All token traffic over HTTPS exclusively</li>
+<li class="task-list-item"><input type="checkbox" disabled> HSTS enforced to prevent protocol downgrade</li>
+<li class="task-list-item"><input type="checkbox" disabled> Cookies carry <code>Secure</code> flag</li>
+<li class="task-list-item"><input type="checkbox" disabled> Cookies carry <code>HttpOnly</code> flag (mitigates XSS token theft)</li>
+<li class="task-list-item"><input type="checkbox" disabled> Cookies set <code>SameSite=Lax</code> or <code>Strict</code> (mitigates CSRF)</li>
+<li class="task-list-item"><input type="checkbox" disabled> CORS configured to restrict which origins can make authenticated requests</li>
+<li class="task-list-item"><input type="checkbox" disabled> Never place secrets inside a JWT payload (Base64 ≠ encryption)</li>
+</ul>
+<p><strong>OAuth flow hardening</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> Redirect URIs validated by exact match against pre-registered values — no prefix/wildcard</li>
+<li class="task-list-item"><input type="checkbox" disabled> <code>state</code> parameter is a cryptographically random per-request value, validated on callback</li>
+<li class="task-list-item"><input type="checkbox" disabled> PKCE (<code>code_verifier</code> / <code>code_challenge</code>) used on all authorization code flows</li>
+<li class="task-list-item"><input type="checkbox" disabled> <code>nonce</code> parameter used for OIDC id_tokens to bind them to the auth request</li>
+<li class="task-list-item"><input type="checkbox" disabled> Authorization codes are single-use and short-lived (minutes)</li>
+<li class="task-list-item"><input type="checkbox" disabled> Client secret never touches the browser; stored in a secrets manager, not source/env/CI logs</li>
+<li class="task-list-item"><input type="checkbox" disabled> Client secrets rotated on a schedule and on personnel turnover</li>
+</ul>
+<p><strong>JWT verification</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> Algorithm pinned per key server-side — reject tokens declaring any other <code>alg</code></li>
+<li class="task-list-item"><input type="checkbox" disabled> Defend against algorithm confusion (RS256 public key reused as HS256 secret)</li>
+<li class="task-list-item"><input type="checkbox" disabled> Validate <code>exp</code>, <code>nbf</code>, <code>aud</code>, and <code>iss</code> claims — not just the signature</li>
+<li class="task-list-item"><input type="checkbox" disabled> Clocks synchronized via NTP; small leeway (30–60s) configured in validators</li>
+<li class="task-list-item"><input type="checkbox" disabled> Verification keys fetched from JWKS and cached locally for the key-rotation TTL</li>
+</ul>
+<p><strong>Revocation &amp; lifecycle</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> Access tokens short-lived (15 min–1 hr) to bound exposure</li>
+<li class="task-list-item"><input type="checkbox" disabled> Refresh token rotation enabled with automatic reuse detection</li>
+<li class="task-list-item"><input type="checkbox" disabled> Token families tracked; replay of a used token revokes the whole family</li>
+<li class="task-list-item"><input type="checkbox" disabled> Denylist in Redis keyed by <code>jti</code>, TTL = remaining token lifetime</li>
+<li class="task-list-item"><input type="checkbox" disabled> Refresh tokens for public clients are sender-constrained (DPoP / mTLS)</li>
+<li class="task-list-item"><input type="checkbox" disabled> RFC 7009 revocation endpoint and/or RFC 8417 SET back-channel events for enterprise</li>
+</ul>
+<p><strong>Password storage</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> Passwords never stored plaintext or reversibly encrypted</li>
+<li class="task-list-item"><input type="checkbox" disabled> Argon2id used for new systems (memory-hard + CPU-hard); bcrypt for legacy with migration plan</li>
+<li class="task-list-item"><input type="checkbox" disabled> Unique per-user salt stored alongside the hash</li>
+<li class="task-list-item"><input type="checkbox" disabled> Cost factor tunable and stored in the hash output; re-hash on next login when raising it</li>
+<li class="task-list-item"><input type="checkbox" disabled> Bcrypt 72-byte limit handled (e.g. pre-hash with SHA-256) to avoid silent truncation</li>
+<li class="task-list-item"><input type="checkbox" disabled> Breach detection via k-anonymity API (e.g. HaveIBeenPwned) to reject known-breached passwords</li>
+</ul>
+<p><strong>MFA</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> MFA required for any system with meaningful attack surface</li>
+<li class="task-list-item"><input type="checkbox" disabled> Phishing-resistant factor (WebAuthn/FIDO2/passkeys) for high-security systems</li>
+<li class="task-list-item"><input type="checkbox" disabled> Step-up auth for sensitive operations rather than gating every login</li>
+<li class="task-list-item"><input type="checkbox" disabled> Number-matching push notifications to mitigate MFA fatigue</li>
+<li class="task-list-item"><input type="checkbox" disabled> TOTP accepted as a middle ground; SMS avoided where possible</li>
+</ul>
+<p><strong>Rate limiting &amp; lockout</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> Layered rate limiting: WAF/CDN at the edge, app-layer keyed per IP, per account, per device</li>
+<li class="task-list-item"><input type="checkbox" disabled> Progressive delays / exponential backoff + <code>Retry-After</code> on exceeded limits</li>
+<li class="task-list-item"><input type="checkbox" disabled> CAPTCHA or MFA escalation on repeated failures rather than hard block</li>
+<li class="task-list-item"><input type="checkbox" disabled> Time-based or adaptive lockouts (not permanent lockout after few failures — DoS vector)</li>
+<li class="task-list-item"><input type="checkbox" disabled> Password-reset endpoints rate-limited per token and per account; tokens single-use and short-lived</li>
+<li class="task-list-item"><input type="checkbox" disabled> Identical responses for existing vs non-existing emails (no account enumeration)</li>
+</ul>
+<p><strong>Logging &amp; monitoring</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> Every login, failure, issuance, refresh, and revocation logged with context (IP, UA, timestamp, account)</li>
+<li class="task-list-item"><input type="checkbox" disabled> Passwords and password hashes never logged</li>
+<li class="task-list-item"><input type="checkbox" disabled> Anomaly detection: impossible travel, velocity spikes, geographic outliers</li>
+<li class="task-list-item"><input type="checkbox" disabled> Automated responses: step-up MFA, temporary account freeze</li>
+<li class="task-list-item"><input type="checkbox" disabled> Events fed into a SIEM for cross-service correlation and incident response</li>
+</ul>
+<p><strong>Defense in depth</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> No single control relied upon in isolation</li>
+<li class="task-list-item"><input type="checkbox" disabled> Password hashing + MFA + short token lifetimes + rotation + denylists + rate limiting + anomaly detection + network controls layered together</li>
+<li class="task-list-item"><input type="checkbox" disabled> Failure of any one control does not compromise the system</li>
+</ul>
+<h2 id="capacity-planning">Capacity Planning</h2>
+<p>Authentication systems are peculiar in capacity planning because their load is bursty and correlated with human behavior. Login traffic spikes at the start of business hours in each timezone, after major incidents that trigger password resets, and during marketing events that drive new sign-ups. The system must handle peak burst load, not average load, because authentication is on the critical path — if login is slow or fails, the user cannot reach anything else.</p>
+<p>The primary resource consumers are the password hashing function and the token signing operation. Argon2id at reasonable parameters consumes 50 to 100 milliseconds of CPU and tens of megabytes of RAM per hash. If the system processes 1,000 logins per second at peak, password hashing alone requires 50 to 100 CPU-seconds of work per second — meaning 50 to 100 cores dedicated to login, before any other processing. This is not a bug; it is the intended cost that makes offline cracking expensive. But it means login capacity must be provisioned to peak, not average, and the hashing parameters must be tuned so that single-login latency stays under a few hundred milliseconds while aggregate throughput meets the peak. Token signing with RS256 is cheaper but still non-trivial — a few milliseconds per sign — and signing capacity scales with the number of tokens issued, which includes every login and every refresh.</p>
+<p>The shared state stores — Redis for sessions and denylists, the database for refresh token records and user credentials — must be sized for both read and write throughput at peak, with replication for availability and connection pooling to absorb connection churn. Cache hit ratios matter: a well-tuned session store should see 99%+ cache hits, with database writes only on login, logout, and refresh. The authorization server’s key distribution endpoint (JWKS, the JSON Web Key Set) is read-heavy and globally cacheable, and services should cache keys locally with a TTL that matches the key rotation cadence — typically hours to days — to avoid a per-token network call for key material.</p>
+<p>A capacity planning rule of thumb: provision auth infrastructure to 3 to 5x average load, keep token lifetimes and caching tuned so that the hot path is stateless verification, and ensure that the only per-request stateful operations (session or denylist lookups) are served from an in-memory cache with a sub-millisecond p99. Run load tests against the login flow specifically, not just the API, because the login flow exercises the most expensive code paths (hashing, signing, session creation) and is the most sensitive to latency — users will abandon a login that takes more than two to three seconds. Chaos testing should include failure of the session store and the authorization server to verify that failover is transparent and that token verification continues to work during the outage, since local JWT verification is specifically designed to tolerate authorization server downtime.</p>
+<h2 id="interview-question">Interview Question</h2>
+<p><strong>Q: Design an authentication system for a microservices architecture. A user logs in once and needs to access 10 different downstream services. How do you propagate identity, and how do you handle revocation?</strong></p>
+<p><strong>Model Answer:</strong></p>
+<p>The login is handled by a dedicated identity service acting as the OAuth 2.0 authorization server and OpenID Connect provider. On successful authentication — password verified against an Argon2id hash, MFA satisfied if required — the service issues a short-lived access token (15 minutes, RS256-signed JWT) and a longer-lived refresh token stored as a server-side record keyed by a random ID. The access token’s payload carries the user ID, a minimal set of scopes, and a JTI. The refresh token is returned in an HttpOnly, Secure, SameSite=Strict cookie; the access token is returned to the client for use in API calls.</p>
+<p>For service-to-service propagation, the raw user token is not passed to all 10 downstream services. Instead, the API gateway or the calling service exchanges the user token for a service-scoped token by calling the authorization server’s token endpoint with the client credentials of the downstream service, requesting only the scopes that service needs. This means each downstream service receives a token with claims scoped to its responsibilities — the billing service sees the user ID and a <code>billing:read</code> scope; the notification service sees only a pseudonymous identifier and a <code>notify:send</code> scope. This follows least privilege and limits the blast radius of compromise.</p>
+<p>Each downstream service verifies its received JWT locally using the authorization server’s public key, fetched from the JWKS endpoint and cached locally for the key rotation TTL. This is a pure CPU operation with no network call on the hot path. The services also validate the <code>exp</code>, <code>aud</code>, and <code>iss</code> claims and reject tokens whose algorithm is not RS256, defending against algorithm confusion attacks.</p>
+<p>Revocation operates at two levels. For ordinary logout, the refresh token record is deleted from the database, which prevents the client from obtaining new access tokens; the current access token expires naturally within 15 minutes, which is an acceptable window for most use cases. For immediate revocation — a compromised token, a terminated employee — the token’s JTI is written to a Redis denylist with a TTL equal to the token’s remaining lifetime, and every service checks this denylist on each request (cached for a few seconds to limit Redis load). For refresh token theft, automatic reuse detection in the rotation logic revokes the entire token family when a replay is detected.</p>
+<p>The system is stateless on the hot path (local JWT verification), stateful at the control points (refresh token store, denylist), and degrades gracefully: if Redis is down, services fall back to trusting short token lifetimes and fail open on denylist checks (accepting the small revocation-delay risk) rather than failing closed and locking out all users. The identity service and the session store are the only components that need to be highly available for login to work; all downstream services continue to validate existing tokens even if the identity service is temporarily down, because they hold the public key locally.</p>
+<p><strong>Common Pitfall:</strong></p>
+<p>Candidates frequently propose passing the user’s access token directly to every downstream service. This is wrong for two reasons. First, it gives every service the user’s full scope set, violating least privilege — if any of the 10 services is compromised, the attacker holds a token that can do everything the user can do across the entire platform. Second, it makes revocation harder, because the token is now spread across multiple service boundaries and cached in multiple places. The correct pattern is token exchange: mint a fresh, service-scoped token for each downstream call, so that compromise of one service yields only that service’s minimal scopes and revocation is centralized at the authorization server. Interviewers are testing whether you understand that identity propagation is not just about moving a token from A to B, but about progressively narrowing trust as you cross service boundaries.</p>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>OAuth 2.0 = authorization (what can you do), JWT = stateless token format, SSO = one login for multiple services</li>
+<li>JWT has three parts: header, payload, signature — all base64-encoded, separated by dots</li>
+<li>JWT is stateless: no server-side session lookup, but tokens can’t be revoked until they expire</li>
+<li>Access tokens are short-lived (15-60 min); refresh tokens are long-lived (days/weeks) and stored server-side</li>
+<li>For microservices: use token exchange — mint a service-scoped token for each downstream call, never pass the user’s token</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you revoke a JWT before it expires?” — You can’t truly revoke a stateless token. Use a revocation list (blocklist) checked on each request, or keep tokens very short-lived.</li>
+<li>“What’s the difference between SSO and OAuth?” — SSO is the user experience (log in once, access everything). OAuth is the protocol that can enable SSO, but OAuth alone is authorization, not authentication.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>JWT is not encrypted by default — it’s signed. Anyone who intercepts it can read the payload. Never put sensitive data (passwords, PII) in a JWT payload. If confidentiality is needed, use JWE (JSON Web Encryption), not just JWS.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/authentication-system-oauth-jwt-sso/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Authentication%20System%20(OAuth%2C%20JWT%2C%20SSO)&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fauthentication-system-oauth-jwt-sso%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fauthentication-system-oauth-jwt-sso%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/authentication-system-oauth-jwt-sso" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a><a href="/notes/system-design/chaos-engineering-failure-injection-game-days/" class="related-card"><div class="related-card-title">Chaos Engineering (Failure Injection, Game Days)</div><div class="related-card-meta">System Design · 16 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><div class="path-spacer" data-astro-cid-owb62pdl></div><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Bloom Filters &amp; Probabilistic Data Structures</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Authentication System (OAuth, JWT, SSO)" data-selector=".article-prose" data-article-slug="system-design/authentication-system-oauth-jwt-sso" data-article-title="Authentication System (OAuth, JWT, SSO)" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

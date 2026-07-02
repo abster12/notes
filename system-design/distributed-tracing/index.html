@@ -1,0 +1,779 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Distributed Tracing · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview" class="toc-link" data-toc-link="overview" data-astro-cid-p33bl5ka>Overview</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-three-pillars-compared" class="toc-link" data-toc-link="the-three-pillars-compared" data-astro-cid-p33bl5ka>The Three Pillars Compared</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#the-trace-and-span-data-model" class="toc-link" data-toc-link="the-trace-and-span-data-model" data-astro-cid-p33bl5ka>The Trace and Span Data Model</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#trace--span-tree-structure" class="toc-link" data-toc-link="trace--span-tree-structure" data-astro-cid-p33bl5ka>Trace / Span Tree Structure</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#context-propagation" class="toc-link" data-toc-link="context-propagation" data-astro-cid-p33bl5ka>Context Propagation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#context-propagation-across-services" class="toc-link" data-toc-link="context-propagation-across-services" data-astro-cid-p33bl5ka>Context Propagation Across Services</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#w3c-trace-context" class="toc-link" data-toc-link="w3c-trace-context" data-astro-cid-p33bl5ka>W3C Trace Context</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#b3-propagation" class="toc-link" data-toc-link="b3-propagation" data-astro-cid-p33bl5ka>B3 Propagation</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#propagation-across-async-boundaries" class="toc-link" data-toc-link="propagation-across-async-boundaries" data-astro-cid-p33bl5ka>Propagation Across Async Boundaries</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#instrumentation-with-opentelemetry" class="toc-link" data-toc-link="instrumentation-with-opentelemetry" data-astro-cid-p33bl5ka>Instrumentation with OpenTelemetry</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#instrumentation-steps-manual" class="toc-link" data-toc-link="instrumentation-steps-manual" data-astro-cid-p33bl5ka>Instrumentation Steps (Manual)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#sampling-strategies" class="toc-link" data-toc-link="sampling-strategies" data-astro-cid-p33bl5ka>Sampling Strategies</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#head-based-sampling" class="toc-link" data-toc-link="head-based-sampling" data-astro-cid-p33bl5ka>Head-Based Sampling</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#tail-based-sampling" class="toc-link" data-toc-link="tail-based-sampling" data-astro-cid-p33bl5ka>Tail-Based Sampling</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#adaptive-and-probabilistic-sampling" class="toc-link" data-toc-link="adaptive-and-probabilistic-sampling" data-astro-cid-p33bl5ka>Adaptive and Probabilistic Sampling</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#head-based-vs-tail-based-sampling" class="toc-link" data-toc-link="head-based-vs-tail-based-sampling" data-astro-cid-p33bl5ka>Head-Based vs Tail-Based Sampling</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#sampling-strategy-comparison" class="toc-link" data-toc-link="sampling-strategy-comparison" data-astro-cid-p33bl5ka>Sampling Strategy Comparison</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#span-collection-and-storage" class="toc-link" data-toc-link="span-collection-and-storage" data-astro-cid-p33bl5ka>Span Collection and Storage</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-collection-pipeline" class="toc-link" data-toc-link="the-collection-pipeline" data-astro-cid-p33bl5ka>The Collection Pipeline</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#opentelemetry-collection-pipeline" class="toc-link" data-toc-link="opentelemetry-collection-pipeline" data-astro-cid-p33bl5ka>OpenTelemetry Collection Pipeline</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#storage-backends" class="toc-link" data-toc-link="storage-backends" data-astro-cid-p33bl5ka>Storage Backends</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#distributed-trace-visualization" class="toc-link" data-toc-link="distributed-trace-visualization" data-astro-cid-p33bl5ka>Distributed Trace Visualization</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#correlation-with-metrics-and-logs" class="toc-link" data-toc-link="correlation-with-metrics-and-logs" data-astro-cid-p33bl5ka>Correlation with Metrics and Logs</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#performance-overhead" class="toc-link" data-toc-link="performance-overhead" data-astro-cid-p33bl5ka>Performance Overhead</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#tracing-in-a-service-mesh" class="toc-link" data-toc-link="tracing-in-a-service-mesh" data-astro-cid-p33bl5ka>Tracing in a Service Mesh</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#tail-based-sampling-for-latency-optimization" class="toc-link" data-toc-link="tail-based-sampling-for-latency-optimization" data-astro-cid-p33bl5ka>Tail-Based Sampling for Latency Optimization</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#production-tracing-at-scale" class="toc-link" data-toc-link="production-tracing-at-scale" data-astro-cid-p33bl5ka>Production Tracing at Scale</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-planning" class="toc-link" data-toc-link="capacity-planning" data-astro-cid-p33bl5ka>Capacity Planning</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#common-interview-questions--answers" class="toc-link" data-toc-link="common-interview-questions--answers" data-astro-cid-p33bl5ka>Common Interview Questions &amp; Answers</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#q-how-do-you-trace-a-request-through-an-async-message-queue" class="toc-link" data-toc-link="q-how-do-you-trace-a-request-through-an-async-message-queue" data-astro-cid-p33bl5ka>Q: How do you trace a request through an async message queue?</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#q-youre-seeing-p99-latency-spikes-in-your-checkout-api-but-your-traces-show-nothing-unusual-whats-wrong-and-how-do-you-fix-it" class="toc-link" data-toc-link="q-youre-seeing-p99-latency-spikes-in-your-checkout-api-but-your-traces-show-nothing-unusual-whats-wrong-and-how-do-you-fix-it" data-astro-cid-p33bl5ka>Q: You’re seeing P99 latency spikes in your checkout API but your traces show nothing unusual. What’s wrong and how do you fix it?</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#q-what-breaks-when-you-use-single-span-head-sampling-instead-of-multi-span" class="toc-link" data-toc-link="q-what-breaks-when-you-use-single-span-head-sampling-instead-of-multi-span" data-astro-cid-p33bl5ka>Q: What breaks when you use single-span head sampling instead of multi-span?</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#related" class="toc-link" data-toc-link="related" data-astro-cid-p33bl5ka>Related</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Distributed Tracing</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 35 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 49 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>advanced</span><span class="tag" data-astro-cid-sgg5joot>observability</span><span class="tag" data-astro-cid-sgg5joot>tracing</span><span class="tag" data-astro-cid-sgg5joot>opentelemetry</span><span class="tag" data-astro-cid-sgg5joot>jaeger</span><span class="tag" data-astro-cid-sgg5joot>zipkin</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="distributed-tracing">Distributed Tracing</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A system that follows a single request across service boundaries, recording a tree of spans that shows which service caused the delay. It propagates trace context through headers, samples traces to control cost, stores spans in a queryable backend, and reconstructs the full causal chain across process boundaries.</p>
+<p><strong>How it’s asked:</strong> “Design a distributed tracing system for 200 microservices handling 1M RPS. Cover context propagation, sampling strategy, storage, and queryability.”</p>
+<hr>
+<h2 id="overview">Overview</h2>
+<p>Distributed tracing tracks a single request as it propagates through dozens or hundreds of microservices, recording each hop’s latency, metadata, and outcome. It is the forensic tool of observability — while metrics tell you <em>that</em> something is slow, and logs tell you <em>what</em> happened at one service, traces tell you <em>where in the call chain</em> the bottleneck lives and <em>why</em> a particular request took the path it did. In a microservice architecture where a single user action can fan out across twenty downstream services, two message queues, and three database shards, there is no other signal that reconstructs the full causal chain across process boundaries.</p>
+<p>The “three pillars” of observability are <strong>metrics</strong> (aggregate numbers, cheap, always-on), <strong>logs</strong> (per-service strings, medium cost, searchable), and <strong>traces</strong> (end-to-end request journeys, expensive, sampled). Tracing is the only pillar that preserves the causal chain across service boundaries, making it indispensable for root-cause analysis of latency anomalies and cross-service failures. The fundamental tension in distributed tracing is between visibility and cost: every span you capture costs CPU, network bandwidth, and storage, yet every span you drop is a potential blind spot exactly when you need it most. At staff-level interviews, distributed tracing tests your understanding of <strong>propagation mechanics</strong> (how context survives process boundaries), <strong>sampling strategies</strong> at scale (head-based versus tail-based, probabilistic versus adaptive), and the trade-off between <strong>tail latency visibility and infrastructure cost</strong>.</p>
+<h3 id="the-three-pillars-compared">The Three Pillars Compared</h3>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Metrics</th>
+<th>Logs</th>
+<th>Traces</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unit of data</td>
+<td>Aggregate numbers (counters, gauges, histograms)</td>
+<td>Per-service string/structured records</td>
+<td>End-to-end request journey (span DAG)</td>
+</tr>
+<tr>
+<td>Cardinality</td>
+<td>Low (fixed label sets)</td>
+<td>High (free-text, many fields)</td>
+<td>High (per-request trace IDs, span IDs)</td>
+</tr>
+<tr>
+<td>Cost</td>
+<td>Low — cheap to store and query</td>
+<td>Medium — searchable but voluminous</td>
+<td>High — most expensive per GB</td>
+</tr>
+<tr>
+<td>Always-on?</td>
+<td>Yes — always collected</td>
+<td>Yes (typically)</td>
+<td>No — sampled at 0.1%–1% at scale</td>
+</tr>
+<tr>
+<td>Causal chain across services?</td>
+<td>No — aggregates only</td>
+<td>No — per-service only</td>
+<td><strong>Yes — only pillar preserving cross-service causality</strong></td>
+</tr>
+<tr>
+<td>Best for</td>
+<td>Alerting, dashboards, SLO tracking</td>
+<td>Debugging a single service’s behavior</td>
+<td>Root-cause of latency anomalies, cross-service failures</td>
+</tr>
+<tr>
+<td>Query pattern</td>
+<td>Time-series aggregation</td>
+<td>Full-text / structured search</td>
+<td>Trace-by-ID, service/operation search, waterfall view</td>
+</tr>
+<tr>
+<td>Typical retention</td>
+<td>Weeks to months (downsampled)</td>
+<td>Days to weeks</td>
+<td>24–72h full; 7d errors; weeks with object-store backends</td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-trace-and-span-data-model">The Trace and Span Data Model</h2>
+<p>A <strong>trace</strong> represents the complete journey of a single request — or more precisely, a single causal execution tree — from its entry point through every downstream service, queue, and database call. A trace is not a single record but a directed acyclic graph (DAG) of <strong>spans</strong>, where each span represents one logical unit of work: an HTTP request, a database query, a message publish, a cache lookup, or even an internal function call that an engineer chose to instrument. The root span is the outermost operation, typically the API gateway or ingress controller that first received the request, and every subsequent span is a child of either the root or another span, forming a tree whose edges represent parent-child causality.</p>
+<p>Each span carries a rich set of metadata. The <strong>trace ID</strong> is a globally unique 128-bit identifier (typically a random hex string) that links all spans belonging to the same request; it is generated at the entry point and propagated unchanged to every downstream service. The <strong>span ID</strong> is a 64-bit unique identifier for the individual span. The <strong>parent span ID</strong> references the span that caused this span to be created, and this parent-child linkage is what reconstructs the call tree when spans are assembled in the tracing backend. Beyond identifiers, each span records an <strong>operation name</strong> (e.g., <code>POST /payment/charge</code>), <strong>start time</strong> and <strong>duration</strong> in nanosecond resolution, a <strong>status code</strong> (OK or ERROR), a set of <strong>attributes or tags</strong> (key-value pairs like <code>http.status_code=200</code>, <code>db.system=postgres</code>, <code>peer.service=inventory</code>), <strong>span events</strong> (timestamped log entries within the span’s lifetime), and <strong>span links</strong> (references to spans in other traces, used for fan-out and batch processing scenarios). The <strong>resource</strong> attribute block attaches static context about the process that emitted the span: service name, host name, Kubernetes pod ID, container image, cloud region, and so on.</p>
+<h3 id="trace--span-tree-structure">Trace / Span Tree Structure</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                         ┌──────────────────────────────────────────┐</span></span>
+<span class="line"><span>                         │  SPAN A: "GET /api/order"                │</span></span>
+<span class="line"><span>                         │  service: api-gateway   (ROOT span)      │</span></span>
+<span class="line"><span>                         │  trace_id:   4bf92f…e4736  (128-bit)     │</span></span>
+<span class="line"><span>                         │  span_id:    00f067aa0ba902b7 (64-bit)   │</span></span>
+<span class="line"><span>                         │  parent:     (none — root)               │</span></span>
+<span class="line"><span>                         │  duration:   t=0ms ────────────── t=500ms│</span></span>
+<span class="line"><span>                         └─────────────────┬────────────────────────┘</span></span>
+<span class="line"><span>                                           │</span></span>
+<span class="line"><span>                            ┌──────────────┴──────────────┐</span></span>
+<span class="line"><span>                            │                             │</span></span>
+<span class="line"><span>              ┌─────────────▼──────────────┐  ┌───────────▼────────────────┐</span></span>
+<span class="line"><span>              │ SPAN B: "POST              │  │ SPAN C: "POST              │</span></span>
+<span class="line"><span>              │  /inventory/reserve"       │  │  /payment/charge"          │</span></span>
+<span class="line"><span>              │  service: inventory        │  │  service: payment          │</span></span>
+<span class="line"><span>              │  span_id:  a1b2…0001       │  │  span_id:  a1b2…0003       │</span></span>
+<span class="line"><span>              │  parent:   00f067…02b7     │  │  parent:   00f067…02b7     │</span></span>
+<span class="line"><span>              │  t=10ms ──────── t=200ms   │  │  t=210ms ──────── t=480ms  │</span></span>
+<span class="line"><span>              │  tags: {item_id, quantity} │  │  status: ERROR             │</span></span>
+<span class="line"><span>              └─────────────┬──────────────┘  │  tags: {error.type:        │</span></span>
+<span class="line"><span>                            │                 │         "card_declined"}   │</span></span>
+<span class="line"><span>              ┌─────────────▼──────────────┐  └────────────────────────────┘</span></span>
+<span class="line"><span>              │ SPAN D: "SELECT …          │</span></span>
+<span class="line"><span>              │  FROM stock"   (database)  │</span></span>
+<span class="line"><span>              │  span_id:  a1b2…0002       │</span></span>
+<span class="line"><span>              │  parent:   a1b2…0001       │</span></span>
+<span class="line"><span>              │  t=50ms ────── t=190ms     │</span></span>
+<span class="line"><span>              │  tags: {db.system: postgres│</span></span>
+<span class="line"><span>              │         db.statement: …}   │</span></span>
+<span class="line"><span>              └────────────────────────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  ── Trace ID is SHARED by every span in the tree (never changes).</span></span>
+<span class="line"><span>  ── Span IDs chain together via parent_span_id to reconstruct the tree.</span></span>
+<span class="line"><span>  ── Edges = parent→child causality.  The root has no parent.</span></span></code></pre>
+<p>A critical distinction is between <strong>span kind</strong> — <code>CLIENT</code>, <code>SERVER</code>, <code>PRODUCER</code>, <code>CONSUMER</code>, <code>INTERNAL</code> — which tells the backend how to interpret the span’s role in the trace graph. A <code>CLIENT</code> span represents the caller’s perspective of an outbound request, while the corresponding <code>SERVER</code> span represents the callee’s perspective. Together they form a single logical hop with two spans, allowing each side to measure its own contribution to latency (network time vs. processing time). <code>PRODUCER</code> and <code>CONSUMER</code> spans serve the same purpose for asynchronous messaging, where there is no synchronous response to close the loop.</p>
+<h2 id="context-propagation">Context Propagation</h2>
+<p>Context propagation is the hardest part of distributed tracing, and it is the number one cause of broken traces in production. The core idea is simple: every cross-process call must carry a small set of identifiers — the trace ID, the current span ID, and sampling flags — so that the receiving service can create a child span linked to the correct parent. Without this, each service generates its own independent trace, and what should be a single end-to-end trace becomes N disconnected fragments. The mechanism is the injection of trace context into request headers (for HTTP/gRPC), message metadata (for queues), or RPC metadata (for thrift/gRPC), and the extraction of that context on the receiving side. Every instrumentation library must handle both injection and extraction; missing either one breaks the chain.</p>
+<h3 id="context-propagation-across-services">Context Propagation Across Services</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  ┌─────────────┐   traceparent: 00-{traceID}-{spanA}-01   ┌─────────────┐   traceparent: 00-{traceID}-{spanB}-01   ┌─────────────┐</span></span>
+<span class="line"><span>  │  Service A  │  ──────────────────────────────────────► │  Service B  │  ──────────────────────────────────────► │  Service C  │</span></span>
+<span class="line"><span>  │  (gateway)  │                                           │ (inventory) │                                           │  (payment)  │</span></span>
+<span class="line"><span>  │             │  B extracts header:                       │             │  C extracts header:                       │             │</span></span>
+<span class="line"><span>  │  span_id: A │   parent = A                              │  span_id: B │   parent = B                              │  span_id: C │</span></span>
+<span class="line"><span>  │  parent: ∅  │   creates span B as child of A            │  parent: A  │   creates span C as child of B            │  parent: B  │</span></span>
+<span class="line"><span>  │             │   injects NEW traceparent (spanB parent)  │             │   injects NEW traceparent (spanC parent)  │             │</span></span>
+<span class="line"><span>  └─────────────┘                                           └─────────────┘                                           └─────────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  ── Trace ID NEVER changes for the lifetime of the request.</span></span>
+<span class="line"><span>  ── Each receiver becomes the parent for the next hop; only span IDs chain.</span></span>
+<span class="line"><span>  ── Missing injection OR extraction at any boundary fragments the trace.</span></span></code></pre>
+<h3 id="w3c-trace-context">W3C Trace Context</h3>
+<p>The W3C Trace Context specification (RFC-level standard adopted in 2020) defines two HTTP headers: <code>traceparent</code> and <code>tracestate</code>. The <code>traceparent</code> header carries the core trace identity in a fixed, parseable format: <code>00-{trace-id}-{parent-id}-{trace-flags}</code>, where <code>00</code> is the version, the trace ID is a 32-character lowercase hex string (128 bits), the parent ID is a 16-character hex string (64 bits) representing the current span’s ID, and the trace flags is a 2-character hex field whose least significant bit is the sampled flag. For example, <code>traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</code> indicates version 0, a trace ID of <code>4bf92f…</code>, a parent span ID of <code>00f067…</code>, and the sampled flag set to 1. The <code>tracestate</code> header is an optional companion that allows vendors to propagate additional, vendor-specific opaque state as a list of key-value pairs (e.g., <code>tracestate: congo=t61rcWkgMzE,rojo=00f067aa0ba902b7</code>). This extensibility mechanism lets tracing vendors carry custom routing or sampling hints without breaking the standard <code>traceparent</code> format, and multiple vendors can coexist on the same trace.</p>
+<p>When service B receives an HTTP request from service A, it extracts the <code>traceparent</code> header, parses the trace ID and parent span ID, creates a new span with a freshly generated span ID (setting its parent to the extracted span ID), and when it makes outbound calls to service C, it injects a new <code>traceparent</code> with the same trace ID but its own span ID as the parent. The trace ID never changes for the lifetime of the request; only the span IDs chain together. The W3C standard replaced the earlier proliferation of vendor-specific header formats and is now the default in OpenTelemetry, meaning new instrumentation “just works” across W3C-compliant services without configuration.</p>
+<h3 id="b3-propagation">B3 Propagation</h3>
+<p>Before W3C standardization, Zipkin’s <strong>B3</strong> propagation format was the de facto industry standard, and it remains widely deployed — particularly in Spring Cloud Sleuth, legacy Java ecosystems, and service meshes like Istio’s older versions. B3 uses multiple separate headers: <code>X-B3-TraceId</code> (64 or 128 hex), <code>X-B3-SpanId</code> (64 hex), <code>X-B3-ParentSpanId</code> (64 hex, optional), <code>X-B3-Sampled</code> (either <code>1</code>/<code>0</code> or <code>true</code>/<code>false</code>), and <code>X-B3-Flags</code> (for debug-mode tracing, where <code>1</code> means “trace this request at all costs”). The multi-header approach is more verbose but also more readable and easier to debug manually. The critical operational concern is <strong>mixed propagation environments</strong>: if some services use B3 and others use W3C, context can be silently lost at the boundary. OpenTelemetry’s propagator API supports both formats simultaneously (via the <code>composite</code> propagator), and during migration it is common to inject both B3 and W3C headers while extracting from whichever is present. A stable production strategy is to standardize on W3C at the edge (load balancer, API gateway) and use composite propagation internally until all services are migrated.</p>
+<h3 id="propagation-across-async-boundaries">Propagation Across Async Boundaries</h3>
+<p>For message queues (Kafka, RabbitMQ, SQS, Pub/Sub), trace context is injected into message headers or metadata rather than HTTP headers. Kafka supports record headers, SQS supports message attributes, and RabbitMQ supports AMQP headers. The pattern is identical: the producer injects context before publishing, the consumer extracts it upon receipt. The subtlety is that the consumer typically creates a new span with <code>SpanKind.CONSUMER</code> that is linked to (rather than a direct child of) the producer’s <code>SpanKind.PRODUCER</code> span, because the asynchronous boundary means there may be a temporal gap, retries, or multiple consumers. For batch processing where a single consumer processes messages from many producers, <strong>span links</strong> are used instead of parent-child relationships, allowing one consumer span to reference multiple producer spans across different traces. The <code>traceparent</code> format can also be carried over W3C’s <code>baggage</code> mechanism, which propagates application-level key-value pairs (like <code>user.tier=premium</code> or <code>region=us-east</code>) alongside trace context — useful for carrying business context that every downstream service should see.</p>
+<blockquote>
+<p><strong>Common Pitfall:</strong> Context propagation breaks are the number one failure mode in distributed tracing. Every new service integration, every message queue hop, every serverless function invocation, every load balancer that strips unknown headers, every third-party SDK that doesn’t participate in context propagation — if context isn’t carried through, the trace fragments. Mitigation: deploy canary detectors that flag traces with depth mismatch (expected 5 spans, observed 3), and use OpenTelemetry’s auto-instrumentation agents which automatically propagate context for common libraries (HTTP clients, gRPC, Kafka, database drivers) without code changes.</p>
+</blockquote>
+<h2 id="instrumentation-with-opentelemetry">Instrumentation with OpenTelemetry</h2>
+<p>OpenTelemetry (OTel) is a CNCF project — the second most active after Kubernetes — that provides vendor-neutral APIs, SDKs, and a collector for all three observability signals (traces, metrics, logs). Before OTel’s emergence around 2019, every tracing vendor (Jaeger/Uber, Zipkin/Twitter, Datadog, Lightstep, Dynatrace) shipped its own proprietary SDK. Migrating between vendors meant rewriting instrumentation across hundreds of services. OTel solves this by providing a single, standard API that applications code against, with pluggable exporters that send data to any backend. The application never imports vendor-specific code; it imports the OTel API, and the OTel SDK (configured at deployment time) handles the actual export.</p>
+<p>OTel has three architectural layers:</p>
+<ul>
+<li><strong>API layer</strong> — interfaces for creating spans, setting attributes, recording events, and propagating context. This is what application code calls, and it has zero dependencies on any specific backend.</li>
+<li><strong>SDK layer</strong> — implements the API with configurable processors, samplers, and exporters; it is language-specific (Java, Go, Python, Node.js, .NET, Rust, etc.) and is where you configure sampling rates, batching, and export destinations.</li>
+<li><strong>Collector</strong> — a standalone binary, deployed separately from application processes, that receives telemetry from SDKs, processes it (batching, filtering, tail-sampling, attribute enrichment, redaction of sensitive data), and exports it to one or more backends.</li>
+</ul>
+<p>This three-tier separation means you can change backends without touching application code, and you can do heavy processing (like tail-based sampling) in the collector rather than in every service process.</p>
+<p>A powerful feature of OTel is <strong>auto-instrumentation</strong>: language-specific agents (the Java agent, the Python <code>opentelemetry-instrumentation</code> packages, the Node.js auto-loader) automatically instrument common libraries — HTTP servers/clients, gRPC, database drivers (PostgreSQL, MySQL, Redis), message queue clients (Kafka, RabbitMQ), web frameworks (Spring, Express, Flask, Django) — without requiring any code changes. This means a Java service can get full distributed tracing by simply attaching the OTel agent with <code>-javaagent:opentelemetry-javaagent.jar</code> and setting export configuration via environment variables.</p>
+<h3 id="instrumentation-steps-manual">Instrumentation Steps (Manual)</h3>
+<p>For manual instrumentation of business logic, the workflow is:</p>
+<ul>
+<li>Obtain a tracer from the OTel API (e.g., <code>otel.Tracer("order-service")</code>).</li>
+<li>Start a span from the current context, passing a name and optional attributes — this returns a new context carrying the active span.</li>
+<li>Set attributes on the span for business-relevant data (IDs, values, decisions).</li>
+<li><code>defer span.End()</code> (or equivalent) so the span is closed when the function returns — forgetting this leaks spans and corrupts timing.</li>
+<li>Record errors and set the span status to <code>Error</code> when operations fail, so the backend surfaces them.</li>
+<li><strong>Thread the context object through every downstream call</strong> (the <code>context.Context</code> in Go, the equivalent in other languages) so implicit propagation works — goroutines, async tasks, or libraries that ignore context will break the chain.</li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#6A737D">// Manual span creation in Go</span></span>
+<span class="line"><span style="color:#F97583">func</span><span style="color:#B392F0"> handleOrder</span><span style="color:#E1E4E8">(</span><span style="color:#FFAB70">ctx</span><span style="color:#B392F0"> context</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">Context</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">orderID</span><span style="color:#F97583"> string</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">error</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">    tracer </span><span style="color:#F97583">:=</span><span style="color:#E1E4E8"> otel.</span><span style="color:#B392F0">Tracer</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"order-service"</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#E1E4E8">    ctx, span </span><span style="color:#F97583">:=</span><span style="color:#E1E4E8"> tracer.</span><span style="color:#B392F0">Start</span><span style="color:#E1E4E8">(ctx, </span><span style="color:#9ECBFF">"handleOrder"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">        trace.</span><span style="color:#B392F0">WithAttributes</span><span style="color:#E1E4E8">(</span></span>
+<span class="line"><span style="color:#E1E4E8">            attribute.</span><span style="color:#B392F0">String</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"order.id"</span><span style="color:#E1E4E8">, orderID),</span></span>
+<span class="line"><span style="color:#E1E4E8">            attribute.</span><span style="color:#B392F0">Int64</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"order.value"</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">4200</span><span style="color:#E1E4E8">),</span></span>
+<span class="line"><span style="color:#E1E4E8">        ),</span></span>
+<span class="line"><span style="color:#E1E4E8">    )</span></span>
+<span class="line"><span style="color:#F97583">    defer</span><span style="color:#E1E4E8"> span.</span><span style="color:#B392F0">End</span><span style="color:#E1E4E8">()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> err </span><span style="color:#F97583">:=</span><span style="color:#B392F0"> reserveInventory</span><span style="color:#E1E4E8">(ctx, orderID); err </span><span style="color:#F97583">!=</span><span style="color:#79B8FF"> nil</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">        span.</span><span style="color:#B392F0">RecordError</span><span style="color:#E1E4E8">(err)</span></span>
+<span class="line"><span style="color:#E1E4E8">        span.</span><span style="color:#B392F0">SetStatus</span><span style="color:#E1E4E8">(codes.Error, err.</span><span style="color:#B392F0">Error</span><span style="color:#E1E4E8">())</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> err</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#B392F0"> chargePayment</span><span style="color:#E1E4E8">(ctx, orderID)</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>The key pattern is passing the <code>context.Context</code> (in Go) or equivalent context object (in other languages) through every function call. The tracer stores the current active span in the context, so when <code>reserveInventory</code> makes an HTTP call to the inventory service, the OTel HTTP client instrumentation automatically extracts the parent span from the context and injects the traceparent header. This implicit propagation through context objects is why manual context threading is critical: if a function creates a goroutine, spawns an async task, or calls a library that doesn’t accept a context parameter, the trace chain breaks.</p>
+<blockquote>
+<p><strong>Interview Signal:</strong> Mentioning OpenTelemetry (not vendor-specific SDKs) signals awareness of modern observability standards and vendor-neutrality. Mentioning auto-instrumentation versus manual instrumentation, and knowing that the Collector can do tail-sampling, are staff-level differentiators.</p>
+</blockquote>
+<h2 id="sampling-strategies">Sampling Strategies</h2>
+<p>Sampling is the fundamental scale-management mechanism in distributed tracing. At Google, Uber, and Meta scale, tracing every request is computationally and economically impossible. With 10 million requests per second and an average of 10 spans per request, that is 100 million spans per second — over 8.6 trillion spans per day. At roughly 500 bytes per span, that is 4.3 petabytes per day of raw span data, before indexing, replication, or query acceleration. Sampling reduces this volume by orders of magnitude while attempting to preserve representative visibility into system behavior. The art of sampling is choosing which traces to keep and which to drop, and the choice has profound implications for what you can and cannot observe.</p>
+<h3 id="head-based-sampling">Head-Based Sampling</h3>
+<p>Head-based sampling makes the sampling decision at the <strong>entry point</strong> of the request — the load balancer, API gateway, or first service — before any downstream calls are made. The decision is typically a simple probabilistic coin flip: sample this request with probability <em>p</em> (e.g., 0.1% or 1%), and if sampled, set the <code>sampled</code> flag in the trace context so that every downstream service knows to record and export its spans. The critical property is that the decision is made once and propagated: all services in the call chain either all record their spans (producing a complete trace) or all drop them (producing nothing). This is called <strong>multi-span head sampling</strong> or <strong>probabilistic head sampling</strong>, and it is the industry default for high-throughput systems.</p>
+<p>The advantage of head-based sampling is simplicity and consistency. The decision is O(1), requires no buffering, and produces complete traces — never fragments. The overhead is minimal: one random number generation per request at the edge. The disadvantage is that it is <strong>uniformly blind to trace characteristics</strong>: a fast, successful request and a slow, failing request have exactly the same probability of being sampled. At 0.1% sampling, a P99.9 latency event (1 in 1,000 requests) has only about a 10% chance of being captured. For a system processing 1 million RPS, that is 1,000 slow requests per second — and head sampling will miss approximately 900 of them. This is the <strong>sampling visibility gap</strong>: head sampling is biased toward normal requests, which are the least interesting ones.</p>
+<p>A dangerous anti-pattern is <strong>single-span head sampling</strong>, where each service independently decides whether to sample (rather than honoring a propagated decision). Service A samples its span; service B independently decides not to. The result is trace fragmentation — incomplete call trees where child spans are missing, making the trace useless for root-cause analysis. This should never be used in production; the sampled flag must always be propagated and honored.</p>
+<h3 id="tail-based-sampling">Tail-Based Sampling</h3>
+<p>Tail-based sampling defers the sampling decision until the <strong>entire trace is complete</strong> (or a timeout has elapsed). The collector buffers all spans for a given trace ID — waiting for the request to finish across all services — and then applies sampling policies based on the trace’s actual characteristics: total latency, error status, number of spans, specific service involvement, or custom attributes. For example, a policy might be: “always keep traces with errors, always keep traces slower than 500ms, and probabilistically sample 0.1% of the rest.” This deterministic capture of interesting traces is the key advantage: every error and every latency outlier is preserved, regardless of how rare they are.</p>
+<p>The cost of tail-based sampling is buffering and complexity. The collector must hold all spans for a trace in memory until the trace completes or a timeout fires (typically 10–30 seconds). At high throughput, this buffer is enormous: 10 million spans per second with a 10-second buffer means 100 million spans resident in collector memory — tens of gigabytes of RAM. The solution is to distribute tail-sampling across a collector fleet using <strong>consistent hashing by trace ID</strong>, ensuring that all spans for a given trace land on the same collector instance. This requires a load-balancing layer (an OTel Collector in “router” mode) that hashes the trace ID from incoming span data and forwards to the appropriate tail-sampling collector. If a collector crashes, all in-flight traces it was buffering are lost — a trade-off between memory cost and fault tolerance. Some implementations spill to disk or use a distributed cache (Redis) for the buffer, but this adds latency to the sampling decision.</p>
+<p>Tail-based sampling is not a binary choice but a policy engine. Real-world policies combine multiple rules with AND/OR logic: “keep if (duration &gt; P99 OR status = ERROR) AND service in [checkout, payment]”, or “keep 100% of traces involving the auth service, 1% of others.” The OpenTelemetry Collector ships with a tail-sampling processor supporting policies like <code>always_sample</code>, <code>latency</code>, <code>status_code</code>, <code>numeric_attribute</code>, <code>string_attribute</code>, <code>rate_limiting</code>, and <code>and</code>/<code>composite</code> combinators. The art is tuning these policies to maximize signal (interesting traces kept) while minimizing noise (boring traces dropped) within a target storage budget.</p>
+<h3 id="adaptive-and-probabilistic-sampling">Adaptive and Probabilistic Sampling</h3>
+<p><strong>Probabilistic sampling</strong> is the simplest strategy: sample each trace with a fixed probability <em>p</em>. It is easy to reason about and implement but, as discussed, uniformly samples across all trace characteristics. <strong>Adaptive sampling</strong> dynamically adjusts the sampling rate based on observed conditions. One approach is <strong>per-service adaptive sampling</strong>: the collector monitors the incoming span rate per service and adjusts each service’s sampling probability to hit a target span throughput. A service receiving 1 million requests per second might be sampled at 0.01%, while a low-traffic service receiving 100 requests per second might be sampled at 100% — both contributing roughly the same number of spans to the backend. This ensures that rare, low-traffic services (often the most poorly understood) get full visibility while high-traffic services don’t overwhelm the pipeline.</p>
+<p>Another adaptive approach is <strong>latency-aware sampling</strong>: the sampling rate is increased for services or endpoints that are currently exhibiting high latency or elevated error rates, and decreased for healthy ones. This requires the sampling layer to have feedback from metrics or from the trace data itself, creating a control loop. The danger is oscillation: if sampling increases, you see more traces, which might reveal more problems, which increases sampling further. Production implementations use dampening (slow adjustment) and hysteresis (don’t change direction too quickly). Some organizations use <strong>stratified sampling</strong>: different sampling rates for different strata of requests (e.g., 100% for premium-tier users, 10% for free-tier, 100% for checkout, 0.1% for health checks), which is more expressive than a single global rate.</p>
+<h3 id="head-based-vs-tail-based-sampling">Head-Based vs Tail-Based Sampling</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  HEAD-BASED  (decision at entry — before any downstream call):</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   ┌─────────┐  coin flip p=0.1%   ┌─────────┐            ┌─────────┐</span></span>
+<span class="line"><span>   │  Edge   │──sampled flag──────►│  Svc B  │───────────►│  Svc C  │</span></span>
+<span class="line"><span>   │  Svc A  │  set in traceparent │ records │            │ records │</span></span>
+<span class="line"><span>   └─────────┘                     └─────────┘            └─────────┘</span></span>
+<span class="line"><span>        │                              │                       │</span></span>
+<span class="line"><span>        └──────── decision propagated (all-or-nothing) ─────────┘</span></span>
+<span class="line"><span>        ⇒ either a COMPLETE trace is exported, or NOTHING is exported.</span></span>
+<span class="line"><span>        ⇒ O(1), no buffering, but blind to latency/errors.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  TAIL-BASED  (decision AFTER the entire trace completes):</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   ┌─────────┐         ┌─────────┐         ┌─────────┐    ┌─────────────────────────┐</span></span>
+<span class="line"><span>   │  Svc A  │────────►│  Svc B  │────────►│  Svc C  │───►│  Collector BUFFERS all  │</span></span>
+<span class="line"><span>   │ emits   │         │ emits   │         │ emits   │    │  spans by traceID       │</span></span>
+<span class="line"><span>   │ spans   │         │ spans   │         │ spans   │    │  (10–30s window)        │</span></span>
+<span class="line"><span>   └─────────┘         └─────────┘         └─────────┘    └────────────┬────────────┘</span></span>
+<span class="line"><span>                                                                     │ trace complete</span></span>
+<span class="line"><span>                                                                     ▼</span></span>
+<span class="line"><span>                                                       ┌───────────────────────────┐</span></span>
+<span class="line"><span>                                                       │ Policy engine:            │</span></span>
+<span class="line"><span>                                                       │  duration > 500ms?  KEEP  │</span></span>
+<span class="line"><span>                                                       │  status = ERROR?    KEEP  │</span></span>
+<span class="line"><span>                                                       │  else 0.1%?         KEEP  │</span></span>
+<span class="line"><span>                                                       └─────────────┬─────────────┘</span></span>
+<span class="line"><span>                                              KEEP ◄─────────────────┴────────────────► DROP</span></span>
+<span class="line"><span>        ⇒ deterministically captures every error &#x26; outlier regardless of rarity.</span></span>
+<span class="line"><span>        ⇒ requires buffering + consistent-hash routing; collector crash loses in-flight traces.</span></span></code></pre>
+<h3 id="sampling-strategy-comparison">Sampling Strategy Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Decision point</th>
+<th>Cost / overhead</th>
+<th>Trace completeness</th>
+<th>Captures rare outliers?</th>
+<th>Best for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Head-based (multi-span)</strong></td>
+<td>Entry point (edge)</td>
+<td>O(1), minimal — one coin flip</td>
+<td>Complete (all-or-nothing)</td>
+<td>No — uniformly blind to characteristics</td>
+<td>High-throughput baseline; broad coverage</td>
+</tr>
+<tr>
+<td><strong>Single-span head</strong> (anti-pattern)</td>
+<td>Each service independently</td>
+<td>Low</td>
+<td><strong>Fragmented</strong> — broken trees</td>
+<td>No</td>
+<td>Never use in production</td>
+</tr>
+<tr>
+<td><strong>Tail-based</strong></td>
+<td>After full trace completes</td>
+<td>High — buffering (GBs RAM), router tier</td>
+<td>Complete (decided post-hoc)</td>
+<td><strong>Yes</strong> — deterministic capture of errors/latency</td>
+<td>Critical paths; P99.9+ outlier diagnosis</td>
+</tr>
+<tr>
+<td><strong>Probabilistic</strong></td>
+<td>Fixed probability <em>p</em></td>
+<td>Low</td>
+<td>Complete (if head-propagated)</td>
+<td>No</td>
+<td>Simple reasoning, predictable volume</td>
+</tr>
+<tr>
+<td><strong>Adaptive (per-service)</strong></td>
+<td>Dynamic, per-service</td>
+<td>Medium — feedback control loop</td>
+<td>Complete</td>
+<td>Partial — balances volume across services</td>
+<td>Mixed-traffic fleets; low-traffic visibility</td>
+</tr>
+<tr>
+<td><strong>Latency-aware adaptive</strong></td>
+<td>Dynamic, by observed latency/error</td>
+<td>Medium-high — control loop + metrics feedback</td>
+<td>Complete</td>
+<td>Yes — increases rate when unhealthy</td>
+<td>Incident response, regression detection</td>
+</tr>
+<tr>
+<td><strong>Stratified</strong></td>
+<td>Per-stratum rules (tier/endpoint)</td>
+<td>Low-medium</td>
+<td>Complete</td>
+<td>Partial — per-stratum targeting</td>
+<td>Business-tier-aware visibility</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Key Choice:</strong> Head-based sampling at 0.1%–1% is the industry default for high-throughput systems because it is simple, cheap, and produces complete traces. Tail-based sampling is reserved for critical paths where you must deterministically catch every P99.9+ outlier and every error. In practice, many organizations run both: head-based sampling as the baseline (cheap, broad coverage) plus tail-based sampling in a collector tier for critical services (deterministic capture of interesting traces). Adaptive sampling adds a dynamic layer on top to manage volume as traffic patterns shift.</p>
+</blockquote>
+<h2 id="span-collection-and-storage">Span Collection and Storage</h2>
+<h3 id="the-collection-pipeline">The Collection Pipeline</h3>
+<p>The standard collection architecture is a three-tier pipeline: application processes emit spans to a local collector tier, the collector tier processes and batches spans, and the backend stores and indexes them for querying. In a Kubernetes environment, the local collector is typically deployed as a <strong>DaemonSet</strong> (one collector pod per node), receiving spans from all application pods on that node via gRPC or HTTP. This minimizes network hops — spans go to the local node’s collector rather than across the cluster — and provides a failure boundary: if the backend is down, the local collector buffers spans in memory or on disk, preventing backpressure from reaching application processes. An alternative deployment is a <strong>gateway deployment</strong> (a pool of collectors accessible via a cluster-level service), which simplifies configuration (all apps point to one address) but adds a network hop. Some organizations use a hybrid: DaemonSet collectors on each node feed a smaller pool of gateway collectors that do tail-sampling and export to the backend.</p>
+<h3 id="opentelemetry-collection-pipeline">OpenTelemetry Collection Pipeline</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  ┌──────────────────────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>  │  NODE  (Kubernetes)                                                          │</span></span>
+<span class="line"><span>  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                          │</span></span>
+<span class="line"><span>  │  │  App Svc 1  │  │  App Svc 2  │  │  App Svc 3  │   OTel SDK + auto-instr  │</span></span>
+<span class="line"><span>  │  │  (Java agent│  │  (Go agent) │  │  (Python)   │   emits spans via OTLP   │</span></span>
+<span class="line"><span>  │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘                          │</span></span>
+<span class="line"><span>  └─────────┼────────────────┼────────────────┼─────────────────────────────────┘</span></span>
+<span class="line"><span>            │   local hop    │                │   (same node — minimal network)</span></span>
+<span class="line"><span>            ▼                ▼                ▼</span></span>
+<span class="line"><span>  ┌─────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>  │  OTel Collector — DaemonSet (one per node)           │</span></span>
+<span class="line"><span>  │  ┌────────────┐    ┌───────────────┐    ┌─────────┐  │</span></span>
+<span class="line"><span>  │  │  RECEIVERS │───►│  PROCESSORS   │───►│ EXPORTERS│ │</span></span>
+<span class="line"><span>  │  │  OTLP,     │    │  batch,       │    │ OTLP,    │ │</span></span>
+<span class="line"><span>  │  │  Jaeger,   │    │  filter,      │    │ Jaeger,  │ │</span></span>
+<span class="line"><span>  │  │  Zipkin    │    │  redact,      │    │ Tempo,   │ │</span></span>
+<span class="line"><span>  │  │            │    │  route,       │    │ Datadog, │ │</span></span>
+<span class="line"><span>  │  │            │    │  tail-sample  │    │ Kafka,   │ │</span></span>
+<span class="line"><span>  │  └────────────┘    └───────────────┘    └────┬────┘  │</span></span>
+<span class="line"><span>  └──────────────────────────────────────────────┼───────┘</span></span>
+<span class="line"><span>                                                  │  (cluster hop)</span></span>
+<span class="line"><span>                                                  ▼</span></span>
+<span class="line"><span>  ┌──────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>  │  Gateway Collector pool (optional — tail-sampling tier)  │</span></span>
+<span class="line"><span>  │  consistent-hash by traceID → buffer → policy → export   │</span></span>
+<span class="line"><span>  └──────────────────────────┬───────────────────────────────┘</span></span>
+<span class="line"><span>                             │</span></span>
+<span class="line"><span>                             ▼</span></span>
+<span class="line"><span>  ┌───────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>  │  STORAGE BACKEND                                          │</span></span>
+<span class="line"><span>  │  Jaeger (Cassandra/ES)  •  Tempo (S3/GCS object store)    │</span></span>
+<span class="line"><span>  │  Datadog  •  Splunk  •  Honeycomb                         │</span></span>
+<span class="line"><span>  │  indexed by (service, op, ts) + trace_id; queryable       │</span></span>
+<span class="line"><span>  └───────────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  ── ~10K–50K spans/sec per collector instance; scale horizontally.</span></span>
+<span class="line"><span>  ── If backend is down, local collector buffers (memory/disk) → no app backpressure.</span></span>
+<span class="line"><span>  ── DaemonSet = fewest hops; Gateway = simpler config; Hybrid = both.</span></span></code></pre>
+<p>The OpenTelemetry Collector is the de facto standard for this middle tier. It is a single binary with a pluggable pipeline architecture: <strong>receivers</strong> accept telemetry (OTLP, Jaeger, Zipkin, Prometheus, Syslog), <strong>processors</strong> transform it (batching, tail-sampling, attribute filtering, redaction, routing by service name), and <strong>exporters</strong> send it to backends (Jaeger, Tempo, Datadog, Splunk, S3, Kafka). The collector can run multiple pipelines in parallel, routing traces to different backends based on service name or environment. A single collector instance handles approximately 10,000–50,000 spans per second; at higher throughput, you scale horizontally with a load-balancing layer in front.</p>
+<h3 id="storage-backends">Storage Backends</h3>
+<p>The storage backend is where traces become queryable and where cost explodes. There are two dominant architectural patterns.</p>
+<p><strong>Jaeger’s Cassandra/Elasticsearch model:</strong> Jaeger stores spans in Cassandra (or Elasticsearch) with two data paths: an index by <code>(service, operation, timestamp)</code> for trace discovery queries (e.g., “find traces in the payment service with operation <code>POST /charge</code> in the last hour”), and a storage path by <code>trace_id</code> for full trace retrieval. The index enables fast search by service and operation name, which are low-cardinality dimensions. The problem is high-cardinality tag search: querying <code>user_id=12345</code> requires scanning all spans in the time window because building secondary indexes on high-cardinality tags is prohibitively expensive in Cassandra. Elasticsearch handles tag search better but at much higher infrastructure cost. This model works well at moderate scale (millions of traces per day) but becomes cost-prohibitive at petabyte scale due to Cassandra’s storage overhead and operational complexity.</p>
+<p><strong>Grafana Tempo’s object-store model:</strong> Tempo takes a fundamentally different approach — it stores traces as flat, compressed blocks in S3 or GCS, similar to how Prometheus stores metrics and how Loki stores logs. Traces are indexed only by trace ID (using a bloom filter per block), and search by service name or tags is handled via the <code>tempo-query</code> component or by integrating with external metadata. The trade-off is that you cannot search for traces by arbitrary tags efficiently; you must know the trace ID, or use Tempo’s newer “TraceQL” query language which scans blocks with predicate pushdown. The massive advantage is cost: object storage is 10–100x cheaper than Cassandra or Elasticsearch at petabyte scale, and the operational burden is near-zero (S3 manages durability, replication, and lifecycle). This is the modern playbook — treat traces like logs in cold storage, indexed by ID, searchable via block scans, and retainable for weeks or months rather than hours.</p>
+<p><strong>Retention:</strong> Traces are the most expensive observability signal per gigabyte. Typical retention is 24–72 hours for full traces at high sampling rates, extended to 7 days for error-only traces. Some organizations tier retention: 24 hours at 1% sampling, 7 days at 0.01% sampling, 30 days for error traces only. Tempo’s object-store model enables longer retention (weeks to months) because storage is cheap, but query latency for old traces increases as you scan more blocks. Lifecycle policies (S3 transitions to Glacier) can push retention to months or years for compliance, though retrieval becomes minutes-to-hours rather than seconds.</p>
+<h2 id="distributed-trace-visualization">Distributed Trace Visualization</h2>
+<p>Trace visualization transforms the flat list of spans into an actionable diagnostic view. The primary visualization is the <strong>waterfall chart</strong> (also called a Gantt chart or flame graph for traces), where each span is a horizontal bar positioned by start time and width proportional to duration, nested by parent-child relationship. The waterfall immediately reveals the critical path — the longest chain of sequential spans from root to leaf — which is the sequence of operations that directly determines the request’s total latency. Parallel calls (fan-out) appear as overlapping bars, and the gap between a parent span’s start and a child span’s start reveals the parent’s self-time (time spent in its own logic before calling downstream).</p>
+<p>A well-designed trace view shows three levels of detail. At the <strong>trace level</strong>, the user sees the total latency, status, service count, span count, and the critical path highlighted. At the <strong>span level</strong>, clicking a span reveals its attributes, events, and resource information — the HTTP status code, the SQL query text, the cache hit/miss, the error message. At the <strong>aggregate level</strong>, tracing backends offer service dependency graphs (which services call which), latency histograms per service/operation, and comparison views (overlay this trace against the p50 baseline trace for the same operation). Jaeger, Tempo (via Grafana), Datadog, and Honeycomb all offer these views with slightly different UX trade-offs: Jaeger is open-source and functional, Tempo integrates natively with Grafana dashboards, Datadog provides tight metric-trace-log correlation, and Honeycomb focuses on high-cardinality aggregation queries over traces.</p>
+<p>The most powerful visualization feature for staff-level diagnosis is <strong>trace comparison</strong>: selecting two traces for the same operation — one slow, one fast — and diffing their waterfalls side by side. This immediately reveals whether the slowness is due to an extra downstream call, a single slow span, or a different code path. Some backends support <strong>statistical trace analysis</strong>: aggregating thousands of traces for an operation and showing the distribution of span counts, per-service latency contributions, and common sub-paths, turning individual traces into a statistical view of the operation’s behavior space.</p>
+<h2 id="correlation-with-metrics-and-logs">Correlation with Metrics and Logs</h2>
+<p>Distributed tracing is most powerful when correlated with the other two observability pillars. The correlation mechanism is the <strong>exemplar</strong>: a metric data point (e.g., a histogram bucket for <code>http_request_duration_seconds</code>) that carries a reference to a specific trace ID. When a Prometheus histogram records a request at the P99 latency bucket, it can attach the trace ID of that specific request as an exemplar. In Grafana, clicking a spike in a latency dashboard jumps directly to the trace that caused it, bridging the aggregate (metric) and the individual (trace) without manual log searching. Exemplars require the application to propagate the trace ID into the metric recording call, which OTel facilitates through its shared context API.</p>
+<p>Log correlation works through <strong>trace ID injection</strong>: the logging framework is configured to include the current trace ID and span ID in every log line (typically as structured fields, not just string concatenation). When an engineer finds a trace showing a slow payment span, they can query the logging system (Elasticsearch, Loki, Splunk) for all log lines with that trace ID and see the detailed application logs from every service in the trace — the SQL query that was slow, the exception stack trace, the cache miss warning. This turns the trace from “I know the payment service was slow” into “I know the payment service was slow because the database query took 300ms due to a missing index, and here is the exact query.” The integration is typically configured once at the logging framework level (e.g., Logback’s MDC in Java, structlog’s processor in Python) and then automatically applies to all log lines in all services. OTel’s log SDK formalizes this by making logs a first-class signal with built-in trace context correlation.</p>
+<p>The reverse direction — from logs to traces — is equally important. When an on-call engineer sees an error log, the trace ID in the log line lets them jump to the full trace and see the upstream context: what request triggered this, what other services were involved, whether the error is correlated with slowness elsewhere in the call chain. This bidirectional jump between signals is what makes the “three pillars” more than the sum of its parts.</p>
+<h2 id="performance-overhead">Performance Overhead</h2>
+<p>Tracing overhead is the perennial concern, and it must be measured and managed. The overhead comes from four sources:</p>
+<ul>
+<li><strong>Span creation</strong> — allocating span objects, generating span IDs, recording start timestamps.</li>
+<li><strong>Attribute recording</strong> — setting key-value pairs on spans, which involves map allocation.</li>
+<li><strong>Context propagation</strong> — injecting and extracting headers on every cross-process call.</li>
+<li><strong>Span export</strong> — serializing spans and sending them over the network to the collector (batched and asynchronous, but can cause backpressure if the collector is slow or unavailable).</li>
+</ul>
+<p>The first three are per-request and pay-as-you-go; the fourth is batched and asynchronous but can cause backpressure if the collector is slow or unavailable.</p>
+<p>In practice, OTel auto-instrumentation adds approximately <strong>1–5% CPU overhead</strong> at typical sampling rates (1%), with the variance depending on the language runtime (JIT-compiled Java and Go have lower overhead than interpreted Python), the number of spans per request (more instrumentation = more overhead), and the number of attributes per span. Memory overhead is dominated by the span queue: spans are created synchronously but exported asynchronously, so there is a batch buffer (typically 512–2048 spans) in each process. Network overhead is minimal at 1% sampling — a few kilobytes per second per service — but scales linearly with sampling rate. At 100% sampling (which should never be done in production for high-traffic services), overhead can reach 10–20% CPU, degrading application performance measurably.</p>
+<p>The mitigation strategies are:</p>
+<ul>
+<li>Keep sampling rates low (0.1%–1% for head-based).</li>
+<li>Use tail-based sampling in the collector to reduce export volume.</li>
+<li>Batch exports (default 5-second batches or 512-span batches, whichever comes first).</li>
+<li>Configure the SDK to <strong>drop spans silently</strong> if the export queue is full rather than blocking application threads (the <code>BatchSpanProcessor</code> with <code>max_queue_size</code> and <code>blocking=false</code> in OTel).</li>
+</ul>
+<p>The cardinal rule is that tracing must never degrade application performance: if the collector or backend is down, the SDK should drop spans rather than cause backpressure. This is the “observability must not cause outages” principle.</p>
+<h2 id="tracing-in-a-service-mesh">Tracing in a Service Mesh</h2>
+<p>A service mesh (Istio, Linkerd, Consul Connect) provides a unique opportunity for distributed tracing because the sidecar proxy (Envoy, Linkerd2-proxy) sits in the data path of every cross-service call. The proxy can automatically inject and extract trace context — B3 or W3C headers — without the application being aware of it. This means that even services with zero tracing instrumentation get span coverage at the proxy level: the mesh generates <code>CLIENT</code> spans on the sending side and <code>SERVER</code> spans on the receiving side, capturing the network hop latency without any application code changes. This is called <strong>infrastructure-level tracing</strong> and it provides a baseline of trace coverage across the entire mesh with zero application effort.</p>
+<p>The limitation is that proxy-level spans only capture the network hop (the time between the sender’s proxy and the receiver’s proxy), not the application’s internal processing breakdown. A trace showing five proxy spans tells you that the request hit five services and how long each hop took, but not <em>why</em> a particular service was slow (was it a slow database query? a lock contention? a GC pause?). For that, you need application-level instrumentation — OTel SDK in the service creating child spans for database calls, cache lookups, and internal logic. The best practice is to use both: the service mesh for automatic, zero-effort baseline tracing, and OTel SDK for deep, application-aware tracing on critical services. The two layers merge in the tracing backend because the mesh-generated spans and the OTel-generated spans share the same trace ID (the mesh propagates context that the OTel SDK picks up).</p>
+<p>Istio’s tracing integration requires configuration: you specify the sampling rate (e.g., <code>1%</code>), the tracer provider (e.g., Zipkin or OTel), and the collector address. Envoy’s tracing configuration supports both B3 and W3C propagation, and in newer Istio versions, W3C is the default. Linkerd similarly supports OTel-compatible tracing through its proxy. A subtle operational point: the mesh’s sampling rate and the application SDK’s sampling rate are independent; if the mesh samples at 1% and the application samples at 100%, the effective trace rate is 1% (the mesh decision is authoritative because it runs at the edge), but the application creates full-span-depth traces for the 1% that the mesh lets through. Misconfiguring this — e.g., mesh samples at 100% for debugging and forgets to revert — can cause a massive spike in span volume that overwhelms the collector and backend.</p>
+<h2 id="tail-based-sampling-for-latency-optimization">Tail-Based Sampling for Latency Optimization</h2>
+<p>Tail-based sampling is not just a sampling strategy but a latency optimization tool. The core insight is that in distributed systems, <strong>tail latency (P99, P99.9) is caused by rare, complex conditions</strong> — GC pauses, network jitter, cold cache misses, queue contention, cascading retries — that are invisible to head-based sampling. By buffering complete traces and selectively keeping the slow ones, tail-based sampling ensures that the traces you need for diagnosing tail latency are always available.</p>
+<p>The implementation challenge is the buffer. Consider a system with 10 million spans per second and a 10-second trace completion window. The tail-sampling collector must buffer up to 100 million spans, grouping them by trace ID and waiting for each trace to complete before applying the sampling policy. At 500 bytes per span, that is 50 GB of buffer — far too much for a single collector. The solution is <strong>consistent hashing partitioning</strong>: a front-end layer of collectors (the “router” tier) hashes the trace ID from each incoming span and forwards it to one of N tail-sampling collectors. Each tail-sampling collector handles 1/N of traces, reducing the per-collector buffer to manageable size (e.g., 50 collectors × 1 GB each). When a trace completes (the root span arrives with an end timestamp, or a timeout fires), the collector evaluates the sampling policies: if the trace’s total duration exceeds the latency threshold, keep it; if any span has an error status, keep it; otherwise, probabilistically sample at a low rate. Kept traces are exported to the backend; dropped traces are discarded from the buffer.</p>
+<p>The <strong>latency threshold</strong> for tail-sampling policies should be set relative to the service’s SLO, not as an absolute number. For a service with a P99 SLO of 200ms, a threshold of 200ms captures all SLO violations. For a more nuanced approach, you can use <strong>percentile-based thresholds</strong>: the collector periodically computes the P99 latency for each service/operation and sets the threshold at 2× P99, ensuring that traces in the long tail (but not the baseline) are captured. This adapts as the system’s performance profile changes. Some organizations implement <strong>comparative tail-sampling</strong>: they keep a trace if it is significantly slower than the recent moving average for the same operation, even if it doesn’t cross an absolute threshold — useful for catching relative regressions in fast services where 50ms might be an outlier.</p>
+<p>A production-grade tail-sampling configuration might combine multiple policies: always keep 100% of error traces, always keep traces above the latency threshold, keep 10% of traces for any service with elevated error rate (detected via a side-channel metric feed), and keep 0.01% of everything else. The OpenTelemetry Collector’s <code>tail_sampling</code> processor supports these combinations through its <code>composite</code> policy, which applies multiple sub-policies and takes the union of kept traces. The total kept volume is then capped by a <code>rate_limiting</code> policy to prevent storage overrun during incidents (when error rates spike and every trace would otherwise be kept).</p>
+<h2 id="production-tracing-at-scale">Production Tracing at Scale</h2>
+<p>Running distributed tracing in production at scale requires addressing several operational challenges beyond the core architecture.</p>
+<p><strong>Trace completeness</strong> is the first concern. Incomplete traces — where some spans are missing because a service dropped them, a collector crashed, or context propagation broke — are worse than no traces because they give false confidence. The mitigation is a <strong>trace quality monitor</strong>: a background job that samples traces, checks expected span count against actual span count per service, and alerts when the completeness ratio drops below a threshold (e.g., 95%). This catches propagation breaks early, before they affect debugging. Another approach is <strong>synthetic tracing</strong>: periodically send test requests through the full call chain and verify that the resulting trace has all expected spans.</p>
+<p><strong>Collector reliability</strong> is the second concern. If collectors are down, spans accumulate in application SDK buffers and eventually get dropped. The SDK should be configured with bounded queues and <code>drop_on_overflow</code> semantics so that tracing never causes application backpressure. Collectors should be deployed with redundancy (multiple instances behind a load balancer) and health-checked. For tail-sampling collectors, the loss of a collector means the loss of all in-flight traces on that collector — acceptable for tracing (which is best-effort) but should be monitored. Some organizations run collectors in a “spill to disk” mode where the buffer is persisted to local SSD, allowing recovery after a collector restart.</p>
+<p><strong>Multi-tenancy and isolation</strong> is critical in large organizations with shared tracing infrastructure. Different teams should not be able to see each other’s traces (e.g., payment traces should not be visible to the marketing team), and different environments (prod, staging, dev) should be isolated. OTel Collector supports tenant-based routing (the <code>tenant</code> header in OTLP), and backends like Jaeger and Tempo support multi-tenancy with per-tenant retention and quota. At truly massive scale (multiple business units, thousands of services), the tracing infrastructure itself is federated: each business unit runs its own collector tier and backend, with cross-tenant trace links for requests that cross boundaries.</p>
+<p><strong>Cost management</strong> is the perpetual concern. Tracing costs scale with span volume, which scales with RPS × spans-per-request × sampling-rate. The levers are: reduce sampling rate (cheapest, most impactful), reduce spans per request (remove unnecessary instrumentation from high-traffic, low-value operations), reduce retention (accept shorter trace history), and move to cheaper storage (Tempo’s object-store model vs. Cassandra). A practical cost model: at 1M RPS, 10 spans/request, 1% sampling, 500 bytes/span, 48-hour retention, the stored volume is approximately 1.7 TB — manageable. At 100% sampling, it’s 170 TB — not manageable without significant investment. The ratio between 1% and 100% sampling is 100×, which is why sampling rate is the primary cost lever.</p>
+<h2 id="capacity-planning">Capacity Planning</h2>
+<p>Capacity planning for tracing infrastructure requires modeling span throughput, storage volume, and query load.</p>
+<p><strong>Span throughput model:</strong> <code>spans/sec = RPS × spans_per_request × sampling_rate</code>. For a system with 10M RPS, an average of 10 spans per request, and 0.1% head-based sampling, the span throughput is 10,000 spans/sec. This is easily handled by a single OTel Collector instance (capacity ~50K spans/sec). For tail-based sampling at the same rate, you need a router tier (to hash by trace ID) plus tail-sampling collectors with enough aggregate buffer capacity: <code>buffer_per_collector = (spans_per_sec / num_collectors) × completion_window</code>. With 10K spans/sec, a 10-second window, and 10 collectors, each collector buffers 10,000 spans — trivially small. But if you increase sampling to 10% (to get better visibility), throughput becomes 100K spans/sec, and each of 10 collectors buffers 100,000 spans (50 MB) — still manageable. At 100% sampling (1M spans/sec), each of 100 collectors buffers 100,000 spans — and the aggregate buffer is 50 GB, requiring careful memory provisioning.</p>
+<p><strong>Storage volume model:</strong> <code>storage = spans_per_sec × bytes_per_span × retention_seconds × replication_factor</code>. At 10K spans/sec, 500 bytes/span, 48 hours retention, and 3× replication (Cassandra): 10,000 × 500 × 172,800 × 3 = ~2.6 TB. The same workload with Tempo’s object-store model (1× replication, S3 cross-region durability): 10,000 × 500 × 172,800 × 1 = ~864 GB, at S3 costs of roughly $20/month — two orders of magnitude cheaper. This cost differential is why the industry is moving from Cassandra-based backends to object-store-based backends.</p>
+<p><strong>Query load model:</strong> Trace queries fall into two categories: trace-by-ID (O(1) lookup, sub-second) and trace-search (scan by service/operation/tags, seconds to minutes). The backend must handle both without interfering with span ingestion. In Jaeger/Cassandra, trace-by-ID hits the trace_id partition (fast), while search queries hit the service+operation index (moderate) or do full scans for tag queries (slow, can timeout). In Tempo, trace-by-ID hits the bloom filter (fast), while search requires TraceQL block scans (slow but bounded by block count). Capacity planning for query load means provisioning enough query nodes to handle concurrent searches without saturating CPU or I/O, and setting aggressive query timeouts to prevent slow searches from accumulating.</p>
+<p><strong>Growth planning:</strong> Tracing volume grows with the business — new services, new endpoints, new features all add spans. A rule of thumb is to plan for 2× year-over-year growth in span volume and to provision collector and storage capacity at 3× current peak to allow for growth and for emergency sampling-rate increases (e.g., during an incident, you may temporarily increase sampling from 0.1% to 10% to capture more traces, which is a 100× volume spike). The collector tier should be auto-scaled (HPA in Kubernetes, based on CPU and memory), and storage should use lifecycle policies (Tempo/S3) or TTL (Cassandra) to automatically expire old data.</p>
+<h2 id="common-interview-questions--answers">Common Interview Questions &amp; Answers</h2>
+<h3 id="q-how-do-you-trace-a-request-through-an-async-message-queue">Q: How do you trace a request through an async message queue?</h3>
+<p><strong>Answer:</strong> The producer injects trace context into the message metadata (Kafka record headers, SQS message attributes, RabbitMQ AMQP headers) before publishing. The consumer extracts the context upon receipt and creates a follow-up span with <code>SpanKind.CONSUMER</code> that is linked to the producer’s <code>SpanKind.PRODUCER</code> span. The consumer’s span shares the same trace ID but starts a new subtree, because the asynchronous boundary means there may be a temporal gap, retries, or multiple consumers processing the same message. For fire-and-forget patterns with no synchronous response, you use <code>PRODUCER</code>/<code>CONSUMER</code> span kinds instead of <code>CLIENT</code>/<code>SERVER</code>, and the consumer span links to (not parents) the producer span, since there is no synchronous call chain. For batch consumers processing messages from many producers, span links reference multiple producer spans across different traces.</p>
+<p><strong>Common Pitfall:</strong> Forgetting to inject context on the producer side or extract it on the consumer side results in the trace breaking at the queue boundary — the consumer starts a new, disconnected trace. This is especially common with third-party queue libraries that don’t support OTel auto-instrumentation, requiring manual context injection/extraction code.</p>
+<h3 id="q-youre-seeing-p99-latency-spikes-in-your-checkout-api-but-your-traces-show-nothing-unusual-whats-wrong-and-how-do-you-fix-it">Q: You’re seeing P99 latency spikes in your checkout API but your traces show nothing unusual. What’s wrong and how do you fix it?</h3>
+<p><strong>Model Answer:</strong> This is the classic <strong>sampling visibility gap</strong>. If you’re using head-based sampling at 0.1%–1%, you are sampling uniformly across all requests, which means rare P99 outliers (1 in 100 or 1 in 1,000) have a very low probability of being captured. The traces you see are biased toward normal, fast requests — exactly the ones that don’t reveal the problem. The fix is to deploy tail-based sampling in your OTel Collector with a latency threshold policy: buffer all spans for the checkout trace, and deterministically keep any trace whose total duration exceeds the P99 threshold (or 2× the recent moving average). This ensures every slow trace is captured regardless of its rarity. You can complement this with metrics exemplars: configure your Prometheus histogram for checkout latency to carry trace ID exemplars, so when you see a P99 spike in the metrics dashboard, you can click through to the exact trace that caused it. Additionally, check for trace fragmentation — if some spans are missing due to propagation breaks, the trace may look fast (missing the slow span) when the actual request was slow.</p>
+<p><strong>Common Pitfall:</strong> Jumping to “increase the sampling rate to 100%” as the first response. This will capture the slow traces but will also overwhelm your collector and storage with a 100–1000× volume increase, potentially causing an outage in the tracing infrastructure itself. The correct answer is tail-based sampling, which selectively keeps interesting traces at a fraction of the cost.</p>
+<h3 id="q-what-breaks-when-you-use-single-span-head-sampling-instead-of-multi-span">Q: What breaks when you use single-span head sampling instead of multi-span?</h3>
+<p><strong>Answer:</strong> Each service independently decides whether to sample. Service A samples its span (keeps it). Service B independently decides not to sample its span (drops it). You end up with fragment traces — incomplete call trees where child spans are missing. The trace view shows gaps, and you cannot attribute latency because you’re missing the spans that contain the timing data. This is called <strong>trace fragmentation</strong> and it renders traces useless for root-cause analysis. Multi-span head sampling fixes this by making the decision once at the root and propagating the <code>sampled</code> flag so all services in the call chain honor the same decision.</p>
+<hr>
+<h2 id="related">Related</h2>
+<ul>
+<li>[[Metrics &amp; Monitoring (Prometheus-Grafana)]]</li>
+<li>[[topic-queue]]</li>
+<li>[[Weakness Vault/Day-20-Distributed-Tracing]]</li>
+</ul>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>A trace is a tree of spans — each span represents a unit of work with a start time, duration, and context</li>
+<li>Three pillars of observability: metrics (aggregated, cheap), logs (detailed, expensive), traces (request-scoped, connecting)</li>
+<li>OpenTelemetry is the industry standard — instrument once, export to Jaeger, Zipkin, Datadog, or any backend</li>
+<li>Sampling is essential at scale — head sampling (trace ID ratio) vs tail sampling (sample based on response characteristics)</li>
+<li>Context propagation via W3C Trace Context headers — <code>traceparent</code> and <code>tracestate</code></li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you trace across async message queues?” — Inject trace context into message headers, extract on the consumer side. Kafka headers, SQS message attributes, or RabbitMQ properties.</li>
+<li>“Head vs tail sampling — which do you choose?” — Head sampling is simple but drops interesting traces you can’t see. Tail sampling keeps errors and slow requests but requires buffering spans until the trace completes.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Adding tracing to every RPC adds overhead. At 10K RPS with 10 spans per request, that’s 100K spans/sec. If you’re not sampling, your tracing backend becomes a bottleneck — and the ironic failure mode is that tracing itself causes the latency you’re trying to debug.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/distributed-tracing/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Distributed%20Tracing&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fdistributed-tracing%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fdistributed-tracing%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/distributed-tracing" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/distributed-cache-redis-memcached" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Distributed Cache (Redis/Memcached)</span></a><a href="/notes/system-design/event-sourcing-and-cqrs" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Event Sourcing &amp; CQRS</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Distributed Tracing" data-selector=".article-prose" data-article-slug="system-design/distributed-tracing" data-article-title="Distributed Tracing" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

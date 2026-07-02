@@ -1,0 +1,671 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Consistent Hashing · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview" class="toc-link" data-toc-link="overview" data-astro-cid-p33bl5ka>Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#the-problem-with-modulo-hashing" class="toc-link" data-toc-link="the-problem-with-modulo-hashing" data-astro-cid-p33bl5ka>The Problem with Modulo Hashing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#how-consistent-hashing-works" class="toc-link" data-toc-link="how-consistent-hashing-works" data-astro-cid-p33bl5ka>How Consistent Hashing Works</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-hash-ring" class="toc-link" data-toc-link="the-hash-ring" data-astro-cid-p33bl5ka>The Hash Ring</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#adding-a-node" class="toc-link" data-toc-link="adding-a-node" data-astro-cid-p33bl5ka>Adding a Node</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#removing-a-node" class="toc-link" data-toc-link="removing-a-node" data-astro-cid-p33bl5ka>Removing a Node</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#the-hotspot-problem-and-virtual-nodes" class="toc-link" data-toc-link="the-hotspot-problem-and-virtual-nodes" data-astro-cid-p33bl5ka>The Hotspot Problem and Virtual Nodes</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-problem" class="toc-link" data-toc-link="the-problem" data-astro-cid-p33bl5ka>The Problem</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#the-solution-virtual-nodes-vnodes" class="toc-link" data-toc-link="the-solution-virtual-nodes-vnodes" data-astro-cid-p33bl5ka>The Solution: Virtual Nodes (VNodes)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#implementation-details" class="toc-link" data-toc-link="implementation-details" data-astro-cid-p33bl5ka>Implementation Details</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#hash-function-selection" class="toc-link" data-toc-link="hash-function-selection" data-astro-cid-p33bl5ka>Hash Function Selection</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#ring-lookup-binary-search" class="toc-link" data-toc-link="ring-lookup-binary-search" data-astro-cid-p33bl5ka>Ring Lookup: Binary Search</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#java-implementation-sketch" class="toc-link" data-toc-link="java-implementation-sketch" data-astro-cid-p33bl5ka>Java Implementation Sketch</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#weighted-consistent-hashing" class="toc-link" data-toc-link="weighted-consistent-hashing" data-astro-cid-p33bl5ka>Weighted Consistent Hashing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#bounded-consistent-hashing" class="toc-link" data-toc-link="bounded-consistent-hashing" data-astro-cid-p33bl5ka>Bounded Consistent Hashing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#rendezvous-hashing-hrw" class="toc-link" data-toc-link="rendezvous-hashing-hrw" data-astro-cid-p33bl5ka>Rendezvous Hashing (HRW)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#real-world-usage" class="toc-link" data-toc-link="real-world-usage" data-astro-cid-p33bl5ka>Real-World Usage</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#apache-cassandra" class="toc-link" data-toc-link="apache-cassandra" data-astro-cid-p33bl5ka>Apache Cassandra</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#amazon-dynamodb" class="toc-link" data-toc-link="amazon-dynamodb" data-astro-cid-p33bl5ka>Amazon DynamoDB</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#memcached" class="toc-link" data-toc-link="memcached" data-astro-cid-p33bl5ka>Memcached</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#discord" class="toc-link" data-toc-link="discord" data-astro-cid-p33bl5ka>Discord</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#failure-handling-and-replication" class="toc-link" data-toc-link="failure-handling-and-replication" data-astro-cid-p33bl5ka>Failure Handling and Replication</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-planning-with-consistent-hashing" class="toc-link" data-toc-link="capacity-planning-with-consistent-hashing" data-astro-cid-p33bl5ka>Capacity Planning with Consistent Hashing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#trade-offs" class="toc-link" data-toc-link="trade-offs" data-astro-cid-p33bl5ka>Trade-offs</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#sharp-interview-question" class="toc-link" data-toc-link="sharp-interview-question" data-astro-cid-p33bl5ka>Sharp Interview Question</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#model-answer" class="toc-link" data-toc-link="model-answer" data-astro-cid-p33bl5ka>Model Answer</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#common-pitfall" class="toc-link" data-toc-link="common-pitfall" data-astro-cid-p33bl5ka>Common Pitfall</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#key-takeaways" class="toc-link" data-toc-link="key-takeaways" data-astro-cid-p33bl5ka>Key Takeaways</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Consistent Hashing</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-intermediate" data-astro-cid-sgg5joot>intermediate</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 16 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 22 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>distributed-systems</span><span class="tag" data-astro-cid-sgg5joot>hashing</span><span class="tag" data-astro-cid-sgg5joot>caching</span><span class="tag" data-astro-cid-sgg5joot>interview</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="consistent-hashing">Consistent Hashing</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A distributed hashing scheme that minimizes data movement when nodes join or leave — only K/N keys are remapped instead of all keys. It maps both keys and nodes onto a circular hash ring, assigning each key to the first node clockwise from its position, and uses virtual nodes to balance load distribution.</p>
+<p><strong>How it’s asked:</strong> “Design a consistent hashing ring for a cache cluster of 100 nodes. Handle virtual nodes, hotspots, and node addition/removal with minimal data movement.”</p>
+<h2 id="overview">Overview</h2>
+<p>Consistent hashing is a distributed hashing scheme that addresses a fundamental problem in distributed systems: when you add or remove servers from a cluster, how do you minimize the amount of data that needs to be moved between nodes? Traditional hash-based partitioning (like <code>hash(key) % N</code>) requires remapping nearly all keys when N changes, because the modulo operation produces an entirely different distribution. Consistent hashing solves this by ensuring that, on average, only <code>K/N</code> keys need to be remapped when a node joins or leaves — where K is the total number of keys and N is the number of nodes.</p>
+<p>The technique was originally introduced by David Karger and his colleagues at MIT in 1997, in a paper titled “Consistent Hashing and Random Trees.” It was designed to solve the caching locality problem in distributed web caches, but it has since become one of the most important building blocks in distributed systems engineering. It is used in production by Cassandra, DynamoDB, Memcached, Akamai’s CDN, Discord’s chat infrastructure, and countless other systems where data needs to be partitioned across a dynamic set of nodes.</p>
+<p>The core insight is elegant: instead of mapping keys directly to nodes using modulo arithmetic, you map both keys and nodes onto the same circular hash space (a “ring”). Each key is assigned to the first node that appears clockwise from the key’s position on the ring. When a node is added or removed, only the keys that were mapped to that node (or would be mapped to the new node) need to be relocated — everything else stays put.</p>
+<h2 id="the-problem-with-modulo-hashing">The Problem with Modulo Hashing</h2>
+<p>To understand why consistent hashing matters, consider a simple caching cluster with 4 nodes. Using <code>hash(key) % 4</code>, each node handles roughly 25% of the keys. Now suppose traffic grows and you add a 5th node. The new hash function is <code>hash(key) % 5</code>. Almost every key will now map to a different node than before, meaning nearly 100% of your cached data is now in the wrong place. Cache hit rates plummet to near zero, your origin servers get hammered, and the system takes a long time to recover as cache gradually warms up again.</p>
+<p>This problem gets worse at scale. If you have 1000 nodes and add one more, modulo hashing would invalidate ~99.9% of all key-to-node mappings. In a system serving millions of requests per second, this is catastrophic. Consistent hashing, by contrast, would require moving only ~0.1% of keys — the ones that fall in the new node’s segment of the ring.</p>
+<h2 id="how-consistent-hashing-works">How Consistent Hashing Works</h2>
+<h3 id="the-hash-ring">The Hash Ring</h3>
+<p>Imagine a ring with hash values ranging from 0 to 2^32 - 1 (for a 32-bit hash function). Both nodes and keys are hashed onto this ring using the same hash function. A node’s position on the ring is determined by hashing its identifier (IP address, node name, etc.). A key’s position is determined by hashing the key itself.</p>
+<p>To determine which node is responsible for a given key, you start at the key’s position on the ring and walk clockwise until you encounter the first node. That node owns the key. If you reach the end of the ring (2^32 - 1), you wrap around to 0 and continue — hence the “ring” metaphor.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                       0</span></span>
+<span class="line"><span>                     ╱   ╲</span></span>
+<span class="line"><span>                  ╱         ╲</span></span>
+<span class="line"><span>               ╱               ╲</span></span>
+<span class="line"><span>           ● N1                   ● N2</span></span>
+<span class="line"><span>        (h=100)                (h=450)</span></span>
+<span class="line"><span>             │                     │</span></span>
+<span class="line"><span>         ○ keyA                 ○ keyC</span></span>
+<span class="line"><span>        (h=250)               (h=500)</span></span>
+<span class="line"><span>             │                     │</span></span>
+<span class="line"><span>           ● N4 ────────────── ● N3</span></span>
+<span class="line"><span>        (h=850)                (h=700)</span></span>
+<span class="line"><span>                     2^32-1</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Clockwise traversal (→):</span></span>
+<span class="line"><span>    0 ──→ N1 ──→ keyA ──→ N2 ──→ keyC ──→ N3 ──→ N4 ──→ (wrap to 0)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  keyA's owner = N2   (first node clockwise from keyA)</span></span>
+<span class="line"><span>  keyC's owner = N3   (first node clockwise from keyC)</span></span></code></pre>
+<p>This simple rule has a powerful property: when a node is added, it only takes over responsibility for keys that fall between it and the previous node clockwise. When a node is removed, its keys are absorbed by the next node clockwise. No other node-to-key assignments change.</p>
+<h3 id="adding-a-node">Adding a Node</h3>
+<p>When a new node N is added to the ring, it is hashed to some position. It immediately takes ownership of all keys that fall in the arc between its position and the position of the node that previously owned those keys (the node counter-clockwise from N). The node that previously owned those keys must transfer them to N, but no other node in the ring is affected. The number of keys transferred is, on average, <code>K/N</code> — the total keys divided by the total nodes.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  ═══ BEFORE (3 nodes) ═══════════════════════ AFTER (+ N4) ═══</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>         0                                      0</span></span>
+<span class="line"><span>       ╱   ╲                                  ╱   ╲</span></span>
+<span class="line"><span>    ● N1     ● N2                          ● N1     ● N2</span></span>
+<span class="line"><span>    ╲         ╲                            ╲    ●N4   ╲</span></span>
+<span class="line"><span>     ● N3 ────╱                             ● N3 ─────╱</span></span>
+<span class="line"><span>     2^32-1                                  2^32-1</span></span>
+<span class="line"><span>                                            N4 lands at h≈250</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  key1 (h=120) → N2                         key1 (h=120) → N2   ✓ unchanged</span></span>
+<span class="line"><span>  key2 (h=300) → N3                         key2 (h=300) → N3   ✓ unchanged</span></span>
+<span class="line"><span>  key3 (h=700) → N1                         key3 (h=700) → N1   ✓ unchanged</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  ★ Only keys in the arc (N4 ... N2] move:  N2 hands them → N4</span></span>
+<span class="line"><span>  ★ Every other key stays exactly where it was.</span></span>
+<span class="line"><span>  ★ Avg keys moved = K/N.</span></span></code></pre>
+<h3 id="removing-a-node">Removing a Node</h3>
+<p>When a node is removed, its keys are simply reassigned to the next node clockwise on the ring. Again, only the keys that were owned by the removed node are affected. Every other key stays exactly where it was.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  ═══ BEFORE (4 nodes) ═══════════════════════ AFTER (− N4) ═══</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>         0                                      0</span></span>
+<span class="line"><span>       ╱   ╲                                  ╱   ╲</span></span>
+<span class="line"><span>    ● N1     ● N2                          ● N1     ● N2</span></span>
+<span class="line"><span>    ╲    ●N4   ╲                            ╲         ╲</span></span>
+<span class="line"><span>     ● N3 ─────╱                             ● N3 ─────╱</span></span>
+<span class="line"><span>     2^32-1                                  2^32-1</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  N4's keys → reassigned to N1  (next node clockwise from N4)</span></span>
+<span class="line"><span>  All other keys: untouched</span></span></code></pre>
+<h2 id="the-hotspot-problem-and-virtual-nodes">The Hotspot Problem and Virtual Nodes</h2>
+<h3 id="the-problem">The Problem</h3>
+<p>In a basic consistent hashing ring with a small number of nodes, the distribution of keys can be uneven. This happens because the hash function places nodes at random positions on the ring, and with few nodes, some nodes may end up with much larger arcs than others. A node with a large arc receives a disproportionately large share of keys and becomes a hotspot.</p>
+<p>For example, with 3 nodes placed at positions 100, 200, and 800 on a ring of 1000, the node at 200 owns the arc from 200 to 800 — 60% of the ring — while the node at 800 owns only 20%. This is clearly unbalanced.</p>
+<h3 id="the-solution-virtual-nodes-vnodes">The Solution: Virtual Nodes (VNodes)</h3>
+<p>The standard solution is to place each physical node on the ring multiple times using “virtual nodes” or “replicas.” Instead of hashing a node once, you hash it M times using different identifiers (e.g., <code>hash(node1-0)</code>, <code>hash(node1-1)</code>, …, <code>hash(node1-M-1)</code>). Each virtual node acts as an independent point on the ring, but they all map back to the same physical node.</p>
+<p>With a large number of virtual nodes (typically 100-200 per physical node), the key distribution becomes approximately uniform. The probability that any single physical node owns a disproportionate share of the ring drops dramatically. When a physical node joins or leaves, its virtual nodes are spread across the ring, so the load is redistributed evenly among all remaining nodes rather than dumping everything onto a single neighbor.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  ═══ WITHOUT vnodes (3 nodes — UNEVEN) ═══</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>         0</span></span>
+<span class="line"><span>       ╱   ╲</span></span>
+<span class="line"><span>    ● N1(h=100) ─── ● N2(h=200) ─── ● N3(h=800)</span></span>
+<span class="line"><span>       ╲              ╲               ╱</span></span>
+<span class="line"><span>        ╲      N2 owns arc 200→800    ╱</span></span>
+<span class="line"><span>         ╲      = 60% of ring!  ◆HOT  ╱</span></span>
+<span class="line"><span>          ╲                        ╱</span></span>
+<span class="line"><span>           └──── N3 owns only 20% ──┘</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  ═══ WITH vnodes (3 physical × 4 vnodes = 12 points) ═══</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>         0</span></span>
+<span class="line"><span>    ●N1ₐ  ●N1ᵦ  ●N2ₐ   ●N3ᵦ</span></span>
+<span class="line"><span>       ●N3ₐ    ●N1ᵧ      ●N2ᵦ</span></span>
+<span class="line"><span>    ●N2ᵧ   ●N1ᵨ  ●N3ᵧ    ●N1ₑ</span></span>
+<span class="line"><span>       ●N3ᵨ   ●N2ₑ  ●N1ₑ  ●N3ₑ</span></span>
+<span class="line"><span>         2^32-1</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Each physical node's 4 vnodes are scattered around the ring.</span></span>
+<span class="line"><span>  → Arcs owned per physical node are roughly equal.</span></span>
+<span class="line"><span>  → Load is uniform. No hotspots.</span></span>
+<span class="line"><span>  → When a physical node leaves, its 4 vnodes vanish and the</span></span>
+<span class="line"><span>    freed arcs are absorbed by vnodes of MANY different nodes</span></span>
+<span class="line"><span>    (not just one neighbor).</span></span></code></pre>
+<p>Cassandra uses 256 virtual nodes per physical node by default. DynamoDB uses a similar approach. The trade-off is memory: more virtual nodes means more metadata to store and exchange, but the amount is trivial compared to the data itself.</p>
+<h2 id="implementation-details">Implementation Details</h2>
+<h3 id="hash-function-selection">Hash Function Selection</h3>
+<p>The choice of hash function matters. You want a function that distributes values uniformly across the ring. Common choices include:</p>
+<ul>
+<li><strong>MurmurHash3</strong> — Fast, non-cryptographic, uniform distribution. The most popular choice for consistent hashing.</li>
+<li><strong>FNV-1a</strong> — Simple and fast, slightly less uniform than MurmurHash.</li>
+<li><strong>MD5/SHA-1</strong> — Cryptographic hashes work but are overkill and slower. Some systems use them because they’re already available.</li>
+<li><strong>xxHash</strong> — Extremely fast, excellent distribution. Increasingly popular in modern systems.</li>
+</ul>
+<p>Avoid using Java’s <code>hashCode()</code> directly — it has poor distribution for consistent hashing because it produces clustered values for similar inputs.</p>
+<h3 id="ring-lookup-binary-search">Ring Lookup: Binary Search</h3>
+<p>In a production system, you maintain a sorted array of all node positions on the ring. To find the owner of a key, you hash the key, then binary search the sorted array for the first node position greater than or equal to the key’s hash (wrapping around if needed). This gives O(log N) lookup where N is the number of virtual nodes. With 100 physical nodes and 200 vnodes each, that’s 20,000 entries — a binary search over this takes about 14 comparisons, which is negligible.</p>
+<h3 id="java-implementation-sketch">Java Implementation Sketch</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="java"><code><span class="line"><span style="color:#F97583">public</span><span style="color:#F97583"> class</span><span style="color:#B392F0"> ConsistentHash</span><span style="color:#E1E4E8">&#x3C;</span><span style="color:#F97583">T</span><span style="color:#E1E4E8">> {</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> final</span><span style="color:#E1E4E8"> HashFunction hashFunction;</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> final</span><span style="color:#F97583"> int</span><span style="color:#E1E4E8"> numberOfReplicas;</span></span>
+<span class="line"><span style="color:#F97583">    private</span><span style="color:#F97583"> final</span><span style="color:#E1E4E8"> SortedMap&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">T</span><span style="color:#E1E4E8">> ring </span><span style="color:#F97583">=</span><span style="color:#F97583"> new</span><span style="color:#E1E4E8"> TreeMap&#x3C;>();</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#B392F0"> ConsistentHash</span><span style="color:#E1E4E8">(HashFunction </span><span style="color:#FFAB70">hashFunction</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">int</span><span style="color:#FFAB70"> numberOfReplicas</span><span style="color:#E1E4E8">, Collection&#x3C;</span><span style="color:#F97583">T</span><span style="color:#E1E4E8">> </span><span style="color:#FFAB70">nodes</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#79B8FF">        this</span><span style="color:#E1E4E8">.hashFunction </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> hashFunction;</span></span>
+<span class="line"><span style="color:#79B8FF">        this</span><span style="color:#E1E4E8">.numberOfReplicas </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> numberOfReplicas;</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (T node </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> nodes) {</span></span>
+<span class="line"><span style="color:#B392F0">            add</span><span style="color:#E1E4E8">(node);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> add</span><span style="color:#E1E4E8">(T </span><span style="color:#FFAB70">node</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> numberOfReplicas; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            ring.</span><span style="color:#B392F0">put</span><span style="color:#E1E4E8">(hashFunction.</span><span style="color:#B392F0">hash</span><span style="color:#E1E4E8">(node.</span><span style="color:#B392F0">toString</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> i), node);</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#F97583"> void</span><span style="color:#B392F0"> remove</span><span style="color:#E1E4E8">(T </span><span style="color:#FFAB70">node</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">int</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">; i </span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8"> numberOfReplicas; i</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            ring.</span><span style="color:#B392F0">remove</span><span style="color:#E1E4E8">(hashFunction.</span><span style="color:#B392F0">hash</span><span style="color:#E1E4E8">(node.</span><span style="color:#B392F0">toString</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> i));</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">    public</span><span style="color:#E1E4E8"> T </span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(Object </span><span style="color:#FFAB70">key</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (ring.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">()) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">        int</span><span style="color:#E1E4E8"> hash </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> hashFunction.</span><span style="color:#B392F0">hash</span><span style="color:#E1E4E8">(key);</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">ring.</span><span style="color:#B392F0">containsKey</span><span style="color:#E1E4E8">(hash)) {</span></span>
+<span class="line"><span style="color:#E1E4E8">            SortedMap&#x3C;</span><span style="color:#F97583">Integer</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">T</span><span style="color:#E1E4E8">> tailMap </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> ring.</span><span style="color:#B392F0">tailMap</span><span style="color:#E1E4E8">(hash);</span></span>
+<span class="line"><span style="color:#E1E4E8">            hash </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> tailMap.</span><span style="color:#B392F0">isEmpty</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">?</span><span style="color:#E1E4E8"> ring.</span><span style="color:#B392F0">firstKey</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">:</span><span style="color:#E1E4E8"> tailMap.</span><span style="color:#B392F0">firstKey</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> ring.</span><span style="color:#B392F0">get</span><span style="color:#E1E4E8">(hash);</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h2 id="weighted-consistent-hashing">Weighted Consistent Hashing</h2>
+<p>In real-world deployments, not all nodes are equal. You might have a cluster with mixed hardware — some nodes with 64GB RAM and others with 16GB. Standard consistent hashing with equal virtual nodes per physical node would give each node the same share of the ring, which is wrong: the 64GB node should handle 4x more keys than the 16GB node.</p>
+<p>Weighted consistent hashing solves this by assigning virtual nodes proportional to the node’s capacity. If node A has capacity 4 and node B has capacity 1, you give A 4x more virtual nodes than B. This ensures that the load distribution matches the capacity distribution.</p>
+<p>A more sophisticated approach is used by DynamoDB, which uses a “token allocation” strategy where each node is assigned a set of tokens (positions on the ring) based on its capacity, and the system continuously monitors and rebalances if the actual load diverges from the expected distribution.</p>
+<h2 id="bounded-consistent-hashing">Bounded Consistent Hashing</h2>
+<p>Standard consistent hashing has a subtle issue: when a node joins, it takes keys from only its immediate counter-clockwise neighbor. This means that neighbor bears the entire cost of the transfer. In a large cluster, this can create a temporary load spike on a single node.</p>
+<p>Bounded consistent hashing (also called “load-balanced consistent hashing”) addresses this by spreading the key transfer across multiple nodes. When a new node joins, instead of taking all its keys from one neighbor, it takes a small portion from each of several nodes. This ensures that no single node experiences a significant load change.</p>
+<p>This is particularly important in systems where the “cost” of a key is variable — for example, in a CDN where some objects are much larger than others. If the new node happens to take over a segment containing several large objects, its neighbor could experience significant load. Bounded hashing mitigates this by sampling from multiple segments.</p>
+<h2 id="rendezvous-hashing-hrw">Rendezvous Hashing (HRW)</h2>
+<p>Rendezvous hashing, also known as Highest Random Weight (HRW) hashing, is an alternative to consistent hashing that achieves the same properties with a different approach. Instead of placing nodes on a ring, for each key, you compute a hash of the key combined with each node identifier: <code>weight_i = hash(key, node_i)</code>. The node with the highest weight wins.</p>
+<p>Rendezvous hashing has the same minimal redistribution property as consistent hashing — when a node is added or removed, only the keys that were assigned to that node (or would be assigned to the new node) are affected. However, it has different trade-offs:</p>
+<ul>
+<li><strong>Lookup</strong> — O(N) per key (compute N hashes and pick the max), compared to O(log N) for consistent hashing with binary search. This makes it slower for large clusters.</li>
+<li><strong>Memory</strong> — O(1); no ring data structure needed, just the list of nodes.</li>
+<li><strong>Simplicity</strong> — Much simpler to implement. No virtual nodes, no ring, no sorted array.</li>
+<li><strong>Uniformity</strong> — Naturally uniform without virtual nodes, because the hash function provides randomness directly.</li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>  ═══ CONSISTENT HASHING (ring-based) ═══</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>         0</span></span>
+<span class="line"><span>       ╱   ╲</span></span>
+<span class="line"><span>    ● N1     ● N2     key → hash(key) → walk ring clockwise</span></span>
+<span class="line"><span>    ╲         ╲       O(log N) lookup · O(V·N) memory</span></span>
+<span class="line"><span>     ● N3 ────╱       Needs vnodes for uniformity</span></span>
+<span class="line"><span>     2^32-1</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  ═══ RENDEZVOUS HASHING (weight-based, no ring) ═══</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   For key X, compute one weight per node, pick the MAX:</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>     X ──┬── hash(X, N1) = 0.73</span></span>
+<span class="line"><span>         ├── hash(X, N2) = 0.41</span></span>
+<span class="line"><span>         └── hash(X, N3) = 0.88   ◆ highest → N3 owns X</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   O(N) lookup · O(1) memory · no vnodes needed</span></span>
+<span class="line"><span>   Naturally uniform.</span></span></code></pre>
+<p>For small-to-medium clusters (up to ~100 nodes), rendezvous hashing is often preferred for its simplicity. For large clusters (thousands of nodes), consistent hashing with virtual nodes is more efficient due to the O(log N) lookup.</p>
+<h2 id="real-world-usage">Real-World Usage</h2>
+<h3 id="apache-cassandra">Apache Cassandra</h3>
+<p>Cassandra uses consistent hashing with virtual nodes (256 per physical node by default) to distribute data across the cluster. Each node is responsible for a range of token values on the ring. When a node joins, it announces its token ranges, and the nodes that currently own those ranges transfer the relevant data. Cassandra’s use of virtual nodes ensures that adding a node redistributes load evenly across all existing nodes, not just one neighbor.</p>
+<p>Cassandra also uses consistent hashing for replica placement. The replication factor N determines how many nodes store a copy of each piece of data. The first node clockwise from the key’s position is the primary replica, the next N-1 nodes clockwise are the secondary replicas. This ensures that replicas are spread across different racks and data centers when configured properly.</p>
+<h3 id="amazon-dynamodb">Amazon DynamoDB</h3>
+<p>DynamoDB uses consistent hashing internally to partition data across storage nodes. However, DynamoDB hides this complexity from users — you specify a partition key, and DynamoDB handles the distribution. DynamoDB’s implementation is more sophisticated than vanilla consistent hashing: it uses a continuous monitoring and rebalancing system that detects hot partitions and splits them across nodes dynamically.</p>
+<h3 id="memcached">Memcached</h3>
+<p>Many Memcached client libraries (like libketama) use consistent hashing to distribute keys across multiple memcached servers. This is critical for caching because when a cache server is added or removed, you want to minimize cache invalidation. With consistent hashing, adding a server only invalidates the keys that move to the new server — the rest of the cache remains intact.</p>
+<h3 id="discord">Discord</h3>
+<p>Discord uses consistent hashing to distribute chat messages across their backend servers. With millions of concurrent users and hundreds of server nodes, consistent hashing ensures that when servers are added or removed for scaling, only a small fraction of channels need to be migrated to new servers.</p>
+<h2 id="failure-handling-and-replication">Failure Handling and Replication</h2>
+<p>Consistent hashing defines where data <em>should</em> live, but it doesn’t handle node failures directly. In practice, consistent hashing is combined with replication strategies:</p>
+<ol>
+<li><strong>Replica placement</strong> — The primary replica is the first node clockwise from the key. Secondary replicas are the next N-1 nodes clockwise. This ensures replicas are on different nodes.</li>
+<li><strong>Failure detection</strong> — When a node fails, the nodes that hold replicas of its data detect the failure (via [[Glossary#Gossip Protocol|gossip protocol]] — a decentralized protocol where nodes periodically share state with random peers, heartbeats, or a failure detector like Phi Accrual). The key’s next-in-line replica is promoted to primary.</li>
+<li><strong>Read repair</strong> — When a read hits a replica that has stale data, the system repairs it by pushing the correct version from the freshest replica. This works hand-in-hand with consistent hashing because the nodes involved are deterministic.</li>
+<li><strong>Hinted handoff</strong> — If a write is destined for a node that is temporarily down, another node (the “hint” node) takes the write on behalf of the failed node. When the failed node recovers, the hint node forwards the stored write. The hint node is typically the next node clockwise on the ring — the same node that would take over if the failed node were permanently removed.</li>
+</ol>
+<h2 id="capacity-planning-with-consistent-hashing">Capacity Planning with Consistent Hashing</h2>
+<p>When planning capacity for a system using consistent hashing, consider:</p>
+<ul>
+<li><strong>Cluster size</strong> — With V virtual nodes per physical node and P physical nodes, the ring has V×P entries. Memory for the ring is O(V×P) — negligible compared to data.</li>
+<li><strong>Rebalancing cost</strong> — Adding or removing a node transfers approximately <code>data_size / P</code> of the total data. For a 1TB cluster with 100 nodes, adding a node transfers ~10GB.</li>
+<li><strong>Heterogeneous clusters</strong> — Use weighted virtual nodes to match capacity. A node with 2x the CPU and memory should get 2x the virtual nodes.</li>
+<li><strong>Replication overhead</strong> — With replication factor R, each node stores <code>R × data_size / P</code> of data. Plan disk capacity accordingly.</li>
+</ul>
+<h2 id="trade-offs">Trade-offs</h2>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Consistent Hashing</th>
+<th>Modulo Hashing</th>
+<th>Rendezvous Hashing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Redistribution on node change</td>
+<td>K/N keys</td>
+<td>~K keys (all)</td>
+<td>K/N keys</td>
+</tr>
+<tr>
+<td>Lookup complexity</td>
+<td>O(log N)</td>
+<td>O(1)</td>
+<td>O(N)</td>
+</tr>
+<tr>
+<td>Memory</td>
+<td>O(V×N)</td>
+<td>O(1)</td>
+<td>O(1)</td>
+</tr>
+<tr>
+<td>Uniformity</td>
+<td>Depends on V</td>
+<td>Perfect</td>
+<td>Perfect</td>
+</tr>
+<tr>
+<td>Heterogeneous support</td>
+<td>Weighted vnodes</td>
+<td>Difficult</td>
+<td>Weight-based</td>
+</tr>
+<tr>
+<td>Implementation complexity</td>
+<td>Medium</td>
+<td>Simple</td>
+<td>Simple</td>
+</tr>
+</tbody>
+</table>
+<h2 id="sharp-interview-question">Sharp Interview Question</h2>
+<blockquote>
+<p><strong>“You’re building a distributed cache with 50 nodes using consistent hashing with 150 virtual nodes each. You notice that one node is receiving 3x more traffic than the average. What are the possible causes and how do you fix it?”</strong></p>
+</blockquote>
+<h3 id="model-answer">Model Answer</h3>
+<p>There are three likely causes, each with a different fix:</p>
+<p><strong>1. Skewed key distribution (hot keys):</strong> The problem may not be the hash ring at all — it may be that a small number of keys receive disproportionate traffic. If a specific cache key (e.g., a viral product page) gets 100x the traffic of other keys, whichever node owns that key will be overloaded regardless of ring balance.</p>
+<ul>
+<li>Fix: identify hot keys via monitoring, and either (a) add a caching layer in front of those specific keys (client-side caching), (b) replicate the hot key to multiple nodes using a “hot key replication” strategy, or (c) use request coalescing to batch multiple requests for the same key.</li>
+</ul>
+<p><strong>2. Insufficient virtual nodes:</strong> With 150 vnodes per physical node and 50 nodes, you have 7,500 points on the ring. While this is generally good, it’s possible (with bad luck) that one node’s vnodes happen to cluster in a high-traffic region.</p>
+<ul>
+<li>Fix: increase the virtual node count to 200-300 per node and redistribute. You can verify this by measuring the actual arc length owned by each node — if the variance is high, more vnodes will help.</li>
+</ul>
+<p><strong>3. Non-uniform hash function:</strong> If your hash function has poor distribution properties (e.g., Java’s <code>String.hashCode()</code>), keys may cluster in certain ring segments.</p>
+<ul>
+<li>Fix: switch to a known-good hash function like MurmurHash3 or xxHash.</li>
+</ul>
+<p><strong>Diagnostic approach:</strong> First, check if the load imbalance is in requests or storage. If it’s request imbalance with uniform storage, it’s hot keys. If storage is also imbalanced, it’s the ring. Plot the arc lengths owned by each node — if they’re roughly equal, the problem is hot keys. If they vary significantly, increase vnodes.</p>
+<h3 id="common-pitfall">Common Pitfall</h3>
+<blockquote>
+<p>❌ “I’d just increase the number of virtual nodes.”</p>
+</blockquote>
+<p>While this might help if the issue is ring imbalance, it does nothing for hot keys. Many candidates jump straight to the ring when they hear “consistent hashing” and “uneven load.” The first diagnostic step should always be: is the imbalance in storage (ring problem) or in requests (hot key problem)? These require completely different solutions. Fixing the ring when the problem is hot keys will just move the overloaded node from one physical machine to another.</p>
+<h2 id="key-takeaways">Key Takeaways</h2>
+<ul>
+<li>Consistent hashing minimizes redistribution when nodes are added or removed — only K/N keys move, versus ~K keys with modulo hashing.</li>
+<li>Virtual nodes solve the hotspot problem by spreading each physical node across the ring multiple times, ensuring uniform distribution.</li>
+<li>The ring lookup is O(log N) with binary search over a sorted array of node positions.</li>
+<li>Weighted consistent hashing handles heterogeneous clusters by assigning vnodes proportional to capacity.</li>
+<li>Rendezvous hashing is a simpler alternative for small-to-medium clusters, with O(N) lookup but no ring data structure.</li>
+<li>Real-world systems combine consistent hashing with replication, failure detection, and read repair for production-grade durability.</li>
+<li>The first diagnostic when debugging load imbalance is to distinguish storage imbalance (ring) from request imbalance (hot keys) — they need different fixes.</li>
+</ul>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Consistent hashing minimizes data movement when nodes join or leave: only K/N keys move, versus ~K keys with modulo hashing (<code>hash(key) % N</code>).</li>
+<li>[[Glossary#Virtual Node (VNode)|Virtual nodes]] (vnodes) solve uneven distribution by placing each physical node on the ring multiple times (typically 100–200); without them, a small cluster will have hotspots.</li>
+<li>Ring lookup is O(log N) via binary search over a sorted array of node positions — fast even with thousands of virtual nodes.</li>
+<li>Rendezvous hashing (HRW) is a simpler alternative for small clusters (O(N) lookup, no ring needed) but doesn’t scale to thousands of nodes.</li>
+<li>When debugging load imbalance, first determine whether it’s a storage problem (ring imbalance → add vnodes) or a request problem (hot keys → cache/replicate the hot key).</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li><em>How do you handle heterogeneous nodes (different capacities)?</em> — Use weighted consistent hashing: assign virtual nodes proportional to each node’s capacity, so a 4x larger machine gets 4x more vnodes.</li>
+<li><em>What happens when a node fails?</em> — Its keys are absorbed by the next node clockwise. In production, this is combined with [[Glossary#Replication|replication]] (the next N-1 nodes clockwise hold replicas) and hinted handoff for temporary failures.</li>
+<li><em>How does this compare to rendezvous hashing?</em> — Rendezvous hashing is simpler (no ring, no vnodes, naturally uniform) but has O(N) lookup per key, making it better for small clusters and worse for large ones.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>The most common mistake is jumping straight to “increase virtual nodes” when a node is overloaded. If the overload is from a hot <em>key</em> (a viral cache entry), no amount of ring rebalancing will help — you’re just moving the overloaded node. Always diagnose first: is the imbalance in storage (ring problem) or in requests (hot key problem)?</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/consistent-hashing/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Consistent%20Hashing&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fconsistent-hashing%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fconsistent-hashing%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/consistent-hashing" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/notification-system-push-email-sms" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Notification System (Push, Email, SMS)</span></a><a href="/notes/system-design/cdn-and-edge-computing" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>CDN &amp; Edge Computing</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="Consistent Hashing" data-selector=".article-prose" data-article-slug="system-design/consistent-hashing" data-article-title="Consistent Hashing" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

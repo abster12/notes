@@ -1,0 +1,726 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>Video &amp; Image Storage &amp; Streaming · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#object-storage-architecture-s3-like" class="toc-link" data-toc-link="object-storage-architecture-s3-like" data-astro-cid-p33bl5ka>Object Storage Architecture (S3-Like)</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#multipart-upload" class="toc-link" data-toc-link="multipart-upload" data-astro-cid-p33bl5ka>Multipart Upload</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#cdn-for-media-delivery" class="toc-link" data-toc-link="cdn-for-media-delivery" data-astro-cid-p33bl5ka>CDN for Media Delivery</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#video-transcoding-pipeline" class="toc-link" data-toc-link="video-transcoding-pipeline" data-astro-cid-p33bl5ka>Video Transcoding Pipeline</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#hls-and-dash-packaging" class="toc-link" data-toc-link="hls-and-dash-packaging" data-astro-cid-p33bl5ka>HLS and DASH Packaging</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#adaptive-bitrate-logic" class="toc-link" data-toc-link="adaptive-bitrate-logic" data-astro-cid-p33bl5ka>Adaptive Bitrate Logic</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#thumbnail-generation" class="toc-link" data-toc-link="thumbnail-generation" data-astro-cid-p33bl5ka>Thumbnail Generation</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#image-processing-resize-crop-format" class="toc-link" data-toc-link="image-processing-resize-crop-format" data-astro-cid-p33bl5ka>Image Processing (Resize, Crop, Format)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#storage-tiering-hot-warm-cold" class="toc-link" data-toc-link="storage-tiering-hot-warm-cold" data-astro-cid-p33bl5ka>Storage Tiering (Hot, Warm, Cold)</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#deduplication" class="toc-link" data-toc-link="deduplication" data-astro-cid-p33bl5ka>Deduplication</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#content-moderation" class="toc-link" data-toc-link="content-moderation" data-astro-cid-p33bl5ka>Content Moderation</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-estimation-500m-users-uploading-video" class="toc-link" data-toc-link="capacity-estimation-500m-users-uploading-video" data-astro-cid-p33bl5ka>Capacity Estimation: 500M Users Uploading Video</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#bandwidth-planning" class="toc-link" data-toc-link="bandwidth-planning" data-astro-cid-p33bl5ka>Bandwidth Planning</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-question" class="toc-link" data-toc-link="interview-question" data-astro-cid-p33bl5ka>Interview Question</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#common-pitfalls" class="toc-link" data-toc-link="common-pitfalls" data-astro-cid-p33bl5ka>Common Pitfalls</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>Video &amp; Image Storage &amp; Streaming</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="badge badge-hard" data-astro-cid-sgg5joot>Hard</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 21 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 29 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>media</span><span class="tag" data-astro-cid-sgg5joot>video</span><span class="tag" data-astro-cid-sgg5joot>streaming</span><span class="tag" data-astro-cid-sgg5joot>transcoding</span><span class="tag" data-astro-cid-sgg5joot>cdn</span><span class="tag" data-astro-cid-sgg5joot>adaptive-bitrate</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="video--image-storage--streaming">Video &amp; Image Storage &amp; Streaming</h1>
+<p>Storing and serving media at scale is a fundamentally different engineering problem from serving JSON APIs or transactional records. The single most important mental shift is that <strong>throughput and egress cost, not request latency, become the dominant constraints</strong>. A user will tolerate a two-second video buffer; they will not tolerate a profile picture that takes 800 ms to paint. That asymmetry forces every downstream decision — how you encode, how you tier, how you cache, how you bill — to optimize for sustained bytes-per-second and price-per-gigabyte-served rather than for p99 millisecond latency on an individual request. Media systems are also availability-first and eventually-consistent by temperament: a video that buffers is a worse experience than one showing a slightly stale thumbnail, so designs lean toward serving stale-but-available content over failing fast. The sections below walk through the full lifecycle from upload through transcoding, delivery, moderation, and long-term archival, with the capacity and bandwidth math a staff engineer is expected to produce on a whiteboard.</p>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A system that stores, transcodes, and serves video at scale using adaptive bitrate streaming (HLS/DASH), CDN edge caching, and storage tiering for cost management.</p>
+<p><strong>How it’s asked:</strong> “Design a video sharing platform like YouTube handling 500 hours of uploads/min and serving 1B users. Cover transcoding, adaptive bitrate, CDN strategy, and content moderation.”</p>
+<hr>
+<h2 id="object-storage-architecture-s3-like">Object Storage Architecture (S3-Like)</h2>
+<p>The foundation of any media platform is an object store — S3, Google Cloud Storage, Azure Blob, or a self-hosted equivalent like MinIO or Ceph RADOS. An object store is not a filesystem. There are no directories, no rename, no append; there are only buckets, keys, and immutable byte blobs with metadata. Internally, a system like S3 is built on a distributed key-value layer where a coordinator maps each object key to a placement group, and data is striped across many storage nodes with erasure coding or triple replication. A flat key such as <code>media/videos/{video_id}/720p/segment00012.ts</code> carries slashes only for human readability — the store treats it as an opaque string and uses a consistent-hash partitioning scheme to decide which nodes hold the bytes. The key design choices that matter at the application level are bucket-per-tenant versus shared-bucket (shared buckets with key-prefix sharding avoid per-bucket request-rate limits, which on S3 sit around 3,500 PUTs/s and 5,500 GETs/s per prefix before you need prefix partitioning), the consistency model (S3 is now strongly consistent for PUT-overwrites but still eventually consistent for delete propagation in some implementations), and the lifecycle policy that governs when objects transition between storage classes.</p>
+<p>Object storage is engineered for durability and bulk throughput, not for millions of concurrent low-latency reads. It is cheap, horizontally scalable, and durable to eleven nines, but it was never designed to be the thing a player hits directly on every segment request. The cardinal rule of media architecture is that the object store is the origin of truth and the last-resort cache miss — never the serving tier. A CDN must sit in front of it, and hot content must be promoted to edge or to an in-process cache long before it reaches origin.</p>
+<h3 id="multipart-upload">Multipart Upload</h3>
+<p>Large media files cannot be uploaded as a single PUT. A 2 GB video uploaded in one stream is a 2 GB failure surface: a dropped connection at 1.9 GB means restarting from zero, the client holds the entire payload in memory, and the server cannot begin any processing until the final byte arrives. Multipart upload solves all three problems by letting the client break the object into independent parts, upload them in parallel with resumable retries, and then submit a final “complete” call that concatenates the parts server-side into a single logical object.</p>
+<p>A typical flow has the client first call <code>CreateMultipartUpload</code> to get an upload ID, then issue <code>UploadPart</code> for each chunk (commonly 5–100 MB; S3 requires a minimum part size of 5 MB except for the last part), and finally <code>CompleteMultipartUpload</code> with the ordered list of part ETags. If any part fails, only that part is retried; if the user abandons the upload, an <code>AbortMultipartUpload</code> call prevents orphaned parts from accumulating as billable storage. For user-generated content, the production pattern is almost always presigned-URL based: the API server mints short-lived presigned URLs for each part so the client uploads directly to the object store, keeping the API server out of the data path entirely. A 5 GB file split into 50 MB parts becomes 100 parallel uploads saturating the user’s bandwidth, and a network hiccup costs one 50 MB retry rather than a full restart. The interview-grade insight is that multipart upload is not just a reliability feature — it is the mechanism that makes parallel upload bandwidth and resumability possible, and the part-size choice is a real tuning knob: too small and you pay per-request overhead and hit the 10,000-part cap; too large and retries become expensive and tail latency rises.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                MULTIPART UPLOAD FLOW (Presigned-URL Pattern)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Client                    API Server                 Object Store (S3-like)</span></span>
+<span class="line"><span>    |                            |                            |</span></span>
+<span class="line"><span>    | 1. Request upload          |                            |</span></span>
+<span class="line"><span>    |  (file size, hash)         |                            |</span></span>
+<span class="line"><span>    |--------------------------->|                            |</span></span>
+<span class="line"><span>    |                            |                            |</span></span>
+<span class="line"><span>    | 2. CreateMultipartUpload   |                            |</span></span>
+<span class="line"><span>    |                           ---------------------------> |</span></span>
+<span class="line"><span>    |                            |  3. Upload ID returned     |</span></span>
+<span class="line"><span>    |                            |&#x3C;---------------------------|</span></span>
+<span class="line"><span>    | 4. Presigned URLs per part |                            |</span></span>
+<span class="line"><span>    |&#x3C;---------------------------|                            |</span></span>
+<span class="line"><span>    |                            |                            |</span></span>
+<span class="line"><span>    | 5. UploadPart #1  -------->| (out of data path) ------> |  (parallel)</span></span>
+<span class="line"><span>    | 5. UploadPart #2  -------->|                        ---> |  (parallel)</span></span>
+<span class="line"><span>    | 5. UploadPart #N  -------->|                        ---> |  (parallel)</span></span>
+<span class="line"><span>    |    (5-100 MB each,         |                            |</span></span>
+<span class="line"><span>    |     retry failed parts     |                            |</span></span>
+<span class="line"><span>    |     independently)         |                            |</span></span>
+<span class="line"><span>    |                            |                            |</span></span>
+<span class="line"><span>    | 6. CompleteMultipartUpload |                            |</span></span>
+<span class="line"><span>    |    (ordered ETag list)     |--------------------------->|</span></span>
+<span class="line"><span>    |                            |                            |</span></span>
+<span class="line"><span>    |                            |  7. Parts concatenated     |</span></span>
+<span class="line"><span>    |                            |     into single object     |</span></span>
+<span class="line"><span>    | 8. Upload complete ack     |                            |</span></span>
+<span class="line"><span>    |&#x3C;---------------------------|&#x3C;---------------------------|</span></span></code></pre>
+<h2 id="cdn-for-media-delivery">CDN for Media Delivery</h2>
+<p>A Content Delivery Network is the layer that makes a media product economically viable. Without it, every video view is an egress charge from your origin region and a cross-continent round trip for the viewer; with it, 90–99% of bytes are served from an edge point-of-presence within tens of milliseconds of the user, and origin egress drops by an order of magnitude. For media specifically, the CDN is configured for large, cacheable, immutable objects — exactly the profile of HLS segments and resized image variants. Cache keys are derived from the object key plus a content-version hash, so invalidation becomes a matter of shipping a new key rather than purging an old one. Cache-hit ratio is the metric that pays the bills: a 95% hit ratio means the origin sees one request for every twenty the CDN serves, while a 70% ratio means the origin sees three times as much traffic and the egress bill triples. Tuning hit ratio on media workloads involves long TTLs (segments are immutable, so TTL can be days or weeks), conservative origin shielding (a single regional shield PoP absorbs misses so the true origin sees coalesced requests), and stale-while-revalidate semantics so a expired-but-still-correct object is served instantly while a refresh happens in the background.</p>
+<p>For video, the CDN also performs just-in-time segment packaging and, increasingly, edge transcoding for the long tail of formats. Most major CDNs support origin shield, range requests (so a player can byte-seek into a segment), and token-based signed URLs for DRM and access control. The staff-level concern is cache pollution: if you key on per-user tokens or query strings, every distinct URL becomes a separate cache entry and your hit ratio collapses. The discipline is to separate the cacheable resource identity (the segment key) from the access-control decision (a signed URL with a short expiry that the CDN validates but does not incorporate into the cache key).</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>              CDN MULTI-TIER DELIVERY ARCHITECTURE</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>                          Viewers (global)</span></span>
+<span class="line"><span>                             |    |    |</span></span>
+<span class="line"><span>                  +----------+----+----+---------+</span></span>
+<span class="line"><span>                  |    Edge PoPs (closest to user)  |</span></span>
+<span class="line"><span>                  |    Cache hit ratio: 90-99%       |</span></span>
+<span class="line"><span>                  |    TTL: days-weeks (immutable)   |</span></span>
+<span class="line"><span>                  +----------+----+----+---------+</span></span>
+<span class="line"><span>                             | cache MISS (rare)</span></span>
+<span class="line"><span>                             v</span></span>
+<span class="line"><span>                  +------------------------------+</span></span>
+<span class="line"><span>                  |   Regional Origin Shield PoP   |</span></span>
+<span class="line"><span>                  |   Coalesces misses -> 1 fetch  |</span></span>
+<span class="line"><span>                  |   per unique object to origin  |</span></span>
+<span class="line"><span>                  +--------------+---------------+</span></span>
+<span class="line"><span>                                 | shield MISS (coalesced)</span></span>
+<span class="line"><span>                                 v</span></span>
+<span class="line"><span>                  +------------------------------+</span></span>
+<span class="line"><span>                  |   Object Store Origin (S3-like)|</span></span>
+<span class="line"><span>                  |   Source of truth / last resort|</span></span>
+<span class="line"><span>                  |   Not the serving tier!        |</span></span>
+<span class="line"><span>                  +------------------------------+</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Hot path:  Viewer -> Edge PoP (HIT)  ............  ~95-99% of bytes</span></span>
+<span class="line"><span>  Warm path:  Viewer -> Edge -> Shield (HIT) ......  ~1-5% of bytes</span></span>
+<span class="line"><span>  Cold path:  Viewer -> Edge -> Shield -> Origin ..  &#x3C;1% (unique misses)</span></span></code></pre>
+<h2 id="video-transcoding-pipeline">Video Transcoding Pipeline</h2>
+<p>Raw uploads are unplayable at scale. A user’s 4K phone recording is a multi-gigabyte blob in a container format with a codec and bitrate the player may not support, at a resolution that will stutter on mobile data. The transcoding pipeline’s job is to turn that one source into a family of adaptive-bitrate renditions that a player can switch between in real time. The canonical pipeline is: ingest the source into object storage, partition it, transcode into multiple resolution-bitrate ladders, package each rendition into streaming segments, generate a manifest, publish to the CDN origin, and only then mark the video as ready.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>          VIDEO TRANSCODING PIPELINE (Upload -> Publish)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  +-----------+    +-------------+    +------------------+</span></span>
+<span class="line"><span>  | Raw Upload|--->| Object Store|--->| Source Partition |</span></span>
+<span class="line"><span>  | (client)  |    | (source)    |    | (GOP chunking)   |</span></span>
+<span class="line"><span>  +-----------+    +-------------+    +--------+---------+</span></span>
+<span class="line"><span>                                                |</span></span>
+<span class="line"><span>                       +------------------------+------------------------+</span></span>
+<span class="line"><span>                       |                        |                        |</span></span>
+<span class="line"><span>                  +----v----+              +----v----+              +----v----+</span></span>
+<span class="line"><span>                  | 240p    |              | 720p    |    ...       | 1440p/  |</span></span>
+<span class="line"><span>                  | 0.4Mbps |              | 3 Mbps  |              | 4K      |</span></span>
+<span class="line"><span>                  +----+----+              +----+----+              +----+----+</span></span>
+<span class="line"><span>                       |                        |                        |</span></span>
+<span class="line"><span>                  +----v----+              +----v----+              +----v----+</span></span>
+<span class="line"><span>                  | Package |              | Package |              | Package |</span></span>
+<span class="line"><span>                  | (.ts)   |              | (.ts)   |              | (.ts)   |</span></span>
+<span class="line"><span>                  +----+----+              +----+----+              +----+----+</span></span>
+<span class="line"><span>                       |                        |                        |</span></span>
+<span class="line"><span>                       +-----------+------------+----------+-------------+</span></span>
+<span class="line"><span>                                   |                       |</span></span>
+<span class="line"><span>                              +----v----+              +---v--------+</span></span>
+<span class="line"><span>                              | Manifest|              | Thumbnails |</span></span>
+<span class="line"><span>                              | (.m3u8) |              | + Sprites  |</span></span>
+<span class="line"><span>                              +----+----+              +---+--------+</span></span>
+<span class="line"><span>                                   |                       |</span></span>
+<span class="line"><span>                              +----v----+                   |</span></span>
+<span class="line"><span>                              | Publish |                   |</span></span>
+<span class="line"><span>                              | to CDN  |&#x3C;------------------+</span></span>
+<span class="line"><span>                              | origin  |</span></span>
+<span class="line"><span>                              +----+----+</span></span>
+<span class="line"><span>                                   |</span></span>
+<span class="line"><span>                              +----v----+</span></span>
+<span class="line"><span>                              |  Mark   |</span></span>
+<span class="line"><span>                              | READY   |</span></span>
+<span class="line"><span>                              +---------+</span></span></code></pre>
+<p>A typical ABR ladder for general content is summarized below. Each rung is a deliberate trade between quality and the lowest device class you want to serve well; the bottom rung is what keeps the video playing on a congested subway. An audio-only rendition is included for background and low-bandwidth playback.</p>
+<table>
+<thead>
+<tr>
+<th>Rendition</th>
+<th>Resolution</th>
+<th>Video Bitrate</th>
+<th>Codec</th>
+<th>Target Device</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bottom rung</td>
+<td>240p</td>
+<td>0.4 Mbps</td>
+<td>H.264 baseline</td>
+<td>Congested mobile / 2G</td>
+</tr>
+<tr>
+<td>Low</td>
+<td>360p</td>
+<td>0.8 Mbps</td>
+<td>H.264</td>
+<td>Mobile data</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>480p</td>
+<td>1.4 Mbps</td>
+<td>H.264</td>
+<td>Low-end phones / slow WiFi</td>
+</tr>
+<tr>
+<td>High</td>
+<td>720p</td>
+<td>3 Mbps</td>
+<td>H.264</td>
+<td>Phones / tablets</td>
+</tr>
+<tr>
+<td>Premium</td>
+<td>1080p</td>
+<td>5–6 Mbps</td>
+<td>H.264 / HEVC</td>
+<td>Desktop / smart TV</td>
+</tr>
+<tr>
+<td>Ultra</td>
+<td>1440p</td>
+<td>8–12 Mbps</td>
+<td>HEVC / AV1</td>
+<td>High-end displays</td>
+</tr>
+<tr>
+<td>Ultra HD</td>
+<td>4K (2160p)</td>
+<td>12–16 Mbps</td>
+<td>HEVC / AV1</td>
+<td>Premium / large screens</td>
+</tr>
+<tr>
+<td>Audio only</td>
+<td>—</td>
+<td>64–128 kbps</td>
+<td>AAC</td>
+<td>Background / low bandwidth</td>
+</tr>
+</tbody>
+</table>
+<h3 id="hls-and-dash-packaging">HLS and DASH Packaging</h3>
+<p>The two dominant adaptive streaming protocols are HTTP Live Streaming (HLS) and Dynamic Adaptive Streaming over HTTP (DASH). Both work the same way at a high level: the source is chopped into short segments (typically 2–10 seconds), each rendition gets its own set of segments, and a manifest file lists the available renditions and their segment URLs so the player can switch between them on the fly. HLS uses <code>.m3u8</code> playlists and <code>.ts</code> (MPEG-2 Transport Stream) or fMP4 segments; DASH uses <code>.mpd</code> manifests and <code>.m4s</code> fragments. HLS has broader device support, especially on iOS and Safari, and is the safe default for consumer-facing products. DASH offers finer-grained control, better DRM integration with Widevine/PlayReady, and lower-latency live variants. In practice many platforms encode once and package to both, or pick HLS and accept the ecosystem lock-in. The manifest is the player’s map: a master playlist enumerates the renditions with their bandwidth attributes, and each rendition has a media playlist enumerating its segments. The player measures throughput over a rolling window of recent segment downloads, predicts the highest rendition it can sustain without rebuffering, and requests the next 2–3 segments ahead to maintain a buffer. The choice of segment length is a genuine trade: shorter segments (2s) reduce live latency and make the player more responsive to bandwidth changes but increase manifest overhead and request count; longer segments (6–10s) reduce overhead and encoding efficiency loss but make adaptation sluggish and live latency worse. For VOD, 4–6 seconds is common; for low-latency live, 2 seconds with CMAF chunked transfer is the modern norm.</p>
+<h3 id="adaptive-bitrate-logic">Adaptive Bitrate Logic</h3>
+<p>The player’s ABR algorithm is where perceived quality is won or lost. A naive throughput-based controller measures the last few segment download rates, picks the highest rendition whose bitrate fits within 70–80% of measured throughput (leaving headroom for variance), and maintains a 10–30 second buffer. This works but is brittle on cellular networks where throughput swings wildly. More sophisticated controllers (BBA, BOLA, and the model-based MPC schemes used by Netflix and YouTube) combine throughput estimates with current buffer level and recent rebuffer history, aggressively downswitching when the buffer drains below a panic threshold and cautiously upswitching only when the buffer is healthy and throughput is stable. The staff engineer’s point: ABR lives in the client, which means you ship bugs you cannot hotfix without an app update, so the rendition ladder and segment length must be chosen to be forgiving of imperfect client logic.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>          HLS ADAPTIVE BITRATE FLOW (Player-Side)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  Player                          CDN Edge</span></span>
+<span class="line"><span>    |</span></span>
+<span class="line"><span>    | 1. Fetch master playlist (master.m3u8)</span></span>
+<span class="line"><span>    |----------------------------------------->|</span></span>
+<span class="line"><span>    |&#x3C;-----------------------------------------|</span></span>
+<span class="line"><span>    |    renditions: [240p 0.4M, 720p 3M, 1080p 5M, ...]</span></span>
+<span class="line"><span>    |</span></span>
+<span class="line"><span>    | 2. Measure throughput over rolling window</span></span>
+<span class="line"><span>    |    (last 2-3 segment downloads)</span></span>
+<span class="line"><span>    |</span></span>
+<span class="line"><span>    | 3. Predict max sustainable rendition</span></span>
+<span class="line"><span>    |    (bitrate &#x3C;= 70-80% of measured throughput)</span></span>
+<span class="line"><span>    |</span></span>
+<span class="line"><span>    | 4. Request next 2-3 segments ahead  (720p / seg_0042.ts)</span></span>
+<span class="line"><span>    |----------------------------------------->|</span></span>
+<span class="line"><span>    |&#x3C;-----------------------------------------|  segment bytes</span></span>
+<span class="line"><span>    |</span></span>
+<span class="line"><span>    | 5. Buffer grows (target: 10-30s)</span></span>
+<span class="line"><span>    |</span></span>
+<span class="line"><span>    | 6. Conditions change (bandwidth drops)  ---+</span></span>
+<span class="line"><span>    |                                            |</span></span>
+<span class="line"><span>    | 7. DOWN-SWITCH (panic if buffer &#x3C; threshold)</span></span>
+<span class="line"><span>    |    Request lower rendition (240p / seg_0043.ts)</span></span>
+<span class="line"><span>    |----------------------------------------->|</span></span>
+<span class="line"><span>    |&#x3C;-----------------------------------------|</span></span>
+<span class="line"><span>    |</span></span>
+<span class="line"><span>    | 8. Buffer recovers, throughput stable</span></span>
+<span class="line"><span>    |    -> CAUTIOUS UP-SWITCH (720p -> 1080p)</span></span>
+<span class="line"><span>    |</span></span>
+<span class="line"><span>    | Key: aggressive downswitch, cautious upswitch</span></span></code></pre>
+<h2 id="thumbnail-generation">Thumbnail Generation</h2>
+<p>Every video needs a poster image for the scrubber, the feed, and the embed preview. The naive approach — extracting a frame at the zero-second mark — frequently produces a black or fade-in frame and a useless thumbnail. The production approach is to extract several candidate frames (commonly at 1s, 25%, 50%, 75%, and 90% of duration), score them for brightness, contrast, and face presence, and select the most visually informative one, optionally letting the uploader choose. The workhorse tool is ffmpeg: <code>ffmpeg -i input.mp4 -ss 00:00:01 -frames:v 1 -q:v 2 poster.jpg</code> extracts a single high-quality JPEG. For scrubbing previews, a sprite sheet — a single image containing a grid of frames sampled at one or two per second across the whole video — lets the player show a thumbnail on hover with a single image load rather than hundreds of per-second requests. A 10-minute video at one frame per second produces 600 frames; laid into a 30x20 grid at 160x90 each, that is a single 4800x1800 sprite the player crops client-side. Sprites are generated as part of the transcoding job and stored alongside the renditions, and because they are immutable they cache forever on the CDN.</p>
+<h2 id="image-processing-resize-crop-format">Image Processing (Resize, Crop, Format)</h2>
+<p>Images are simpler than video but have their own depth. The pattern is to store the original once and generate variants on upload, never on read: resizing on every request burns CPU on the hot serving path and makes response time unpredictable. A standard avatar or photo upload produces a thumbnail (e.g. 100x100, cropped), a small (400px wide), a medium (800px), and the original, each written to a versioned key such as <code>media/{content_hash}/{variant}/{filename}</code>. Modern format choice is WebP or AVIF with a JPEG fallback: WebP is 25–35% smaller than JPEG at equivalent quality and is now universally supported, while AVIF pushes that to 40–50% smaller at the cost of slower encoding. EXIF metadata is always stripped on upload — it leaks geolocation and device fingerprints and adds needless bytes. The two hard problems are crop semantics (a smart face-aware crop beats a naive center crop for portraits) and the format-encoding CPU budget, which is why variant generation is offloaded to async workers and the serving path only ever reads pre-rendered bytes. A subtle but important operational detail is to generate variants with a deterministic pipeline (same input always produces the same output bytes) so that variant keys are content-addressable and cacheable indefinitely — any change to the resize or encoding parameters ships under a new variant key, never by overwriting.</p>
+<h2 id="storage-tiering-hot-warm-cold">Storage Tiering (Hot, Warm, Cold)</h2>
+<p>Not all bytes are equally valuable, and storing everything on the fastest tier is ruinously expensive. The production pattern is lifecycle-driven tiering: newly uploaded and recently accessed content lives on hot storage (NVMe-backed object storage or CDN edge cache) for fast first-byte; content that has not been touched in a week or two transitions to warm storage (standard HDD-backed object storage, still milliseconds to first byte but cheaper per GB); and content untouched for 30–90 days transitions to cold or archive tiers (S3 Glacier, GCS Archive, Azure Archive) where retrieval takes minutes to hours and the per-GB-month price is a fraction of standard. The transition rules are encoded as object-storage lifecycle policies: “move prefix <code>media/videos/</code> objects to Glacier after 60 days of no access, delete after 365 days unless tagged <code>keep</code>.” The economic lever is access frequency prediction. Popular and recently uploaded content is hot and must stay hot; the long tail of rarely-watched videos is cold and should pay cold-tier prices. A viral event re-promotes cold content back to hot — this is a restore request that costs both money and latency, so the design must allow rapid promotion (expedited retrievals, or simply re-transcoding from the source if the renditions were deleted). The staff engineer’s framing: tiering is a bet on the access distribution, and for UGC video that distribution is power-law — a tiny fraction of videos generates the vast majority of views, so aggressively cold-tiering the tail is where the savings are. The failure mode is mis-tiering something that goes viral and paying expedited-retrieval premiums at the worst possible moment, which is why promotion-on-demand and keeping the source rendition available for fast re-transcode are the safety nets.</p>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Backing</th>
+<th>Retrieval Latency</th>
+<th>Cost / GB-mo</th>
+<th>Typical Age</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hot</td>
+<td>NVMe / CDN edge cache</td>
+<td>&lt; 50 ms</td>
+<td>High</td>
+<td>0–7 days</td>
+<td>New + recently accessed</td>
+</tr>
+<tr>
+<td>Warm</td>
+<td>HDD-backed object storage</td>
+<td>ms–tens of ms</td>
+<td>Medium</td>
+<td>7–30 days</td>
+<td>Standard, untouched</td>
+</tr>
+<tr>
+<td>Cold / Archive</td>
+<td>Glacier / Archive</td>
+<td>minutes–hours</td>
+<td>Very low</td>
+<td>30–90+ days</td>
+<td>Long tail, rarely watched</td>
+</tr>
+<tr>
+<td>Source (retained)</td>
+<td>Standard</td>
+<td>ms</td>
+<td>Medium</td>
+<td>Until re-transcode safety net expires</td>
+<td>Fast re-promotion on viral</td>
+</tr>
+</tbody>
+</table>
+<h2 id="deduplication">Deduplication</h2>
+<p>User-generated content has enormous duplication: the same meme re-uploaded thousands of times, the same profile photo re-avatared across services, the same source video re-encoded. Deduplication is built on content-addressable storage — compute a cryptographic hash of the file bytes and use the hash as (part of) the storage key, so two clients uploading identical bytes resolve to the same object and the second upload is a no-op. In practice you compute a SHA-256 of the content (or a fast BLAKE3 if throughput matters), use the first 16 hex characters as the storage key prefix, and issue a HEAD request before uploading: if the key exists, skip the bytes entirely and just record a reference in the metadata database. This works perfectly for exact duplicates but does nothing for near-duplicates (the same video re-encoded at a different bitrate hashes differently), so for video the bigger savings come from storing a single source and deriving all renditions on demand rather than storing pre-rendered ladders forever. The gotcha is that content-addressable dedup is incompatible with per-user encryption or per-tenant keys — if every user encrypts with their own key, identical plaintexts produce different ciphertexts and dedup breaks, which is why most platforms dedup only within unencrypted platform-owned storage and accept the trade.</p>
+<h2 id="content-moderation">Content Moderation</h2>
+<p>Any platform accepting user uploads must screen for illegal and policy-violating content before it reaches other users, and for media this is a pipeline problem layered on top of the transcoding pipeline. The standard flow runs every upload through, in parallel: an automated virus/malware scan (ClamAV or a commercial equivalent), an image-classification model for nudity, violence, and banned symbols, a video-frame sampling pass that runs the same classifiers on sampled frames, a text-extraction pass (OCR) for overlaid text and a speech-to-text pass for audio, and a perceptual-hash match (PhotoDNA for known illegal imagery) against databases of previously-identified violating content. The automated pass produces a risk score; high-confidence violations are blocked before publish, medium-confidence items are queued for human review, and low-risk items are published with a post-hoc review queue. The operational reality is that no classifier is perfect, the false-positive cost is a legitimate user blocked and the false-negative cost is policy or legal liability, so the system must be designed for human-in-the-loop review with a review queue, appeal flow, and audit log. For video, moderation must run on the source before renditions are published to avoid the cost of transcoding content that will be taken down, which means moderation is on the critical path of publish latency — a real tension between safety and speed that is resolved by publishing thumbnails and low-res previews early while the full moderation pass completes.</p>
+<h2 id="capacity-estimation-500m-users-uploading-video">Capacity Estimation: 500M Users Uploading Video</h2>
+<p>The numbers a staff candidate is expected to produce, with assumptions stated explicitly. Assume 500 million monthly active users, of whom 5% upload a video in a given month, so 25 million new videos per month. Assume an average raw upload size of 300 MB (a mix of short clips and longer recordings).</p>
+<p><strong>Ingest:</strong></p>
+<ul>
+<li>Raw source ingest: 25M videos × 300 MB = 7.5 PB / month</li>
+<li>Daily ingest: ~250 TB / day</li>
+<li>After 15% dedup elimination: ~6.4 PB effective new content / month</li>
+</ul>
+<p><strong>Durable storage (rendition ladder):</strong></p>
+<ul>
+<li>A 300 MB source produces ~400 MB across all renditions + a few MB of thumbnails/manifests</li>
+<li>Call it ~500 MB of durable output per video</li>
+<li>New rendition storage: 25M × 500 MB = 12.5 PB / month</li>
+<li>Annual growth: ~150 PB / year (before tiering/retention)</li>
+</ul>
+<p><strong>Steady-state active storage:</strong></p>
+<ul>
+<li>90-day hot retention + 365-day warm retention + older content to archive</li>
+<li>Steady-state active storage: tens of PB + long archive tail</li>
+</ul>
+<p><strong>Ingest bandwidth (edge):</strong></p>
+<ul>
+<li>250 TB/day over 86,400 s ≈ 24 Gbps sustained upload throughput</li>
+<li>Evening peak factor 3–5x average → provision 100+ Gbps ingest capacity globally</li>
+<li>Distributed across CDN ingest PoPs</li>
+</ul>
+<p><strong>Transcoding compute:</strong></p>
+<ul>
+<li>5-rung ladder encoding: ~1–2 min GPU time or 5–10 min CPU time per video</li>
+<li>At 25M videos/month: ~400,000–800,000 GPU-hours / month</li>
+<li>Or ~2–4 million CPU-hours / month</li>
+<li>Fleet: hundreds of GPU transcoders or thousands of CPU workers running continuously</li>
+</ul>
+<h2 id="bandwidth-planning">Bandwidth Planning</h2>
+<p>Egress is where the money goes. The same 25 million uploaded videos are viewed far more than they are uploaded; assume an average of 100 views per video over its lifetime (heavily long-tailed — most videos get few views, a few get millions). At 500 MB of rendition data consumed per view on average (a viewer does not watch every rendition, but across all viewers and rewatching, assume roughly one full-equivalent stream’s worth of bytes per view), that is 2.5 PB of egress per month in the view-weighted steady state, and realistically much more for a successful platform. Sustained, that is roughly 9.6 Gbps average egress, but the peak factor for video is severe — evening prime time in each region can run 4–8x average — so the network and CDN must be sized for 40–80 Gbps of global peak egress, and a single viral event can spike a single video to tens of Gbps on its own. This is exactly why the CDN is non-negotiable: serving 80 Gbps from a single origin region is both a latency disaster and an egress-bill disaster, while serving it from edge PoPs keeps the origin egress to the cache-miss fraction (single-digit percent) and moves the cost into CDN bandwidth, which is cheaper and closer to the user. Bandwidth planning also has a unit-economics dimension: if you pay the CDN $0.02/GB served and the average view streams 30 MB, the per-view bandwidth cost is a fraction of a cent — but at a billion views a month it is real money, and the lever is aggressive caching, lower-bitrate ladders for mobile, and codec upgrades (H.265 or AV1 cut bytes per view 30–50% at equivalent quality, directly reducing the egress line item).</p>
+<h2 id="interview-question">Interview Question</h2>
+<p><strong>Question:</strong> “You run a video platform with 500M users. A single 4K video goes viral and within ten minutes accounts for 40% of global traffic, concentrated in one region. Walk me through every layer — from the player’s ABR decision to your CDN edge to your origin object storage to your transcoding capacity — and tell me where this breaks first and what you do about it.”</p>
+<p><strong>Model Answer:</strong> The first thing that breaks is not the origin — it is the CDN edge cache for that specific video’s segments in the affected region, because even a 95% hit ratio leaves 5% of a 40% global-traffic spike hitting the origin, which can be tens of Gbps of miss traffic. The mitigation sequence: first, the CDN’s origin shield coalesces those misses so the true object-store origin sees only a handful of unique segment requests, not millions — this is the single most important architectural decision and it must already be in place, not added during the incident. Second, the player’s ABR controller downshifts users to lower renditions as edge bandwidth saturates, which naturally reduces per-view bytes and is the self-healing property of ABR — but only if the lowest renditions were pre-generated, which is why the 240p/360p rungs exist. Third, I proactively pre-warm the edge caches for the viral video’s segments across nearby regions by issuing prefetch requests from the CDN’s origin shield, converting the next wave of demand into cache hits before it arrives. Fourth, I watch the transcoding pipeline only if the viral video is freshly uploaded and its renditions are still being generated — a video going viral mid-transcode is a real failure mode, so the pipeline must prioritize completing the lower renditions first so that something playable exists for every ABR rung before the higher rungs finish. The layer that breaks first if I have not done the shield-and-prefetch work is the origin object store, which will rate-limit or throttle and cascade into rebuffering for every cache miss; the layer that breaks first even with good shielding is the regional edge egress capacity, which is why multi-CDN and regional capacity headroom are the structural answers. The staff answer also names the unit-economics: a viral event at this scale can add tens of thousands of dollars of egress per hour, so the same prefetch-and-cache logic that protects availability also protects the margin.</p>
+<h2 id="common-pitfalls">Common Pitfalls</h2>
+<p><strong>Transcoding on read.</strong> Running ffmpeg on every request, or even on first request with caching, collapses under load because transcoding is seconds-to-minutes of CPU per video and is fundamentally incompatible with a serving path that must return in tens of milliseconds. Always transcode on upload or on a background job, and serve only pre-rendered bytes. The exception — on-demand transcoding for the long tail of rarely-requested formats — is acceptable only if it is aggressively cached and bounded by a queue, never on the synchronous request path.</p>
+<p><strong>Serving from object storage directly.</strong> Object storage was not designed for millions of concurrent low-latency reads; it rate-limits per prefix, has higher latency than edge, and its egress is the most expensive bandwidth you can buy. A CDN in front is not an optimization, it is a requirement, and the origin should be shielded so the object store never sees the raw fanout of a cache miss storm.</p>
+<p><strong>No upload size limits or part-size tuning.</strong> A single 20 GB upload with no multipart will saturate a transcode worker for an hour and block the pipeline; a multipart upload with 1 MB parts will hit the 10,000-part cap on a 10 GB file and pay per-request overhead. Enforce a maximum upload size at the API layer, choose a part size that balances parallelism against retry cost (50–100 MB is a sane default for video), and abort abandoned multipart uploads aggressively so orphaned parts do not accumulate as billable storage.</p>
+<p><strong>Keying CDN cache on per-user tokens.</strong> Signing every media URL with a per-user token and letting that token become part of the cache key turns a single segment into millions of cache entries and destroys hit ratio. The signed URL must authorize access without entering the cache key — the CDN validates the signature and serves the cacheable underlying object, keeping the key stable across users.</p>
+<p><strong>Ignoring codec and format evolution.</strong> H.264 is the safe baseline, but H.265/HEVC cuts bytes 40% at equivalent quality (with licensing cost) and AV1 is royalty-free with even better compression but heavy encode cost. Sticking with H.264 forever means paying 30–40% more in egress and storage than necessary at scale, while jumping to AV1 without accounting for encode CPU can starve the transcode pipeline. The right move is a codec ladder — H.264 for broad compatibility, HEVC/AV1 for premium and high-traffic content where the egress savings justify the encode cost — and revisiting it annually as codec support and hardware acceleration shift.</p>
+<table>
+<thead>
+<tr>
+<th>Codec</th>
+<th>Royalty</th>
+<th>Compression vs H.264</th>
+<th>Encode Cost</th>
+<th>Best Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>H.264 (AVC)</td>
+<td>Yes (low)</td>
+<td>Baseline (1.0x)</td>
+<td>Low</td>
+<td>Broad compatibility default</td>
+</tr>
+<tr>
+<td>H.265 (HEVC)</td>
+<td>Yes (high)</td>
+<td>~40% smaller</td>
+<td>Medium</td>
+<td>Premium + high-traffic</td>
+</tr>
+<tr>
+<td>AV1</td>
+<td>Royalty-free</td>
+<td>~30–50% smaller</td>
+<td>High (heavy)</td>
+<td>Premium, AV1-hw accelerated</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Treating content moderation as an afterthought.</strong> Running moderation only after publish means illegal content is briefly available and you eat both the legal risk and the wasted transcode cost for content that gets removed. Moderation must gate publish and run on the source before renditions are generated, with human review for the ambiguous middle and an audit trail for every decision.</p>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Media storage is throughput and egress cost-driven, not latency-driven — different optimization target from APIs</li>
+<li>Adaptive bitrate streaming (HLS/DASH): client selects quality based on bandwidth; segments are pre-encoded</li>
+<li>Encoding ladder: multiple renditions per video (240p to 4K); per-title optimization allocates more bits to complex content</li>
+<li>Storage tiering: hot content on SSD/CDN edge, warm on HDD, cold archive on glacier-class storage</li>
+<li>Content moderation must gate publish, not run post-publish — avoid serving illegal content and wasting transcode cost</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you handle thumbnails for millions of videos?” — Generate at upload time, store as small JPEGs in object storage, cache aggressively in CDN. Lazy-generate for edge cases.</li>
+<li>“What’s the egress cost problem?” — Serving video is bandwidth-intensive. A 10MB video served 1M times = 10TB egress. CDN reduces origin egress but edge bandwidth still costs. This is why Netflix built their own CDN.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Treating content moderation as an afterthought. Running moderation only after publish means illegal content is briefly available and you eat both the legal risk and the wasted transcode cost for content that gets removed. Moderation must gate publish and run on the source before renditions are generated.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/video-image-storage-and-streaming/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=Video%20%26%20Image%20Storage%20%26%20Streaming&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fvideo-image-storage-and-streaming%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fvideo-image-storage-and-streaming%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/video-image-storage-and-streaming" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/payment-system" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Payment System / Ledger Design</span></a><div class="path-spacer" data-astro-cid-owb62pdl></div></nav></article></div><div class="audio-player" id="audio-player" data-title="Video &amp; Image Storage &amp; Streaming" data-selector=".article-prose" data-article-slug="system-design/video-image-storage-and-streaming" data-article-title="Video &amp; Image Storage &amp; Streaming" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>

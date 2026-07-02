@@ -1,0 +1,731 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-z4jru4n3><head><meta charset="UTF-8"><meta name="description" content="Knowledge site for System Design and Coding Interview Prep — 78 in-depth articles plus interview prep, narrated via browser TTS."><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/notes/favicon.svg"><meta name="generator" content="Astro v7.0.3"><title>S3-like Object Storage · Notes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><!-- Pre-paint theme script — prevents flash of incorrect theme (Phase 2.2) --><script>
+      (function() {
+        try {
+          var t = localStorage.getItem('notes:theme') || 'system';
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script><link rel="stylesheet" href="/notes/_astro/BaseLayout.CuK2PibT.css"><link rel="stylesheet" href="/notes/_astro/_..BaXATuz0.css"></head><body data-astro-cid-z4jru4n3><nav class="site-nav" data-astro-cid-z4jru4n3><div class="nav-inner" data-astro-cid-z4jru4n3><a href="/notes/" class="nav-logo" data-astro-cid-z4jru4n3><span class="logo-mark" data-astro-cid-z4jru4n3>τ</span><span class="logo-text" data-astro-cid-z4jru4n3>Notes</span></a><div class="nav-links" id="nav-links" data-astro-cid-z4jru4n3><a href="/notes/system-design/" class="nav-link active" data-astro-cid-z4jru4n3>System Design</a><a href="/notes/coding-interview/" class="nav-link" data-astro-cid-z4jru4n3>Coding Interview</a><a href="/notes/interview-prep/" class="nav-link" data-astro-cid-z4jru4n3>Interview Prep</a><a href="/notes/glossary/" class="nav-link" data-astro-cid-z4jru4n3>Glossary</a></div><div class="nav-search" data-pagefind-search data-astro-cid-z4jru4n3></div><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme (Light / Dark / System)"><span class="theme-icon" data-icon="system" aria-hidden="true"><!-- Sun --><svg class="icon-sun" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path></svg><!-- Moon --><svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><!-- Monitor (system) --><svg class="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span></button><script>
+  (function() {
+    const STORAGE_KEY = 'notes:theme';
+    const THEMES = ['light', 'dark', 'system'];
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    function getTheme() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'system'; }
+      catch { return 'system'; }
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light' || theme === 'dark') {
+        html.setAttribute('data-theme', theme);
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      updateIcon(theme);
+    }
+
+    function updateIcon(theme) {
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      const mon = btn.querySelector('.icon-monitor');
+      if (!sun || !moon || !mon) return;
+      sun.style.display = 'none';
+      moon.style.display = 'none';
+      mon.style.display = 'none';
+      if (theme === 'light') sun.style.display = 'block';
+      else if (theme === 'dark') moon.style.display = 'block';
+      else mon.style.display = 'block';
+      btn.setAttribute('aria-label', `Theme: ${theme} (click to change)`);
+    }
+
+    function cycle() {
+      const current = getTheme();
+      const idx = THEMES.indexOf(current);
+      const next = THEMES[(idx + 1) % THEMES.length];
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
+
+    // Apply current theme on load (in case BaseLayout didn't pre-set it)
+    applyTheme(getTheme());
+
+    btn.addEventListener('click', cycle);
+  })();
+</script><button class="nav-drawer-toggle" id="nav-drawer-toggle" aria-label="Toggle menu" data-astro-cid-z4jru4n3><svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-z4jru4n3><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" data-astro-cid-z4jru4n3></path></svg></button></div></nav><main data-astro-cid-z4jru4n3><div class="article-progress-bar" id="article-progress-bar" data-astro-cid-sgg5joot><div class="article-progress-bar-fill" id="article-progress-bar-fill" data-astro-cid-sgg5joot></div></div><div class="article-layout" data-astro-cid-sgg5joot><aside class="toc-sidebar" data-astro-cid-sgg5joot><nav class="toc" data-astro-cid-p33bl5ka><h4 class="toc-title" data-astro-cid-p33bl5ka>On this page</h4><ul class="toc-list" data-astro-cid-p33bl5ka><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#summary--interview-framing" class="toc-link" data-toc-link="summary--interview-framing" data-astro-cid-p33bl5ka>Summary &amp; Interview Framing</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#overview" class="toc-link" data-toc-link="overview" data-astro-cid-p33bl5ka>Overview</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#architecture-bucket-object-key" class="toc-link" data-toc-link="architecture-bucket-object-key" data-astro-cid-p33bl5ka>Architecture: Bucket, Object, Key</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#metadata-management" class="toc-link" data-toc-link="metadata-management" data-astro-cid-p33bl5ka>Metadata Management</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#consistency-models" class="toc-link" data-toc-link="consistency-models" data-astro-cid-p33bl5ka>Consistency Models</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#partitioning-strategy" class="toc-link" data-toc-link="partitioning-strategy" data-astro-cid-p33bl5ka>Partitioning Strategy</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#replication-same-region-and-cross-region" class="toc-link" data-toc-link="replication-same-region-and-cross-region" data-astro-cid-p33bl5ka>Replication: Same-Region and Cross-Region</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#versioning" class="toc-link" data-toc-link="versioning" data-astro-cid-p33bl5ka>Versioning</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#multipart-upload" class="toc-link" data-toc-link="multipart-upload" data-astro-cid-p33bl5ka>Multipart Upload</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#lifecycle-policies" class="toc-link" data-toc-link="lifecycle-policies" data-astro-cid-p33bl5ka>Lifecycle Policies</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#storage-tiers" class="toc-link" data-toc-link="storage-tiers" data-astro-cid-p33bl5ka>Storage Tiers</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#erasure-coding-vs-replication" class="toc-link" data-toc-link="erasure-coding-vs-replication" data-astro-cid-p33bl5ka>Erasure Coding vs Replication</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#garbage-collection" class="toc-link" data-toc-link="garbage-collection" data-astro-cid-p33bl5ka>Garbage Collection</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#access-control-iam-bucket-policies-acls" class="toc-link" data-toc-link="access-control-iam-bucket-policies-acls" data-astro-cid-p33bl5ka>Access Control: IAM, Bucket Policies, ACLs</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#presigned-urls" class="toc-link" data-toc-link="presigned-urls" data-astro-cid-p33bl5ka>Presigned URLs</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#capacity-planning-for-exabyte-scale" class="toc-link" data-toc-link="capacity-planning-for-exabyte-scale" data-astro-cid-p33bl5ka>Capacity Planning for Exabyte Scale</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#sharp-interview-question" class="toc-link" data-toc-link="sharp-interview-question" data-astro-cid-p33bl5ka>Sharp Interview Question</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#model-answer" class="toc-link" data-toc-link="model-answer" data-astro-cid-p33bl5ka>Model Answer</a></li><li class="toc-item depth-3" data-astro-cid-p33bl5ka><a href="#common-pitfall" class="toc-link" data-toc-link="common-pitfall" data-astro-cid-p33bl5ka>Common Pitfall</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#key-takeaways" class="toc-link" data-toc-link="key-takeaways" data-astro-cid-p33bl5ka>Key Takeaways</a></li><li class="toc-item depth-2" data-astro-cid-p33bl5ka><a href="#interview-cheat-sheet" class="toc-link" data-toc-link="interview-cheat-sheet" data-astro-cid-p33bl5ka>Interview Cheat Sheet</a></li></ul></nav><script type="module">document.addEventListener(`DOMContentLoaded`,()=>{let e=document.querySelectorAll(`[data-toc-link]`);if(e.length===0)return;let t=Array.from(e).map(e=>{let t=e.dataset.tocLink;return document.getElementById(t||``)}).filter(Boolean);if(t.length===0)return;let n=new IntersectionObserver(t=>{for(let n of t){let t=n.target.id,r=document.querySelector(`[data-toc-link="${t}"]`);n.isIntersecting&&(e.forEach(e=>e.classList.remove(`active`)),r?.classList.add(`active`))}},{rootMargin:`-20% 0px -75% 0px`,threshold:0});t.forEach(e=>n.observe(e))});</script></aside><article class="article-main" data-astro-cid-sgg5joot><header class="article-header" data-astro-cid-sgg5joot><a href="/notes/system-design/" class="article-category" data-astro-cid-sgg5joot>System Design</a><h1 class="article-title" data-astro-cid-sgg5joot>S3-like Object Storage</h1><div class="article-meta" data-astro-cid-sgg5joot><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>📖</span> 29 min read</span><span class="meta-item" data-astro-cid-sgg5joot><span class="meta-icon" data-astro-cid-sgg5joot>🔊</span> 41 min listen</span></div><div class="article-tags" data-astro-cid-sgg5joot><span class="tag" data-astro-cid-sgg5joot>system-design</span><span class="tag" data-astro-cid-sgg5joot>interview</span><span class="tag" data-astro-cid-sgg5joot>object-storage</span><span class="tag" data-astro-cid-sgg5joot>s3</span><span class="tag" data-astro-cid-sgg5joot>scalability</span></div></header><div class="article-prose" data-astro-cid-sgg5joot><h1 id="s3-like-object-storage">S3-like Object Storage</h1>
+<h2 id="summary--interview-framing">Summary &amp; Interview Framing</h2>
+<p>A distributed storage system with a flat namespace (bucket/key), metadata service for key-to-location mapping, and data nodes with replication or erasure coding for durability.</p>
+<p><strong>How it’s asked:</strong> “Design an S3-like object storage system for 1 exabyte of data with 99.999999999% durability. Cover metadata sharding, replication, erasure coding, and garbage collection.”</p>
+<hr>
+<h2 id="overview">Overview</h2>
+<p>An object storage system stores arbitrary binary blobs — objects — inside flat, globally-named buckets addressed over a REST API. Unlike a file system, which organizes data into a hierarchy of directories and inodes, or block storage, which exposes raw fixed-size sectors to an operating system, an object store treats each blob as an opaque payload coupled with arbitrary user-defined metadata and addressed by a unique string key. There is no directory traversal, no seek, no partial overwrite; the unit of access is the whole object. At Amazon S3 scale this design serves exabytes of data and tens of millions of requests per second while advertising 99.999999999% (eleven nines) durability and 99.99% availability, numbers that are only achievable because the system decouples the read/write path from a metadata layer that can be independently scaled, replicated, and made consistent.</p>
+<p>The architectural insight that makes object storage tractable at exabyte scale is the deliberate separation of the data plane (the bytes themselves, stored on cheap, dense disks across hundreds of thousands of nodes) from the control plane (a metadata service that maps bucket+key to a physical location, enforces access control, and tracks versions). Reads and writes never touch the metadata service after the initial placement decision except to update bookkeeping, which lets the data plane scale horizontally with the number of storage nodes while the metadata service scales by sharding on the key space. Everything else in this design — erasure coding, multipart upload, lifecycle policies, replication, garbage collection — is a consequence of that split and the scale it implies.</p>
+<h2 id="architecture-bucket-object-key">Architecture: Bucket, Object, Key</h2>
+<p>A bucket is a flat, globally-unique namespace container. Bucket names are DNS-compliant (3-63 chars, lowercase, no underscores, must start and end with a letter or number) because they appear in the virtual-hosted-style URL <code>https://&lt;bucket&gt;.s3.&lt;region&gt;.amazonaws.com</code>, which means the name must be globally unique across all customers and resolvable by DNS. A bucket is created in a single region — the region is where the primary data and metadata live — though replication and cross-region access can make the data appear elsewhere. Each bucket carries configuration: a region, a versioning state, lifecycle rules, an encryption default, a logging destination, and an access policy. There is a soft limit of roughly 100 buckets per account because bucket metadata is replicated and indexed globally, and the act of creating or deleting a bucket is a rare, expensive, eventually-consistent operation.</p>
+<p>An object is the atomic unit of storage: a blob of bytes from zero to five terabytes, plus a bundle of metadata. The metadata is split into system metadata (ETag, content-type, content-length, last-modified, version-id, storage class, encryption state, owner) which the service sets, and user metadata (arbitrary key-value pairs supplied via <code>x-amz-meta-*</code> headers) which the client controls. The ETag is normally the MD5 of the object body, which makes integrity checking cheap and lets clients verify uploads without a second round-trip; for multipart uploads the ETag becomes a composite hash of the part MD5s and is not a simple object MD5, a subtlety that trips up clients that assume ETag equality implies byte equality.</p>
+<p>The key is the unique identifier of an object within a bucket. Despite looking like a path (<code>photos/2026/june/sunset.jpg</code>), it is a flat string — the slashes are convention, not directory boundaries. This flat namespace is critical: it lets the system hash the key to a partition without traversing a tree, and it lets a single bucket hold effectively unlimited objects (trillions) without any directory-inode scaling wall. The slash convention is preserved only so that prefix-based listing (<code>ListObjectsV2</code> with <code>prefix=photos/2026/</code>) and prefix-based lifecycle and replication rules can use lexical ordering to group related keys. The trade-off for flatness is that listing is a lexicographic scan with a delimiter, not a tree walk, which means “list this directory” is O(matching keys) rather than O(children) — a fact that shapes how clients should lay out keys for performance.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                     OBJECT STORAGE ARCHITECTURE</span></span>
+<span class="line"><span>                     ============================</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Client (REST API)</span></span>
+<span class="line"><span>      |   PUT/GET/DELETE  https://&#x3C;bucket>.s3.&#x3C;region>.amazonaws.com/&#x3C;key></span></span>
+<span class="line"><span>      v</span></span>
+<span class="line"><span> +----------------------------------------------------------+</span></span>
+<span class="line"><span> |                  CONTROL PLANE                           |</span></span>
+<span class="line"><span> |   Metadata Service (sharded, quorum-replicated KV)       |</span></span>
+<span class="line"><span> |                                                           |</span></span>
+<span class="line"><span> |   maps (bucket, key, version-id) -> physical location     |</span></span>
+<span class="line"><span> |                                                           |</span></span>
+<span class="line"><span> |    +----------------+   +----------------+               |</span></span>
+<span class="line"><span> |    | Metadata Shard |   | Metadata Shard |  ...          |</span></span>
+<span class="line"><span> |    |  (hash shard)  |   |  (hash shard)  |               |</span></span>
+<span class="line"><span> |    |  B-tree/LSM    |   |  B-tree/LSM    |               |</span></span>
+<span class="line"><span> |    |  in-memory +   |   |  in-memory +   |               |</span></span>
+<span class="line"><span> |    |  WAL on disk   |   |  WAL on disk   |               |</span></span>
+<span class="line"><span> |    +-------+--------+   +--------+-------+               |</span></span>
+<span class="line"><span> |            |                     |                        |</span></span>
+<span class="line"><span> |            +---------+ +---------+                        |</span></span>
+<span class="line"><span> |                      | |                                  |</span></span>
+<span class="line"><span> |            resolves location + authz                       |</span></span>
+<span class="line"><span> +----------------------|-|----------------------------------+</span></span>
+<span class="line"><span>                        | |</span></span>
+<span class="line"><span>                        v v</span></span>
+<span class="line"><span> +----------------------------------------------------------+</span></span>
+<span class="line"><span> |                   DATA PLANE                             |</span></span>
+<span class="line"><span> |   Log-structured storage nodes (hundreds of thousands)   |</span></span>
+<span class="line"><span> |                                                           |</span></span>
+<span class="line"><span> |   hash(bucket+key) -> partition -> replication group      |</span></span>
+<span class="line"><span> |                                                           |</span></span>
+<span class="line"><span> |    +---------+   +---------+   +---------+               |</span></span>
+<span class="line"><span> |    | Node A  |   | Node B  |   | Node C  |  ...          |</span></span>
+<span class="line"><span> |    | AZ-1    |   | AZ-2    |   | AZ-3    |               |</span></span>
+<span class="line"><span> |    | disk    |   | disk    |   | disk    |               |</span></span>
+<span class="line"><span> |    +---------+   +---------+   +---------+               |</span></span>
+<span class="line"><span> |                                                           |</span></span>
+<span class="line"><span> |   Object = bytes (0 .. 5 TB) + metadata bundle            |</span></span>
+<span class="line"><span> |     system metadata: ETag, size, version-id, class...     |</span></span>
+<span class="line"><span> |     user metadata:    x-amz-meta-*  key-value pairs       |</span></span>
+<span class="line"><span> +----------------------------------------------------------+</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Key insight: data plane scales with node count;</span></span>
+<span class="line"><span>                metadata plane scales by sharding the key space.</span></span>
+<span class="line"><span>   Read/write touch metadata only for placement + bookkeeping.</span></span></code></pre>
+<h2 id="metadata-management">Metadata Management</h2>
+<p>The metadata service is the brain of the system. It is a distributed, sharded key-value store (in S3 this role is played by a system evolved from a DynamoDB-like layer) that maps each <code>(bucket, key, version-id)</code> tuple to a storage location: a set of disks, an erasure-coding stripe layout, and the offset and length of the object’s data blocks. It also stores all object metadata: size, ETag, creation time, user metadata, storage class, encryption metadata, and a pointer to the object’s data. Every GET and PUT consults the metadata service first to resolve where the bytes live and to check authorization, so the metadata service must be fast (single-digit millisecond lookups), highly available, and able to scale to trillions of entries.</p>
+<p>The metadata store shards on a hash of the bucket+key so that load and storage are spread across thousands of metadata nodes. Because metadata records are small (hundreds of bytes) and randomly accessed, they live entirely in memory on the metadata nodes, backed by a write-ahead log on disk for durability. Each metadata entry is replicated across multiple nodes (typically three) with a quorum protocol (Raft or a Paxos variant) so that a single metadata node failure does not lose the mapping. The cardinal scaling challenge is that a single bucket may hold billions of objects, each generating a metadata row, and listing operations must paginate across shards; the service uses a tiered index — a per-shard B-tree or LSM-tree keyed by <code>(bucket, key)</code> — so that prefix scans and pagination are efficient without loading the entire keyspace.</p>
+<p>A subtle but important property is that the metadata service is the consistency boundary. The data plane (the disks holding the bytes) is allowed to be eventually consistent with respect to overwrites and deletes, because the metadata version-id and generation number determine which physical bytes are authoritative. When a client overwrites an object, the system writes a new version of the bytes, then atomically flips the metadata pointer to the new version; until the flip, reads see the old version, and after the flip, reads deterministically see the new one. This indirection is what later allowed S3 to upgrade from eventual consistency to strong read-after-write consistency without rearchitecting the data plane — the metadata pointer flip is a single atomic operation.</p>
+<h2 id="consistency-models">Consistency Models</h2>
+<p>For most of S3’s history, the consistency story was: read-after-write for new objects (a PUT followed by a GET of a previously-nonexistent key always returned the new object), but eventual consistency for overwrites and deletes (a PUT that overwrites an existing key, or a DELETE, could be followed by a GET that returned the stale version or the deleted object, briefly). This eventual consistency arose because writes were fanned out to multiple storage nodes and the response was returned before every replica acknowledged, so a read routed to a lagging replica could see old data. The system offered “read-after-write” only for the create case because the absence of a prior version made the write unambiguous.</p>
+<p>In late 2020 S3 moved to strong read-after-write consistency for all operations in all regions, with no application change required. The mechanism relies on the metadata service being the single source of truth for “which version is current.” A write completes only once the new bytes are durably stored and the metadata pointer has been atomically updated across the quorum; a read resolves the current version from the same metadata quorum before fetching bytes. Because the version selection is serialized through the metadata service, a read cannot see a stale version — it either sees the old pointer (if the read started before the write committed) or the new pointer (if it started after), never a torn or ghost version. This came at the cost of slightly higher write latency (the write must wait for the metadata commit, not just the data quorum) and tighter coupling between the data and metadata planes, but eliminated an entire class of application bugs.</p>
+<p>A residual consistency nuance remains for global bucket existence and for cross-region replication: creating a bucket and immediately listing buckets in a different region’s control plane is eventually consistent, and cross-region replication (CRR) is asynchronous by design, so a read in the destination region may lag the source. Concurrent writers to the same key with versioning disabled still produce a last-writer-wins race resolved by timestamp; with versioning enabled, both writes succeed and produce distinct version-ids, so no data is lost but the client must reconcile. Designers should treat “strong consistency” as scoped to a single key in a single region, not as a global invariant across regions.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>              CONSISTENCY MODEL FLOW (strong read-after-write)</span></span>
+<span class="line"><span>              ===============================================</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Client                Metadata Quorum           Data Nodes</span></span>
+<span class="line"><span>     |                         |                       |</span></span>
+<span class="line"><span>     |  1. PUT key=v2          |                       |</span></span>
+<span class="line"><span>     |------------------------>|                       |</span></span>
+<span class="line"><span>     |                         |  2. write new bytes   |</span></span>
+<span class="line"><span>     |                         |---------------------->|</span></span>
+<span class="line"><span>     |                         |                       |</span></span>
+<span class="line"><span>     |                         |  3. ack durably stored|</span></span>
+<span class="line"><span>     |                         |&#x3C;----------------------|</span></span>
+<span class="line"><span>     |                         |                       |</span></span>
+<span class="line"><span>     |                         | 4. atomic pointer     |</span></span>
+<span class="line"><span>     |                         |    flip  v1 -> v2     |</span></span>
+<span class="line"><span>     |                         |   (quorum commit)     |</span></span>
+<span class="line"><span>     |  5. 200 OK              |                       |</span></span>
+<span class="line"><span>     |&#x3C;------------------------|                       |</span></span>
+<span class="line"><span>     |                         |                       |</span></span>
+<span class="line"><span>     |                         |                       |</span></span>
+<span class="line"><span>     |  6. GET key             |                       |</span></span>
+<span class="line"><span>     |------------------------>|                       |</span></span>
+<span class="line"><span>     |                         | 7. resolve current    |</span></span>
+<span class="line"><span>     |                         |    version = v2       |</span></span>
+<span class="line"><span>     |                         | 8. fetch bytes @v2    |</span></span>
+<span class="line"><span>     |                         |---------------------->|</span></span>
+<span class="line"><span>     |                         | 9. return v2 bytes    |</span></span>
+<span class="line"><span>     |                         |&#x3C;----------------------|</span></span>
+<span class="line"><span>     | 10. v2 bytes            |                       |</span></span>
+<span class="line"><span>     |&#x3C;------------------------|                       |</span></span>
+<span class="line"><span>     |                         |                       |</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Rule: a read sees EITHER the old pointer (if it started before</span></span>
+<span class="line"><span>         step 4's commit) OR the new pointer (after). Never torn.</span></span>
+<span class="line"><span>   The metadata quorum is the consistency boundary; the data plane</span></span>
+<span class="line"><span>   can lag because version selection is serialized via metadata.</span></span></code></pre>
+<h2 id="partitioning-strategy">Partitioning Strategy</h2>
+<p>The system must distribute trillions of objects and millions of requests per second across hundreds of thousands of storage nodes, which demands a partitioning scheme that is both balanced and stable under growth. The approach is hash-based partitioning on the key, combined with an order-preserving sub-index for prefix listing. Each object’s <code>(bucket, key)</code> is hashed, and the hash space is divided into partitions; each partition is assigned to a storage node (or, more precisely, to a replication group of nodes). Because the hash distributes keys uniformly, hot buckets spread their load across many partitions automatically — provided the keys within a bucket are themselves high-cardinality.</p>
+<p>The famous failure mode is the hot-prefix problem. If a customer uses sequential, time-ordered keys like <code>logs/2026-06-19-00-00-01.bin</code>, <code>logs/2026-06-19-00-00-02.bin</code>, all keys share a prefix and, because the hash is applied to the whole key but the partition assignment historically had order-preserving locality for listing efficiency, a burst of writes to a single prefix could all land on the same partition and saturate one storage node while the rest of the cluster sat idle. S3 addressed this by partitioning on a hash of the entire key (not the prefix) and by auto-splitting hot partitions: when a partition’s request rate exceeds a threshold, the system splits it into child partitions and redistributes them across nodes, transparently to the client. The guidance to clients was historically to add a hash prefix (<code>&lt;hash&gt;/logs/...</code>) to spread load, though modern auto-splitting has largely retired that workaround.</p>
+<p>Partition splits are the key elastic mechanism. A partition is a contiguous range of the hash ring owned by a replication group; as either its stored bytes or its request rate grow, the partition splits in half and each half is reassigned, with data migrated in the background via a handoff process. This lets a single bucket scale from one object to trillions without the client choosing a sharding scheme. The trade-off is that list operations now span multiple partitions and must be merged, which is why listing a huge bucket is slow and eventually-consistent at the pagination boundary. For exabyte-scale deployments the operator’s job is to ensure the hash function has no clustering and that auto-splitting thresholds are tuned so that no partition becomes a bottleneck before the splitter catches up — a monitoring problem as much as an algorithmic one.</p>
+<h2 id="replication-same-region-and-cross-region">Replication: Same-Region and Cross-Region</h2>
+<p>Replication is how the system turns cheap, failure-prone disks into eleven-nines durability. There are two distinct kinds. Same-region replication (SRR) and the underlying intra-region durability mechanism place multiple copies of an object’s data within a single region but across distinct failure domains — separate racks, separate Availability Zones (AZs), separate power and network planes — so that a single AZ outage does not cause data loss. Cross-region replication (CRR) asynchronously copies objects from a source bucket to a destination bucket in a different region, serving disaster recovery, latency reduction for geographically distributed readers, and regulatory data-sovereignty requirements.</p>
+<p>The intra-region durability mechanism is not naive full-copy replication. Modern S3 uses erasure coding (described below) rather than storing three identical copies, which delivers the same durability at roughly one-third less raw disk. Whatever the scheme, the write path acknowledges success only once a quorum of the durability copies (or erasure fragments) are durably persisted across multiple AZs, so a power loss or single-AZ failure after the PUT returns 200 cannot lose the object. Replication within the region is synchronous with respect to the write; replication across regions is asynchronous because synchronously waiting for an intercontinental round-trip on every write would impose hundreds of milliseconds of latency.</p>
+<p>Cross-region replication is configured per-bucket with a rule specifying a destination bucket, a role with permission to read the source and write the destination, and an optional key filter. Once enabled, new objects are replicated automatically; the metadata is copied and the bytes are streamed to the destination region’s storage nodes. Replication has a replication time control (RTC) SLA — typically 15 minutes for 99.99% of objects — and emits <code>Replication:Completed</code> event notifications. Existing objects are not retroactively replicated unless a batch replication job is run. The subtlety is that CRR is eventually consistent: a GET against the destination immediately after the source PUT may 404, and if the source object is overwritten before the first replication completes, the destination may see the later version only. For delete markers, replication can be configured to replicate or not, and the choice has compliance implications (a retention-locked delete in the source may need to propagate, or may be forbidden to).</p>
+<h2 id="versioning">Versioning</h2>
+<p>Versioning is the mechanism that makes overwrites and deletes non-destructive. When versioning is enabled on a bucket, every PUT creates a new immutable object version with a unique, randomly-generated version-id rather than replacing the prior data. A GET without a version-id returns the “current” version (the one with the latest version-id marker); a GET with a specific version-id returns that exact version. A DELETE does not erase data — it inserts a delete marker as the new current version, so a subsequent GET returns 404, but <code>GET?version-id=&lt;prior&gt;</code> still returns the object. This makes accidental overwrites and deletes recoverable and is the foundation of object-lock retention and legal-hold compliance workflows.</p>
+<p>The cost of versioning is storage: every overwrite and every delete consumes space for the prior versions until they are explicitly purged or aged out by lifecycle rules. This is why lifecycle rules with <code>NoncurrentVersionExpiration</code> are essential for versioned buckets that see churn, or storage costs grow unbounded. The metadata service stores one row per version, so a key with one million versions has one million metadata rows and listing versions (<code>ListObjectVersions</code>) must paginate across all of them, which is expensive. The system also offers MFA-delete, requiring a multi-factor token to delete a version or change the bucket’s versioning state, as a defense against credential compromise. A key design point: versioning, once enabled, cannot be fully “disabled” — it can be suspended (new writes stop generating new version-ids and overwrite the current version), but old versions persist and must be lifecycle-expired.</p>
+<h2 id="multipart-upload">Multipart Upload</h2>
+<p>Objects up to 5 TB cannot be reasonably uploaded in a single HTTP request: a network hiccup at 4 TB means restarting the whole upload, and a single TCP stream cannot saturate available bandwidth. Multipart upload solves this by letting the client break a large object into parts (1 to 10,000 parts, each 5 MB to 5 GB except the last), upload each part independently and in parallel, and then commit them with a single <code>CompleteMultipartUpload</code> call that concatenates the parts in order into the final object. Each part is uploaded to a <code>/uploads/&lt;upload-id&gt;/partNumber</code> path and can be retried independently; failed parts can be re-uploaded without affecting the others.</p>
+<p>The upload-id is a metadata-service-generated token that tracks the in-progress multipart session; the service records each completed part’s ETag and size as it arrives. On <code>CompleteMultipartUpload</code>, the service validates that all part numbers are present and contiguous, concatenates the part data (either logically by linking extent metadata, or physically by stitching on disk), computes the final object ETag (a composite of the part MD5s), and atomically creates the object version — only at this point does the object become visible to plain GET. Because parts are stored separately before completion, an abandoned multipart upload leaves orphaned parts consuming storage and billing; this is why lifecycle rules include <code>AbortIncompleteMultipartUpload</code> to garbage-collect uploads not completed within N days. Multipart is not just for huge objects — for any object over roughly 100 MB, the resilience and parallelism benefits justify it, and most SDKs auto-use multipart transparently above a threshold.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>                MULTIPART UPLOAD FLOW</span></span>
+<span class="line"><span>                ====================</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   Client                     Object Storage</span></span>
+<span class="line"><span>     |                              |</span></span>
+<span class="line"><span>     | 1. CreateMultipartUpload     |</span></span>
+<span class="line"><span>     |----------------------------->|</span></span>
+<span class="line"><span>     |    returns upload-id (token) |</span></span>
+<span class="line"><span>     |&#x3C;-----------------------------|</span></span>
+<span class="line"><span>     |                              |</span></span>
+<span class="line"><span>     | 2. UploadPart #1 (parallel)  |</span></span>
+<span class="line"><span>     |----------------------------->|  store /uploads/&#x3C;id>/1</span></span>
+<span class="line"><span>     |    ETag p1                   |</span></span>
+<span class="line"><span>     |&#x3C;-----------------------------|      \</span></span>
+<span class="line"><span>     |                              |       |</span></span>
+<span class="line"><span>     | 3. UploadPart #2 (parallel)  |       |  independent</span></span>
+<span class="line"><span>     |----------------------------->|  store /uploads/&#x3C;id>/2     retry;</span></span>
+<span class="line"><span>     |    ETag p2                   |       |  no restart-all</span></span>
+<span class="line"><span>     |&#x3C;-----------------------------|      /   on failure</span></span>
+<span class="line"><span>     |                              |       |</span></span>
+<span class="line"><span>     | ... 1..10,000 parts ...      |       |</span></span>
+<span class="line"><span>     |  (5 MB .. 5 GB each,         |       |</span></span>
+<span class="line"><span>     |   last part may be smaller)  |       |</span></span>
+<span class="line"><span>     |                              |       |</span></span>
+<span class="line"><span>     | 4. CompleteMultipartUpload   |</span></span>
+<span class="line"><span>     |    (list of part# + ETags)   |</span></span>
+<span class="line"><span>     |----------------------------->|</span></span>
+<span class="line"><span>     |    validate all parts present|</span></span>
+<span class="line"><span>     |    + contiguous             |</span></span>
+<span class="line"><span>     |    concatenate in order      |</span></span>
+<span class="line"><span>     |    (link extents / stitch)   |</span></span>
+<span class="line"><span>     |    compute composite ETag    |</span></span>
+<span class="line"><span>     |    atomically create version |</span></span>
+<span class="line"><span>     |    -> object now visible     |</span></span>
+<span class="line"><span>     |    to plain GET              |</span></span>
+<span class="line"><span>     |&#x3C;-----------------------------|</span></span>
+<span class="line"><span>     |                              |</span></span>
+<span class="line"><span>     | (abandoned? lifecycle rule   |</span></span>
+<span class="line"><span>     |  AbortIncompleteMultipart-   |</span></span>
+<span class="line"><span>     |  Upload GCs parts after N d) |</span></span></code></pre>
+<h2 id="lifecycle-policies">Lifecycle Policies</h2>
+<p>Lifecycle policies are declarative rules that transition objects between storage classes or delete them based on age, prefix, tags, or version status, automating cost and retention management at exabyte scale where manual intervention is impossible. A rule is a JSON document with a filter (prefix and/or tags) and a list of transitions and expirations: <code>transition</code> moves an object to a cheaper storage class after N days (e.g., Standard to Standard-IA after 30 days, to Glacier after 90, to Glacier Deep Archive after 180), and <code>expiration</code> deletes it after M days. For versioned buckets, separate actions target current versus noncurrent versions: <code>NoncurrentVersionTransition</code> and <code>NoncurrentVersionExpiration</code>, plus <code>AbortIncompleteMultipartUpload</code>.</p>
+<p>The lifecycle engine runs as a continuous background scanner over the metadata index, evaluating rules and emitting transition/delete jobs to workers. Because the object count is in the trillions, the engine is designed for throughput, not latency: transitions may lag the rule’s nominal schedule by hours or days, and S3 only bills for the storage class the object is actually in, not the one the rule “should” have moved it to. A critical pitfall is that lifecycle transitions to archive tiers (Glacier) change the access model: retrieving a Glacier object requires a restore job that takes minutes to hours and incurs a retrieval fee, so a rule that aggressively archives can break applications that assume synchronous GET. Lifecycle rules are also the primary tool for controlling cost in versioned buckets — without <code>NoncurrentVersionExpiration</code>, every overwrite permanently doubles storage.</p>
+<h2 id="storage-tiers">Storage Tiers</h2>
+<p>Storage tiers trade cost per gigabyte against retrieval latency and access frequency. Standard is the hot tier: millisecond access, no retrieval fee, highest per-GB price, suitable for frequently-accessed data. Standard-IA (Infrequent Access) is for data accessed monthly or less: same millisecond latency but a per-GB price roughly half of Standard and a retrieval fee per GB, so it only wins if access is rare. One-Zone-IA is IA stored in a single AZ (lower durability, lower price) for reproducible data. Glacier Flexible Retrieval is archival: retrieval takes minutes to twelve hours, price an order of magnitude lower. Glacier Instant Retrieval is the hybrid — millisecond access but archive pricing, for long-tail data accessed once a quarter. Glacier Deep Archive is the cheapest, with retrieval in twelve to forty-eight hours, for compliance archives rarely touched. Intelligent-Tiering is a managed class that auto-moves objects between an access and archive sub-tier based on access patterns, charging a small monitoring fee per object to remove the manual rule-tuning burden.</p>
+<table>
+<thead>
+<tr>
+<th>Storage Tier</th>
+<th>Latency</th>
+<th>Retrieval Fee</th>
+<th>Price vs Standard</th>
+<th>Durability</th>
+<th>Best For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Standard</td>
+<td>milliseconds</td>
+<td>none</td>
+<td>1.0x (baseline)</td>
+<td>11 nines, multi-AZ</td>
+<td>frequently accessed data</td>
+</tr>
+<tr>
+<td>Standard-IA</td>
+<td>milliseconds</td>
+<td>per-GB fee</td>
+<td>~0.5x</td>
+<td>11 nines, multi-AZ</td>
+<td>accessed monthly or less</td>
+</tr>
+<tr>
+<td>One-Zone-IA</td>
+<td>milliseconds</td>
+<td>per-GB fee</td>
+<td>&lt; Standard-IA</td>
+<td>lower (single AZ)</td>
+<td>reproducible / recreatable data</td>
+</tr>
+<tr>
+<td>Glacier Instant Retrieval</td>
+<td>milliseconds</td>
+<td>per-GB fee</td>
+<td>archive pricing</td>
+<td>11 nines, multi-AZ</td>
+<td>long-tail data accessed ~once/quarter</td>
+</tr>
+<tr>
+<td>Glacier Flexible Retrieval</td>
+<td>minutes to 12 hours</td>
+<td>per-GB fee</td>
+<td>~0.1x of Standard</td>
+<td>11 nines, multi-AZ</td>
+<td>archival, async restore OK</td>
+</tr>
+<tr>
+<td>Glacier Deep Archive</td>
+<td>12 to 48 hours</td>
+<td>per-GB fee</td>
+<td>lowest</td>
+<td>11 nines, multi-AZ</td>
+<td>compliance archives rarely touched</td>
+</tr>
+<tr>
+<td>Intelligent-Tiering</td>
+<td>milliseconds (hot) / archive (cold)</td>
+<td>none (auto-move)</td>
+<td>varies + small monitoring fee/object</td>
+<td>11 nines, multi-AZ</td>
+<td>unknown / shifting access patterns</td>
+</tr>
+</tbody>
+</table>
+<p>The economics are per-object, so tier choice is dominated by object size and access frequency. For small objects, the monitoring fee of Intelligent-Tiering or the minimum-duration billing of IA classes (30-day minimum charge on transition) can make them more expensive than Standard, because a 1 KB object transitioned to IA incurs the same 30-day IA charge as a 1 TB object but saves only bytes. The general rule: only transition objects larger than ~128 KB, and only to IA if monthly access is below a small threshold. Archive tiers are for data the application can tolerate waiting hours to read; mixing them with synchronous access paths is a classic production outage.</p>
+<h2 id="erasure-coding-vs-replication">Erasure Coding vs Replication</h2>
+<p>The durability math is the heart of the design. Replication stores N identical copies; if each copy has an annual failure probability p and failures are independent, the probability of losing all N copies is roughly p^N. Three copies at p=0.01 gives ~10^-6 annual loss — only six nines, far short of eleven. Erasure coding instead stores the object as k data fragments plus m parity fragments (a (k,m) code), such that any k of the (k+m) fragments suffice to reconstruct the object. With Reed-Solomon (10,6) across 16 disks in distinct failure domains, the system tolerates any 6 simultaneous fragment losses and the probability of losing more than 6 of 16 independent fragments is astronomically small — well beyond eleven nines — while storing only 1.6× the raw data versus 3× for triple replication.</p>
+<p>The trade-offs are computational and I/O. Erasure coding requires CPU for encode/decode on every write and every degraded read, and a single object read may need to fetch fragments from multiple nodes (though for non-degraded reads it fetches only the k data fragments, often in parallel). Replication reads a single copy, so it has lower read latency and CPU overhead and simpler failure handling, but pays 3× storage. At exabyte scale the storage savings of erasure coding dominate — 1.6× vs 3× across exabytes is an enormous CapEx difference — so production object stores use erasure coding for the bulk tier and reserve full replication for the hottest small-object cache or for metadata, where latency matters more than raw bytes. A hybrid pattern is common: erasure-code the cold/bulk data, triple-replicate the index and hot working set, and let a tiering layer move objects between the two as access patterns change.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>        ERASURE CODING vs REPLICATION</span></span>
+<span class="line"><span>        =============================</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   REPLICATION (3x)                  ERASURE CODING  Reed-Solomon (10,6)</span></span>
+<span class="line"><span>   3 identical copies                10 data + 6 parity fragments</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>     [ OBJ ]  [ OBJ ]  [ OBJ ]        [d1][d2][d3][d4][d5][d6][d7][d8][d9][d10][p1][p2][p3][p4][p5][p6]</span></span>
+<span class="line"><span>       |        |        |              \___________________ 16 fragments across 16 disks ___________/</span></span>
+<span class="line"><span>     node1    node2    node3                                  in distinct failure domains</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   storage overhead: 3.0x            storage overhead: 1.6x</span></span>
+<span class="line"><span>   tolerate loss:    any 2 of 3      tolerate loss:    any 6 of 16</span></span>
+<span class="line"><span>   annual loss ~ p^3 (~10^-6 at      annual loss: P(>6 of 16 fail)</span></span>
+<span class="line"><span>     p=0.01) -> ~6 nines               -> astronomically beyond 11 nines</span></span>
+<span class="line"><span>   read = 1 copy (fast, low CPU)     read = fetch k=10 data fragments</span></span>
+<span class="line"><span>   write = fan out 3 copies            (parallel; degraded needs parity)</span></span>
+<span class="line"><span>   simpler failure handling          CPU encode/decode on every write</span></span>
+<span class="line"><span>                                      and every degraded read</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>   At exabyte scale 1.6x vs 3x disk = hundreds of PB and</span></span>
+<span class="line"><span>   hundreds of millions of dollars saved -> erasure coding wins</span></span>
+<span class="line"><span>   for bulk; replication reserved for hot small-object cache +</span></span>
+<span class="line"><span>   metadata where latency matters more than raw bytes.</span></span></code></pre>
+<h2 id="garbage-collection">Garbage Collection</h2>
+<p>Garbage collection reclaims space from deleted objects, overwritten versions, and aborted multipart uploads, all of which leave orphaned data blocks on disk that are no longer referenced by the metadata index. The system is built on a log-structured storage layer (each disk appends writes sequentially and never overwrites in place), so deletes and overwrites do not physically erase old data — they only update the metadata pointer, leaving the old blocks as garbage. This is deliberate: append-only writes are fast and avoid read-modify-write cycles, and the metadata indirection makes versioning and atomic updates cheap. The cost is that a separate GC process must periodically reclaim the space.</p>
+<p>The GC design is a mark-sweep over the storage nodes coordinated with the metadata service. A storage node tracks which blocks it holds and a generation/version for each; the GC compares this local list against the metadata service’s authoritative mapping and deletes blocks that no metadata entry references, after a safety delay (typically 24 hours or more) to avoid reclaiming data from writes whose metadata commit is still propagating. This safety delay is why deleted objects may still consume storage briefly and why billing for deleted data can lag. For multipart uploads, an abandoned session’s parts are GC’d either by an explicit abort, by a lifecycle <code>AbortIncompleteMultipartUpload</code> rule, or by a background scanner that aborts uploads older than a threshold. The hard part of GC at scale is doing it without impacting foreground I/O: it runs at low priority, is throttled by the scheduler, and is designed to be self-steadying — if free space is plentiful it idles, if it drops below a watermark it accelerates. A misconfigured or stalled GC leads to silent capacity growth and is one of the most common causes of “why is our storage bill not going down despite deletes.”</p>
+<h2 id="access-control-iam-bucket-policies-acls">Access Control: IAM, Bucket Policies, ACLs</h2>
+<p>Access control is layered, with three mechanisms that compose rather than conflict. IAM (Identity and Access Management) policies are attached to users or roles and grant permissions on AWS resources in a unified policy language; they are the primary mechanism for an account’s own principals. Bucket policies are resource-based policies attached directly to a bucket and can grant cross-account access, anonymous public access, or conditional access (e.g., only over TLS, only from a VPC endpoint, only with a specific object tag). ACLs are a legacy, per-object or per-bucket grant mechanism (canned grants like <code>public-read</code>, <code>authenticated-read</code>) with coarse permissions; they are discouraged for new designs and, with S3’s recent default Block Public Access, are effectively disabled unless explicitly opted in.</p>
+<table>
+<thead>
+<tr>
+<th>Mechanism</th>
+<th>Attached To</th>
+<th>Scope</th>
+<th>Primary Use</th>
+<th>Cross-Account?</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IAM policy</td>
+<td>user / role (principal)</td>
+<td>identity-based</td>
+<td>an account’s own principals</td>
+<td>no (own account)</td>
+<td>primary, recommended</td>
+</tr>
+<tr>
+<td>Bucket policy</td>
+<td>bucket (resource)</td>
+<td>resource-based</td>
+<td>cross-account, public, conditional access (TLS/VPC/tag)</td>
+<td>yes</td>
+<td>primary, recommended</td>
+</tr>
+<tr>
+<td>ACL</td>
+<td>bucket / object</td>
+<td>legacy, coarse grants</td>
+<td>canned grants (<code>public-read</code>, <code>authenticated-read</code>)</td>
+<td>yes (legacy)</td>
+<td>discouraged; disabled by Block Public Access default</td>
+</tr>
+</tbody>
+</table>
+<p>The evaluation model is a single unified authorization decision: for a given request, the service collects the IAM identity policy, the bucket policy, any applicable ACL, and any organization-level service control policies, and evaluates whether the combined effect is an explicit Allow with no explicit Deny. Deny wins, which makes bucket policies a powerful tool for enforcing guardrails (e.g., “deny any PUT that is not SSE-KMS encrypted”). A subtle but critical rule is that the bucket owner account must authorize access even for cross-account bucket-policy grants — the trusting account’s IAM role must also have permission to access the object, resulting in a “both sides must allow” intersection for cross-account access. This trips up teams who grant a bucket policy to another account and forget that the other account’s role also needs the s3:GetObject permission. Object ownership can differ from bucket ownership when cross-account writes occur; the recommended fix is the bucket-owner-enforced setting, which makes the bucket owner own all objects regardless of writer, eliminating the ACL-based ownership dance entirely.</p>
+<h2 id="presigned-urls">Presigned URLs</h2>
+<p>Presigned URLs are the mechanism for granting time-limited, signature-scoped access to a private object without distributing long-lived credentials. The bucket owner (or a principal with permission) signs a URL with their secret access key over the HTTP method, the bucket, the key, the expiry time, and any overrides (response-content-type, etc.); the resulting URL can be handed to a client (a browser, a mobile app, a third party) who can then perform exactly that operation until the expiry, with no credentials of their own. The signature is an HMAC over the canonical request, so the server re-derives it on receipt and allows the operation if it matches and the timestamp has not expired.</p>
+<p>Presigned URLs are the standard pattern for direct-to-S3 browser uploads and downloads: instead of proxying bytes through an application server (which wastes bandwidth and adds latency), the app server signs a PUT URL, the browser uploads directly to S3, and the app is notified via an event or a callback. The design constraints are: the URL embeds the access key ID and signature, so it must be treated as a bearer token (use HTTPS, short expiries, log and rotate); the signature covers the method and key, so a PUT-presigned URL cannot be used to GET; and for multipart uploads, presigning applies per-part (each part URL is signed separately), which the SDKs handle transparently. A common pitfall is presigning a URL with a role’s temporary credentials whose session expires before the URL’s stated expiry — the URL stops working at the credential’s session expiry, not the URL’s expiry, a mismatch that produces confusing 403s.</p>
+<h2 id="capacity-planning-for-exabyte-scale">Capacity Planning for Exabyte Scale</h2>
+<p>Capacity planning for an exabyte-scale object store is a multi-dimensional problem spanning storage density, request rate, metadata footprint, and bandwidth. At exabyte scale the dominant cost is raw disk, so the storage efficiency of the redundancy scheme is the first-order lever: erasure coding at 1.6× versus triple replication at 3× is a near-2× difference in disk CapEx, which across an exabyte is hundreds of petabytes of disks and hundreds of millions of dollars. The planning exercise sizes the fleet as <code>usable_bytes × redundancy_factor / disk_capacity × (1 + failure_headroom)</code>, where failure_headroom accounts for disks under reconstruction and for the need to keep free space above the GC watermark so reclamation can keep up with deletes.</p>
+<p>Key capacity numbers and sizing levers:</p>
+<ul>
+<li>Storage fleet sizing: <code>usable_bytes × redundancy_factor / disk_capacity × (1 + failure_headroom)</code></li>
+<li>Redundancy factor: 1.6× (erasure coding) vs 3× (triple replication) — near-2× disk CapEx swing</li>
+<li>Exabyte impact: 1.6× vs 3× across 1 EB = hundreds of PB of disks = hundreds of millions of dollars</li>
+<li>Request plane: <code>cluster_rps = nodes × per_node_rps</code>; partitions auto-split to keep any partition below per-node limit</li>
+<li>Per-node bound: CPU (erasure coding) / network (large transfers) / IOPS (small objects)</li>
+<li>Small-object workload (median 64 KB): IOPS-bound — a few PB of small objects can need more nodes than tens of PB of large objects</li>
+<li>Metadata footprint: <code>objects × metadata_row_size</code>; ~500 bytes/row</li>
+<li>At 1 trillion objects × ~500 bytes = ~500 TB of index, replicated 3×, in memory across thousands of metadata shards</li>
+<li>Disk failure rate: ~1-3% annual, steady background process at fleet scale</li>
+<li>Million-disk fleet: dozens of failures per day</li>
+<li>Capacity reserve: must sustain peak rebuild rate + peak write rate + replication, with margin</li>
+</ul>
+<p>The request plane is sized separately. Each storage node handles a bounded request rate (bounded by CPU for erasure coding, by network for large transfers, by IOPS for small objects). The cluster request capacity is <code>nodes × per_node_rps</code>, and partitions auto-split to keep any single partition below its per-node limit. For small-object workloads (median 64 KB), the system is IOPS-bound and the fleet must be sized on request rate, not bytes — a few petabytes of small objects can require more nodes than tens of petabytes of large objects. The metadata footprint is <code>objects × metadata_row_size</code>; at a trillion objects with ~500 bytes each, the metadata store must hold ~500 TB of index, replicated three ways, in memory across thousands of metadata shards, and list operations must scan it efficiently. Bandwidth planning must account for the amplification of erasure coding (each write fans out to k+m nodes) and for replication and lifecycle transition traffic competing with foreground requests on shared interconnects.</p>
+<p>The operational discipline that makes this work is continuous rebalancing and failure-driven capacity headroom. Disks fail at a roughly constant annual rate (1-3% typical), so at fleet scale failures are a steady background process, not rare events — a million-disk fleet sees dozens of failures per day. The system must reconverge (rebuild failed fragments onto healthy nodes) faster than the failure rate, or the rebuild backlog grows and a correlated failure (a bad batch of disks, a power event) can exceed the erasure code’s tolerance. The capacity model therefore reserves enough spare disks and bandwidth to sustain the peak rebuild rate plus the peak write rate plus replication, with margin. Underprovisioning any of these — disk for durability, nodes for IOPS, metadata shards for key count, bandwidth for rebuild — surfaces as either data loss risk or latency collapse, both of which violate the SLAs that justify the system’s existence.</p>
+<h2 id="sharp-interview-question">Sharp Interview Question</h2>
+<blockquote>
+<p><strong>“You run an object store with erasure coding (10,6) across 16 nodes in distinct racks. A buggy lifecycle job deletes 30% of your objects in a single bucket. Walk me through what happens to durability, availability, and cost in the next hour, and what could go wrong.”</strong></p>
+</blockquote>
+<h3 id="model-answer">Model Answer</h3>
+<p>The first thing to establish is that deletes in an object store are metadata operations, not data erasures. The lifecycle job updates the metadata index to remove the deleted objects’ mappings and inserts delete markers (if versioned) or simply drops the rows (if not). The actual 16-fragment erasure-coded data blocks remain on disk as garbage until GC reclaims them. This has three immediate consequences.</p>
+<p><strong>Durability is unchanged for the surviving objects.</strong> Erasure coding (10,6) tolerates any 6 of 16 fragment failures independently per object; deleting unrelated objects does not change the fragment distribution of the survivors, so their annual loss probability is unchanged. A common incorrect instinct is that “fewer objects means more redundant capacity,” but redundancy is per-object, not per-pool.</p>
+<p><strong>Availability is unchanged for reads, but GC load spikes.</strong> GETs of surviving objects hit the same metadata and data path as before. The deletion itself generated a burst of metadata writes (one per deleted object) and now the GC must scan and reclaim the orphaned blocks. With 30% of a large bucket deleted, the GC backlog is significant and reclamation will run for hours to days at its throttled rate. During this window, free space on affected nodes drops, and if the GC cannot keep up with continued writes plus the backlog, free space can cross the watermark and trigger emergency GC, which competes with foreground I/O and can degrade read latency.</p>
+<p><strong>Cost behavior is the trap.</strong> Billing typically reflects the storage class an object is actually in, so deleted objects stop billing once the metadata row is gone — but the physical disk space is not reclaimed until GC runs, so the cluster’s <em>used</em> capacity does not drop for hours or days. If the team had been provisioning new nodes based on a capacity metric that measures physical disk usage rather than billable usage, they might over-provision because the freed space has not yet materialized. Conversely, if they expect the delete to immediately relieve a capacity crunch and keep writing, they can hit a free-space wall before GC catches up. The right monitoring is to track both billable bytes (metadata-derived) and reclaimable garbage bytes (GC backlog), separately.</p>
+<p><strong>What could go wrong:</strong> (1) If the bucket was versioning-disabled and the deletes are irreversible, the only recovery is from backups or replication — so CRR or versioning should have been on. (2) If GC is misconfigured or stalled, capacity silently grows and a subsequent correlated failure could exceed free space for reconstruction. (3) If the lifecycle rule also had an aggressive <code>AbortIncompleteMultipartUpload</code> and there were in-flight uploads, those abort and the client sees failures. (4) The metadata delete burst can saturate the metadata shard for that bucket’s key range, causing latency for concurrent reads of surviving keys in the same partition — the hot-partition problem, triggered by a delete storm rather than a write storm.</p>
+<h3 id="common-pitfall">Common Pitfall</h3>
+<blockquote>
+<p>❌ “Deleting 30% of objects reduces redundancy because there’s less data to spread across the cluster.”</p>
+</blockquote>
+<p>This conflates pool-level replication (where copies can be co-located and total copy count matters) with per-object erasure coding (where each object’s 16 fragments are independently placed and the survivor count of <em>that object’s</em> fragments is all that matters). Deleting unrelated objects cannot reduce a survivor’s fragment count. The real risks after a mass delete are GC backlog, capacity-vs-billing divergence, and metadata-shard load from the delete storm — none of which are durability regressions for the survivors. A candidate who jumps to “durability drops” has not internalized that erasure coding is per-object and that deletes are metadata-only.</p>
+<h2 id="key-takeaways">Key Takeaways</h2>
+<ol>
+<li>The defining architectural choice is the separation of a flat, hash-partitioned metadata service (the control plane) from a log-structured, erasure-coded data plane, which lets each scale independently to trillions of objects and exabytes of bytes.</li>
+<li>Buckets are flat DNS-named namespaces, keys are opaque strings whose slashes are convention not hierarchy, and the flat namespace is what enables unlimited objects per bucket and hash-based partitioning.</li>
+<li>Strong read-after-write consistency is achieved by serializing version selection through the metadata service’s atomic pointer flip, not by synchronizing every data replica — the metadata quorum is the consistency boundary.</li>
+<li>Hash partitioning with automatic splitting solves the hot-prefix problem, but sequential keys can still cause temporary hotspots; clients should rely on auto-splitting and only add hash prefixes for extreme write bursts.</li>
+<li>Eleven-nines durability comes from erasure coding (e.g., Reed-Solomon 10,6) across distinct failure domains, delivering astronomically low loss probability at 1.6× storage overhead versus 3× for replication.</li>
+<li>Same-region replication/durability is synchronous and cross-AZ; cross-region replication is asynchronous with a 15-minute SLA and is eventually consistent at the destination.</li>
+<li>Versioning makes overwrites and deletes non-destructive but requires lifecycle <code>NoncurrentVersionExpiration</code> to bound storage growth, and once enabled it can only be suspended, not truly disabled.</li>
+<li>Multipart upload breaks large objects into independently-retryable parallel parts and is the only way to reach 5 TB; abandoned parts must be lifecycle-aborted or they leak storage.</li>
+<li>Storage tiers trade per-GB price for retrieval latency and access frequency; the per-object economics mean small objects should generally stay in Standard, and archive tiers break synchronous access paths.</li>
+<li>Garbage collection is mark-sweep over a log-structured disk layer, runs throttled in the background, and is the reason physical capacity lags billable capacity after deletes — a stalled GC is a silent cost and capacity risk.</li>
+<li>Access control composes IAM identity policies, resource-based bucket policies, and legacy ACLs under a deny-wins, both-sides-must-allow-for-cross-account evaluation; bucket-owner-enforced eliminates the ownership trap.</li>
+<li>Presigned URLs enable credential-free direct-to-S3 uploads but are bearer tokens whose real expiry is the lesser of the URL expiry and the signing credential’s session expiry.</li>
+<li>Exabyte capacity planning sizes four independent dimensions — disk for durability, nodes for IOPS, metadata shards for key count, and bandwidth for rebuild+replication — and underprovisioning any violates the SLA.</li>
+<li>The first diagnostic when debugging “things are slow after a mass delete” is to check GC backlog and metadata-shard load, not durability — deletes are metadata-only and per-object redundancy is unaffected.</li>
+</ol>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<p><strong>Key Points to Remember:</strong></p>
+<ul>
+<li>Object storage = flat namespace (bucket/key), no hierarchy, no POSIX semantics</li>
+<li>Metadata service stores key→location mapping; data nodes store the actual bytes</li>
+<li>Replication factor 3 is standard; erasure coding (e.g., 10+4) saves 50% storage with same durability</li>
+<li>Consistency: S3 provides strong read-after-write for new objects, eventual for overwrite/delete</li>
+<li>Versioning enables atomic updates and recovery from accidental deletes</li>
+</ul>
+<p><strong>Common Follow-Up Questions:</strong></p>
+<ul>
+<li>“How do you handle hot keys (one object accessed millions of times)?” — CDN caching in front of S3. For private content, signed URLs with short TTL.</li>
+<li>“What’s the difference between erasure coding and replication?” — Replication: 3x storage, simple, fast reads (any replica). Erasure coding: 1.5x storage, complex, reads need multiple fragments.</li>
+</ul>
+<p><strong>Gotcha:</strong></p>
+<ul>
+<li>Deletes are metadata operations, not data operations. When you delete an object, the metadata service removes the key mapping immediately, but the actual data blocks are garbage-collected later. This means deletes are fast but storage reclamation is delayed — and a mass delete can cause a GC backlog that affects write performance.</li>
+</ul>
+</div><div class="article-actions" data-astro-cid-sgg5joot><button class="action-btn" id="share-copy" data-url="/notes/system-design/s3-like-object-storage/" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" data-astro-cid-sgg5joot></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" data-astro-cid-sgg5joot></path></svg><span id="share-copy-text" data-astro-cid-sgg5joot>Copy link</span></button><a class="action-btn" href="https://twitter.com/intent/tweet?text=S3-like%20Object%20Storage&amp;url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fs3-like-object-storage%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" data-astro-cid-sgg5joot></path></svg>Share</a><a class="action-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fabster12.github.io%2Fnotes%2Fsystem-design%2Fs3-like-object-storage%2F" target="_blank" rel="noopener" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-sgg5joot><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-sgg5joot></path></svg>LinkedIn</a><button class="action-btn" id="helpful-btn" data-helpful="1" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" data-astro-cid-sgg5joot></path></svg>Helpful</button><a class="action-btn" href="https://github.com/abster12/abster12.github.io/edit/main/system-design/s3-like-object-storage" target="_blank" rel="noopener" title="Edit on GitHub" data-astro-cid-sgg5joot><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" data-astro-cid-sgg5joot><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" data-astro-cid-sgg5joot></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" data-astro-cid-sgg5joot></path></svg>Edit</a></div><section class="related-articles"><h3>Related</h3><div class="related-grid"><a href="/notes/system-design/authentication-system-oauth-jwt-sso/" class="related-card"><div class="related-card-title">Authentication System (OAuth, JWT, SSO)</div><div class="related-card-meta">System Design · 35 min</div></a><a href="/notes/system-design/bloom-filters-and-probabilistic-data-structures/" class="related-card"><div class="related-card-title">Bloom Filters &amp; Probabilistic Data Structures</div><div class="related-card-meta">System Design · 25 min</div></a><a href="/notes/system-design/cdn-and-edge-computing/" class="related-card"><div class="related-card-title">CDN &amp; Edge Computing</div><div class="related-card-meta">System Design · 22 min</div></a></div></section><nav class="path-nav" data-astro-cid-owb62pdl><a href="/notes/system-design/recommender-systems-two-tower-candidate-gen-ranking" class="path-link path-prev" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>← Previous</span><span class="path-title" data-astro-cid-owb62pdl>Recommender Systems (Two-Tower, Candidate Gen, Ranking)</span></a><a href="/notes/system-design/saga-pattern-and-distributed-transactions" class="path-link path-next" data-astro-cid-owb62pdl><span class="path-direction" data-astro-cid-owb62pdl>Next →</span><span class="path-title" data-astro-cid-owb62pdl>Saga Pattern &amp; Distributed Transactions (Compensation, Orchestration)</span></a></nav></article></div><div class="audio-player" id="audio-player" data-title="S3-like Object Storage" data-selector=".article-prose" data-article-slug="system-design/s3-like-object-storage" data-article-title="S3-like Object Storage" data-astro-cid-fsou344l><div class="player-collapsed" data-astro-cid-fsou344l><button class="player-btn play-btn" id="player-toggle" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><div class="player-info" data-astro-cid-fsou344l><span class="player-label" data-astro-cid-fsou344l>Read Aloud</span><span class="player-progress" id="player-progress" data-astro-cid-fsou344l>0%</span></div><button class="player-btn" id="player-queue-btn" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg></button><button class="player-btn expand-btn" id="player-expand" aria-label="Show controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 10l5 5 5-5z" data-astro-cid-fsou344l></path></svg></button></div><div class="player-expanded" id="player-expanded" style="display:none" data-astro-cid-fsou344l><div class="player-progress-bar" data-astro-cid-fsou344l><div class="player-progress-fill" id="player-progress-fill" data-astro-cid-fsou344l></div></div><div class="player-controls" data-astro-cid-fsou344l><div class="control-group" data-astro-cid-fsou344l><button class="control-btn" id="player-skip-back" aria-label="Skip back 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn primary" id="player-toggle-2" aria-label="Play/Pause" data-astro-cid-fsou344l><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" data-astro-cid-fsou344l><path d="M8 5v14l11-7z" data-astro-cid-fsou344l></path></svg><svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none" data-astro-cid-fsou344l><path d="M6 4h4v16H6zm8 0h4v16h-8z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-skip-forward" aria-label="Skip forward 30s" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" data-astro-cid-fsou344l><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z" data-astro-cid-fsou344l></path></svg></button><button class="control-btn" id="player-stop" aria-label="Stop" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><rect x="6" y="6" width="12" height="12" data-astro-cid-fsou344l></rect></svg></button></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Speed</label><select class="control-select" id="player-speed" data-astro-cid-fsou344l><option value="0.75" data-astro-cid-fsou344l>0.75×</option><option value="1" selected data-astro-cid-fsou344l>1×</option><option value="1.25" data-astro-cid-fsou344l>1.25×</option><option value="1.5" data-astro-cid-fsou344l>1.5×</option><option value="2" data-astro-cid-fsou344l>2×</option></select></div><div class="control-group" data-astro-cid-fsou344l><label class="control-label" data-astro-cid-fsou344l>Voice</label><select class="control-select" id="player-voice" data-astro-cid-fsou344l><option value="default" data-astro-cid-fsou344l>System default</option></select></div><button class="control-btn" id="player-queue-btn-2" aria-label="Add to queue" title="Add to queue" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" data-astro-cid-fsou344l><path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h12v2H3zm14-1v6h2v-6h6v-2h-6V7h-2v6h-6v2h6z" data-astro-cid-fsou344l></path></svg><span id="queue-btn-text" style="margin-left: 0.3rem; font-size: 0.85rem;" data-astro-cid-fsou344l>Queue</span></button><button class="control-btn collapse-btn" id="player-collapse" aria-label="Hide controls" data-astro-cid-fsou344l><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" data-astro-cid-fsou344l><path d="M7 14l5-5 5 5z" data-astro-cid-fsou344l></path></svg></button></div></div></div><script type="module" src="/notes/_astro/AudioPlayer.astro_astro_type_script_index_0_lang.CEaFxVhP.js"></script><script>
+    // Top progress bar
+    (function() {
+      const fill = document.getElementById('article-progress-bar-fill');
+      if (!fill) return;
+      let ticking = false;
+      function update() {
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollMax <= 0) { fill.style.width = '0%'; return; }
+        const pct = Math.min(100, Math.max(0, (window.scrollY / scrollMax) * 100));
+        fill.style.width = pct + '%';
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(update); ticking = true; }
+      }, { passive: true });
+      update();
+    })();
+
+    // Scroll spy for TOC
+    (function() {
+      const tocLinks = document.querySelectorAll('.toc-link');
+      if (tocLinks.length === 0) return;
+      const headingIds = Array.from(tocLinks).map(l => l.getAttribute('href')?.replace('#', '')).filter(Boolean);
+      const headings = headingIds.map(id => document.getElementById(id)).filter(Boolean);
+
+      function update() {
+        const scrollY = window.scrollY + 120; // offset for sticky nav
+        let current = null;
+        for (const h of headings) {
+          if (!h) continue;
+          const top = h.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollY) current = h.id;
+          else break;
+        }
+        tocLinks.forEach(l => {
+          const href = l.getAttribute('href')?.replace('#', '');
+          l.classList.toggle('active', href === current);
+        });
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+
+    // Share buttons
+    (function() {
+      const copy = document.getElementById('share-copy');
+      const text = document.getElementById('share-copy-text');
+      if (copy && text) {
+        copy.addEventListener('click', async () => {
+          const url = copy.getAttribute('data-url') || location.href;
+          const fullUrl = location.origin + url;
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            text.textContent = 'Copied!';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          } catch {
+            text.textContent = 'Failed';
+            setTimeout(() => { text.textContent = 'Copy link'; }, 1500);
+          }
+        });
+      }
+
+      const helpful = document.getElementById('helpful-btn');
+      if (helpful) {
+        const slug = location.pathname.replace(/^\/notes\//, '').replace(/\/$/, '');
+        const key = 'notes:helpful:' + slug;
+        if (localStorage.getItem(key)) helpful.classList.add('is-active');
+        helpful.addEventListener('click', () => {
+          localStorage.setItem(key, '1');
+          helpful.classList.add('is-active');
+        });
+      }
+    })();
+  </script></main><footer class="site-footer" data-astro-cid-z4jru4n3><div class="footer-inner" data-astro-cid-z4jru4n3><p data-astro-cid-z4jru4n3>Built by <a href="https://github.com/abster12" data-astro-cid-z4jru4n3>abster12</a> · Hosted on GitHub Pages ·<a href="https://github.com/abster12/notes" data-astro-cid-z4jru4n3>Source</a></p></div></footer><nav class="mobile-tab-bar" aria-label="Mobile navigation"><a href="/notes/" class="mobile-tab" data-match="/"><span class="mobile-tab-icon">⌂</span><span>Home</span></a><a href="/notes/system-design/" class="mobile-tab" data-match="/system-design/"><span class="mobile-tab-icon">⚙</span><span>SD</span></a><a href="/notes/coding-interview/" class="mobile-tab" data-match="/coding-interview/"><span class="mobile-tab-icon">⌨</span><span>CIP</span></a><a href="/notes/interview-prep/" class="mobile-tab" data-match="/interview-prep/"><span class="mobile-tab-icon">★</span><span>Prep</span></a><button class="mobile-tab" id="mobile-search-btn" type="button"><span class="mobile-tab-icon">🔍</span><span>Search</span></button><button class="mobile-tab" id="mobile-playlist-btn" type="button"><span class="mobile-tab-icon">≡</span><span>Queue</span></button></nav><script>
+  (function() {
+    const path = location.pathname;
+
+    // Highlight current section
+    document.querySelectorAll('.mobile-tab[data-match]').forEach(el => {
+      const match = el.getAttribute('data-match');
+      if (match === '/' && (path === '/' || path.endsWith('/notes/') || path.endsWith('/notes'))) {
+        el.classList.add('active');
+      } else if (match && match !== '/' && path.includes(match)) {
+        el.classList.add('active');
+      }
+    });
+
+    // Search button → focus pagefind input
+    document.getElementById('mobile-search-btn')?.addEventListener('click', () => {
+      // Try pagefind first
+      const pagefind = document.querySelector('.pagefind-ui__search-input') || document.querySelector('input[type="search"]');
+      if (pagefind) {
+        pagefind.focus();
+        pagefind.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // Fallback to nav search
+      const navSearch = document.querySelector('.nav-search input');
+      if (navSearch) {
+        navSearch.focus();
+        navSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Playlist button → toggle playlist bar
+    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
+      window.NotesPlaylistUI?.toggle();
+    });
+  })();
+</script><div class="playlist-bar" id="playlist-bar" data-open="false"><div class="playlist-header"><div class="playlist-title"><span>Queue</span><span class="playlist-count" id="playlist-count">0</span></div><button class="playlist-toggle-btn" id="playlist-close" aria-label="Close playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button></div><div class="playlist-items" id="playlist-items"><div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div></div><div class="playlist-header" style="border-top: 1px solid var(--color-border); border-bottom: none;"><button class="action-btn" id="playlist-clear" style="width: 100%; justify-content: center;">Clear all</button></div></div><button class="playlist-mini-btn" id="playlist-mini-btn" aria-label="Open playlist"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg><span id="playlist-mini-count">0</span></button><script>
+  (function() {
+    const bar = document.getElementById('playlist-bar');
+    const itemsEl = document.getElementById('playlist-items');
+    const countEl = document.getElementById('playlist-count');
+    const miniBtn = document.getElementById('playlist-mini-btn');
+    const miniCountEl = document.getElementById('playlist-mini-count');
+    const closeBtn = document.getElementById('playlist-close');
+    const clearBtn = document.getElementById('playlist-clear');
+    if (!bar || !itemsEl) return;
+
+    // Wait for state module to load
+    function whenReady(cb) {
+      if (window.NotesPlaylist) { cb(); return; }
+      let attempts = 0;
+      const t = setInterval(function() {
+        if (window.NotesPlaylist) { clearInterval(t); cb(); }
+        else if (++attempts > 50) { clearInterval(t); }
+      }, 100);
+    }
+
+    whenReady(function() {
+      const NP = window.NotesPlaylist;
+
+    function render() {
+      const state = NP.getPlaylist();
+      countEl.textContent = state.items.length;
+      if (miniCountEl) miniCountEl.textContent = state.items.length;
+
+      if (state.items.length === 0) {
+        miniBtn.classList.remove('is-visible');
+        bar.classList.remove('is-open');
+        bar.dataset.open = 'false';
+        itemsEl.innerHTML = '<div class="playlist-empty">Your queue is empty. Click + on any article to add it.</div>';
+        return;
+      }
+
+      miniBtn.classList.add('is-visible');
+
+      const currentSlug = state.items[state.currentIndex]?.slug;
+
+      itemsEl.innerHTML = state.items.map((item, i) => {
+        const isCurrent = item.slug === currentSlug;
+        return `
+          <div class="playlist-item ${isCurrent ? 'is-current' : ''}" data-slug="${escapeHtml(item.slug)}" data-url="${escapeHtml(item.url)}">
+            <span class="playlist-item-num">${isCurrent ? '▶' : (i + 1)}</span>
+            <span class="playlist-item-title">${escapeHtml(item.title)}</span>
+            <button class="playlist-item-remove" data-remove="${escapeHtml(item.slug)}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function open() {
+      bar.classList.add('is-open');
+      bar.dataset.open = 'true';
+    }
+    function close() {
+      bar.classList.remove('is-open');
+      bar.dataset.open = 'false';
+    }
+    function toggle() {
+      if (bar.dataset.open === 'true') close();
+      else open();
+    }
+
+    miniBtn?.addEventListener('click', toggle);
+    closeBtn?.addEventListener('click', close);
+    clearBtn?.addEventListener('click', () => {
+      if (confirm('Clear the entire queue?')) NP.clearPlaylist();
+    });
+
+    itemsEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const removeBtn = target.closest('[data-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        const slug = removeBtn.getAttribute('data-remove');
+        if (slug) NP.removeFromPlaylist(slug);
+        return;
+      }
+
+      const item = target.closest('.playlist-item');
+      if (item) {
+        const url = item.getAttribute('data-url');
+        const slug = item.getAttribute('data-slug');
+        if (slug) NP.setCurrent(slug);
+        if (url) location.href = url;
+      }
+    });
+
+    document.addEventListener('notes:playlist:changed', render);
+    render();
+
+    // Expose for other components (e.g., MobileTabBar)
+    window.NotesPlaylistUI = { open, close, toggle };
+    }); // end whenReady
+  })();
+</script><div class="kbd-help" id="kbd-help" role="dialog" aria-label="Keyboard shortcuts"><div class="kbd-help-panel"><h3>Keyboard shortcuts</h3><div class="kbd-row"><span>Focus search</span><kbd>/</kbd></div><div class="kbd-row"><span>Play / pause audio</span><kbd>Space</kbd></div><div class="kbd-row"><span>Previous article</span><kbd>←</kbd></div><div class="kbd-row"><span>Next article</span><kbd>→</kbd></div><div class="kbd-row"><span>Toggle theme</span><kbd>t</kbd></div><div class="kbd-row"><span>Show this help</span><kbd>?</kbd></div><div class="kbd-row"><span>Close overlay</span><kbd>Esc</kbd></div></div></div><script>
+  (function() {
+    const helpEl = document.getElementById('kbd-help');
+    if (!helpEl) return;
+
+    function isTyping(target) {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getLearningNavLinks() {
+      return {
+        prev: document.querySelector('.path-prev')?.getAttribute('href') || null,
+        next: document.querySelector('.path-next')?.getAttribute('href') || null,
+      };
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Escape closes help
+      if (e.key === 'Escape' && helpEl.classList.contains('is-open')) {
+        e.preventDefault();
+        helpEl.classList.remove('is-open');
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const search = document.querySelector('.pagefind-ui__search-input') ||
+                       document.querySelector('input[type="search"]') ||
+                       document.querySelector('.nav-search input');
+        if (search) {
+          search.focus();
+          search.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('player-toggle')?.click();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        document.getElementById('theme-toggle')?.click();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        helpEl.classList.add('is-open');
+      } else if (e.key === 'ArrowLeft') {
+        const { prev } = getLearningNavLinks();
+        if (prev) location.href = prev;
+      } else if (e.key === 'ArrowRight') {
+        const { next } = getLearningNavLinks();
+        if (next) location.href = next;
+      }
+    });
+
+    // Click outside to close
+    helpEl.addEventListener('click', (e) => {
+      if (e.target === helpEl) helpEl.classList.remove('is-open');
+    });
+  })();
+</script><!-- Client-side state modules (progress, playlist) — loaded on every page --><script type="module" src="/notes/_astro/BaseLayout.astro_astro_type_script_index_0_lang.XGxFGCKc.js"></script><!-- Pagefind UI init --><script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.PagefindUI) {
+          new window.PagefindUI({
+            element: '[data-pagefind-search]',
+            showImages: false,
+            showSubResults: true,
+            resetStyles: false,
+          });
+        }
+      });
+    </script><link rel="stylesheet" href="/notes/pagefind/pagefind-ui.css"><script src="/notes/pagefind/pagefind-ui.js"></script><script>
+      // Mobile nav drawer
+      (function() {
+        const toggle = document.getElementById('nav-drawer-toggle');
+        const links = document.getElementById('nav-links');
+        if (toggle && links) {
+          toggle.addEventListener('click', () => links.classList.toggle('is-open'));
+        }
+      })();
+    </script></body></html>
