@@ -61,9 +61,25 @@ const base = import.meta.env.BASE_URL;
       }
     });
 
-    // Playlist button → toggle playlist bar
-    document.getElementById('mobile-playlist-btn')?.addEventListener('click', () => {
-      window.NotesPlaylistUI?.toggle();
-    });
+    // Playlist button → toggle playlist bar (with retry if UI not ready)
+    const playlistBtn = document.getElementById('mobile-playlist-btn');
+    if (playlistBtn) {
+      playlistBtn.addEventListener('click', () => {
+        if (window.NotesPlaylistUI) {
+          window.NotesPlaylistUI.toggle();
+        } else {
+          // Retry: UI module may still be loading
+          let attempts = 0;
+          const retry = setInterval(() => {
+            if (window.NotesPlaylistUI) {
+              clearInterval(retry);
+              window.NotesPlaylistUI.toggle();
+            } else if (++attempts > 30) {
+              clearInterval(retry);
+            }
+          }, 100);
+        }
+      });
+    }
   })();
 </script>

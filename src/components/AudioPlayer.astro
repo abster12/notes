@@ -107,10 +107,13 @@ const articleSlug = slug || '';
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
     font-family: var(--font-body);
-    overflow: hidden;
+    overflow: visible;
     transition: all 200ms;
     width: 360px;
     max-width: calc(100vw - 3rem);
+  }
+  .audio-player.has-playlist-open {
+    bottom: 280px;
   }
   .player-collapsed {
     display: flex;
@@ -161,13 +164,22 @@ const articleSlug = slug || '';
   .play-btn.is-queued {
     background: var(--color-text);
   }
-  /* Flash animation for queue button feedback */
-  .play-btn.flash-queue {
-    animation: queueFlash 0.3s ease-in-out 3;
+  #player-queue-btn.is-flashing {
+    position: relative;
+    color: transparent;
   }
-  @keyframes queueFlash {
-    0%, 100% { background: var(--color-accent); color: white; }
-    50% { background: var(--color-text); color: var(--color-bg); }
+  #player-queue-btn.is-flashing::after {
+    content: attr(data-flash-text);
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-accent);
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
   }
   .player-expanded {
     padding: 0.75rem 1rem;
@@ -253,6 +265,9 @@ const articleSlug = slug || '';
       width: auto;
       max-width: none;
     }
+    .audio-player.has-playlist-open {
+      bottom: 320px;
+    }
     .player-collapsed {
       min-width: 0;
     }
@@ -312,6 +327,13 @@ const articleSlug = slug || '';
       this.restoreSession();
       this.trackScrollProgress();
       this.updateQueueButtonState();
+      // Listen for playlist open/close to shift position on mobile
+      document.addEventListener('notes:playlist:open', () => {
+        this.root.classList.add('has-playlist-open');
+      });
+      document.addEventListener('notes:playlist:close', () => {
+        this.root.classList.remove('has-playlist-open');
+      });
     }
 
     private NP() { return (window as any).NotesProgress; }
@@ -475,8 +497,12 @@ const articleSlug = slug || '';
       const btn = document.getElementById('player-queue-btn');
       const text2 = document.getElementById('queue-btn-text');
       if (btn) {
-        btn.classList.add('flash-queue');
-        setTimeout(() => { btn.classList.remove('flash-queue'); }, 1500);
+        btn.classList.add('is-flashing');
+        btn.setAttribute('data-flash-text', text);
+        setTimeout(() => {
+          btn.classList.remove('is-flashing');
+          btn.removeAttribute('data-flash-text');
+        }, 1200);
       }
       if (text2) {
         const original = text2.textContent;
