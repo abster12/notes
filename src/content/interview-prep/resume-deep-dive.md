@@ -1,0 +1,699 @@
+---
+title: "Resume Deep-Dive — Every Project Under the Microscope"
+date: 2026-07-07
+type: article
+tags: [interview-prep, resume, system-design, deep-dive, hedgineer, applied-ai, walmart, podeum, rakuten]
+related: [llm-research-tool-for-an-asset-manager, multi-tenant-llm-platform, market-data-etl, mock-interview-playbook]
+difficulty: Staff
+estimated_reading_time: 45
+description: "A structured interview prep framework covering every project on the resume. For each project: what was the problem, what made it complex, how was it solved, why not a simpler solution, what would you do differently, and what numbers prove it mattered. Built from the Hedgineer rejected-candidate feedback — the exact questions that separated pass from fail."
+---
+
+# Resume Deep-Dive: Every Project Under the Microscope
+
+This document exists because of one sentence in the rejected candidate's feedback:
+
+> "He did not give a good reason on why alerts needed an LLM (these were deterministic queues)."
+
+The interviewer doesn't want you to describe what you built. They want you to defend *why you built it that way* — against cheaper, simpler alternatives — and show that you understand what's happening under the hood.
+
+For every project on your resume, be ready to answer the 7 questions below. The interviewer will only ask 2-3 of them per project, but you need to be ready for all 7 because you won't know which ones they'll pick.
+
+## The 7 Questions
+
+| # | Question | What the interviewer is testing |
+|---|---|---|
+| Q1 | **What was the problem, and why was it hard?** | Can you scope. Not "what did you do" — "why was this worth doing." |
+| Q2 | **What made it complex?** | Can you identify the hard part. Complexity isn't volume — it's the tradeoff with no right answer. |
+| Q3 | **How did you solve it? What was YOUR specific contribution?** | Ownership. Not the team's decision. YOUR call. |
+| Q4 | **Deep technical detail — how did it actually work?** | Can you go one layer below the wrapper. Data model, protocol, serialization, failure mode. |
+| Q5 | **Why not a simpler solution?** | Cost-consciousness. Can you name the cheaper alternative and defend why it wasn't enough. |
+| Q6 | **What would you do differently now?** | Self-critique. Can you spot your own gaps before the interviewer does. |
+| Q7 | **What numbers prove it mattered?** | Impact. Not "it was faster" — a concrete before/after number. |
+
+---
+
+# WALMART (May 2024 – Present) — Software Engineer 3
+
+Your highest-signal projects for the Hedgineer role because 4 of 7 bullets are AI/agentic and one is performance at scale. This is where the interviewer will spend 70% of the deep-dive.
+
+## Project 1: Performance Optimization — Start/Update Workflow APIs
+
+> Resume bullet: *"Led performance optimization of core Start and Update Workflow APIs, reducing P95 latency from ~200ms to ~130ms and scaling the platform to ~1500 synchronous workflow executions per second through database query optimizations and infrastructure tuning."*
+
+### Q1 — What was the problem?
+
+[Your answer here]
+
+### Q2 — What made it complex?
+
+[Your answer here]
+
+### Q3 — What was YOUR specific contribution? What decisions did YOU make?
+
+[Your answer here]
+
+### Q4 — Deep technical detail
+
+Push here: what were the slow queries? What did the query plan look like before? What indexes did you add and why? Did you denormalize? Did you add caching — if so, what invalidation strategy? What was the infrastructure tuning — connection pooling, instance sizing, read replicas?
+
+[Your answer here]
+
+### Q5 — Why not simpler?
+
+Could you have solved this with just caching (Redis) and skipped the DB optimizations? Could you have thrown hardware at it (bigger instances) instead of refactoring queries? Why wasn't that the right call?
+
+[Your answer here]
+
+### Q6 — What would you do differently now?
+
+[Your answer here]
+
+### Q7 — Numbers
+
+You have the headline numbers (200→130ms, 1500 RPS). Fill in: what was the query count per workflow execution? What was the DB CPU before and after? What was the P99 before/after (P95 hides tail latency)?
+
+[Your answer here]
+
+---
+
+## Project 2: Multi-Tenant Onboarding Architecture
+
+> Resume bullet: *"Designed and implemented a multi-tenant onboarding architecture supporting multiple teams and multiple workflow engines per tenant within a shared cluster, defining data models, relationships, and lifecycle management."*
+
+This is a high-signal bullet for Hedgineer because the role is multi-tenant. Expect the interviewer to probe: how did you isolate tenants? Where does data live per tenant?
+
+### Q1 — What was the problem?
+
+[Your answer here]
+
+### Q2 — What made it complex?
+
+[Your answer here]
+
+### Q3 — What was YOUR specific contribution?
+
+[Your answer here]
+
+### Q4 — Deep technical detail
+
+Push here: what was the data model? How did you represent tenant + workflow engine relationships? What was the lifecycle — tenant create → engine bind → engine upgrade → tenant delete? How did you handle multiple engine versions per tenant? Was it DB-per-tenant, schema-per-tenant, or shared tables with a tenant_id column?
+
+[Your answer here]
+
+### Q5 — Why not simpler?
+
+Could you have just given each tenant their own cluster? Shared-nothing is simpler to reason about. Why was multi-tenancy within a shared cluster the right call?
+
+[Your answer here]
+
+### Q6 — What would you do differently now?
+
+[Your answer here]
+
+### Q7 — Numbers
+
+How many tenants? How many workflow engines per tenant? What was the onboarding time before/after? Did this reduce operational toil (quantify)?
+
+[Your answer here]
+
+---
+
+## Project 3: Orkes Workflow Engine Integration
+
+> Resume bullet: *"Owned the end-to-end integration of Orkes Workflow Engine, enabling workflow-driven orchestration across backend and AI-powered systems, including SDK integration, configuration management, and runtime interoperability."*
+
+### Q1 — What was the problem?
+
+[Your answer here]
+
+### Q2 — What made it complex?
+
+[Your answer here]
+
+### Q3 — What was YOUR specific contribution? What decisions did YOU make?
+
+[Your answer here]
+
+### Q4 — Deep technical detail
+
+Push here: what does Orkes give you that a simple state machine or a Kafka consumer group doesn't? What was the SDK integration — did you wrap it? What's the execution model — polling, push, long-polling? How do you handle workflow versioning when workflows change mid-flight?
+
+[Your answer here]
+
+### Q5 — Why not simpler?
+
+Why Orkes and not Temporal? Not Camunda? Not a hand-rolled state machine in Postgres? Defend the choice.
+
+[Your answer here]
+
+### Q6 — What would you do differently now?
+
+[Your answer here]
+
+### Q7 — Numbers
+
+How many workflows run through Orkes? What's the execution volume? Did it replace something else — if so, what improvement did it drive?
+
+[Your answer here]
+
+---
+
+## Project 4: Production-Grade AI Platform (RAG + Milvus)
+
+> Resume bullet: *"Built and owned a production-grade AI platform, including RAG pipelines (Docling, pdfplumber, Vision LLMs), hybrid retrieval using Milvus (semantic + BM25 with RRF and cross-encoder re-ranking), and LLM-based response generation with evaluation and observability pipelines."*
+
+THIS IS THE FLAGSHIP. This is the project the interviewer will want to deep-dive for the Applied AI Engineer role. Every sub-component is a potential 10-minute tangent. Be ready for all of them.
+
+### Q1 — What was the problem?
+
+[Your answer here]
+
+### Q2 — What made it complex?
+
+[Your answer here]
+
+### Q3 — What was YOUR specific contribution? What decisions did YOU make?
+
+CRITICAL: the rejected candidate failed here — "key decisions were taken by other teams in the org (Info Sec, Prompt Engineering)." Your answer needs to name specific decisions YOU made. Not "we chose Milvus" — "I evaluated Pinecone, Weaviate, and Milvus. I chose Milvus because X. I set up the index with these parameters. I designed the retrieval pipeline."
+
+[Your answer here]
+
+### Q4 — Deep technical detail
+
+This is where you go one layer deeper than the wrapper. The interviewer wants to know you understand what's happening, not just that you called an API.
+
+**Document ingestion:**
+- What formats? PDFs, Word, HTML, plain text?
+- How do you handle tables? Embedded images? Multi-column PDFs?
+- What chunking strategy — fixed-size, recursive, semantic, agentic? What chunk size and overlap?
+- Docling vs pdfplumber — when do you use which? What does each fail on?
+
+**Hybrid retrieval:**
+- What embedding model? What dimension? Why that model?
+- BM25 — which implementation? How do you weight BM25 vs. semantic?
+- RRF (Reciprocal Rank Fusion) — what k value? Why?
+- Cross-encoder re-ranking — which model? How many candidates does it re-rank? What's the latency impact?
+
+**Vector DB (Milvus):**
+- What index type? HNSW, IVF_FLAT, IVF_PQ? What parameters (M, efConstruction, efSearch)?
+- How many vectors? What's the index size?
+- How do you handle index updates? Rebuild or incremental?
+- What's the retrieval latency (p95)?
+
+**Response generation:**
+- Which LLM? Self-hosted or API? What's the prompt structure?
+- How do you inject retrieved context? How much context fits in the context window?
+- How do you handle citations? How does the user know which document a claim came from?
+
+**Evaluation and observability:**
+- How do you measure retrieval quality? Precision@K, Recall@K, MRR, NDCG?
+- How do you measure generation quality? Human eval, LLM-as-judge, RAGAS?
+- What does the observability pipeline capture? Latency per stage, token count, cost per query?
+
+[Your answer here]
+
+### Q5 — Why not simpler?
+
+This is the question that killed the rejected candidate. For EVERY sub-component, name the simpler alternative and defend why it wasn't enough:
+
+- **RAG vs. fine-tuning:** Why not just fine-tune a model on your documents?
+- **Hybrid retrieval vs. semantic-only:** Why add BM25? What does BM25 catch that embeddings miss?
+- **Cross-encoder vs. no re-ranking:** Why add the latency of a second pass?
+- **Milvus vs. pgvector:** Postgres has vector search now. Why a dedicated vector DB?
+- **LLM vs. deterministic:** For any part of the pipeline — could a rules engine or a classifier have done the job? Where is the LLM *actually necessary* vs. *nice to have*?
+
+[Your answer here]
+
+### Q6 — What would you do differently now?
+
+[Your answer here]
+
+### Q7 — Numbers
+
+This is the weak spot in your current resume bullets — the AI bullets have no numbers. Fill in everything you can:
+
+- Documents in the corpus?
+- Queries per day?
+- Retrieval p95 latency?
+- End-to-end response time?
+- Retrieval precision/recall numbers if measured?
+- Hallucination rate if measured?
+- Cost per query?
+
+[Your answer here]
+
+---
+
+## Project 5: Multi-Agent Orchestration
+
+> Resume bullet: *"Designed and implemented a stateful multi-agent orchestration system with task decomposition, parallel execution, dynamic model selection, and persisted workflow state for deterministic pause/resume, enabling human-in-the-loop code generation and review cycles."*
+
+### Q1 — What was the problem?
+
+[Your answer here]
+
+### Q2 — What made it complex?
+
+[Your answer here]
+
+### Q3 — What was YOUR specific contribution? What decisions did YOU make?
+
+CRITICAL: Did you design the orchestrator yourself, or did you use LangGraph / an existing framework? If you used a framework, what decisions did YOU make on top of it — the topology, the communication pattern, the state management, the error handling? The rejected candidate got burned on "worked with wrappers." Be ready to go one layer deeper.
+
+[Your answer here]
+
+### Q4 — Deep technical detail
+
+**Orchestration topology:**
+- What topology? Supervisor, peer-to-peer, hierarchical, blackboard?
+- How many agents? What does each agent own?
+- How do agents communicate — message passing, shared memory, tool calls?
+
+**Task decomposition:**
+- How does the orchestrator break down a task? LLM-driven, template-driven, or hybrid?
+- What does the decomposition output look like — a DAG, a list, a tree?
+- How does it handle dependencies between sub-tasks?
+
+**State management:**
+- Where is workflow state persisted? Postgres, Redis, something else?
+- What's the schema for a workflow state? What fields are checkpointed?
+- How does pause/resume work? What happens if the LLM call is mid-stream when paused?
+
+**Dynamic model selection:**
+- What models are in the pool? How does the system choose which model to use?
+- Is the choice based on task type, cost budget, latency requirement, or accuracy need?
+- Who configures the routing rules — developer, or does the system learn?
+
+**Human-in-the-loop:**
+- Where does the human intervene — after generation, before execution, on failure?
+- What does the review interface look like? What can the human approve/reject/edit?
+- What happens when the human doesn't respond? Timeout? Escalation?
+
+**Failure modes:**
+- What happens when a sub-agent hallucinates?
+- What happens when the orchestrator gets stuck in a loop?
+- What happens when parallel agents produce conflicting outputs?
+- How do you prevent cost runaway (an agent looping and burning tokens)?
+
+[Your answer here]
+
+### Q5 — Why not simpler?
+
+- **Multi-agent vs. single agent with tools:** Why not one agent that calls tools sequentially? Why does it need multiple agents?
+- **Stateful vs. stateless:** Why persist workflow state instead of re-running? When is re-run cheaper?
+- **Dynamic model selection vs. fixed model:** Why not just use the best model for everything? What's the cost tradeoff?
+- **Human-in-the-loop vs. fully autonomous:** Why not just run and show the result? When is human review worth the latency?
+
+[Your answer here]
+
+### Q6 — What would you do differently now?
+
+[Your answer here]
+
+### Q7 — Numbers
+
+- Concurrent workflows per day?
+- Average agents per workflow?
+- Pause/resume frequency?
+- Human review acceptance rate?
+- Time saved per workflow vs. manual process?
+- Token cost per workflow?
+- Failure/loop rate if measured?
+
+[Your answer here]
+
+---
+
+## Project 6: AI-Powered Developer Tooling
+
+> Resume bullet: *"Built internal AI-powered developer tooling and introduced spec-driven development workflows using LLMs, improving engineering velocity and consistency across feature development."*
+
+### Q1 — What was the problem?
+
+[Your answer here]
+
+### Q2 — What made it complex?
+
+[Your answer here]
+
+### Q3 — What was YOUR specific contribution?
+
+[Your answer here]
+
+### Q4 — Deep technical detail
+
+Push here: what tools specifically (you named Claude Code, Cursor, Windsurf in past discussions)? What does "spec-driven development" mean in practice — did you write a spec, feed it to the LLM, and get generated code? What was the workflow? What was the quality gate before merging LLM-generated code?
+
+[Your answer here]
+
+### Q5 — Why not simpler?
+
+Why not just give everyone Copilot and call it done? What did your spec-driven workflow add that raw autocomplete doesn't?
+
+[Your answer here]
+
+### Q6 — What would you do differently now?
+
+[Your answer here]
+
+### Q7 — Numbers
+
+How many engineers adopted? PR cycle time impact? Code review pass rate? Bug rate before/after?
+
+[Your answer here]
+
+---
+
+# RAKUTEN (May 2023 – May 2024) — Software Engineer 2
+
+## Project 7: Payment Batch Processing
+
+> Resume bullet: *"Designed high-volume payment batch processing systems and APIs, enabling seamless third-party integrations across multiple Rakuten brands."*
+
+### Q1 — What was the problem?
+
+[Your answer here]
+
+### Q2 — What made it complex?
+
+[Your answer here]
+
+### Q3 — What was YOUR specific contribution?
+
+[Your answer here]
+
+### Q4 — Deep technical detail
+
+Push here: what made it "high-volume"? What was the batch processing pattern — chunked processing, parallel workers, idempotency keys? How did you handle partial failures in a batch? How did you handle reconciliation? What payment providers did you integrate?
+
+[Your answer here]
+
+### Q5 — Why not simpler?
+
+Why batch processing instead of real-time per-transaction? Why not use an off-the-shelf payment orchestrator?
+
+[Your answer here]
+
+### Q6 — What would you do differently now?
+
+[Your answer here]
+
+### Q7 — Numbers
+
+Throughput? Batch size? Failure rate? Reconciliation time before/after?
+
+[Your answer here]
+
+---
+
+## Project 8: Mock Server Framework
+
+> Resume bullet: *"Built a Java-based mock server framework to simulate external payment providers, improving integration test coverage and reliability."*
+
+### Q1 — What was the problem?
+
+[Your answer here]
+
+### Q2 — What made it complex?
+
+[Your answer here]
+
+### Q3 — What was YOUR specific contribution?
+
+[Your answer here]
+
+### Q4 — Deep technical detail
+
+Push here: what made this a framework vs. a script? How did you model payment provider behavior — state machines, recorded responses, programmatic? How did you handle edge cases (timeouts, partial responses, malformed payloads)? How did you keep mocks in sync with real provider APIs?
+
+[Your answer here]
+
+### Q5 — Why not simpler?
+
+Why not use WireMock or a SaaS mock service? Why build your own framework?
+
+[Your answer here]
+
+### Q6 — What would you do differently now?
+
+[Your answer here]
+
+### Q7 — Numbers
+
+Test coverage before/after? Number of providers mocked? Tests run per build?
+
+[Your answer here]
+
+---
+
+# PODEUM (July 2022 – May 2023) — Founding Engineer
+
+This is your highest-ownership project. You were the only backend engineer. Every decision was yours. The interviewer will test: did you rise to that ownership, or did you just build what was asked?
+
+## Project 9: Built and Scaled Backend from Scratch
+
+> Resume bullet: *"Built and scaled backend services from scratch using Java, supporting growth from 0 to ~10,000 daily active users."*
+
+### Q1 — What was the problem?
+
+[Your answer here]
+
+### Q2 — What made it complex?
+
+[Your answer here]
+
+### Q3 — What was YOUR specific contribution? (This one is easy — you were the ONLY backend engineer.)
+
+[Your answer here]
+
+### Q4 — Deep technical detail
+
+Push here: what was the stack (Java + what framework)? What was the deployment model — VPS, cloud, something else? What was the DB schema at launch vs. at 10K DAU? What broke when you scaled? What was the hardest scaling bottleneck you hit and how did you fix it?
+
+[Your answer here]
+
+### Q5 — Why not simpler?
+
+You were a founding engineer with no users yet. Why Java + a real framework instead of a quick Firebase backend or a Node.js prototype? Why invest in architecture when the app had 0 users?
+
+[Your answer here]
+
+### Q6 — What would you do differently now?
+
+[Your answer here]
+
+### Q7 — Numbers
+
+From 0 to 10K DAU — over what timeframe? What was the growth curve? What was the infrastructure cost at 0 users vs. 10K? What was the availability target and did you hit it?
+
+[Your answer here]
+
+---
+
+## Project 10: Core Platform Systems
+
+> Resume bullet: *"Designed and implemented core platform systems including authentication, virtual economy, in-app purchases, and real-time live score feeds."*
+
+### Q1 — What was the problem for EACH system?
+
+Auth, economy, IAP, live scores — four separate problems. Be ready to talk about each.
+
+[Your answer here]
+
+### Q2 — What made it complex?
+
+[Your answer here]
+
+### Q3 — What was YOUR specific contribution?
+
+[Your answer here]
+
+### Q4 — Deep technical detail
+
+**Authentication:** What auth scheme? JWT, session-based, OAuth? How did you handle token refresh? Did you roll your own or use a library?
+
+**Virtual economy:** How did you model currency? Double-entry bookkeeping? What consistency guarantees? How did you prevent double-spend or negative balances?
+
+**In-app purchases:** Which platform (App Store, Google Play)? How did you verify receipts server-side? How did you handle restore purchases? What happened when the verification endpoint was down?
+
+**Real-time live score feeds:** What was the data source? How did you ingest it? Firestore? What was the latency from game event to user seeing the update? How did you handle thousands of concurrent viewers on a single match?
+
+[Your answer here]
+
+### Q5 — Why not simpler?
+
+For each system — what was the simpler approach and why wasn't it enough?
+
+[Your answer here]
+
+### Q6 — What would you do differently now?
+
+[Your answer here]
+
+### Q7 — Numbers
+
+DAU using each system? Transaction volume for IAP/economy? Concurrent viewers for live scores? Latency numbers?
+
+[Your answer here]
+
+---
+
+# MORGAN STANLEY (Oct 2020 – Jun 2022) — Software Developer
+
+## Project 11: Big Data + CI/CD
+
+> Resume bullet: *"Developed and maintained Big Data applications and set up CI/CD pipelines with Jenkins and Sonar, improving code quality and deployment workflows."*
+
+This is your earliest role. The interviewer is less likely to deep-dive here, but you should still have crisp answers. Especially for "what did YOU do vs. what was team process."
+
+### Q1 — What was the problem?
+
+[Your answer here]
+
+### Q2 — What made it complex?
+
+[Your answer here]
+
+### Q3 — What was YOUR specific contribution?
+
+[Your answer here]
+
+### Q4 — Deep technical detail
+
+What Big Data stack — Hadoop, Spark, something else? What was the data pipeline doing? What was the data volume? What did the CI/CD pipeline improve specifically — build time, deploy frequency, test coverage?
+
+[Your answer here]
+
+### Q5 — Why not simpler?
+
+[Your answer here]
+
+### Q6 — What would you do differently now?
+
+[Your answer here]
+
+### Q7 — Numbers
+
+Data volume? Build time before/after? Deployment frequency before/after?
+
+[Your answer here]
+
+---
+
+# ANSWER FRAMEWORKS
+
+Below are suggested answer frameworks for each project. They are STARTING POINTS — not the final answer. Use them to jog your memory, then write your actual answers in the sections above. The interviewer will hear your voice, not mine.
+
+## Walmart Project 1: Performance Optimization
+
+**Q1 (Problem):** The Start and Update Workflow APIs were the critical path for every workflow execution in the platform. At P95 200ms, under peak load of 1500 RPS, the tail latency was causing timeouts and cascading failures in downstream services. The DB was the bottleneck — multiple N+1 queries per API call.
+
+**Q2 (Complexity):** The queries were not trivially fixable — they spanned multiple joins across workflow definitions, execution state, and task history tables. Adding an index might speed up one query pattern but slow down writes. The platform was multi-tenant, so any schema change affected all tenants simultaneously.
+
+**Q3 (Your contribution):** You owned the investigation end-to-end. You identified the slow queries via query plan analysis, proposed the index changes and query refactors, benchmarked the improvements in a staging environment with production-like data volumes, and rolled out the changes.
+
+**Q4 (Detail to prep):** Know the schema. Know which queries were slow. Know what the EXPLAIN output looked like before and after. Know what indexes you added (composite? covering? partial?). Know if you introduced any caching layer.
+
+**Q5 (Why not simpler):** Caching alone wouldn't work because the Start/Update APIs mutate state — you can't cache a write. Bigger instances would have been a temporary fix at 2-3x the cost without addressing the underlying query inefficiency. The query optimization was the right first step before scaling hardware.
+
+**Q6 (What I'd change):** Possibly: "I'd add more aggressive connection pooling earlier" or "I'd instrument the query layer with finer-grained metrics so we'd catch the degradation sooner."
+
+---
+
+## Walmart Project 4: AI Platform (FLAGSHIP)
+
+**Q1 (Problem):** Walmart had a large corpus of internal documentation, runbooks, and operational data across multiple teams. Engineers and support staff spent significant time searching across fragmented sources to answer operational questions. The goal was a single NL interface that could synthesize answers from all sources.
+
+**Q2 (Complexity):** The document formats were heterogeneous (PDFs with tables, Word docs, Confluence pages, code repos). Simple keyword search couldn't handle multi-hop queries ("what's the escalation process for X, and who owns it?"). The corpus was being updated continuously, so the index needed to stay fresh. The answers needed citations — users had to verify where information came from.
+
+**Q3 (Your contribution):** You designed the RAG pipeline architecture. You evaluated embedding models and chose the one that worked best on the internal document mix. You chose hybrid retrieval (semantic + BM25) after observing that pure semantic search missed exact keyword matches (like error codes, ticket IDs). You integrated the cross-encoder re-ranker to improve precision. You built the evaluation pipeline.
+
+**Q4 (Detail to prep):**
+- Embedding model: which one, what dimension, why
+- Chunking: strategy, size, overlap
+- Milvus index: type, parameters, vector count
+- BM25: implementation, weighting formula
+- RRF k value
+- Cross-encoder model, re-rank count, latency impact
+- LLM: model, prompt structure, context window management
+- Evaluation: metrics, framework
+
+**Q5 (Why not simpler — THE CRITICAL QUESTION):**
+
+*"Why RAG instead of fine-tuning?"* → Fine-tuning would bake the knowledge into the model weights, making updates expensive (re-train on every doc change). RAG keeps knowledge external and updateable by re-indexing. For a frequently-changing corpus, RAG is the right pattern.
+
+*"Why hybrid retrieval instead of semantic-only?"* → Semantic search misses exact matches. An error code like "ERR-5421" has no semantic meaning — it's a string. BM25 catches these. Conversely, BM25 misses paraphrases ("how to restart the service" vs. "service restart procedure"). Hybrid covers both.
+
+*"Why Milvus instead of pgvector?"* → Milvus is purpose-built for vector search with better index types (HNSW, IVF), better recall at high dimensions, and better performance at scale. pgvector is fine for <1M vectors; beyond that, a dedicated vector DB is the right call.
+
+*"Why an LLM at all instead of just returning search results?"* → The user doesn't want 10 document links. They want an answer synthesized from multiple sources with contradictions resolved. Search results are a starting point; an LLM turns them into an answer. BUT — acknowledge the tradeoff: the LLM can hallucinate. That's why you have citations, a critic agent / evaluation pipeline, and the principle: "the LLM is never the source of numerics."
+
+**Q6 (What I'd change):** Possibly: "I'd add query classification upfront — a lightweight classifier to route simple lookup queries to a faster path and only invoke the full RAG pipeline for complex synthesis queries" or "I'd invest more in the evaluation dataset earlier — we built the pipeline before we had a good eval set, which made it hard to measure improvement."
+
+---
+
+## Walmart Project 5: Multi-Agent Orchestration
+
+**Q1 (Problem):** Complex developer workflows (code generation, review, testing, deployment) required multiple steps with human approval gates. A single LLM call couldn't handle this — you needed task-specific agents (code generator, reviewer, tester), coordination between them, and the ability to pause for human input.
+
+**Q2 (Complexity):** The orchestration had to be stateful (agents might wait hours for human review). Parallel execution had to be safe (two agents modifying the same code would conflict). The system had to be cost-aware (not burn tokens on loops). Model selection mattered — simple tasks could use a cheaper model, complex tasks needed a stronger one.
+
+**Q3 (Your contribution):** You designed the orchestrator topology. You chose the state persistence strategy. You built the dynamic model router. You designed the human-in-the-loop interface. (Adjust based on what you actually did.)
+
+**Q4 (Detail to prep):**
+- Orchestrator: custom or LangGraph? Supervisor topology or something else?
+- State schema: what fields are persisted?
+- Pause/resume: how is state serialized/deserialized?
+- Model routing: rules-based or learned? What models?
+- Human-in-the-loop: where in the pipeline? What UI?
+- Failure handling: timeout, retry, escalation
+
+**Q5 (Why not simpler):**
+
+*"Why multiple agents instead of one agent with tools?"* → A single agent with tools would work for simple chains (1→2→3). But when you have parallel independent tasks (code gen + test gen running simultaneously), and conditional branching (if review fails → regenerate), you need an orchestrator that can manage a DAG, not a linear chain.
+
+*"Why stateful instead of stateless?"* → Stateless means re-running the entire workflow if something fails at step 7. With LLM costs and human review latency (hours), re-running is wasteful. Stateful checkpointing means you resume from the failure point.
+
+*"Why dynamic model selection?"* → Running every task through GPT-4-class models would be 5-10x more expensive with marginal quality gain for simple tasks (formatting, linting, simple transformations). Routing simple tasks to cheaper models keeps cost under control.
+
+**Q6 (What I'd change):** Possibly: "I'd add an eval harness specific to the orchestrator — right now we evaluate individual agent outputs but not the orchestration quality. I'd measure: did the orchestrator decompose correctly? Did it choose the right model? Did it parallelize when it could have?"
+
+---
+
+## Podeum Project 9-10: Backend from Scratch + Core Systems
+
+**Q1 (Problem):** Podeum was a sports fan engagement app. It needed a backend that could handle real-time live score updates for thousands of concurrent users during matches, a virtual economy for in-app engagement, and authentication. There was no existing backend — everything had to be built from scratch by one person.
+
+**Q2 (Complexity):** Real-time live scores are hard — you're ingesting from an external data provider, processing events, and pushing updates to thousands of connected clients with sub-second latency. The virtual economy required consistency guarantees (no double-spend, no negative balances) — effectively a ledger. You were the only backend engineer, so there was no one to review your designs or catch your mistakes.
+
+**Q3 (Your contribution):** Everything. You chose the tech stack, designed the data model, built the APIs, handled deployment, monitored production. Every architectural decision was yours.
+
+**Q4 (Detail to prep):**
+- Stack: Java + what framework? Spring Boot? What DB?
+- Live scores: data source → ingestion → processing → push to clients. What made it real-time? Firebase? WebSockets? SSE?
+- Virtual economy: how did you model currency? What consistency guarantees? How did you handle concurrent transactions?
+- IAP: receipt verification flow. What happened when Apple/Google verification was down?
+- Auth: scheme, token management, security
+
+**Q5 (Why not simpler):** You chose a real backend stack (Java + framework + DB) instead of Firebase/BaaS. Why? Defend this — it's a strong signal. Firebase would have been faster to prototype, but it wouldn't have given you the control needed for the virtual economy (complex transactions, consistency) or the live score feed (custom processing logic). You traded speed-to-prototype for long-term architectural control.
+
+**Q6 (What I'd change):** Possibly: "I'd start with a simpler deployment model — I over-invested in infra before we had users. At 0 DAU, a single VPS would have been fine. I'd also add more monitoring earlier — we caught scaling issues through user reports, not dashboards."
+
+---
+
+# INTERVIEW-DAY CHECKLIST
+
+Morning of the round, spend 20 minutes on this document. Read:
+
+1. **The 7 questions framework** (2 min) — the interviewer will ask some flavor of these
+2. **Your Walmart AI Platform answers** (10 min) — this is the flagship, re-read your Q4, Q5, Q6 answers
+3. **Your Podeum answers** (5 min) — your highest-ownership story, re-read Q3 and Q5
+4. **The three things that killed the last candidate** (3 min):
+   - Couldn't defend "why LLM" → your Q5 answers save you
+   - Didn't understand internals → your Q4 answers save you
+   - Could only talk about one project → you have 11 projects prepared
+
+---
+
+*This document is a living artifact. After every mock interview or real round, update the answers that felt weak. The answers you write today are not the answers you'll give in 3 months — tighten them as your understanding deepens.*
