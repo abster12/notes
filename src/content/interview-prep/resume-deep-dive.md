@@ -260,37 +260,29 @@ The eval dataset was [To fill: hand-labeled queries? synthetic? how many?]. Obse
 
 ### Q4 — Deep technical detail
 
-This is where you go one layer deeper than the wrapper. The interviewer wants to know you understand what's happening, not just that you called an API.
+**Document ingestion — chunking strategy (adaptive by document type):**
 
-**Document ingestion:**
-- What formats? PDFs, Word, HTML, plain text?
-- How do you handle tables? Embedded images? Multi-column PDFs?
-- What chunking strategy — fixed-size, recursive, semantic, agentic? What chunk size and overlap?
-- Docling vs pdfplumber — when do you use which? What does each fail on?
+The chunking strategy wasn't one-size-fits-all. Different document types needed different approaches, and the fallback pipeline naturally created three chunking paths:
 
-**Hybrid retrieval:**
-- What embedding model? What dimension? Why that model?
-- BM25 — which implementation? How do you weight BM25 vs. semantic?
-- RRF (Reciprocal Rank Fusion) — what k value? Why?
-- Cross-encoder re-ranking — which model? How many candidates does it re-rank? What's the latency impact?
+| Parser | Chunking Strategy | Rationale |
+|---|---|---|
+| **Docling** (structured PDFs) | Semantic chunking, up to 1000 tokens per chunk | Prose documents (policies, guides) have natural boundaries — paragraphs, sections, headings. Semantic chunking respects these rather than splitting mid-paragraph. 1000 tokens is large enough to capture a complete thought but small enough to keep retrieval precise. |
+| **pdfplumber** (table-heavy docs) | **Each table row is a chunk** | Tables don't have semantic boundaries — they have rows. Splitting a table mid-row would create unanswerable fragments. Row-level chunking means each chunk is a self-contained fact: "Product X, SKU Y, price Z, handling instruction W." |
+| **Vision LLM** (complex layouts) | 800 tokens per chunk with **100 token overlap** | Vision-extracted text loses document structure (no headings, no paragraph markers). Overlapping chunks prevent context from being lost at chunk boundaries — the same sentence might appear at the end of chunk N and the start of chunk N+1, so retrieval doesn't miss it regardless of where the boundary falls. |
 
-**Vector DB (Milvus):**
-- What index type? HNSW, IVF_FLAT, IVF_PQ? What parameters (M, efConstruction, efSearch)?
-- How many vectors? What's the index size?
-- How do you handle index updates? Rebuild or incremental?
-- What's the retrieval latency (p95)?
+[To fill: what was the total number of chunks after ingestion? What was the average chunk count per document?]
 
-**Response generation:**
-- Which LLM? Self-hosted or API? What's the prompt structure?
-- How do you inject retrieved context? How much context fits in the context window?
-- How do you handle citations? How does the user know which document a claim came from?
+**Vector DB — Milvus index configuration:**
 
-**Evaluation and observability:**
-- How do you measure retrieval quality? Precision@K, Recall@K, MRR, NDCG?
-- How do you measure generation quality? Human eval, LLM-as-judge, RAGAS?
-- What does the observability pipeline capture? Latency per stage, token count, cost per query?
+[To fill: what index type — HNSW, IVF_FLAT, IVF_PQ? What parameters — M, efConstruction, efSearch? How many vectors total? What's the index size on disk? What's the retrieval p95 latency?]
 
-[Your answer here]
+**Response generation — prompt structure and citation handling:**
+
+[To fill: what does the prompt look like? How do you inject the top-3 chunks? How does the LLM output citations — inline markers like [1], footnotes, or something else? How does the user see which document each claim came from?]
+
+**Observability — what's captured per query:**
+
+[To fill: latency broken down by stage? Token counts? Cost?]
 
 ### Q5 — Why not simpler?
 
