@@ -286,15 +286,36 @@ The chunking strategy wasn't one-size-fits-all. Different document types needed 
 
 ### Q5 — Why not simpler?
 
-This is the question that killed the rejected candidate. For EVERY sub-component, name the simpler alternative and defend why it wasn't enough:
+**1. Why RAG instead of fine-tuning?**
 
-- **RAG vs. fine-tuning:** Why not just fine-tune a model on your documents?
-- **Hybrid retrieval vs. semantic-only:** Why add BM25? What does BM25 catch that embeddings miss?
-- **Cross-encoder vs. no re-ranking:** Why add the latency of a second pass?
-- **Milvus vs. pgvector:** Postgres has vector search now. Why a dedicated vector DB?
-- **LLM vs. deterministic:** For any part of the pipeline — could a rules engine or a classifier have done the job? Where is the LLM *actually necessary* vs. *nice to have*?
+Fine-tuning embeds knowledge in model weights. Every time a document changes — a policy update, a new product spec, a revised compliance doc — you'd need a new fine-tuning run. That's expensive in compute, slow to deploy, and risks catastrophic forgetting: the model gets confused about which version of the policy is current. Worse, fine-tuning makes auditing impossible — you can't trace an answer to a specific document version because the knowledge is baked into billions of weights. With RAG, the knowledge stays in the index. Update a document → re-index it → answers reflect the change immediately. The LLM is never the source of truth; the documents are. For a corpus that changes regularly and requires citations, RAG is the only defensible choice.
 
-[Your answer here]
+**2. Why hybrid retrieval instead of semantic-only?**
+
+Embeddings capture meaning but miss exact string matches. A product name like "Samsung 65-inch QLED 4K TV" has near-zero semantic overlap with its SKU "SAM-QN65Q80C-2024" — an embedding model sees them as unrelated tokens. But BM25 catches the token overlap. Store associates search by product names, model numbers, error codes, SKUs. Pure semantic search would silently miss these. Pure keyword search would miss paraphrases ("busted screen" vs "display damage"). Hybrid covers both. The rejected candidate's system failed on deterministic alerts because they used an LLM where a rule would work. This is the inverse: BM25 is the deterministic safety net where embeddings alone would fail.
+
+**3. Why cross-encoder re-ranking instead of passing RRF results straight to the LLM?**
+
+Bi-encoders (like the embedding model) encode the question and each document independently, then compare via cosine similarity. They're fast but shallow — the question and document never "see" each other during encoding. A cross-encoder processes the question-document pair together through full cross-attention, so it understands: "is this document actually relevant TO this specific question?" The distinction matters. The RRF top-10 might include a document about TV return policies when the user asked about TV setup instructions — both are "about TVs" (high semantic similarity), but the cross-encoder catches that "return policy" is not "setup guide" for this specific query. Yes, it adds latency — but retrieval quality is the foundation. Sending irrelevant chunks to the LLM wastes tokens and produces wrong answers. The 20→6→3 funnel means only 3 chunks reach the LLM; getting those 3 right is worth the re-ranking cost.
+
+**4. Why Milvus instead of pgvector?**
+
+Four reasons, building on what was said above in Q3:
+
+- **Independence.** The assistant needed its own infrastructure. Embedding the vector store in the operational Postgres instance would couple RAG query load to transactional system performance. A spike in associate queries shouldn't slow down order processing.
+- **Extensibility.** A standalone vector DB can be scaled, tuned, and upgraded independently. If we later added more document types or higher-dimension embeddings, we'd resize Milvus without touching the operational DB.
+- **Vector-native operations.** Milvus has index types (HNSW, IVF) purpose-built for ANN search at high dimensions. pgvector's ANN support was relatively new and less battle-tested at the time.
+- **Postgres wasn't in the picture for this.** There was no existing Postgres instance to piggyback on. Adding pgvector would have meant standing up a new Postgres instance anyway — at which point a purpose-built vector DB is the simpler choice, not the more complex one.
+
+**5. Why an LLM at all instead of keyword search + templates?**
+
+Three reasons:
+
+- **Scale of the corpus.** Thousands of documents across dozens of domains — products, policies, compliance, handling, safety. A template-based system would need a template for every combination, which doesn't scale.
+- **Synthesis across documents.** A real associate query like "how do I handle a return for a defective Samsung TV purchased online" spans returns policy, defective-item policy, online-purchase policy, and the Samsung product spec. A keyword search returns fragments. An LLM synthesizes them into one answer.
+- **Conversational disambiguation.** The LLM lets the user refine their query. "The screen is cracked" → "Was it cracked on arrival or after purchase?" → this changes which policy applies. A keyword search can't have a dialogue. The conversation IS the interface — not a nice-to-have, but the core UX.
+
+That said, the LLM is the thinnest layer in the stack. It doesn't generate facts — it rearranges retrieved facts. It doesn't know product codes — it cites them from the retrieved chunks. Every claim it makes is tethered to a source document. The rejected candidate's mistake was using an LLM where deterministic logic would work. This system uses the LLM only where it's actually needed: synthesis and conversation. Everything upstream — retrieval, ranking, citation tracking — is deterministic.
 
 ### Q6 — What would you do differently now?
 
