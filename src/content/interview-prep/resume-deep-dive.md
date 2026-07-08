@@ -64,19 +64,21 @@ I owned the entire optimization effort end-to-end. Four specific decisions:
 ### Q4 — Deep technical detail
 
 **How we reverse-engineered the engine internals (engine was a black box):**
-- Enabled SQL query logging on the engine's database to capture all queries the engine was executing — this gave us the query patterns without touching engine code
-- [To fill: what specific tables were hot? What queries were running?]
-- [To fill: what indexes did you add — composite, covering, partial? On which tables?]
+- Enabled SQL query logging AND engine-level logs to capture everything happening inside the engine — query patterns, internal state transitions, lock acquisition. This gave us visibility without touching engine code.
+- **Two-pronged index strategy, not just "add indexes":**
+  1. Added targeted indexes for the hot queries the platform was making — identified from query logs and EXPLAIN plans.
+  2. **Reduced the number of queries the platform was making.** Analyzed what data was actually needed in code vs. what was being fetched "just in case" from the DB. Moved computed/derived data into application code where possible. This is often higher-impact than adding indexes — you eliminate the query entirely instead of making it faster.
 
 **Connection pool sizing:**
-- Both the application (HikariCP presumably) and the engine maintained their own connection pools to the same database
-- [To fill: what was the optimal pool size per pod? How did you test — ramp test, soak test? What happened when pool was too small vs too large?]
+- Database had 128 CPU cores. Started with 10 pods × 30 connections/pod = 300 total connections.
+- Used a **custom test workflow** to benchmark throughput after every configuration change — empirical tuning, not formula-based.
+- Final optimal: **12 pods × 27 connections/pod** = 324 total connections. More pods (reducing per-pod engine overhead) with slightly fewer connections each (reducing contention). Total throughput increased despite the connection count barely changing — proof that the bottleneck was per-pod engine overhead, not raw DB capacity.
 
 **Database scaling strategy:**
-- [To fill: what DB was this — MySQL, Postgres? What was the starting instance tier and what did you end at? What was the sweet spot? Why did higher cores degrade performance — lock contention on the workflow state table?]
-
-**Instance tuning:**
-- [To fill: how many pods before optimization vs after? What was the TPS per pod? What was the bottleneck that prevented linear scaling — engine's internal thread pool, DB contention, something else?]
+- Started at 2 cores (capped at ~100 TPS)
+- Scaled incrementally: tested at each tier with the custom test workflow
+- Scaled all the way to 256 cores but hit diminishing returns — beyond a certain point, the engine's internal lock contention on workflow state tables meant more cores didn't translate to more throughput
+- **Optimal sweet spot: 84 cores.** This was the point where cost/performance peaked. 256 cores gave marginal additional TPS at dramatically higher cost.
 
 ### Q5 — Why not simpler?
 
@@ -93,14 +95,14 @@ The biggest learning: **an embedded engine is a scaling ceiling.** No amount of 
 ### Q7 — Numbers
 
 | Metric | Before | After |
-|---|---|---|
-| Throughput (TPS) | 500-600 | [To fill: ~1500?] |
+|---|---|---|---|
+| Throughput (TPS) | 500-600 | [To fill: final TPS after all optimizations?] |
 | P95 latency | ~200ms | ~130ms |
-| Daily transaction capacity | ~43M (at 500 TPS) | [To fill] |
-| DB CPU | [To fill] | [To fill] |
-| Pod count | [To fill] | [To fill] |
-| Connection pool size per pod | [To fill] | [To fill] |
-| P99 latency | [To fill] | [To fill] |
+| DB cores | 2 | 84 (optimal sweet spot; tested up to 256 with diminishing returns) |
+| Pod count | 10 | 12 |
+| Connection pool per pod | 30 | 27 |
+| Total DB connections | 300 | 324 |
+| DB CPU cores | 128 (available) | 128 (unchanged; bottleneck was lock contention, not CPU) |
 
 ---
 
