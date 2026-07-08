@@ -96,7 +96,7 @@ The biggest learning: **an embedded engine is a scaling ceiling.** No amount of 
 
 | Metric | Before | After |
 |---|---|---|---|
-| Throughput (TPS) | 500-600 | [To fill: final TPS after all optimizations?] |
+| Throughput (TPS) | 500-600 | 1500 (~3x improvement) |
 | P95 latency | ~200ms | ~130ms |
 | DB cores | 2 | 84 (optimal sweet spot; tested up to 256 with diminishing returns) |
 | Pod count | 10 | 12 |
