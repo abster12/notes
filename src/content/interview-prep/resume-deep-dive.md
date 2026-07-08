@@ -319,21 +319,39 @@ That said, the LLM is the thinnest layer in the stack. It doesn't generate facts
 
 ### Q6 — What would you do differently now?
 
-[Your answer here]
+Three things:
+
+**1. Build evaluation alongside the product, not after.**
+
+I built the eval pipeline later in the project lifecycle. This was the single biggest mistake. Without eval from day one, I had no objective measure of whether a change improved or degraded the system. Every index parameter change, every chunking tweak, every prompt adjustment — I was relying on spot-checking and intuition. If I rebuilt it, the eval dataset and metrics pipeline would ship BEFORE the first user query. Every change would be measured. Every PR would show the delta in recall, precision, and faithfulness. This is the lesson: for any LLM-powered system, eval isn't a QA step — it's the foundation. You can't improve what you can't measure.
+
+**2. Add HyDE and LLM-based query reframing for better retrieval.**
+
+User queries are often short and underspecified ("how do I return a TV"). Document chunks are long and detailed. There's a representation gap. Two techniques I'd add:
+
+- **HyDE (Hypothetical Document Embeddings):** Before retrieval, ask the LLM to generate a hypothetical ideal document that would answer the query. Embed THAT generated text instead of the raw query. The generated text looks more like a real document chunk, so it retrieves better matches.
+- **Query reframing:** Ask the LLM to expand the user's query with relevant context — synonyms, related terms, clarifications. "How do I return a TV" becomes "What is the return policy for televisions, including conditions for opened boxes, restocking fees, and return window duration." The expanded query retrieves better because it has more tokens to match against.
+
+Both add a small LLM call before retrieval, but the retrieval quality improvement is worth the latency — same principle as the cross-encoder re-ranker.
+
+**3. Async ingestion from the start.**
+
+The first version had synchronous ingestion — users uploaded documents and waited for processing to complete before they could query them. For large documents with Vision LLM fallbacks, this could take minutes. I later made ingestion async: upload → acknowledge immediately → process in background → notify when ready. This unblocked users and made the system feel faster. Should have been async from day one.
 
 ### Q7 — Numbers
 
-This is the weak spot in your current resume bullets — the AI bullets have no numbers. Fill in everything you can:
-
-- Documents in the corpus?
-- Queries per day?
-- Retrieval p95 latency?
-- End-to-end response time?
-- Retrieval precision/recall numbers if measured?
-- Hallucination rate if measured?
-- Cost per query?
-
-[Your answer here]
+| Metric | Value |
+|---|---|
+| Queries per day | ~1000 |
+| End-to-end response time | 3-4 seconds (with citations) |
+| Retrieval latency (p95) | [To fill] |
+| Documents in corpus | [To fill] |
+| Total chunks after ingestion | [To fill] |
+| Token usage per query (avg) | [To fill] |
+| Cost per query (avg) | [To fill] |
+| Recall@K | [To fill] |
+| Precision@K | [To fill] |
+| Faithfulness score | [To fill] |
 
 ---
 
