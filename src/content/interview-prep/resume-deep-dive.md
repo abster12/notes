@@ -362,17 +362,62 @@ The first version had synchronous ingestion — users uploaded documents and wai
 
 ### Q1 — What was the problem?
 
-[Your answer here]
+Walmart teams needed to deliver features end-to-end faster, and LLMs were the obvious accelerator — but the naive approach of throwing every task at a frontier model was burning tokens at an unsustainable rate. The challenge: build a coding agent system that could take a feature from spec to production-ready code with tests and review, while keeping token costs under control by routing each sub-task to the right-sized model.
 
 ### Q2 — What made it complex?
 
-[Your answer here]
+Three layers of complexity, each compounding the next:
+
+**Model routing isn't free.** You can save tokens by routing simple tasks to cheap models — but the routing decision ITSELF costs tokens. The orchestrator has to analyze the task, classify its complexity, and route it. If the routing call burns 500 tokens but saves 2000, it's worth it. If the classification is wrong and you route a complex task to a weak model, you get bad output AND you have to re-run it on a bigger model — burning tokens twice. Getting the routing right was the linchpin.
+
+**Pipeline dependencies create a fragile chain.** Spec → task breakdown → code generation → tests → review. Each step's output is the next step's input. If code generation fails at task 7 of 12, and you restart from scratch, you've burned all the tokens from tasks 1-6 for nothing. At frontier model prices, that's real money. The system had to checkpoint state at every step so failures were cheap to recover from.
+
+**Review is the quality gate, and quality gates can't be cheap.** The review agent has to compare generated code against the original spec, check test coverage, and flag issues. This is the hardest step in the pipeline — it requires understanding both the spec's intent AND the code's implementation. Routing this to a weak model would defeat the purpose. The review agent HAD to be a strong model, which means it's the most expensive call in the pipeline. The cost savings from routing earlier steps to cheap models had to pay for the expensive review step.
 
 ### Q3 — What was YOUR specific contribution? What decisions did YOU make?
 
-CRITICAL: Did you design the orchestrator yourself, or did you use LangGraph / an existing framework? If you used a framework, what decisions did YOU make on top of it — the topology, the communication pattern, the state management, the error handling? The rejected candidate got burned on "worked with wrappers." Be ready to go one layer deeper.
+I designed and built the entire system. Four key architectural decisions:
 
-[Your answer here]
+**1. Pipeline architecture — spec → tasks → code → tests → review**
+
+The feature delivery pipeline had five stages:
+
+```
+Feature request → [Spec Agent] → Spec doc
+Spec doc → [Orchestrator Agent] → Task breakdown + complexity classification
+Tasks → [Code Agent] → Generated code (routed by task complexity)
+Code → [Test Agent] → Test suite
+Code + Tests + Spec → [Review Agent] → Review against spec
+```
+
+Each stage produces structured output that feeds the next stage. The orchestrator is the central decision point — it receives the spec, breaks it into tasks, classifies each task's complexity, and routes it.
+
+**2. Three-tier model routing by task complexity**
+
+I defined three complexity tiers with explicit routing rules:
+
+| Tier | Task Type | Model |
+|---|---|---|
+| **Tier 1 — Lowest** | Boilerplate, config files, imports, package setup | Cheapest model |
+| **Tier 2 — Medium** | Function implementations, business logic, data transformations | Mid-tier model |
+| **Tier 3 — Highest (quality gate)** | Review against spec, correctness verification | Best/frontier model |
+
+The orchestrator agent classifies each task into a tier based on the spec context. This isn't keyword-matching — the orchestrator reads the task description and decides: "is this a boilerplate task, a function implementation, or does it require reasoning?" The classification itself is an LLM call, but it's a small one — the token savings from routing Tier 1 tasks to cheap models more than pays for the classification cost.
+
+**3. State persistence with file-based checkpointing for deterministic pause/resume**
+
+The biggest cost risk was mid-pipeline failure. If a 12-task pipeline fails at task 7, and you restart from scratch, you've wasted tokens on tasks 1-6. I persisted workflow state to local files at every stage boundary — after spec generation, after task breakdown, after each code generation task, after tests. The state file contains the serialized output of every completed stage.
+
+On resume, the system reads the state file, identifies the last completed stage, and picks up from the next uncompleted task. This means:
+- A failure at task 7 costs you ONLY the tokens from task 7 (plus the restart overhead)
+- A human reviewer who takes 4 hours to respond doesn't block other workflows — the state file sits on disk and resumes when the review comes in
+- Multiple workflows can run concurrently — each gets its own state file
+
+The tradeoff: file-based state means the system is single-machine, not distributed. For the scale we were operating at, this was the right call — adding a database for workflow state would have been over-engineering. The file IS the database.
+
+**4. Review agent as the quality gate**
+
+The review agent is the only stage that ALWAYS uses the frontier model. It receives: the original spec, the generated code, and the test results. It produces: a pass/fail decision with specific line references for any issues. If it fails, the workflow resumes from the failed code generation task — not from scratch. The review agent's quality determines the entire pipeline's output quality, so this is the one place where cost optimization is explicitly NOT the goal.
 
 ### Q4 — Deep technical detail
 
