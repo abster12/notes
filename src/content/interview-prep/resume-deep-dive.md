@@ -421,38 +421,73 @@ The review agent is the only stage that ALWAYS uses the frontier model. It recei
 
 ### Q4 — Deep technical detail
 
-**Orchestration topology:**
-- What topology? Supervisor, peer-to-peer, hierarchical, blackboard?
-- How many agents? What does each agent own?
-- How do agents communicate — message passing, shared memory, tool calls?
+**Model routing — which models for which tier?**
 
-**Task decomposition:**
-- How does the orchestrator break down a task? LLM-driven, template-driven, or hybrid?
-- What does the decomposition output look like — a DAG, a list, a tree?
-- How does it handle dependencies between sub-tasks?
+Used Anthropic's model family, which has a natural complexity gradient:
 
-**State management:**
-- Where is workflow state persisted? Postgres, Redis, something else?
-- What's the schema for a workflow state? What fields are checkpointed?
-- How does pause/resume work? What happens if the LLM call is mid-stream when paused?
+| Tier | Model | Why |
+|---|---|---|
+| Tier 1 — Lowest | **Claude Haiku** | Fastest, cheapest. For boilerplate and config where correctness is trivial — the output is either right or obviously wrong. |
+| Tier 2 — Medium | **Claude Sonnet** | Balanced cost/capability. For function implementations and business logic where correctness matters but the task is well-scoped. |
+| Tier 3 — Quality gate | **Claude Opus** | Most capable. For review against spec — this is the one place where cost is NOT the priority. |
 
-**Dynamic model selection:**
-- What models are in the pool? How does the system choose which model to use?
-- Is the choice based on task type, cost budget, latency requirement, or accuracy need?
-- Who configures the routing rules — developer, or does the system learn?
+**Classification strategy — task description only, not full spec**
 
-**Human-in-the-loop:**
-- Where does the human intervene — after generation, before execution, on failure?
-- What does the review interface look like? What can the human approve/reject/edit?
-- What happens when the human doesn't respond? Timeout? Escalation?
+A critical design decision: the orchestrator classifies task complexity by reading only the **task description**, NOT the full spec. Why? Re-reading the full spec for every single task classification would burn tokens proportional to (spec size × number of tasks). For a 2000-token spec with 12 tasks, that's 24,000 tokens just on classification — more than the code generation itself for Tier 1 tasks.
 
-**Failure modes:**
-- What happens when a sub-agent hallucinates?
-- What happens when the orchestrator gets stuck in a loop?
-- What happens when parallel agents produce conflicting outputs?
-- How do you prevent cost runaway (an agent looping and burning tokens)?
+The task description is written by the orchestrator during the breakdown phase. Since the orchestrator already read the full spec to create the tasks, the task descriptions are self-contained — they carry enough context for complexity classification without re-reading the spec.
 
-[Your answer here]
+**State file — JSON DAG with dependencies and parallel execution**
+
+The state file is a JSON representation of the task DAG:
+
+```
+{
+  "workflow_id": "feature-xyz-001",
+  "status": "in_progress",
+  "stages": {
+    "spec": {"status": "completed", "output": "...", "model": "sonnet"},
+    "task_breakdown": {"status": "completed", "tasks": [...]},
+    "code_gen": {
+      "task_1": {"status": "completed", "tier": 1, "model": "haiku", "output": "...", "dependencies": []},
+      "task_2": {"status": "completed", "tier": 1, "model": "haiku", "output": "...", "dependencies": []},
+      "task_3": {"status": "completed", "tier": 2, "model": "sonnet", "output": "...", "dependencies": ["task_1"]},
+      "task_4": {"status": "failed", "tier": 2, "model": "sonnet", "output": null, "dependencies": ["task_2", "task_3"]},
+      ...
+    },
+    "tests": {"status": "pending"},
+    "review": {"status": "pending"}
+  }
+}
+```
+
+Key design properties:
+- **Dependencies are explicit.** Each task lists which tasks must complete before it can start. Tasks with no dependencies (task_1, task_2 above) execute in parallel.
+- **Model outputs are checkpointed.** Every completed task stores its model output in the state file. On resume, you don't re-run completed tasks — you read the output from the state file.
+- **Resume from last failure.** The agent scans the DAG, finds all completed tasks (read from checkpoint), identifies the first uncompleted task with all dependencies satisfied, and resumes from there.
+
+**Handling misrouted tasks — reviewer detects, orchestrator re-routes, code agent regenerates**
+
+This was the most nuanced failure mode. Here's the flow:
+
+1. Orchestrator classifies a task as Tier 1 (Haiku). The task actually requires Tier 2 reasoning, but the description looked simple.
+2. Haiku generates code. It compiles but doesn't handle an edge case from the spec.
+3. Review agent (Opus) compares code against spec, catches the gap, and outputs: `{"status": "fail", "task": "task_7", "reason": "Missing edge case: null handling for input parameter X. This task requires Tier 2.", "action": "reassign_to_tier_2"}`
+4. Orchestrator receives the review verdict, re-classifies task_7 as Tier 2, and routes it to Sonnet.
+5. Sonnet regenerates task_7 with full spec context.
+6. Review agent re-evaluates.
+
+**Why the reviewer doesn't fix the code directly:**
+
+Having the review agent (Opus) write the fix is tempting — it's the most capable model. But it creates three problems:
+
+- **Code style inconsistency.** The reviewer writes in its own style, which may differ from the code agent's output on all other tasks. The codebase becomes a patchwork.
+- **No learning for the orchestrator.** If the reviewer fixes silently, the orchestrator never learns that it misrouted. The same misrouting will happen on the next workflow.
+- **Audit trail breaks.** The code for task_7 was generated by the reviewer, not the code agent. If there's a bug later, you can't trace which agent wrote what.
+
+The right pattern: **reviewer detects → orchestrator re-routes → code agent regenerates.** The reviewer is a quality gate, not a contributor. The code agent is always the source of generated code. This keeps the system's roles clean and the audit trail intact.
+
+A refinement worth considering (not implemented, but noted for future): on the SECOND failure of the same task at Tier 2, auto-escalate to Tier 3. Don't loop indefinitely. Two failures at a tier means the task is harder than the orchestrator estimated — escalate rather than retry.
 
 ### Q5 — Why not simpler?
 
