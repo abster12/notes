@@ -661,21 +661,47 @@ Test coverage before/after? Number of providers mocked? Tests run per build?
 
 This is your highest-ownership project. You were the only backend engineer. Every decision was yours. The interviewer will test: did you rise to that ownership, or did you just build what was asked?
 
+The codebase (Podeum/games, since open-sourced) reveals a multi-game sports gaming platform: Dropwizard + Guice + MongoDB, three Maven modules (runtime → api → database), custom adapter pattern, four game systems in one monolith. This wasn't a simple CRUD app — it was a real platform.
+
 ## Project 9: Built and Scaled Backend from Scratch
 
 > Resume bullet: *"Built and scaled backend services from scratch using Java, supporting growth from 0 to ~10,000 daily active users."*
 
 ### Q1 — What was the problem?
 
-[Your answer here]
+Podeum was a sports fan engagement platform — live match tracking, fantasy leagues, quizzes. There was no backend. No API. No database. No deployment. I had to build everything from scratch as the only backend engineer, while the frontend was being built in parallel in Flutter. The backend had to support four game systems — cricket match tracking with live events, fantasy league with role-based team selection, team/player management, and timed multiplayer quizzes — all sharing the same infrastructure and scaling to thousands of concurrent users during live matches.
 
 ### Q2 — What made it complex?
 
-[Your answer here]
+**Four game systems, one monolith, one engineer.** Each system had its own data model, its own business rules, its own failure modes:
 
-### Q3 — What was YOUR specific contribution? (This one is easy — you were the ONLY backend engineer.)
+- **Cricket Match Engine** — matches with toss decisions, innings tracking, win type/margin calculation, real-time MatchEvents keyed by playing team, and PlayerStats with a `fantasyScore` computation that fed directly into the fantasy system
+- **Fantasy League** — per-community fantasy leagues with time-windowed FantasyMatches, user-created FantasyTeams with role-based player selection (captain/vice-captain multipliers), and scoring derived from real match statistics
+- **Team & Player Management** — leagues containing teams, teams containing players with skills/roles/status, upsert-based sync patterns to handle frequent roster changes
+- **Live Quiz** — pod-based quizzes with timed start, question pools, multiplayer participation tracking
 
-[Your answer here]
+These weren't independent microservices — they shared the same MongoDB instance, the same connection pool, the same deployment. A fantasy scoring query couldn't slow down live match event ingestion. A quiz with 1000 concurrent players couldn't starve the match API of connections.
+
+**No one to review my designs.** No senior engineer, no architect, no platform team. Every schema decision, every index choice, every API contract — I made it, I owned it, I got paged if it broke at 2am during an IPL match.
+
+### Q3 — What was YOUR specific contribution? What decisions did YOU make?
+
+Everything. But specifically:
+
+**1. Chose Dropwizard over Spring Boot.** Spring Boot was the industry default, but Dropwizard was lighter, faster to bootstrap, and came with built-in metrics, health checks, and configuration management. For a solo engineer who needed to move fast and operate the system alone, Dropwizard's "batteries included but minimal" philosophy was the right call. The Guice integration (via Hubspot's dropwizard-guice) gave me DI without Spring's complexity.
+
+**2. Designed a custom MongoDB adapter layer instead of using an ORM.** MongoDB doesn't have a standard Java ORM like Hibernate. I built an adapter pattern with:
+- An `Adapter` interface defining every data operation (70+ methods across all entities)
+- A `MongoDBAdapter` implementation with repository classes per collection
+- A custom `@Collection` annotation to map Java entities to MongoDB collection names
+- A `@Transactional` interceptor for atomic multi-document writes
+- DTO/Entity separation with hand-written mapper classes
+
+This was more work upfront than using a library like Morphia, but it meant I had full control over every query, every index, every write concern. No black-box ORM behavior — critical when you're the only person who can debug production issues.
+
+**3. Made the architecture decision to keep it a monolith.** Four game systems could have been four microservices. But with one engineer, four services means four deployments, four monitoring setups, four failure domains, and inter-service latency on every fantasy scoring lookup. A well-structured monolith (separate packages per domain, shared database module, clean adapter boundaries) gave me the isolation benefits without the operational overhead. The code was structured so it COULD be split later — the adapter interface was the seam.
+
+**4. Built the fantasy scoring pipeline.** The `PlayerStat` entity has a `fantasyScore` field derived from match statistics. When a MatchEvent was ingested, the system updated the relevant PlayerStats, recalculated fantasy points based on the event type and the player's role, and propagated the score to all FantasyTeams that had selected that player — with captain/vice-captain multipliers applied. This was the most complex business logic in the system: real-time, multi-entity, write-heavy, and accuracy-critical (users tracked their fantasy scores live during matches).
 
 ### Q4 — Deep technical detail
 
