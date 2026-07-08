@@ -196,17 +196,53 @@ THIS IS THE FLAGSHIP. This is the project the interviewer will want to deep-dive
 
 ### Q1 — What was the problem?
 
-[Your answer here]
+Walmart store associates needed quick, accurate answers to operational questions about products, processes, and policies. The information existed — but it was scattered across thousands of internal documents: product spec sheets, return policies, handling guidelines, compliance docs. An associate with a customer in front of them couldn't spend 15 minutes searching through PDFs. They needed a single conversational interface: ask a question in plain English, get an answer with citations to the source documents.
 
 ### Q2 — What made it complex?
 
-[Your answer here]
+The complexity was multi-layered and domain-specific — not just "we built RAG."
+
+**Heterogeneous document corpus.** The source documents weren't clean markdown. They were PDFs with embedded tables (product specs, pricing grids), multi-column layouts (policy docs), and images containing critical information (safety labels, handling diagrams). A naive text extractor would jumble multi-column text into gibberish and completely miss information trapped in images.
+
+**Dual retrieval requirement.** The system had to handle both semantic queries ("how do I handle a customer complaint about a defective item") AND exact-match queries (product codes, SKU numbers, error IDs). Pure vector search misses exact string matches — a SKU like "WMT-48291-BL" has no semantic meaning. Pure keyword search misses intent — "what do I do if the item is broken" and "damaged product procedure" mean the same thing but share zero keywords.
+
+**Citations were non-negotiable.** A store associate making a wrong decision based on hallucinated information isn't a UX bug — it's a real business risk. Every answer had to link back to the exact source document and section. The LLM couldn't be the source of truth; the documents were.
+
+**Built solo.** I was the only person designing and building this — ingestion pipeline, retrieval, generation, evaluation, and observability. No separate ML team, no prompt engineering team. Every architectural decision was mine.
 
 ### Q3 — What was YOUR specific contribution? What decisions did YOU make?
 
-CRITICAL: the rejected candidate failed here — "key decisions were taken by other teams in the org (Info Sec, Prompt Engineering)." Your answer needs to name specific decisions YOU made. Not "we chose Milvus" — "I evaluated Pinecone, Weaviate, and Milvus. I chose Milvus because X. I set up the index with these parameters. I designed the retrieval pipeline."
+Every major architectural decision was mine. Here are the key ones, with the reasoning behind each:
 
-[Your answer here]
+**1. Multi-fallback document ingestion pipeline (Docling → pdfplumber → Vision LLM)**
+
+This was the most nuanced decision. No single parser handled everything well. I designed a cascading fallback pipeline with quality gates at each stage:
+
+- **Stage 1 — Docling:** Primary parser for structured PDFs. Handles standard layouts, headings, paragraphs. Fast and reliable for clean documents.
+- **Stage 2 — pdfplumber (table fallback):** If Docling's extraction confidence score dropped below threshold — typically on table-heavy pages — the system fell back to pdfplumber, which has superior table extraction. pdfplumber preserves row/column structure that Docling would flatten.
+- **Stage 3 — Vision LLM (final fallback):** If both Docling and pdfplumber produced low-confidence output (complex multi-column layouts, embedded images with text, scanned documents), the page was rendered as an image and sent to a Vision LLM for extraction. This was the most expensive path but guaranteed that no document was unreadable.
+
+The key design decision: each stage had a **quality score threshold** that triggered the next fallback. This meant simple documents took the fast path (Stage 1 only), and only genuinely hard documents escalated to the expensive Vision LLM. Without this gating, you'd burn compute running every page through a Vision model.
+
+**2. Model selection — LLM for generation**
+
+[To fill: which LLM did you use for response generation? What alternatives did you consider? Why this one? Was it self-hosted or API-based?]
+
+**3. Embedding model selection**
+
+[To fill: which embedding model? What dimension? Why this model and not alternatives?]
+
+**4. Milvus as the vector database**
+
+I evaluated the options — Pinecone, Weaviate, pgvector, and Milvus. Chose Milvus because [To fill: what was the deciding factor? Performance at scale, index flexibility, self-hosting requirements, cost?]. I configured the index myself: chose the index type, set the parameters (M, efConstruction, efSearch), and designed the collection schema.
+
+**5. Hybrid retrieval with RRF + cross-encoder re-ranking**
+
+[To fill: why hybrid instead of pure semantic? What BM25 implementation? What weighting between BM25 and vector scores? What RRF k value? Which cross-encoder model, and how many candidates does it re-rank?]
+
+**6. Evaluation and observability**
+
+[To fill: did you build the eval pipeline? What metrics — retrieval precision/recall, generation quality? LLM-as-judge or human eval? What does observability capture?]
 
 ### Q4 — Deep technical detail
 
