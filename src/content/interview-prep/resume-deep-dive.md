@@ -226,23 +226,37 @@ The key design decision: each stage had a **quality score threshold** that trigg
 
 **2. Model selection — LLM for generation**
 
-[To fill: which LLM did you use for response generation? What alternatives did you consider? Why this one? Was it self-hosted or API-based?]
+Started with an open-source model but settled on **GPT-5.1 Mini/Nano**. The reasoning: by the time context reaches the LLM, all the heavy lifting is done — retrieval has found the right documents, the re-ranker has picked the most relevant chunks. The LLM's job is narrow: synthesize those chunks into a coherent answer and attach citations. A smaller, faster, cheaper model is the right tool for that job. Using a frontier model would have been overkill — you'd pay 5-10x more per query for marginal quality gain on a task that's closer to summarization than reasoning.
 
 **3. Embedding model selection**
 
-[To fill: which embedding model? What dimension? Why this model and not alternatives?]
+**sentence-transformers/all-MiniLM-L6-v2** (384 dimensions). Chose this because: (a) it's battle-tested on retrieval benchmarks, (b) 384 dimensions hits the sweet spot between embedding quality and index size — higher dimensions (768, 1024) give marginally better recall at significantly higher storage and latency cost, (c) it's small enough to run locally without GPU, which mattered for the ingestion pipeline. Evaluated against larger models (MPNet, E5) but the quality difference on Walmart's internal document corpus didn't justify the 2-4x dimension increase.
 
 **4. Milvus as the vector database**
 
-I evaluated the options — Pinecone, Weaviate, pgvector, and Milvus. Chose Milvus because [To fill: what was the deciding factor? Performance at scale, index flexibility, self-hosting requirements, cost?]. I configured the index myself: chose the index type, set the parameters (M, efConstruction, efSearch), and designed the collection schema.
+Evaluated Pinecone, Weaviate, pgvector, and Milvus. Chose Milvus for four reasons:
+
+- **Self-hosted deployment.** Walmart internal documents cannot leave the network. Pinecone was SaaS-only, Weaviate had cloud-first pricing. Milvus is purpose-built for self-hosted production deployments with proper replication, failover, and retention policies.
+- **Hybrid search is native.** Milvus 2.4+ supports BM25 + vector search in a single query — no need for a separate search engine (Elasticsearch) just for keyword retrieval. This simplified the architecture significantly.
+- **Index flexibility.** HNSW for high-recall workloads, IVF_FLAT for memory-constrained deployments, DiskANN for very large collections. I could tune the index to the workload rather than being locked into one index type.
+- **Production maturity at no per-query cost.** pgvector had the basics but lacked replication, failover, and retention at the time. Pinecone and Weaviate charged per-query. Milvus on our own infra meant the cost was flat infrastructure, not variable per-associate-query.
 
 **5. Hybrid retrieval with RRF + cross-encoder re-ranking**
 
-[To fill: why hybrid instead of pure semantic? What BM25 implementation? What weighting between BM25 and vector scores? What RRF k value? Which cross-encoder model, and how many candidates does it re-rank?]
+- **BM25:** Used **BM25Okapi** — the canonical BM25 variant with default parameters (k1=1.5, b=0.75). The implementation was [To fill: Milvus built-in BM25, or rank_bm25 Python package?]
+- **Why hybrid:** Semantic search (embeddings) catches paraphrases and intent. BM25 catches exact string matches — product codes, SKU numbers, error IDs. Neither alone covers both. The rejected candidate learned this the hard way; I designed for it from the start.
+- **RRF (Reciprocal Rank Fusion), k=60:** RRF merges the BM25 ranking and vector ranking into a single list. The formula: `score(d) = Σ 1/(k + rank_i(d))` where rank_i(d) is the document's position in ranking list i. k=60 is the canonical value from the original paper — it means rank position matters but isn't dominant. A lower k (e.g., k=1) means only the #1 spot in each list matters — too aggressive. A higher k (e.g., k=1000) means all positions are nearly equal — too flat. k=60 was empirically validated as the sweet spot.
+- **Cross-encoder:** **ms-marco-MiniLM-L6-v2** — same model family as the embedding model (consistent architecture, simplifies dependency management). The pipeline: 20 candidates from RRF → cross-encoder re-ranks them → top 6 returned → **final top-3 passed to the LLM** with their source citations. This 20→6→3 funnel keeps the LLM context window focused on the most relevant chunks while maintaining a buffer (6) in case the top few have inconsistent information.
 
 **6. Evaluation and observability**
 
-[To fill: did you build the eval pipeline? What metrics — retrieval precision/recall, generation quality? LLM-as-judge or human eval? What does observability capture?]
+Built the eval pipeline myself. Three metrics:
+
+- **Recall@K:** Are we finding the right documents? Measures whether relevant docs appear in the top K retrieval results.
+- **Precision@K:** Are the retrieved documents actually relevant? Measures signal-to-noise ratio in what we send to the LLM.
+- **Faithfulness:** Does the LLM's answer stay grounded in the retrieved context, or does it hallucinate? Measured by comparing generated claims against source chunks.
+
+The eval dataset was [To fill: hand-labeled queries? synthetic? how many?]. Observability pipeline captured: latency per stage (ingestion → retrieval → re-rank → generation), token count per query, and cost per query.
 
 ### Q4 — Deep technical detail
 
