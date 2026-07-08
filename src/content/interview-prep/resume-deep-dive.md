@@ -491,16 +491,35 @@ A refinement worth considering (not implemented, but noted for future): on the S
 
 ### Q5 — Why not simpler?
 
-- **Multi-agent vs. single agent with tools:** Why not one agent that calls tools sequentially? Why does it need multiple agents?
-- **Stateful vs. stateless:** Why persist workflow state instead of re-running? When is re-run cheaper?
-- **Dynamic model selection vs. fixed model:** Why not just use the best model for everything? What's the cost tradeoff?
-- **Human-in-the-loop vs. fully autonomous:** Why not just run and show the result? When is human review worth the latency?
+**1. Why multiple agents instead of one agent doing everything?**
 
-[Your answer here]
+When this system was built, the cost differential between model tiers was significant. Running every task — including boilerplate — through Opus would have been wasteful. The three-tier routing saved ~60% in token costs compared to a single-agent approach where Opus handled everything. The multi-agent architecture was a cost-optimization decision, not a complexity fetish.
+
+That said, this answer has an expiration date. As models improved, we observed that a better model could complete the same task in fewer tokens — sometimes fewer total tokens than a weaker model struggling through the same problem. The cost equation flipped. We've since transitioned to a single coding agent with a configurable advisor tool, where the user sets guardrails and the agent executes end-to-end. Task/phases breakdown is still recommended — not for model routing, but because context windows are finite and quality degrades on large codebases. The multi-agent system was the right architecture for its moment; the single agent is the right architecture now.
+
+**2. Why stateful (checkpointing) instead of stateless (re-run on failure)?**
+
+A full pipeline run with 12 tasks across three model tiers wasn't cheap. If the pipeline failed at task 10 because of a flaky model output, re-running tasks 1-9 would burn tokens with zero new value — those tasks already produced correct, review-passed output. File-based checkpointing meant a failure cost you only the tokens from the failed task onward. The state file overhead was near-zero (a few KB of JSON on disk) and the savings were real.
+
+**3. Why human-in-the-loop instead of fully autonomous merge?**
+
+Four reasons, each stronger than "models make mistakes":
+
+- **Code is liability, not just output.** Generated code goes to production. If it breaks at 3am, a human gets paged. The human who reviewed and approved the code is the human who understands it and can debug it. Without review, you have production code that no human has ever read — that's not automation, that's abandonment.
+
+- **The review IS the knowledge transfer.** When an engineer reviews agent-generated code, they learn what was built, where it lives, and why decisions were made. Six months later, when a bug surfaces, there's a human who knows where to look. An auto-merged codebase is a codebase nobody understands.
+
+- **Not all correctness is spec-verifiable.** The review agent checks "does this match the spec?" It doesn't know that the auth module is being refactored next sprint, or that the team convention is to use repository pattern for data access, or that Sarah already built a utility function that does half of this. Human reviewers catch context that isn't in any spec.
+
+- **Accountability is a feature.** If the agent generates buggy code and auto-merges it, who owns the incident? The engineer who kicked off the workflow? The person who configured the agent? The agent itself? Human-in-the-loop means the approving engineer explicitly signs off — accountability is clear, and so is the audit trail. The guardrails catch deterministic errors; the human catches judgment errors.
 
 ### Q6 — What would you do differently now?
 
-[Your answer here]
+The biggest learning: **model quality changes architectural decisions.** The multi-agent system was built on the assumption that model tiers had a meaningful quality gap that justified routing complexity. As models improved, that gap narrowed — a single strong model could handle the entire pipeline end-to-end in fewer total tokens than the multi-agent system spent on orchestration + classification + generation + review. We validated this empirically and transitioned.
+
+If I were building this today, I'd start with the single-agent approach: one coding agent with an advisor tool that the user configures with guardrails and conventions. Task breakdown into phases still matters — not for model routing, but because context windows are finite and you can't feed an entire codebase into one prompt. The architecture simplifies from "orchestrator + router + multiple specialized agents" to "one agent + structured phases + human review at the gate."
+
+The principle: **let model capability do the heavy lifting, and keep your architecture as simple as the model allows.** The multi-agent system was necessary when models were weaker. Now that they're stronger, the simpler architecture wins. I'd rather explain to an interviewer why I simplified my own system than defend complexity I no longer believe in.
 
 ### Q7 — Numbers
 
