@@ -43,37 +43,64 @@ Your highest-signal projects for the Hedgineer role because 4 of 7 bullets are A
 
 ### Q1 — What was the problem?
 
-[Your answer here]
+A tenant onboarding onto our orchestration platform needed to handle very high throughput — 20 million transactions per day. Before optimization, the platform was capped at 500-600 TPS. To onboard this tenant, we needed to roughly triple the throughput capacity.
 
 ### Q2 — What made it complex?
 
-[Your answer here]
+The workflow engine was **embedded inside the application framework** — meaning the application code and the engine shared the same process, same resources, same pod. You couldn't optimize one without affecting the other. Worse, the engine code was **not touchable** (proprietary/third-party), so we couldn't just go in and fix inefficiencies. We had to reverse-engineer what was happening internally — observe behavior through metrics, logs, and query patterns — then make changes from the application side to work around the engine's limitations. This is harder than it sounds: you're optimizing a system where half the stack is a black box.
 
 ### Q3 — What was YOUR specific contribution? What decisions did YOU make?
 
-[Your answer here]
+I owned the entire optimization effort end-to-end. Four specific decisions:
+
+1. **Index analysis on the engine's SQL database.** The engine used an internal SQL database for workflow state. I identified the hot queries by enabling query logging at the DB layer (since we couldn't touch engine code), analyzed the query plans, and added targeted indexes to the engine-managed tables. This was the single highest-impact change.
+
+2. **Connection pool sizing per pod.** The engine opened DB connections internally, and the application opened its own. With both sharing the same pod, connection pool sizing wasn't formulaic — I had to empirically test different pool sizes per pod to find the sweet spot where neither the engine nor the application starved for connections, while avoiding over-subscription that would cause contention at the DB.
+
+3. **Optimal database scaling.** Instead of throwing the highest CPU/memory tier at the problem (which can actually degrade performance due to lock contention and NUMA effects at high core counts), I benchmarked incrementally — starting from the current tier and scaling up one step at a time, measuring TPS at each level. Found the optimal cost/performance point rather than the maximum configuration.
+
+4. **Instance count tuning.** With the engine embedded, horizontal scaling wasn't linear — each additional pod added engine overhead. I mapped the TPS vs. pod-count curve to find the optimal instance count for the target throughput.
 
 ### Q4 — Deep technical detail
 
-Push here: what were the slow queries? What did the query plan look like before? What indexes did you add and why? Did you denormalize? Did you add caching — if so, what invalidation strategy? What was the infrastructure tuning — connection pooling, instance sizing, read replicas?
+**How we reverse-engineered the engine internals (engine was a black box):**
+- Enabled SQL query logging on the engine's database to capture all queries the engine was executing — this gave us the query patterns without touching engine code
+- [To fill: what specific tables were hot? What queries were running?]
+- [To fill: what indexes did you add — composite, covering, partial? On which tables?]
 
-[Your answer here]
+**Connection pool sizing:**
+- Both the application (HikariCP presumably) and the engine maintained their own connection pools to the same database
+- [To fill: what was the optimal pool size per pod? How did you test — ramp test, soak test? What happened when pool was too small vs too large?]
+
+**Database scaling strategy:**
+- [To fill: what DB was this — MySQL, Postgres? What was the starting instance tier and what did you end at? What was the sweet spot? Why did higher cores degrade performance — lock contention on the workflow state table?]
+
+**Instance tuning:**
+- [To fill: how many pods before optimization vs after? What was the TPS per pod? What was the bottleneck that prevented linear scaling — engine's internal thread pool, DB contention, something else?]
 
 ### Q5 — Why not simpler?
 
-Could you have solved this with just caching (Redis) and skipped the DB optimizations? Could you have thrown hardware at it (bigger instances) instead of refactoring queries? Why wasn't that the right call?
+**Why not just throw bigger hardware at it?** We tried. Scaling the DB to the highest core/memory tier actually left performance on the table — beyond a certain point, the engine's internal architecture (shared locks on workflow state) meant more cores didn't translate to more throughput. We had to find the optimal tier, not the maximum tier.
 
-[Your answer here]
+**Why not just add more pods?** With the engine embedded, each new pod brought a full engine instance with its own overhead. The TPS curve wasn't linear — it flattened. We needed to find the sweet spot, not just scale horizontally indefinitely.
+
+**Why not cache?** Workflow Start/Update APIs are mutating operations — you're creating new workflow instances or transitioning state. You can't cache a write. You have to optimize the write path.
 
 ### Q6 — What would you do differently now?
 
-[Your answer here]
+The biggest learning: **an embedded engine is a scaling ceiling.** No amount of query optimization or connection pool tuning can fully overcome the fundamental problem of co-locating the engine with the application. Every pod runs a copy of the engine consuming resources. Every optimization has to work around an untouchable black box. This realization directly led to exploring engines that could be hosted independently — which is why we eventually moved to Orkes (see Project 3), where the engine runs as a separate service and the application is a thin client. If I were starting over, I'd push for a separated engine architecture from day one for any high-throughput tenant.
 
 ### Q7 — Numbers
 
-You have the headline numbers (200→130ms, 1500 RPS). Fill in: what was the query count per workflow execution? What was the DB CPU before and after? What was the P99 before/after (P95 hides tail latency)?
-
-[Your answer here]
+| Metric | Before | After |
+|---|---|---|
+| Throughput (TPS) | 500-600 | [To fill: ~1500?] |
+| P95 latency | ~200ms | ~130ms |
+| Daily transaction capacity | ~43M (at 500 TPS) | [To fill] |
+| DB CPU | [To fill] | [To fill] |
+| Pod count | [To fill] | [To fill] |
+| Connection pool size per pod | [To fill] | [To fill] |
+| P99 latency | [To fill] | [To fill] |
 
 ---
 
