@@ -243,7 +243,7 @@ Evaluated Pinecone, Weaviate, pgvector, and Milvus. Chose Milvus for four reason
 
 **5. Hybrid retrieval with RRF + cross-encoder re-ranking**
 
-- **BM25:** Used **BM25Okapi** — the canonical BM25 variant with default parameters (k1=1.5, b=0.75). The implementation was [To fill: Milvus built-in BM25, or rank_bm25 Python package?]
+- **BM25:** Used **BM25Okapi** — the canonical BM25 variant with default parameters (k1=1.5, b=0.75). The implementation was the `rank_bm25` Python library.
 - **Why hybrid:** Semantic search (embeddings) catches paraphrases and intent. BM25 catches exact string matches — product codes, SKU numbers, error IDs. Neither alone covers both. The rejected candidate learned this the hard way; I designed for it from the start.
 - **RRF (Reciprocal Rank Fusion), k=60:** RRF merges the BM25 ranking and vector ranking into a single list. The formula: `score(d) = Σ 1/(k + rank_i(d))` where rank_i(d) is the document's position in ranking list i. k=60 is the canonical value from the original paper — it means rank position matters but isn't dominant. A lower k (e.g., k=1) means only the #1 spot in each list matters — too aggressive. A higher k (e.g., k=1000) means all positions are nearly equal — too flat. k=60 was empirically validated as the sweet spot.
 - **Cross-encoder:** **ms-marco-MiniLM-L6-v2** — same model family as the embedding model (consistent architecture, simplifies dependency management). The pipeline: 20 candidates from RRF → cross-encoder re-ranks them → top 6 returned → **final top-3 passed to the LLM** with their source citations. This 20→6→3 funnel keeps the LLM context window focused on the most relevant chunks while maintaining a buffer (6) in case the top few have inconsistent information.
@@ -349,9 +349,10 @@ The first version had synchronous ingestion — users uploaded documents and wai
 | Total chunks after ingestion | [To fill] |
 | Token usage per query (avg) | [To fill] |
 | Cost per query (avg) | [To fill] |
-| Recall@K | [To fill] |
-| Precision@K | [To fill] |
-| Faithfulness score | [To fill] |
+| Recall@K | 1.0 |
+| Context Precision@K | 0.9 |
+| Relevance | 0.8 |
+| Faithfulness | 0.66 |
 
 ---
 
