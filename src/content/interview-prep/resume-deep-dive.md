@@ -659,49 +659,57 @@ Test coverage before/after? Number of providers mocked? Tests run per build?
 
 # PODEUM (July 2022 – May 2023) — Founding Engineer
 
-This is your highest-ownership project. You were one of two backend engineers building everything from scratch — every architectural decision was made by you or debated with one other person.
+This is your highest-ownership project. You were one of two backend engineers building a full production platform from scratch — every architectural decision was made by you or debated with one other person.
 
-The codebase (Podeum/games, since open-sourced) reveals a multi-game sports gaming platform: Dropwizard + Guice + MongoDB, three Maven modules (runtime → api → database), custom adapter pattern, four game systems in one monolith. This wasn't a simple CRUD app — it was a real platform.
+The codebase reveals a platform, not an app: **9 Maven modules**, polyglot persistence (MySQL + MongoDB + Redis), UPI payment integration, Firebase notifications, Docker deployment. This wasn't a CRUD backend — it was a sports gaming platform with a virtual economy, real-time match stats, fantasy leagues, and multiplayer games, serving 10,000 DAU.
 
-## Project 9: Built and Scaled Backend from Scratch
+## Project 9: Built and Scaled the Entire Backend Platform
 
 > Resume bullet: *"Built and scaled backend services from scratch using Java, supporting growth from 0 to ~10,000 daily active users."*
 
 ### Q1 — What was the problem?
 
-Podeum was a sports fan engagement platform — live match tracking, fantasy leagues, quizzes. There was no backend. No API. No database. No deployment. I built it from scratch alongside one other backend engineer, while the frontend was being built in parallel in Flutter. The backend had to support four game systems — cricket match tracking with live events, fantasy league with role-based team selection, team/player management, and timed multiplayer quizzes — all sharing the same infrastructure and scaling to thousands of concurrent users during live matches.
+Podeum was a sports fan engagement platform. There was no backend — no API, no database, no deployment, no payment system, no notification infrastructure. I built it from scratch alongside one other backend engineer, while Flutter devs built the frontend in parallel. The platform needed: live cricket match tracking with detailed player statistics, fantasy leagues with real-time scoring, daily trivia and prediction games, a virtual economy (coins earned through engagement, redeemable for rewards), UPI payments for in-app purchases, push notifications for match events, community pods, badges, and referrals. All of this had to work at scale during IPL matches with thousands of concurrent users.
 
 ### Q2 — What made it complex?
 
-**Four game systems, one monolith, two engineers.** Each system had its own data model, its own business rules, its own failure modes:
+**Nine modules, two databases, one cache, real money.** The platform had nine Maven modules:
 
-- **Cricket Match Engine** — matches with toss decisions, innings tracking, win type/margin calculation, real-time MatchEvents keyed by playing team, and PlayerStats with a `fantasyScore` computation that fed directly into the fantasy system
-- **Fantasy League** — per-community fantasy leagues with time-windowed FantasyMatches, user-created FantasyTeams with role-based player selection (captain/vice-captain multipliers), and scoring derived from real match statistics
-- **Team & Player Management** — leagues containing teams, teams containing players with skills/roles/status, upsert-based sync patterns to handle frequent roster changes
-- **Live Quiz** — pod-based quizzes with timed start, question pools, multiplayer participation tracking
+| Module | What it handled |
+|---|---|
+| `api` | REST API — resources, services, DTOs, mappers |
+| `sql-database` | **MySQL via Hibernate** — 60+ entities, all transactional data |
+| `database` | **MongoDB** — document-type data, custom adapter pattern |
+| `caching` | **Redis** — query caching, session data |
+| `payment-gateway` | **PhonePe UPI** — real payments for in-app purchases |
+| `notifications` | **Firebase** — push notifications for match events |
+| `http-client` | External API calls (live score feeds, third-party data) |
+| `runtime` | Dropwizard app bootstrap, Guice DI wiring, health checks |
+| `deployment` | CircleCI CI/CD, Docker, AWS RDS |
 
-These weren't independent microservices — they shared the same MongoDB instance, the same connection pool, the same deployment. A fantasy scoring query couldn't slow down live match event ingestion. A quiz with 1000 concurrent players couldn't starve the match API of connections.
+**Virtual economy with real money.** The economy wasn't just points — it was a double-entry ledger system (Ledger entity with transactionType, amount, redeemable/nonRedeemable splits), a Wallet with automatic balance reconciliation (@PrePersist/@PreUpdate hooks computing `coins = coinsEarned - coinsRedeemed`), canDebit/canSpend validation methods preventing negative balances at the entity level, Voucher and Redeemable reward systems, and PhonePe UPI integration for real purchases. Bugs in the wallet meant real user money lost — consistency wasn't optional.
 
-**Minimal review surface.** With only one other backend engineer, there was no senior architect, no platform team, no dedicated DB admin. Every schema decision, every index choice, every API contract — we made it, we owned it, one of us got paged if it broke at 2am during an IPL match.
+**Real-time match statistics pipeline.** The MatchPlayerStats entity tracked 15+ cricket statistics per player per innings: batting (runs, fours, sixes, strikeRate, ballsPlayed, duck, milestones), bowling (wickets, dotBalls, maidenOvers, economy, oversBowled, bowled, lbw), and fielding (catches, stumping, runOut, directHitRunOut). These had to be ingested from external score feeds, updated in real-time during live matches, and propagated to fantasy team scores — all while thousands of users were polling for updates.
+
+**Two databases with different consistency models.** MySQL handled everything transactional: economy, users, matches, teams, fantasy selections, scores, pods, badges, referrals. MongoDB handled document-type data where schema flexibility mattered. This wasn't a default — it was a deliberate polyglot persistence decision. The trick was knowing which data belonged where and ensuring cross-database consistency when a single user action touched both stores.
 
 ### Q3 — What was YOUR specific contribution? What decisions did YOU make?
 
-Everything. But specifically:
+**1. Chose Dropwizard + Guice over Spring Boot.** Two-person team, full platform to build. Spring Boot would have worked but Dropwizard's built-in metrics, health checks, and configuration management meant less boilerplate and faster iteration. The Guice integration gave us DI without Spring's complexity. We shipped faster with fewer files.
 
-**1. Chose Dropwizard over Spring Boot.** Spring Boot was the industry default, but Dropwizard was lighter, faster to bootstrap, and came with built-in metrics, health checks, and configuration management. For a two-person team that needed to move fast and operate the system with minimal overhead, Dropwizard's "batteries included but minimal" philosophy was the right call. The Guice integration (via Hubspot's dropwizard-guice) gave us DI without Spring's complexity.
+**2. Designed the polyglot persistence architecture.** The key decision: MySQL for transactions, MongoDB for documents, Redis for caching. Why not just one database? The virtual economy DEMANDED ACID transactions — a wallet debit on one side and a ledger credit on the other had to be atomic. MongoDB couldn't guarantee multi-document transactions reliably at the time. But MongoDB was perfect for flexible schemas like game configurations, quiz question pools, and player profile data that evolved rapidly. Rather than force-fit everything into one model, I chose the right tool for each data shape.
 
-**2. Designed a custom MongoDB adapter layer instead of using an ORM.** MongoDB doesn't have a standard Java ORM like Hibernate. I built an adapter pattern with:
-- An `Adapter` interface defining every data operation (70+ methods across all entities)
-- A `MongoDBAdapter` implementation with repository classes per collection
-- A custom `@Collection` annotation to map Java entities to MongoDB collection names
-- A `@Transactional` interceptor for atomic multi-document writes
-- DTO/Entity separation with hand-written mapper classes
+**3. Built the virtual economy with guardrails at every layer.** The economy wasn't just a `coins` integer on the user table. It was:
+- **Ledger** — immutable transaction log (transactionType, category, amount, redeemable/nonRedeemable, clientRefId for idempotency)
+- **Wallet** — computed balance with canDebit() and canSpend() validation methods that threw BEFORE touching the database
+- **Transaction** — payment records with externalId for PhonePe reconciliation
+- **Voucher/Redeemable** — reward catalog and redemption tracking
 
-This was more work upfront than using a library like Morphia, but it meant we had full control over every query, every index, every write concern. No black-box ORM behavior — critical when you're one of two people who can debug production issues.
+The `canDebit` check ran at the entity level (Java), the service level (business logic), and the database level (constraints). Three layers of defense against double-spend. When you're handling real money on a two-person team, you don't trust one layer.
 
-**3. Made the architecture decision to keep it a monolith.** Four game systems could have been four microservices. But with two engineers, four services means four deployments, four monitoring setups, four failure domains, and inter-service latency on every fantasy scoring lookup. A well-structured monolith (separate packages per domain, shared database module, clean adapter boundaries) gave us the isolation benefits without the operational overhead. The code was structured so it COULD be split later — the adapter interface was the seam.
+**4. Made the monolith decision — and structured it to be split later.** Nine modules, but one deployable. Each module (api, sql-database, database, caching, payment-gateway, notifications, http-client) was a separate Maven module with its own Guice module for DI wiring. This meant the code was already organized along domain boundaries. If we ever needed to split into microservices, the module boundaries were the cut lines. But with two engineers, we needed the operational simplicity of one deployable — one Docker image, one health check, one set of logs.
 
-**4. Built the fantasy scoring pipeline.** The `PlayerStat` entity has a `fantasyScore` field derived from match statistics. When a MatchEvent was ingested, the system updated the relevant PlayerStats, recalculated fantasy points based on the event type and the player's role, and propagated the score to all FantasyTeams that had selected that player — with captain/vice-captain multipliers applied. This was the most complex business logic in the system: real-time, multi-entity, write-heavy, and accuracy-critical (users tracked their fantasy scores live during matches).
+**5. Integrated real UPI payments via PhonePe.** This wasn't a mock. The `payment-gateway` module had PhonePe UPI integration with request/response mapping, status checking, and reconciliation. For in-app purchases of coins and vouchers, real money moved through India's UPI infrastructure. The payment flow had to handle: initiation → user redirect to PhonePe app → callback/webhook → status verification → wallet credit. Every step had a failure mode, and every failure mode had a reconciliation path.
 
 ### Q4 — Deep technical detail
 
